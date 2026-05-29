@@ -1261,3 +1261,23 @@ Captured the uploading account on Bulk Upload records/events and linked bulk-ori
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (970 kB).
+
+---
+
+### Planning — Roadmap & backlog update (2026-05-30)
+
+Documentation-only update (no app feature code changed). Added `ROADMAP.md` capturing the next Business Development enhancements plus one foundational data-model improvement, and repointed PROJECT_HANDOFF.md §14 "Next recommended task" to the foundational cleanup.
+
+**Roadmap items added (all planned/backlog, not built):**
+- **Stable Subaccount IDs (P0, foundational, next):** shared stable id map used by transactions, bulk uploads, batch records, notifications, SubAccountContext, and future claims/SLA/analytics. Visibility keys off `accountId` (name = display only); populate `batch.accountId` consistently.
+- **Financial Security / OTP (P1):** OTP gate (mock code `123456`, 6 digits) on all financial/payout changes incl. Admin; prepare a mock attention-email event to the account holder on success; local/mock only.
+- **Claims & Cancellations (P2):** refund claims on undelivered transactions (linked to tracking numbers, may notify, candidate sidebar item); cancellations only for newly booked transactions.
+- **SLA Alerts / Ops Monitoring (P2):** No Movement / Breach SLA / follow-up alerts with hub/forwarder follow-up notes; may notify; frontend/mock.
+- **Data Analytics Enhancements (P3, larger redesign):** Business Review (Zenith PH) metric set (Performance Overview, Total/Fulfilled Orders, Delivery Efficiency, RTS Rate, Returns, SLA HIT/MISS, avg delivery days by city/region, returns by reason/location, claims summary, amount settled, volume by region); reconsider peak-hours; treat as a redesign, not a chart refresh.
+
+**Build priority:** Stable IDs → Financial/OTP → Claims & SLA (peers) → Data Analytics redesign.
+**Dependencies:** Stable IDs unblock scoping for all later items; Claims feeds Analytics "claims summary"; SLA feeds "SLA HIT/MISS"; Analytics best sequenced last. recharts lazy-load remains a separate deferred performance task.
+
+**Files changed:** added `ROADMAP.md`; updated `PROJECT_HANDOFF.md` (§14); this log note.
+
+**Validation:** docs only — no build impact.

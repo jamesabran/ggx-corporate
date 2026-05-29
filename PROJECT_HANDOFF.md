@@ -49,7 +49,9 @@ Reusable Dialog/ConfirmDialog now exist (gap closed). Remaining: Textarea, Switc
 Polish: wire pagination, search/filters to data, CSV export, loading skeletons/empty states; lazy-load recharts (DataAnalytics) to fix bundle size. Needs decision: real auth + route guards; Forgot Password page; Notifications page vs popover. Defer: real API/billing/parsing, persistence, dark mode.
 
 ## 14. Next recommended task
-**Bulk Upload negative scenarios and review flow** — strengthen the validation/review step: rich error states (file too large, wrong type, empty file, all-invalid, partial-invalid), per-row error review/inline fixes, clearer skipped-row messaging before submit. Frontend/mock-only; reuse Dialog + DS; keep scope to Bulk Upload + summary.
+**Stable Subaccount IDs (foundational data-model cleanup).** Notification/visibility scoping still matches on account/subaccount *names*, which is fragile. Introduce a shared stable subaccount ID map (source of truth in `SubAccountContext`) consumed by transactions, bulk uploads, upload batch records, and notifications; key visibility/filtering off `accountId` (treat `accountName` as display only) and populate `batch.accountId` consistently. This unblocks robust scoping for the planned Financial/OTP, Claims, SLA Alerts, and Analytics work.
+
+See **ROADMAP.md** for the full planned backlog and build priority (Stable IDs → Financial/OTP → Claims → SLA Alerts → Data Analytics redesign).
 
 ## 15. Prompting rules for future sessions
 Scope tightly (named files/flows). Mock/frontend-only unless backend pattern exists. No new deps without approval. Preserve DS + routes; don't touch unrelated pages. Run `npm run build` after edits; fix only safe errors. Update `IMPLEMENTATION_LOG.md` briefly per task. Note pre-existing uncommitted changes before staging.
