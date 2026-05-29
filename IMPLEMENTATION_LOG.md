@@ -6,80 +6,386 @@
 
 ---
 
-## What was built
+## 1. Completed Work (Page by Page)
 
-Greenfield project scaffolded from scratch (only `GGX_CORPORATE_DS_CONTEXT.md` existed). Ported the entire Figma Make app (file key `oQk6zNAdGyQmDAPf57PSmC`) into a production React project at `C:/Users/james/Projects/GGX Corporate/`.
+### Login (`/`)
+- Two-panel layout: login form (left) + feature showcase card (right)
+- Login form: email + password + remember me + social login buttons (Facebook, Google, Apple — UI only)
+- Registration form: toggle from login, collects company name, volume, price range, contact info
+- Client-side auth: `max@email.com` / `!1234qwer` → navigate to `/dashboard`; else `alert()`
+- "Forgot password?" and support link are `<a href="#">` stubs
 
-### Config / foundation
-- `package.json`, `vite.config.ts`, `tsconfig*.json`, `index.html`, `.gitignore`
-- `src/main.tsx`, `src/index.css` (imports Tailwind v4 + theme), `src/styles/theme.css`
-- Inter font loaded via Google Fonts in `index.html`; bound through `--font-sans` in theme.
-- Path alias `@/` → `src/` (via `fileURLToPath`, no `@types/node` dirname dependency at runtime).
+### Dashboard (`/dashboard` — standard or subaccount view)
+- 4 KPI stat cards: Active Deliveries, Pending Pickups, Failed/Delayed, Monthly Spend
+- 4 Quick Action cards linking to Bulk Uploader, Billing, API Access, Complaints
+- 3 side-by-side panels: Recent Transactions (5 rows), Earnings Report (3 rows), Delivery Performance
+- Subaccount banner shown when viewing a specific subaccount (not main)
+- `DashboardWrapper` decides between `Dashboard` and `ParentDashboard` based on `isMainAccountView()`
 
-### Base UI components (`src/app/components/ui/`)
-Button, Badge, Card, Input, Select, Table, Tabs. All DS-aligned (see decisions below).
+### ParentDashboard (`/dashboard` — main account view)
+- 4 consolidated KPI cards: Total Shipments, Total COD, Active Subaccounts, Failed Deliveries
+- 4 Quick Actions: Add Subaccount, Invite User, View Reports, View Finance
+- Subaccount Performance table (2 subaccounts with shipments/revenue/success rate)
+- Recent Activity feed (4 items with type icons)
 
-### Context + layout
-- `contexts/SubAccountContext.tsx` — verbatim port (in-memory subaccount state).
-- `layouts/RootLayout.tsx` — sidebar + topbar with subaccount switcher, three navigation variants (standard / main-account / subaccount).
-- `routes.tsx` — all 19 routes wired.
+### Transactions (`/dashboard/transactions`)
+- Full table: tracking number, recipient, destination, [subaccount if main view], type, status badge, date, View button
+- Filters: search input, subaccount select (main view only), status select, type select
+- Note: filters render but do not currently filter the static data array
+- Pagination UI (Previous/Next buttons — non-functional)
+- Export CSV button (non-functional)
 
-### Pages (all 19 + AddressBook component)
-Login, Dashboard, ParentDashboard, DashboardWrapper, Transactions, TransactionDetails, BulkUploader, BulkUploadSummary, DataAnalytics (recharts), Earnings, BillingStatement, PaymentSettings, AddressBookPage + AddressBook, APIAccess, Complaints, SubAccounts, EnableSubAccounts, EnableSubAccountsSetup, RequestSubAccount, UsersPermissions, Settings.
+### Transaction Details (`/dashboard/transactions/:id`)
+- Static transaction data (does not use URL param to look up real records)
+- Pickup/Delivery dates, Sender/Recipient details, Order Summary with items+pricing
+- Packaging info, Transaction Fees breakdown, Payment Method
+- Star rating widget (state stored locally, not persisted)
+- Tracking Timeline with 7 events, proof-of-delivery links (stubs)
+- "Send a Report" and "Upload New Delivery" buttons
+- "Need Help?" card at bottom
+
+### Bulk Uploader (`/dashboard/bulk-uploader`)
+- Standard / Same-Day delivery mode toggle
+- Pickup address display with "Change Address" button that embeds the AddressBook in select mode
+- File upload drop zone (clicking/dropping navigates to summary — simulated)
+- Recent Uploads table (4 rows) with click-to-view-summary
+- Template download buttons (non-functional), requirements sidebar card
+
+### Bulk Upload Summary (`/dashboard/bulk-upload-summary`)
+- Reads `:id` param from URL for display only; always shows same 5-row mock data
+- Validation summary: total rows, valid count, error count
+- Data preview table with per-row validation status and error messages
+- "Proceed with Valid Bookings" button (enabled only when validRows > 0)
+
+### Data Analytics (`/dashboard/analytics`)
+- 4 stat cards: Total Deliveries, Success Rate, Avg Delivery Time, Failed Deliveries
+- Period and brand filter selects (UI only)
+- Bar chart: Monthly Delivery Volume (recharts BarChart)
+- Pie chart: Delivery Status Breakdown (recharts PieChart)
+- Line chart: On-Time Performance (recharts LineChart)
+- 3 info panels: Top Destinations, Delivery Types, Peak Hours
+
+### Earnings (`/dashboard/earnings`)
+- 4 summary cards: Available for Payout, Pending Collection, Scheduled Deposit, Remitted This Month
+- Primary Bank Account display
+- Settlement History table with status badges; subaccount column shown in main account view
+- Source / status / date / subaccount filters (UI only)
+- Pagination UI (non-functional)
+
+### Billing Statements (`/dashboard/billing`)
+- 4 summary cards: Current Balance, Due This Month, Overdue, Last Payment
+- Payment method on file card with link to PaymentSettings
+- Invoice History table with status badges, download buttons, "Pay Now" for pending
+- Subaccount filter in main account view
+- Billing contact and payment method summary cards at bottom
+
+### Payment Settings (`/dashboard/payment-settings`)
+- Payment Methods section: 2 cards (Visa default + Mastercard), Add Payment Method button
+- Auto-Pay "Coming Soon" notice card
+- Payout Bank Accounts section: BDO (primary, verified) + BPI (pending verification)
+- Payout Schedule and Verification info cards
+- All edit/remove/set-default buttons are stubs
+
+### Address Book (`/dashboard/address-book`)
+- Wraps `AddressBook` component in `full` mode
+- Full CRUD: add, edit, delete, set default address — all functional in local state
+- Search by name/city/province, filter by label type
+- Address form: label, name, mobile, province/city/barangay cascade, other details, preferred toggle
+- Province/city/barangay data is partially populated (limited coverage)
+
+### API Integration (`/dashboard/api-access`)
+- API Documentation link card
+- Environment toggle (Sandbox / Production) with warning banner in production mode
+- API key display (masked/shown with eye button), copy to clipboard, Generate New Key button
+- Quick Stats sidebar (API calls today, rate limit, system status)
+- Webhook URL configuration, event subscription checkboxes
+- Save/Test Webhook buttons (non-functional)
+- Security Best Practices card
+
+### Support Tickets (`/dashboard/complaints`)
+- 4 summary cards: Open, In Review, Resolved, Avg Response Time
+- "File New Complaint" form panel (toggleable): tracking number, issue type, description
+- Tickets table with priority + status badges, assignee, last update
+- Status and type filters (UI only)
+- Pagination UI (non-functional)
+
+### Subaccounts (`/dashboard/subaccounts`)
+- Gate: shows "not enabled" screen with Enable Subaccounts CTA when `subAccountsEnabled = false`
+- When enabled: lists all subaccounts with manager, pickup address, booking count
+- Per-subaccount actions: View Dashboard (switches context + navigates), Manage Users, Settings (stubs)
+- Request Additional Subaccount button
+
+### Enable Subaccounts Intro (`/dashboard/subaccounts/enable`)
+- Explains how subaccounts work, 4 benefit cards
+- "Not Now" → Settings, "Continue" → Enable Setup
+
+### Enable Subaccounts Setup (`/dashboard/subaccounts/enable/setup`)
+- Shows prefilled Main Account data and Default Subaccount info
+- "Enable Subaccounts" calls `enableSubAccounts()` context function
+- Success screen confirms activation, links to Request Subaccount or Dashboard
+
+### Request Additional Subaccount (`/dashboard/subaccounts/request`)
+- Form: Business Info (name, type, address, pickup address, billing ref) + Operational Details (volume, start date, manager, role) + Notes
+- On submit: calls `addSubAccount()` context function, shows success confirmation
+- Success screen notes prototype behavior (real flow requires Sales review)
+
+### Users & Permissions (`/dashboard/users-permissions`)
+- Available only in main account navigation
+- User list: 4 hardcoded users with name, email, role badge, level, access scope
+- Role Definitions section: Parent-level roles (Owner, Admin, Finance, Viewer) + Subaccount roles (Manager, Operator, Viewer)
+- "Invite User" and "Edit" buttons are stubs
+
+### Settings (`/dashboard/settings`)
+- "Enable Subaccounts" promo card (shown only when subaccounts not enabled)
+- Account Information form: company, email, phone, address (Save/Cancel — non-functional)
+- Notifications preferences with checkboxes (non-functional)
+- Security: Change Password button, 2FA toggle (non-functional)
 
 ---
 
-## Critical implementation rules applied
+## 2. Files Created / Modified
 
-1. **Icons migrated Lucide → `@tabler/icons-react`** across every file. Mapping examples:
-   `LayoutDashboard→IconLayoutDashboard`, `Package→IconPackage`, `BarChart3→IconChartBar`,
-   `Code2→IconCode`, `MessageSquare→IconMessage`, `Building2→IconBuilding`, `DollarSign→IconCurrencyDollar`,
-   `ChevronsUpDown→IconSelector`, `ArrowLeftRight→IconArrowsLeftRight`, `Menu→IconMenu2`,
-   `CheckCircle2→IconCircleCheck`, `XCircle→IconCircleX`, `AlertCircle→IconAlertCircle`,
-   `CalendarDays→IconCalendar`, `RefreshCw→IconRefresh`, `Share2→IconShare`, `Trash2→IconTrash`,
-   `SlidersHorizontal→IconAdjustmentsHorizontal`, `Shield→IconShield`, `Book→IconBook`.
-2. **Button `variant="danger"` → `variant="destructive"`** (RootLayout logout button).
-3. **Button `size="md"` → `size="default"`**; default variant renamed `primary` → `default` (now `bg-primary`).
-4. **Theme CSS variables** used for primary color (`--primary: #0088C9`). Component focus rings use `focus-visible:ring-primary`. Page-level layout retains Tailwind `gray-*`/`blue-*` utilities (acceptable for POC per DS §7).
-5. **IMPLEMENTATION_LOG.md** created (this file).
-6. No blockers required stopping — see notes below.
-7. **`npm run build` passes** (tsc -b + vite build, 0 errors).
+### Configuration
+- `package.json` — dependencies and scripts
+- `vite.config.ts` — Vite + React + Tailwind v4 plugin + `@/` alias
+- `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` — TypeScript composite project
+- `index.html` — root HTML with Inter font via Google Fonts
+
+### Styles
+- `src/index.css` — imports Tailwind and theme
+- `src/styles/theme.css` — CSS custom properties (design tokens, Tailwind @theme inline)
+
+### App entry
+- `src/main.tsx` — React root render
+- `src/app/App.tsx` — RouterProvider wrapper
+
+### Routing
+- `src/app/routes.tsx` — all 19 routes
+
+### Layout
+- `src/app/layouts/RootLayout.tsx` — sidebar, topbar, account switcher, logout modal
+
+### Context
+- `src/app/contexts/SubAccountContext.tsx` — subaccount state, enable/add/switch functions
+
+### Utilities
+- `src/app/lib/utils.ts` — `cn()` helper (clsx + tailwind-merge)
+
+### UI Components (all new)
+- `src/app/components/ui/Button.tsx`
+- `src/app/components/ui/Badge.tsx`
+- `src/app/components/ui/Card.tsx`
+- `src/app/components/ui/Input.tsx`
+- `src/app/components/ui/Select.tsx`
+- `src/app/components/ui/Table.tsx`
+- `src/app/components/ui/Tabs.tsx`
+
+### Application Components (new)
+- `src/app/components/AddressBook.tsx`
+
+### Pages (all new)
+- `src/app/pages/Login.tsx`
+- `src/app/pages/Dashboard.tsx`
+- `src/app/pages/ParentDashboard.tsx`
+- `src/app/pages/DashboardWrapper.tsx`
+- `src/app/pages/Transactions.tsx`
+- `src/app/pages/TransactionDetails.tsx`
+- `src/app/pages/BulkUploader.tsx`
+- `src/app/pages/BulkUploadSummary.tsx`
+- `src/app/pages/DataAnalytics.tsx`
+- `src/app/pages/Earnings.tsx`
+- `src/app/pages/BillingStatement.tsx`
+- `src/app/pages/PaymentSettings.tsx`
+- `src/app/pages/AddressBookPage.tsx`
+- `src/app/pages/APIAccess.tsx`
+- `src/app/pages/Complaints.tsx`
+- `src/app/pages/SubAccounts.tsx`
+- `src/app/pages/EnableSubAccounts.tsx`
+- `src/app/pages/EnableSubAccountsSetup.tsx`
+- `src/app/pages/RequestSubAccount.tsx`
+- `src/app/pages/UsersPermissions.tsx`
+- `src/app/pages/Settings.tsx`
+
+### Existing reference files (not modified)
+- `GGX_CORPORATE_DS_CONTEXT.md` — design system reference document
 
 ---
 
-## Decisions
+## 3. DS Components Used (from GGX-SHADCN Design System)
 
-- **Button variants:** Provided `default, secondary, outline, ghost, link, destructive` + sizes `default, sm, lg, icon`. The Make file's `primary` mapped to `default`; `danger` mapped to `destructive`.
-- **Badge variants:** Extended Make's set to include both `info`/`warning` (used by Dashboard/Transactions status configs) and kept `danger` + alias `destructive`, plus `secondary`/`outline`. Status variants: `success, info, warning, danger, pending`.
-- **Unused Lucide imports dropped** during port: `Filter` (Transactions, Complaints), `Key`/`FileText` where unused, `Building2` where unused (Setup/Request). Removes dead imports without behavior change.
-- **recharts `percent` typing:** PieChart label now guards `(percent ?? 0)` since recharts v2 types it optional.
-- **vite alias:** used `fileURLToPath(new URL(...))` instead of `__dirname`/`node:path` to keep config clean; `@types/node@22` added as devDep for `node:url` typing.
+| DS Component | Code File | Notes |
+|---|---|---|
+| Button | `ui/Button.tsx` | All variants used throughout |
+| Badge | `ui/Badge.tsx` | Status variants used heavily |
+| Card / CardHeader / CardContent / CardTitle / CardDescription / CardFooter | `ui/Card.tsx` | Used on every page |
+| Input | `ui/Input.tsx` | Forms throughout |
+| Native Select | `ui/Select.tsx` | Filters and forms |
+| Table / TableHeader / TableBody / TableRow / TableHead / TableCell | `ui/Table.tsx` | Transactions, Earnings, Billing, Bulk, Complaints |
+| Tabs / TabsList / TabsTrigger / TabsContent | `ui/Tabs.tsx` | Available but not actively used in current pages |
 
 ---
 
-## DS Gaps (carried over from DS context §8, unresolved in code)
+## 4. New Local App-Level Components Created
 
-### DS Gap: Form error/invalid states
-- Figma Make reference: Login uses `alert()` for invalid credentials; no inline field error styling exists.
-- Current workaround: kept `alert()` behavior from Make file.
-- Recommended DS addition: error/invalid `State` on Input/Select with red ring + helper text.
-- Risk level: medium (required before real auth/registration ships).
+| Component | File | Purpose |
+|---|---|---|
+| AddressBook | `components/AddressBook.tsx` | Full-featured CRUD address book; used in AddressBookPage (full mode) and BulkUploader (select mode) |
+| RootLayout | `layouts/RootLayout.tsx` | Shell: sidebar nav, topbar, account switcher, logout modal |
+| SubAccountProvider | `contexts/SubAccountContext.tsx` | In-memory state for subaccount feature |
+| DashboardWrapper | `pages/DashboardWrapper.tsx` | Selects Dashboard vs ParentDashboard based on account view |
 
-### DS Gap: Sidebar component
-- Figma Make reference: sidebar is fully custom Tailwind (not the DS `Sidebar` component).
-- Current workaround: ported the custom sidebar verbatim into `RootLayout.tsx`.
-- Recommended DS addition: reconcile DS `Sidebar` page with this implementation.
+---
+
+## 5. DS Gaps Discovered
+
+### DS Gap: Form Error / Invalid States
+- Figma Make reference: Login uses `alert()` for invalid credentials; no inline field error styling exists in the Make file.
+- Current workaround: `alert()` retained verbatim from Make file.
+- Recommended DS addition: `State=error` on Input and Select components with red ring + below-field helper text. DS context §8 already flags this as unresolved.
+- Risk level: medium — required before any form with real validation ships.
+
+### DS Gap: Sidebar Component
+- Figma Make reference: Sidebar in the Make file is fully custom Tailwind (not using the DS `Sidebar` component page).
+- Current workaround: ported the custom sidebar verbatim into `RootLayout.tsx`. Includes mobile slide-in, subaccount switcher panel, Finance accordion section.
+- Recommended DS addition: reconcile the DS Sidebar page with this implementation; either adopt the Make file's sidebar as the canonical DS Sidebar or document the divergence.
+- Risk level: low for POC; medium when enforcing DS compliance.
+
+### DS Gap: Avatar with Initials
+- Figma Make reference: topbar and sidebar use gradient+initials avatar pattern (blue gradient circle, white initials, configurable size).
+- Current workaround: implemented inline in `RootLayout.tsx` using Tailwind `bg-gradient-to-br from-blue-600 to-blue-700`.
+- Recommended DS addition: `Avatar` component with an `initials` variant that accepts a string and generates the gradient+initials display.
 - Risk level: low.
 
-### DS Gap: Avatar initials / KPI card / notification dot
-- Figma Make reference: gradient+initials avatars, colored KPI stat cards, bell-with-red-dot.
-- Current workaround: implemented inline with Tailwind utilities (no named DS component).
-- Recommended DS addition: `Avatar initials` variant, `KPI Card` pattern, notification badge.
+### DS Gap: KPI Stat Card Pattern
+- Figma Make reference: Dashboard and ParentDashboard use colored-background stat cards (pastel bg, icon in darker bg square, title/value/trend).
+- Current workaround: implemented inline in Dashboard.tsx and ParentDashboard.tsx using inline `cardBg`/`iconBg` string props on a data array.
+- Recommended DS addition: a named `KPICard` or `StatCard` pattern in the DS with defined slots for icon, value, label, trend.
 - Risk level: low.
+
+### DS Gap: Notification Dot on Icon
+- Figma Make reference: topbar bell icon has a small red dot indicator.
+- Current workaround: `<span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />` inline in `RootLayout.tsx`.
+- Recommended DS addition: a Badge `Display=dot` variant or a notification indicator utility.
+- Risk level: low.
+
+### DS Gap: Toggle Switch (Inline)
+- Figma Make reference: API Access page uses an inline toggle for Sandbox/Production environment switching.
+- Current workaround: custom `<button>` with conditional classes in `APIAccess.tsx`.
+- Recommended DS addition: use the DS `Switch` component (already defined in DS). Requires wiring to a boolean state — the gap is that the DS Switch component was not ported into code yet.
+- Risk level: low.
+
+### DS Gap: Textarea Component
+- Figma Make reference: multiple pages use `<textarea>` elements (Login registration, AddressBook, RequestSubAccount, Complaints).
+- Current workaround: raw `<textarea className="... border border-gray-300 ... focus:ring-primary ...">` inline in each page.
+- Recommended DS addition: a `Textarea` UI component at `src/app/components/ui/Textarea.tsx` matching the Input style.
+- Risk level: low — purely cosmetic consistency.
 
 ---
 
-## Known follow-ups (non-blocking)
-- Bundle is a single 871 kB chunk (recharts-heavy). Consider lazy-loading `DataAnalytics` route to code-split recharts.
-- Page-level color utilities are raw Tailwind, not `mode` semantic tokens — fine for POC, revisit when enforcing tokens.
-- Login is unauthenticated mock (`max@email.com` / `!1234qwer`); routes are not guarded.
+## 6. Assumptions Made
+
+1. **Button `variant="danger"` → `variant="destructive"`** — DS and shadcn use `destructive`. The Make file used `danger`. Standardised to `destructive` throughout.
+2. **Button `size="md"` → `size="default"`** — DS uses `default` as the size name. Aligned to that.
+3. **Tabler Icons used exclusively** — The Make file referenced Lucide icons. All icons were migrated to `@tabler/icons-react` equivalents as specified in `GGX_CORPORATE_DS_CONTEXT.md`.
+4. **recharts `percent` guard** — PieChart label uses `(percent ?? 0)` because recharts v2 types `percent` as optional. Safe defensive guard.
+5. **Static mock data is intentional for POC** — Data arrays embedded in each page file are the correct approach for a prototype; no API layer exists.
+6. **No route guards** — Authentication is client-side mock only; routes are not protected. Intentional for POC.
+7. **SubAccountContext state does not persist** — Enabling subaccounts and switching accounts resets on page reload. Intentional for POC — no localStorage or backend.
+8. **AddressBook CRUD is local state only** — Addresses do not persist across navigation. Intentional for POC.
+9. **`@types/node` added as devDep** — Required for `node:url` typing in `vite.config.ts` when using `fileURLToPath`.
+
+---
+
+## 7. Deferred Blockers
+
+### Blocker: Real Authentication
+- Area affected: `src/app/pages/Login.tsx`, all routes
+- Why deferred: No backend API exists. POC scope only.
+- Recommended decision: implement JWT/session auth with a real backend endpoint, add route guards using a `ProtectedRoute` wrapper around the `/dashboard` layout.
+- Workaround used: hardcoded credential check (`max@email.com` / `!1234qwer`) with `navigate('/dashboard')` on success.
+- Status: deferred
+
+### Blocker: Route Guards
+- Area affected: all `/dashboard/*` routes in `src/app/routes.tsx`
+- Why deferred: depends on real authentication being in place.
+- Recommended decision: wrap `RootLayout` in an auth check; redirect to `/` if no valid session exists.
+- Workaround used: none — all routes are open.
+- Status: deferred
+
+### Blocker: Real Data Layer
+- Area affected: all pages with data tables (Transactions, Earnings, Billing, Complaints, Bulk Upload)
+- Why deferred: no API contract defined. POC uses static mock arrays.
+- Recommended decision: define API contracts, add React Query or SWR for data fetching, move mock data to a mock server or fixture files.
+- Workaround used: hardcoded `const` arrays at the top of each page file.
+- Status: deferred
+
+### Blocker: Inline Form Validation
+- Area affected: Login, Registration, RequestSubAccount, Complaints new ticket form, AddressBook form
+- Why deferred: DS `Input` error state does not exist yet.
+- Recommended decision: add `State=error` to the Input DS component, create error/helper-text pattern, then apply `react-hook-form` or similar for form state.
+- Workaround used: `alert()` for auth error; HTML5 `required` attribute for other forms.
+- Status: deferred
+
+### Blocker: Lazy Loading / Code Splitting
+- Area affected: `src/app/pages/DataAnalytics.tsx` (recharts), all routes
+- Why deferred: POC does not require optimization.
+- Recommended decision: use `React.lazy` + `Suspense` on the DataAnalytics route to split recharts (~300 kB) into a separate chunk.
+- Workaround used: all routes in single bundle, 871 kB total.
+- Status: deferred
+
+---
+
+## 8. Known Issues
+
+1. **Bundle size 871 kB** — recharts is not code-split. Not a production issue for a POC.
+2. **`alert()` for login errors** — should be inline field validation.
+3. **TransactionDetails ignores URL param** — same static transaction always shown regardless of which tracking number was clicked.
+4. **Filters do not filter data** — all select/input filters on Transactions, Earnings, Billing, Complaints render but the filtering logic is not wired to the displayed data.
+5. **Pagination is non-functional** — Previous/Next buttons render with `disabled` on Previous, but clicking Next does nothing.
+6. **Logo loaded from external CDN** — `https://gogoxpress.com/wp-content/uploads/2022/07/gogox-logo.png` will fail offline.
+7. **Province/city/barangay coverage is incomplete** — AddressBook location cascade only covers a subset of Philippine locations.
+8. **SubAccountContext resets on reload** — no persistence layer.
+
+---
+
+## 9. Validation Results
+
+### Build (`npm run build`)
+```
+tsc -b && vite build
+✓ built in 6.73s
+0 errors, 0 warnings (TypeScript)
+1 warning (Vite): single chunk 871 kB — expected, recharts-related
+```
+
+### TypeScript (`tsc -b`)
+- 0 errors
+- All props typed explicitly
+- All context values typed with interfaces
+- No `any` escapes
+
+### Lint
+- No lint tool configured (`npm run lint` not defined in `package.json`)
+- ESLint / Prettier not installed
+
+---
+
+## 10. Next Recommended Steps
+
+**Priority 1 — Before showing to stakeholders:**
+1. Replace `alert()` login error with inline field error state (add `State=error` to Input DS component first)
+2. Fix TransactionDetails to actually use the `:id` param and look up the correct record from the mock data array
+
+**Priority 2 — Before any real user testing:**
+3. Add route guards (protect all `/dashboard/*` routes)
+4. Wire filter state to the data arrays on Transactions, Earnings, Billing, Complaints pages
+5. Make pagination functional (slice the data arrays)
+6. Add a `Textarea` UI component to replace the raw `<textarea>` elements
+
+**Priority 3 — Before production:**
+7. Add real authentication backend
+8. Replace static data arrays with API calls (React Query recommended)
+9. Add `React.lazy` to DataAnalytics route to code-split recharts
+10. Port the DS `Switch` component to code and use it in APIAccess environment toggle
+11. Add `localStorage` persistence for SubAccountContext (or move to backend session)
+12. Bundle the logo locally instead of loading from external CDN
