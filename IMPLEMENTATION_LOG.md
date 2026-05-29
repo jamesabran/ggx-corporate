@@ -1442,3 +1442,34 @@ Added a mock SLA/ops monitoring layer with No Movement / Breach SLA alerts and f
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (997 kB).
+
+---
+
+### Build Next — Data Analytics redesign + recharts lazy-load (ROADMAP item 4) (2026-05-30)
+
+Redesigned the Data Analytics page around the Business Review (Zenith PH) metric set and code-split the recharts-heavy route, resolving most of the long-standing bundle-size warning.
+
+**Analytics redesign (`src/app/pages/DataAnalytics.tsx`, rewritten)**
+- Replaced the old layout (and removed the peak-hours card, deemed not relevant).
+- Performance Overview KPI row: Total Orders, Fulfilled Orders, Delivery Efficiency, RTS Rate.
+- Secondary KPI row: SLA Hit/Miss, Returned / For Return, Claims, Amount Settled.
+- Charts: Monthly Order Volume (bar), Fulfillment vs RTS Trend (line), SLA Hit/Miss (donut), Volume Sharing by Region (pie).
+- Lists: Avg. Delivery Days by Area, Returns by Reason (bars), Claims Summary (status breakdown).
+- Region filter replaces the old brand filter.
+- **Derived from real mock modules:** Claims summary + total/open and settled amount from `getClaims()`; active SLA breaches from `getSlaAlerts()`. Volume/efficiency/region/returns remain curated mock aggregates.
+
+**recharts lazy-load (`routes.tsx`)**
+- `DataAnalytics` is now `React.lazy`-loaded and rendered inside `<Suspense>` (fallback: "Loading analytics…"); all other routes unchanged.
+- recharts now ships as a separate ~431 kB chunk (`DataAnalytics-*.js`); the main bundle dropped from ~997 kB to ~570 kB. Main is still marginally above Vite's 500 kB warning threshold, so the warning persists but is greatly reduced — further route-level splitting is an optional follow-up.
+
+**Files changed**
+- Modified: `src/app/pages/DataAnalytics.tsx` (rewrite), `src/app/routes.tsx` (lazy + Suspense), `ROADMAP.md` (statuses + cross-cutting note), `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- Most analytics figures are curated mock; only claims + active SLA breaches are derived live. Real metric wiring would need a backend/analytics source.
+- Period/region filters are UI-only (do not recompute the mock figures).
+- Main bundle (~570 kB) still slightly over the 500 kB warning; further code-splitting deferred.
+- Zendesk/real APIs, auth/route guards, persistence, dark mode remain deferred.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts split into a ~431 kB lazy chunk; main bundle ~570 kB (down from ~997 kB).

@@ -15,7 +15,7 @@ This roadmap captures the next planned enhancements from Business Development pl
 | 1 | Financial Security / OTP Verification | P1 | Feature (mock) | Done (2026-05-30) |
 | 2 | Claims & Cancellations | P2 | Feature (mock) | Done (2026-05-30) |
 | 3 | SLA Alerts / Operations Monitoring | P2 | Feature (mock) | Done (2026-05-30) |
-| 4 | Data Analytics Enhancements (Business Review redesign) | P3 — larger effort | Redesign | Planned |
+| 4 | Data Analytics Enhancements (Business Review redesign) | P3 — larger effort | Redesign | Done (2026-05-30) |
 
 **Rationale:** Stable IDs unblock robust scoping for notifications, claims, SLA, and analytics filters, so it goes first. Financial/OTP is a self-contained, high-value security layer that should land before the larger feature areas. Claims and SLA are peer operational features that both lean on stable IDs and the notification model. Data Analytics is a larger redesign driven by the Business Review metrics — treat it as a project, not a chart refresh.
 
@@ -115,6 +115,6 @@ This roadmap captures the next planned enhancements from Business Development pl
 
 ---
 
-## Cross-cutting deferred items (unchanged)
-- recharts `DataAnalytics` lazy-load / code-split (bundle ~970 kB) — separate performance task.
+## Cross-cutting deferred items
+- ~~recharts `DataAnalytics` lazy-load / code-split~~ — **Done (2026-05-30)** alongside the Analytics redesign. recharts now ships as a separate ~431 kB chunk; main bundle dropped from ~997 kB to ~570 kB. Main is still slightly above Vite's 500 kB warning threshold — further route-level code-splitting is an optional follow-up.
 - Real auth + route guards; real notification/Zendesk APIs; persistence; dark mode.

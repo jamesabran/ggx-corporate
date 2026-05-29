@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import { RootLayout } from './layouts/RootLayout';
 import { Login } from './pages/Login';
@@ -6,7 +7,9 @@ import { Transactions } from './pages/Transactions';
 import { TransactionDetails } from './pages/TransactionDetails';
 import { BulkUploader } from './pages/BulkUploader';
 import { BulkUploadSummary } from './pages/BulkUploadSummary';
-import { DataAnalytics } from './pages/DataAnalytics';
+// Code-split the recharts-heavy analytics page into its own chunk (keeps the
+// main bundle smaller; resolves the long-standing bundle-size warning).
+const DataAnalytics = lazy(() => import('./pages/DataAnalytics').then((m) => ({ default: m.DataAnalytics })));
 import { Earnings } from './pages/Earnings';
 import { BillingStatement } from './pages/BillingStatement';
 import { PaymentSettings } from './pages/PaymentSettings';
@@ -43,7 +46,14 @@ export const router = createBrowserRouter([
       { path: 'bulk-uploader', Component: BulkUploader },
       { path: 'bulk-uploader/summary/:id', Component: BulkUploadSummary },
       { path: 'bulk-upload-summary', Component: BulkUploadSummary },
-      { path: 'analytics', Component: DataAnalytics },
+      {
+        path: 'analytics',
+        element: (
+          <Suspense fallback={<div className="p-6 text-sm text-gray-500">Loading analytics…</div>}>
+            <DataAnalytics />
+          </Suspense>
+        ),
+      },
       { path: 'earnings', Component: Earnings },
       { path: 'billing', Component: BillingStatement },
       { path: 'payment-settings', Component: PaymentSettings },
