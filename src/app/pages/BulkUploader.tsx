@@ -5,12 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { Dialog } from '../components/ui/Dialog';
 import { AddressBook, type Address } from '../components/AddressBook';
-import { BulkPaymentOptions } from '../components/BulkPaymentOptions';
+import { PaymentMethodTabs } from '../components/PaymentMethodTabs';
 import { downloadBulkTemplate, BULK_TEMPLATE_COLUMNS } from '../data/bulkTemplate';
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
+import { PAYMENT_ACCOUNTS } from '../data/paymentAccounts';
 
 const recentUploads = [
   { id: 'UPLOAD-2026-05-19-001', fileName: 'bulk_shipments_may19.xlsx', uploadedAt: '2026-05-19 10:30 AM', totalRows: 5, validRows: 3, errorRows: 2, status: 'needs-review' },
@@ -36,7 +38,10 @@ export function BulkUploader() {
   const [firstMile, setFirstMile] = useState<'pickup' | 'dropoff'>('pickup');
   const [pickupDate, setPickupDate] = useState('');
   const [showDropoffs, setShowDropoffs] = useState(false);
+  const [billToId, setBillToId] = useState(PAYMENT_ACCOUNTS[0].id);
   const [uploadUrl, setUploadUrl] = useState('');
+
+  const billAccount = PAYMENT_ACCOUNTS.find((a) => a.id === billToId) ?? PAYMENT_ACCOUNTS[0];
   const [selectedFile, setSelectedFile] = useState<{ name: string; size: string } | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading'>('idle');
 
@@ -240,8 +245,18 @@ export function BulkUploader() {
               <CardTitle>Payment</CardTitle>
               <CardDescription>Choose how to pay for GoGo Xpress fees</CardDescription>
             </CardHeader>
-            <CardContent>
-              <BulkPaymentOptions billingAccount />
+            <CardContent className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Bill to account</label>
+                <Select value={billToId} onChange={(e) => setBillToId(e.target.value)}>
+                  {PAYMENT_ACCOUNTS.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}{a.contractType === 'billing' ? ' (Billing contract)' : ''}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <PaymentMethodTabs key={billToId} billingAvailable={billAccount.contractType === 'billing'} />
             </CardContent>
           </Card>
         </div>

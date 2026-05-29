@@ -648,3 +648,35 @@ Follow-up to the Bulk Upload flow (did not rebuild the page).
 
 **Validation**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Only the pre-existing recharts bundle-size warning.
+
+### Build Next — PaymentMethodTabs component + Bulk Upload integration (2026-05-29)
+
+**PaymentMethodTabs component (`src/app/components/PaymentMethodTabs.tsx`)**
+- Reusable, DS-styled payment selector. Core is a single bordered card with a top tab row for the four normal methods:
+  - Cash — selectable cards: "Pay upon pick-up" and "Deduct from order total", each with helper text.
+  - E-wallets — GCash (Available); Maya/GrabPay/coins.ph disabled with "Coming soon" badges.
+  - Credit or Debit card — frontend-only mock fields (cardholder name, card number, expiration, CVV) + Visa/Mastercard badge labels.
+  - Online banking — bank `Select` with "Select preferred bank" placeholder (mock bank list).
+- Active tab uses a blue underline + blue text; inactive tabs are muted. No real validation/tokenization/payment API.
+
+**Billing-contract behavior**
+- `billingAvailable` prop. When true, "Pay via billing" is shown as the primary/default selected option with copy "You'll receive an invoice after the service.", followed by an "Other payment options" section containing the normal tab card (visually secondary/muted until chosen; selectable). When false, only the normal tabs render — no billing option.
+
+**Bulk Upload integration**
+- Replaced the previous `BulkPaymentOptions` with `PaymentMethodTabs` in the Bulk Upload payment card and **deleted** `BulkPaymentOptions.tsx` (low-risk; it was only used here — consolidation done now rather than deferred).
+- Added a "Bill to account" `Select` driven by new mock `src/app/data/paymentAccounts.ts`. The chosen account's `contractType` drives `billingAvailable`; `key={billToId}` resets payment state when switching accounts.
+
+**Demo billing subaccount**
+- `PAYMENT_ACCOUNTS`: **Acme Luzon** = `contractType: 'billing'` (default selected → demonstrates the billing state); **Acme Corporation** = `standard` (demonstrates the normal tabs).
+
+**Files changed**
+- Added: `src/app/components/PaymentMethodTabs.tsx`, `src/app/data/paymentAccounts.ts`
+- Modified: `src/app/pages/BulkUploader.tsx`
+- Deleted: `src/app/components/BulkPaymentOptions.tsx`
+
+**Assumptions / deferred**
+- "Bill to account" is a local mock list, not yet sourced from SubAccountContext contract data. Switching away from billing is allowed (friendlier than fully disabling) since the app has no hard billing-lock model.
+- Payment selections are local/mock and not persisted to the upload batch. No backend billing/invoicing.
+
+**Validation**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Only the pre-existing recharts bundle-size warning.
