@@ -1,16 +1,27 @@
-// Mock "bill to" accounts for the Bulk Upload payment section.
+// Account billing-contract data for the Bulk Upload payment section.
 //
-// Payment via billing is only available to accounts whose contract includes
-// billing. Demo: Acme Luzon is a billing-contract account; Acme Corporation is
-// a standard (pay-now) account. No real billing/invoicing logic.
+// Finance/payment responsibility is handled at the parent account level, so
+// billing availability comes from the selected account/subaccount contract —
+// not from a separate UI selector. No real billing/invoicing logic.
 
-export interface PaymentAccount {
-  id: string;
-  name: string;
-  contractType: 'billing' | 'standard';
+export type ContractType = 'billing' | 'standard';
+
+// Demo contracts keyed by account name. Acme Luzon has a billing contract;
+// Acme Visayas is a standard (pay-now) account. The parent/Main Account
+// defaults to billing since finance is handled at the parent level.
+const ACCOUNT_CONTRACTS: Record<string, ContractType> = {
+  'Main Account': 'billing',
+  'Acme Corporation': 'billing',
+  'Acme Luzon': 'billing',
+  'Acme Visayas': 'standard',
+};
+
+/** Resolve the contract type for an account/subaccount name. */
+export function getContractType(accountName: string): ContractType {
+  return ACCOUNT_CONTRACTS[accountName] ?? 'billing';
 }
 
-export const PAYMENT_ACCOUNTS: PaymentAccount[] = [
-  { id: 'acme-luzon', name: 'Acme Luzon', contractType: 'billing' },
-  { id: 'acme-corp', name: 'Acme Corporation', contractType: 'standard' },
-];
+/** Whether the account/subaccount can pay via billing. */
+export function isBillingAccount(accountName: string): boolean {
+  return getContractType(accountName) === 'billing';
+}

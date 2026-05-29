@@ -680,3 +680,23 @@ Follow-up to the Bulk Upload flow (did not rebuild the page).
 
 **Validation**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Only the pre-existing recharts bundle-size warning.
+
+### Follow-up — PaymentMethodTabs cleanup & refinement (2026-05-29)
+
+- **Removed "Bill to account" selector.** Billing availability is now derived from the active account/subaccount contract via `isBillingAccount(getCurrentAccountName())` (SubAccountContext), not a separate dropdown. New helpers in `data/paymentAccounts.ts` (`getContractType`, `isBillingAccount`); contract lookup keyed by account name (Main Account/Acme Corporation/Acme Luzon = billing; Acme Visayas = standard).
+- **Billing vs non-billing:** billing accounts show "Pay via billing" (default-selected) + "You'll receive an invoice after the service." Non-billing accounts render the normal tabs directly with no billing option.
+- **Explicit "Other payment options":** now a selectable radio card. The normal tab card stays disabled until the user explicitly selects it.
+- **Disabled interaction fix (functional, not just visual):** when not selected, the tab card gets `pointer-events-none opacity-60 select-none` AND every interactive element (tab buttons, cash option buttons, wallet buttons, card inputs, bank select) receives the `disabled` attribute with guarded handlers — blocks tab switching, option selection, card entry, and bank selection. Disabled wallets (Maya/GrabPay/coins.ph) are also `disabled` + `cursor-not-allowed`, no longer clickable.
+- **Responsive layout:** Cash options use `grid-cols-1 sm:grid-cols-2` (side by side when space allows). E-wallets use `grid-cols-2 sm:grid-cols-4` (GCash/Maya/GrabPay/coins.ph side by side, wrap on small screens). More compact, less vertical height.
+- **Icon/logo support:** tab icons via Tabler (Cash/Wallet/Card/Bank). Added a `BrandLogo` component with a `BRAND_LOGOS` slot map (GCash, Maya, GrabPay, coins.ph, Visa, Mastercard) — colored initial-box fallback now, swap in real assets by setting `src` per brand later. No external packages added.
+- **Tab/card corner fix:** tab row now uses `rounded-t-lg overflow-hidden` and the active tab uses a plain `border-b-2` (removed the `-mb-px` hack) so active styling no longer overflows/clips the rounded top corners.
+
+**Files changed**
+- Modified: `src/app/components/PaymentMethodTabs.tsx` (rewritten), `src/app/data/paymentAccounts.ts` (contract lookup), `src/app/pages/BulkUploader.tsx` (removed selector, derive billing from active account)
+
+**Assumptions / deferred**
+- Contract data is a mock name-keyed lookup; non-billing state is shown when a standard-contract subaccount (e.g. Acme Visayas) is the active account. Deferred: real contract data from backend.
+- Brand logos are fallback boxes until real image assets are provided (slot map ready).
+
+**Validation**
+- `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).
