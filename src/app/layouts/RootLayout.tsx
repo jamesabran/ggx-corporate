@@ -27,6 +27,7 @@ import {
   IconSelector,
   IconArrowsLeftRight,
   IconUsers,
+  IconFileText,
 } from '@tabler/icons-react';
 import { useState, type ComponentType } from 'react';
 import { cn } from '../lib/utils';
@@ -67,6 +68,7 @@ const standardAccountNavigation: NavItem[] = [
       { name: 'Payment Settings',   href: '/dashboard/payment-settings', icon: IconCreditCard },
     ],
   },
+  { name: 'Reports',         href: '/dashboard/reports',       icon: IconFileText },
   { name: 'Address Book',    href: '/dashboard/address-book',  icon: IconMapPin },
   { name: 'API Integration', href: '/dashboard/api-access',    icon: IconCode },
   { name: 'Support Tickets', href: '/dashboard/support-tickets',    icon: IconMessage },
@@ -88,6 +90,7 @@ const mainAccountNavigation: NavItem[] = [
       { name: 'Payment Settings',   href: '/dashboard/payment-settings', icon: IconCreditCard },
     ],
   },
+  { name: 'Reports',             href: '/dashboard/reports',           icon: IconFileText },
   { name: 'Address Book',        href: '/dashboard/address-book',      icon: IconMapPin },
   { name: 'API Integration',     href: '/dashboard/api-access',        icon: IconCode },
   { name: 'Support Tickets',     href: '/dashboard/support-tickets',        icon: IconMessage },
@@ -101,6 +104,7 @@ const subaccountNavigation: NavItem[] = [
   { name: 'Transactions',    href: '/dashboard/transactions',  icon: IconPackage },
   { name: 'Bulk Uploader',   href: '/dashboard/bulk-uploader', icon: IconUpload },
   { name: 'Data Analytics',  href: '/dashboard/analytics',     icon: IconChartBar },
+  { name: 'Reports',         href: '/dashboard/reports',       icon: IconFileText },
   { name: 'Address Book',    href: '/dashboard/address-book',  icon: IconMapPin },
   { name: 'API Integration', href: '/dashboard/api-access',    icon: IconCode },
   { name: 'Support Tickets', href: '/dashboard/support-tickets',    icon: IconMessage },

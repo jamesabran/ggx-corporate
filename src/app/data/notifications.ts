@@ -111,7 +111,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Monthly billing report is ready',
     body: 'Your May 2026 billing report is available to download.',
     timestamp: minsAgo(720), read: false,
-    href: '/dashboard/billing', meta: { reportId: 'RPT-2026-05' },
+    href: '/dashboard/reports', meta: { reportId: 'RPT-2026-05' },
   },
   {
     id: 'ntf-sup-1', category: 'support',

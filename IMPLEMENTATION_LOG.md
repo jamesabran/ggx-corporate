@@ -1028,3 +1028,37 @@ Built a categorized corporate notification experience and wired completed Bulk U
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (942 kB).
+
+---
+
+### Build Next — Reports & Downloads page (2026-05-29)
+
+Added a dedicated Reports/Downloads experience and repointed `report` notifications to it (removing the prior "links to Billing" compromise).
+
+**Reports data (`src/app/data/reports.ts`, new)**
+- `ReportItem`: id, name, type (`billing` | `settlement` | `delivery` | `analytics`), period, generatedAt, status (`ready` | `generating` | `failed`), format, sizeLabel.
+- `REPORT_TYPE_META` (label + Tabler icon + subtle colors) and `REPORT_STATUS_META` (label + Badge variant).
+- `SEED_REPORTS`: 6 mock reports; `RPT-2026-05` matches the bell "Monthly billing report is ready" notification's `meta.reportId` so it lands on a real row.
+- `downloadReport(report)`: generates a real CSV (UTF-8 BOM, per-type mock summary rows) and triggers a browser download — same library-free fallback approach as the bulk template. No backend.
+
+**Reports page (`src/app/pages/Reports.tsx`, new)**
+- Summary cards (Total / Ready / Generating), a "Generate a Report" card (type Select + button), and an Available Reports table.
+- Generate is mock: appends a `generating` row, then flips it to `ready` after 2.5s (local state).
+- Per-row action: Download (ready, calls `downloadReport`), "Generating…" pulse (generating), Retry (failed). Type icon + status Badge per row. Empty state included.
+
+**Wiring**
+- Route `/dashboard/reports` added to `routes.tsx`.
+- `report` notification href repointed from `/dashboard/billing` to `/dashboard/reports`.
+- "Reports" sidebar nav item added to all three nav variants (standard / main / subaccount), after Analytics, using `IconFileText`.
+
+**Files changed**
+- Added: `src/app/data/reports.ts`, `src/app/pages/Reports.tsx`
+- Modified: `src/app/routes.tsx` (route), `src/app/data/notifications.ts` (report href), `src/app/layouts/RootLayout.tsx` (nav item + icon import)
+
+**Assumptions / deferred**
+- Reports are in-memory mock; generated reports reset on reload. No backend reporting service.
+- Downloads are CSV (no XLSX/PDF library); real exports would come from a backend.
+- "Retry" on failed reports is a stub (no failed seed currently). Date-range pickers / filtering deferred.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (949 kB).
