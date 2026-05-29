@@ -1062,3 +1062,40 @@ Added a dedicated Reports/Downloads experience and repointed `report` notificati
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (949 kB).
+
+---
+
+### Build Next — Support notifications wired to Submit Ticket flow + Zendesk boundary (2026-05-29)
+
+Made the `support` notification category functional and added a single stubbed Zendesk integration point.
+
+**Notification model — runtime push (`notifications.ts`)**
+- Added `RUNTIME_NOTIFICATIONS` (session-pushed) and `pushNotification(input)` so other modules can add notifications without importing the mock array. This is the extension point for future sources (Zendesk, advisories, etc.).
+- `getAllNotifications`, `getUnreadCount`, and `markAllNotificationsRead` now include runtime notifications.
+- The seeded support notification href now deep-links: `/dashboard/support-tickets?ticket=TCK-1043`.
+
+**Support tickets data (`src/app/data/supportTickets.ts`, new)**
+- `SupportTicket` model + module-level `SUPPORT_TICKETS` seed (moved off the page; includes `TCK-1043` so the bell notification deep-links to a real row).
+- `getTickets()`, `getTicket(id)`.
+- `submitTicket(input)`: generates an id, prepends the ticket, pushes a `support` notification ("Support ticket submitted" → `?ticket={id}`), and calls the Zendesk boundary.
+- **Zendesk integration boundary**: `syncTicketToZendesk(ticket)` — the single stubbed integration point (returns a mock external ref, `TODO(zendesk)`). When Zendesk is scoped, only this function changes; the UI and data flow stay intact.
+
+**Support Tickets page (`SupportTickets.tsx`)**
+- Consumes `getTickets()` / `submitTicket()` from the data module (no more inline ticket array).
+- Submit form is now controlled and functional: requires Issue Type, creates a ticket, refreshes the list, closes the form, and highlights the new ticket.
+- Deep-link handling via `useSearchParams`: `?new=1` auto-opens the submit form; `?ticket=ID` shows a dismissible "Showing ticket … from your notification" banner, highlights the row (`bg-blue-50`), and scrolls it into view.
+- "View" row action navigates to `?ticket=ID` (no longer a dead stub).
+- Status filter now actually filters; footer count is dynamic.
+
+**Files changed**
+- Added: `src/app/data/supportTickets.ts`
+- Modified: `src/app/data/notifications.ts` (runtime push + support href), `src/app/pages/SupportTickets.tsx` (data module + deep-links + functional submit)
+
+**Assumptions / deferred**
+- Zendesk NOT integrated — `syncTicketToZendesk` is a documented stub; submit + notifications are frontend/mock only.
+- Tickets are in-memory (module-level); submitted tickets reset on full reload.
+- Bell badge reflects a newly pushed support notification on the next RootLayout render (no global event bus — acceptable for mock).
+- No ticket detail page; deep-link highlights the row in the list (a full ticket detail view is deferred).
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (953 kB).

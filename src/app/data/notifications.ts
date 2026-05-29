@@ -118,9 +118,31 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Support ticket update',
     body: 'Ticket TCK-1043 has a new response from the support team.',
     timestamp: minsAgo(1440), read: true,
-    href: '/dashboard/support-tickets', meta: { ticketId: 'TCK-1043' },
+    href: '/dashboard/support-tickets?ticket=TCK-1043', meta: { ticketId: 'TCK-1043' },
   },
 ];
+
+// Runtime notifications pushed during the session (e.g. a submitted support
+// ticket). Kept separate from the seed so other modules can add notifications
+// without importing the mock array. This is the extension point future sources
+// (Zendesk, reports, advisories) should use.
+const RUNTIME_NOTIFICATIONS: AppNotification[] = [];
+
+/** Push a new notification for the current session (newest first). */
+export function pushNotification(
+  input: Omit<AppNotification, 'id' | 'timestamp' | 'read'> & { id?: string; timestamp?: string; read?: boolean },
+): void {
+  RUNTIME_NOTIFICATIONS.unshift({
+    id: input.id ?? `ntf-rt-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    timestamp: input.timestamp ?? new Date().toISOString(),
+    read: input.read ?? false,
+    category: input.category,
+    title: input.title,
+    body: input.body,
+    href: input.href,
+    meta: input.meta,
+  });
+}
 
 /** Convert a live Bulk Upload event into a unified notification. */
 function uploadEventToNotification(e: UploadNotificationEvent): AppNotification {
@@ -139,22 +161,25 @@ function uploadEventToNotification(e: UploadNotificationEvent): AppNotification 
   };
 }
 
-/** All notifications (live upload events + mock seed), newest first. */
+/** All notifications (live upload events + runtime + mock seed), newest first. */
 export function getAllNotifications(): AppNotification[] {
   const uploads = PENDING_NOTIFICATIONS.map(uploadEventToNotification);
-  return [...uploads, ...MOCK_NOTIFICATIONS].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  return [...uploads, ...RUNTIME_NOTIFICATIONS, ...MOCK_NOTIFICATIONS]
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 }
 
 /** Count of unread notifications (drives the bell red dot). */
 export function getUnreadCount(): number {
   const uploadsUnread = PENDING_NOTIFICATIONS.filter((e) => !e.read).length;
+  const runtimeUnread = RUNTIME_NOTIFICATIONS.filter((n) => !n.read).length;
   const mockUnread = MOCK_NOTIFICATIONS.filter((n) => !n.read).length;
-  return uploadsUnread + mockUnread;
+  return uploadsUnread + runtimeUnread + mockUnread;
 }
 
 /** Mark every notification read (called when the bell popover / page opens). */
 export function markAllNotificationsRead(): void {
   MOCK_NOTIFICATIONS.forEach((n) => { n.read = true; });
+  RUNTIME_NOTIFICATIONS.forEach((n) => { n.read = true; });
   PENDING_NOTIFICATIONS.forEach((e) => { e.read = true; });
 }
 

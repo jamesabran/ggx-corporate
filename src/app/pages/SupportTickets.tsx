@@ -1,20 +1,13 @@
-import { useState } from 'react';
-import { IconPlus, IconMessage, IconEye } from '@tabler/icons-react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
+import { IconPlus, IconMessage, IconEye, IconInfoCircle, IconX } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
-
-const tickets = [
-  { id: 'TKT-2024-00847', trackingNumber: 'GGX-2024-89236', issueType: 'Delivery Failed', status: 'open', priority: 'high', created: '2026-05-18', lastUpdate: '2 hours ago', assignee: 'Support Team' },
-  { id: 'TKT-2024-00846', trackingNumber: 'GGX-2024-89231', issueType: 'Package Damaged', status: 'in-review', priority: 'medium', created: '2026-05-17', lastUpdate: '1 day ago', assignee: 'Claims Dept.' },
-  { id: 'TKT-2024-00845', trackingNumber: 'GGX-2024-89220', issueType: 'Delayed Delivery', status: 'resolved', priority: 'low', created: '2026-05-15', lastUpdate: '3 days ago', assignee: 'Support Team' },
-  { id: 'TKT-2024-00844', trackingNumber: 'GGX-2024-89215', issueType: 'Wrong Address', status: 'closed', priority: 'medium', created: '2026-05-14', lastUpdate: '4 days ago', assignee: 'Operations' },
-  { id: 'TKT-2024-00843', trackingNumber: 'GGX-2024-89208', issueType: 'Billing Inquiry', status: 'resolved', priority: 'low', created: '2026-05-13', lastUpdate: '5 days ago', assignee: 'Billing Team' },
-  { id: 'TKT-2024-00842', trackingNumber: 'GGX-2024-89195', issueType: 'Missing Package', status: 'in-review', priority: 'high', created: '2026-05-12', lastUpdate: '6 days ago', assignee: 'Claims Dept.' },
-];
+import { getTickets, submitTicket, type SupportTicket } from '../data/supportTickets';
 
 const statusConfig = {
   open: { variant: 'pending' as const, label: 'Open' },
@@ -37,8 +30,49 @@ const summaryCards = [
 ];
 
 export function SupportTickets() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showNewTicketForm, setShowNewTicketForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
+
+  // Local copy of the ticket list so a submitted ticket appears immediately.
+  const [tickets, setTickets] = useState<SupportTicket[]>(() => [...getTickets()]);
+
+  // New-ticket form state.
+  const [form, setForm] = useState({ trackingNumber: '', issueType: '', description: '' });
+
+  // Deep-link handling from notifications: ?new=1 opens the form, ?ticket=ID
+  // highlights and scrolls to that ticket row.
+  const highlightId = searchParams.get('ticket');
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') setShowNewTicketForm(true);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (highlightId && rowRefs.current[highlightId]) {
+      rowRefs.current[highlightId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightId]);
+
+  const handleSubmit = () => {
+    if (!form.issueType) return; // issue type required
+    const created = submitTicket(form);
+    setTickets([...getTickets()]);
+    setForm({ trackingNumber: '', issueType: '', description: '' });
+    setShowNewTicketForm(false);
+    // Highlight the newly created ticket.
+    setSearchParams({ ticket: created.id });
+  };
+
+  const clearHighlight = () => {
+    searchParams.delete('ticket');
+    setSearchParams(searchParams);
+  };
+
+  const visibleTickets = tickets.filter(
+    (t) => statusFilter === 'all' || t.status === statusFilter
+  );
 
   return (
     <div className="p-6 space-y-6">
@@ -52,6 +86,18 @@ export function SupportTickets() {
           Submit a Ticket
         </Button>
       </div>
+
+      {highlightId && (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5">
+          <div className="flex items-center gap-2.5">
+            <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <p className="text-sm text-blue-800">Showing ticket <strong>{highlightId}</strong> from your notification.</p>
+          </div>
+          <button onClick={clearHighlight} className="p-1 rounded text-blue-400 hover:text-blue-600 hover:bg-blue-100 transition-colors" aria-label="Clear highlight">
+            <IconX className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {summaryCards.map((c) => (
@@ -78,11 +124,15 @@ export function SupportTickets() {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Tracking Number</label>
-                <Input placeholder="GGX-2024-XXXXX" />
+                <Input
+                  placeholder="GGX-2024-XXXXX"
+                  value={form.trackingNumber}
+                  onChange={(e) => setForm({ ...form, trackingNumber: e.target.value })}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Issue Type</label>
-                <Select>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Issue Type <span className="text-red-500">*</span></label>
+                <Select value={form.issueType} onChange={(e) => setForm({ ...form, issueType: e.target.value })}>
                   <option value="">Select issue type</option>
                   <option value="delayed">Delayed Delivery</option>
                   <option value="failed">Delivery Failed</option>
@@ -100,11 +150,13 @@ export function SupportTickets() {
               <textarea
                 className="w-full h-32 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 placeholder="Provide details about the issue..."
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
             </div>
 
             <div className="flex gap-3">
-              <Button>Submit Ticket</Button>
+              <Button disabled={!form.issueType} onClick={handleSubmit}>Submit Ticket</Button>
               <Button variant="outline" onClick={() => setShowNewTicketForm(false)}>Cancel</Button>
             </div>
           </CardContent>
@@ -150,8 +202,12 @@ export function SupportTickets() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tickets.map((ticket) => (
-                <TableRow key={ticket.id}>
+              {visibleTickets.map((ticket) => (
+                <TableRow
+                  key={ticket.id}
+                  ref={(el) => { rowRefs.current[ticket.id] = el; }}
+                  className={ticket.id === highlightId ? 'bg-blue-50' : ''}
+                >
                   <TableCell className="font-medium">{ticket.id}</TableCell>
                   <TableCell>{ticket.trackingNumber}</TableCell>
                   <TableCell>{ticket.issueType}</TableCell>
@@ -168,7 +224,7 @@ export function SupportTickets() {
                   <TableCell className="text-gray-600">{ticket.assignee}</TableCell>
                   <TableCell className="text-gray-600">{ticket.lastUpdate}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => setSearchParams({ ticket: ticket.id })}>
                       <IconEye className="w-4 h-4 mr-1" />
                       View
                     </Button>
@@ -179,7 +235,7 @@ export function SupportTickets() {
           </Table>
 
           <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600">Showing 6 of 147 tickets</p>
+            <p className="text-sm text-gray-600">Showing {visibleTickets.length} of {tickets.length} tickets</p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled>Previous</Button>
               <Button variant="outline" size="sm">Next</Button>
