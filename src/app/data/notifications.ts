@@ -98,13 +98,14 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Pickup cutoff advisory',
     body: 'Same-day pickup cutoff moves to 9:00 AM on June 12 due to holiday volume.',
     timestamp: minsAgo(600), read: false,
-    // Informational — no link.
+    href: '/dashboard/advisories',
   },
   {
     id: 'ntf-svc-2', category: 'service_advisory',
     title: 'Temporary service delay in selected areas',
     body: 'Deliveries to parts of Cebu may be delayed due to weather conditions.',
     timestamp: minsAgo(2880), read: true,
+    href: '/dashboard/advisories',
   },
   {
     id: 'ntf-rpt-1', category: 'report',

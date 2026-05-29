@@ -1135,3 +1135,33 @@ Added a real ticket detail page with a conversation thread + reply, replacing th
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (960 kB).
+
+---
+
+### Build Next — Service Advisories page (2026-05-29)
+
+Gave the last link-less notification category a dedicated read surface. All six notification categories are now actionable.
+
+**Service advisories data (`src/app/data/serviceAdvisories.ts`, new)**
+- `ServiceAdvisory` model: id, title, body, severity (`info` | `warning` | `critical`), status (`active` | `scheduled` | `resolved`), affectedAreas[], effectiveFrom/To, postedAt.
+- `SEVERITY_META` (icon + colors + Badge variant) and `STATUS_META` (Badge variant).
+- Seed: ADV-002 (critical/active — Cebu weather delay), ADV-001 (warning/scheduled — Jun 12 pickup cutoff), ADV-003 (info/resolved — API maintenance). ADV-001/002 mirror the seeded `service_advisory` notifications.
+
+**Service Advisories page (`src/app/pages/ServiceAdvisories.tsx`, new)**
+- Route `/dashboard/advisories`. Header shows active count; status filter (All/Active/Scheduled/Resolved).
+- Each advisory is a card: severity icon + title + severity & status badges + body + effective date range + affected-area chips + posted time. Resolved items are dimmed. Empty state for filtered-out views.
+
+**Notification wiring**
+- Both `service_advisory` seed notifications now link to `/dashboard/advisories` (previously informational/no link).
+- This closes the category-coverage gap: bulk_upload → batch summary, transaction → transaction, account → users/billing, service_advisory → advisories, report → reports, support → ticket detail.
+
+**Files changed**
+- Added: `src/app/data/serviceAdvisories.ts`, `src/app/pages/ServiceAdvisories.tsx`
+- Modified: `src/app/routes.tsx` (route), `src/app/data/notifications.ts` (advisory hrefs)
+
+**Assumptions / deferred**
+- Advisories are static mock; no backend/ops feed. No per-advisory detail route (the list card carries full content). No deep-link highlight to a specific advisory (list is short).
+- Not added to the sidebar nav (reachable via notifications, consistent with the Notifications page); a nav entry can be added later if desired.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (965 kB).
