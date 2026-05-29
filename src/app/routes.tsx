@@ -13,6 +13,7 @@ import { PaymentSettings } from './pages/PaymentSettings';
 import { AddressBookPage } from './pages/AddressBookPage';
 import { APIAccess } from './pages/APIAccess';
 import { SupportTickets } from './pages/SupportTickets';
+import { SupportTicketDetail } from './pages/SupportTicketDetail';
 import { SubAccounts } from './pages/SubAccounts';
 import { Settings } from './pages/Settings';
 import { EnableSubAccountsIntro } from './pages/EnableSubAccounts';
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
       { path: 'address-book', Component: AddressBookPage },
       { path: 'api-access', Component: APIAccess },
       { path: 'support-tickets', Component: SupportTickets },
+      { path: 'support-tickets/:id', Component: SupportTicketDetail },
       { path: 'complaints', element: <Navigate to="/dashboard/support-tickets" replace /> },
       { path: 'subaccounts', Component: SubAccounts },
       { path: 'subaccounts/enable', Component: EnableSubAccountsIntro },

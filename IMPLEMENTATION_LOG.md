@@ -1099,3 +1099,39 @@ Made the `support` notification category functional and added a single stubbed Z
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (953 kB).
+
+---
+
+### Build Next — Support Ticket detail view (2026-05-29)
+
+Added a real ticket detail page with a conversation thread + reply, replacing the prior row-highlight deep-link.
+
+**Conversation thread (`supportTickets.ts`)**
+- `TicketMessage` model + per-ticket `TICKET_MESSAGES` store (TCK-1043 seeded with a 3-message thread).
+- `getTicketMessages(id)` lazily synthesizes an opening customer message + support acknowledgement for tickets without an explicit thread.
+- `addTicketReply(id, body)` appends a customer message, bumps `lastUpdate`, reopens resolved/closed tickets, and calls the Zendesk reply stub.
+- `postTicketReplyToZendesk(ticketId, message)` — second stubbed Zendesk boundary (replies), `TODO(zendesk)`.
+
+**Detail page (`src/app/pages/SupportTicketDetail.tsx`, new)**
+- Route `/dashboard/support-tickets/:id`.
+- Header with issue type, status + priority badges, ticket id.
+- Two-column layout: conversation thread (customer right/blue, support left/gray, avatars) with a reply textarea + Send (calls `addTicketReply`, refreshes thread); details sidebar (tracking number, assignee, created, last update).
+- Not-found state for unknown ids.
+
+**Deep-link + navigation repointing**
+- Seed support notification href → `/dashboard/support-tickets/TCK-1043`.
+- `submitTicket` notification href → `/dashboard/support-tickets/{id}`.
+- List page: removed the `?ticket=` highlight banner/row-scroll logic (replaced by the detail route). Rows and the "View" action now navigate to the detail page; ticket id rendered as a blue link. `?new=1` (open submit form) retained. After submit, navigates straight to the new ticket's detail page.
+
+**Files changed**
+- Added: `src/app/pages/SupportTicketDetail.tsx`
+- Modified: `src/app/data/supportTickets.ts` (thread + reply + reply stub), `src/app/data/notifications.ts` (support href), `src/app/routes.tsx` (detail route), `src/app/pages/SupportTickets.tsx` (navigate to detail, removed highlight logic)
+
+**Assumptions / deferred**
+- Conversation threads and replies are in-memory (module-level); reset on full reload. No backend.
+- Zendesk still not integrated — `syncTicketToZendesk` (create) and `postTicketReplyToZendesk` (reply) are the two documented stubs.
+- No attachments, internal notes, or status-change controls on the detail page (deferred).
+- Service Advisories remain link-less (next candidate for a dedicated read surface).
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (960 kB).

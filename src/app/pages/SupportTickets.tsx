@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router';
-import { IconPlus, IconMessage, IconEye, IconInfoCircle, IconX } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { IconPlus, IconMessage, IconEye } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -30,7 +30,8 @@ const summaryCards = [
 ];
 
 export function SupportTickets() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [showNewTicketForm, setShowNewTicketForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -40,20 +41,10 @@ export function SupportTickets() {
   // New-ticket form state.
   const [form, setForm] = useState({ trackingNumber: '', issueType: '', description: '' });
 
-  // Deep-link handling from notifications: ?new=1 opens the form, ?ticket=ID
-  // highlights and scrolls to that ticket row.
-  const highlightId = searchParams.get('ticket');
-  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
-
+  // Deep-link from notifications: ?new=1 opens the submit form.
   useEffect(() => {
     if (searchParams.get('new') === '1') setShowNewTicketForm(true);
   }, [searchParams]);
-
-  useEffect(() => {
-    if (highlightId && rowRefs.current[highlightId]) {
-      rowRefs.current[highlightId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [highlightId]);
 
   const handleSubmit = () => {
     if (!form.issueType) return; // issue type required
@@ -61,13 +52,8 @@ export function SupportTickets() {
     setTickets([...getTickets()]);
     setForm({ trackingNumber: '', issueType: '', description: '' });
     setShowNewTicketForm(false);
-    // Highlight the newly created ticket.
-    setSearchParams({ ticket: created.id });
-  };
-
-  const clearHighlight = () => {
-    searchParams.delete('ticket');
-    setSearchParams(searchParams);
+    // Open the newly created ticket's detail view.
+    navigate(`/dashboard/support-tickets/${created.id}`);
   };
 
   const visibleTickets = tickets.filter(
@@ -87,17 +73,6 @@ export function SupportTickets() {
         </Button>
       </div>
 
-      {highlightId && (
-        <div className="flex items-center justify-between gap-3 rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5">
-          <div className="flex items-center gap-2.5">
-            <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
-            <p className="text-sm text-blue-800">Showing ticket <strong>{highlightId}</strong> from your notification.</p>
-          </div>
-          <button onClick={clearHighlight} className="p-1 rounded text-blue-400 hover:text-blue-600 hover:bg-blue-100 transition-colors" aria-label="Clear highlight">
-            <IconX className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {summaryCards.map((c) => (
@@ -205,10 +180,10 @@ export function SupportTickets() {
               {visibleTickets.map((ticket) => (
                 <TableRow
                   key={ticket.id}
-                  ref={(el) => { rowRefs.current[ticket.id] = el; }}
-                  className={ticket.id === highlightId ? 'bg-blue-50' : ''}
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/dashboard/support-tickets/${ticket.id}`)}
                 >
-                  <TableCell className="font-medium">{ticket.id}</TableCell>
+                  <TableCell className="font-medium text-blue-600">{ticket.id}</TableCell>
                   <TableCell>{ticket.trackingNumber}</TableCell>
                   <TableCell>{ticket.issueType}</TableCell>
                   <TableCell>
@@ -224,7 +199,11 @@ export function SupportTickets() {
                   <TableCell className="text-gray-600">{ticket.assignee}</TableCell>
                   <TableCell className="text-gray-600">{ticket.lastUpdate}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => setSearchParams({ ticket: ticket.id })}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/support-tickets/${ticket.id}`); }}
+                    >
                       <IconEye className="w-4 h-4 mr-1" />
                       View
                     </Button>

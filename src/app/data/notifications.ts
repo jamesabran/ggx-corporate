@@ -118,7 +118,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Support ticket update',
     body: 'Ticket TCK-1043 has a new response from the support team.',
     timestamp: minsAgo(1440), read: true,
-    href: '/dashboard/support-tickets?ticket=TCK-1043', meta: { ticketId: 'TCK-1043' },
+    href: '/dashboard/support-tickets/TCK-1043', meta: { ticketId: 'TCK-1043' },
   },
 ];
 

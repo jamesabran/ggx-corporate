@@ -48,6 +48,65 @@ export function getTicket(id: string): SupportTicket | undefined {
   return SUPPORT_TICKETS.find((t) => t.id === id);
 }
 
+// --- Conversation thread ---------------------------------------------------
+
+export interface TicketMessage {
+  id: string;
+  author: string;
+  role: 'customer' | 'support';
+  body: string;
+  timestamp: string;
+}
+
+// Per-ticket message threads (lazily seeded for tickets without an explicit one).
+const TICKET_MESSAGES: Record<string, TicketMessage[]> = {
+  'TCK-1043': [
+    { id: 'TCK-1043-m1', author: 'You',          role: 'customer', body: 'Delivery for GGX-2024-89240 failed and the rider marked it undelivered. The recipient confirms they were available. Please advise.', timestamp: 'May 19, 2026, 10:02 AM' },
+    { id: 'TCK-1043-m2', author: 'Support Team', role: 'support',  body: 'Thanks for flagging this. We have escalated to operations and requested a re-attempt. We will update you within 24 hours.', timestamp: 'May 19, 2026, 11:40 AM' },
+    { id: 'TCK-1043-m3', author: 'Support Team', role: 'support',  body: 'A re-delivery has been scheduled for tomorrow morning. We have added a note for the rider to call on arrival.', timestamp: '2 hours ago' },
+  ],
+};
+
+/** Get the message thread for a ticket, synthesizing an opening exchange if none exists. */
+export function getTicketMessages(id: string): TicketMessage[] {
+  if (!TICKET_MESSAGES[id]) {
+    const t = getTicket(id);
+    if (!t) return [];
+    TICKET_MESSAGES[id] = [
+      {
+        id: `${id}-m1`, author: 'You', role: 'customer',
+        body: t.description || `Issue reported: ${t.issueType} for ${t.trackingNumber}.`,
+        timestamp: t.created,
+      },
+      {
+        id: `${id}-m2`, author: t.assignee, role: 'support',
+        body: `Thanks for reaching out. Ticket ${id} has been received and is currently ${t.status}. Our ${t.assignee} will follow up shortly.`,
+        timestamp: t.created,
+      },
+    ];
+  }
+  return TICKET_MESSAGES[id];
+}
+
+/** Append a customer reply to a ticket thread (frontend mock). */
+export function addTicketReply(id: string, body: string): TicketMessage | null {
+  const ticket = getTicket(id);
+  if (!ticket || !body.trim()) return null;
+  const thread = getTicketMessages(id);
+  const message: TicketMessage = {
+    id: `${id}-m${thread.length + 1}`,
+    author: 'You',
+    role: 'customer',
+    body: body.trim(),
+    timestamp: 'Just now',
+  };
+  thread.push(message);
+  ticket.lastUpdate = 'Just now';
+  if (ticket.status === 'resolved' || ticket.status === 'closed') ticket.status = 'open';
+  postTicketReplyToZendesk(id, message);
+  return message;
+}
+
 // Map the form's issue-type value to a human-readable label.
 const ISSUE_LABELS: Record<string, string> = {
   delayed: 'Delayed Delivery',
@@ -98,7 +157,7 @@ export function submitTicket(input: SubmitTicketInput): SupportTicket {
     category: 'support',
     title: 'Support ticket submitted',
     body: `${id} (${ticket.issueType}) was created. Our team will respond shortly.`,
-    href: `/dashboard/support-tickets?ticket=${id}`,
+    href: `/dashboard/support-tickets/${id}`,
     meta: { ticketId: id, trackingNumber: ticket.trackingNumber },
   });
 
@@ -112,4 +171,10 @@ export function submitTicket(input: SubmitTicketInput): SupportTicket {
 export function syncTicketToZendesk(ticket: SupportTicket): { externalRef: string } {
   // TODO(zendesk): POST to the Zendesk Tickets API and return the created id.
   return { externalRef: `mock-zd-${ticket.id}` };
+}
+
+/** Post a customer reply to Zendesk (stub — same integration boundary). */
+export function postTicketReplyToZendesk(ticketId: string, message: TicketMessage): void {
+  // TODO(zendesk): POST the reply as a comment on the synced Zendesk ticket.
+  void ticketId; void message;
 }
