@@ -2,8 +2,12 @@
 
 Compact checkpoint for continuing in a fresh Claude session. For detail, see `IMPLEMENTATION_LOG.md`, `GGX_CORPORATE_APP_STRUCTURE.md`, `DS_USAGE_GUIDE.md`, `GGX_CORPORATE_DS_CONTEXT.md`.
 
-## 1. Current state
-Working React SPA, demo/mock-only (no backend). `npm run build` passes — 0 TS errors (one pre-existing recharts bundle-size warning). All 19 routes render. Login mock: `max@email.com` / `!1234qwer`.
+## 1. Current state (checkpoint 2026-05-30)
+Working React SPA, demo/mock-only (no backend). `npm run build` passes — 0 TS errors. recharts is code-split into its own ~431 kB lazy chunk; main bundle ~574 kB (still marginally over Vite's 500 kB warning). All routes render and are **auth-guarded**.
+
+**Foundations complete:** mock authentication, route guards (ProtectedRoute + AdminRoute), localStorage persistence, account-scoped notifications, and Admin/Manager role behavior. All five Business Development roadmap items shipped (see §13). Next production-track foundation: **backend/API integration** (start with real auth).
+
+**Mock logins** (password `!1234qwer`): `max@email.com` (Admin / parent) · `manager@email.com` (Manager / Acme Luzon). Demo quick-login buttons on the Login page.
 
 ## 2. Tech stack
 React 18 + TypeScript + Vite 6 + Tailwind v4 + react-router 7. Icons: `@tabler/icons-react`. No spreadsheet/icon/UI libs beyond these — **do not add dependencies** without explicit approval.
@@ -19,7 +23,7 @@ React 18 + TypeScript + Vite 6 + Tailwind v4 + react-router 7. Icons: `@tabler/i
 Primary `#0088C9` via CSS vars; use semantic tokens, not hardcoded hex. Button variants: `default`(primary)/`secondary`/`outline`/`ghost`/`link`/`destructive`; sizes `default`/`sm`/`lg`/`icon`. Badge incl. status variants success/info/warning/danger/pending. Tabler icons only. Disabled = `opacity-50 pointer-events-none`; focus = `focus-visible:ring-2`. Modals via `Dialog`/`ConfirmDialog` (never new inline `fixed inset-0` modals). Do not change global DS tokens.
 
 ## 5. Major completed features (recent commits)
-Transaction detail `:id` lookup; PaymentMethodTabs (+cleanup); Bulk Upload flow + template/drop-off/payment; reusable Dialog/ConfirmDialog consolidation; Users & Permissions access mgmt; Payment Settings edit/remove; pickup-location API in Address Book; topbar/login dead-link fixes; Select chevron + button icon fixes.
+Foundations: mock auth + route guards + localStorage persistence; stable subaccount IDs; account-scoped notifications. BD roadmap: Financial/OTP, Claims & Cancellations, SLA Alerts, Data Analytics redesign (+recharts code-split). Earlier: Bulk Upload flow (header check → mapping → processing → review → booking), PaymentMethodTabs, reusable Dialog/ConfirmDialog, Notifications (tabbed + bell), Reports, Service Advisories, Support Tickets (+detail), Users & Permissions, Address Book pickup-location API.
 
 ## 6. Product decisions
 - Access model: **Admin** (one, all accounts) + **Manager** (one per subaccount). No Owner/Finance/Viewer/Operator, no Level.
@@ -55,14 +59,24 @@ Reusable Dialog/ConfirmDialog now exist (gap closed). Remaining: Textarea, Switc
 
 Other shipped systems: categorized **Notifications** (account-scope visibility, tabbed page, bell, sidebar), **Reports & Downloads**, **Service Advisories**, **Support Tickets** (+ detail, mock Zendesk boundary), full **Bulk Upload** flow, Subaccounts + Users & Permissions, Address Book (live pickup API).
 
-## 14. Current limitations & next recommended task
-**Mock/frontend-only limits:** no backend; in-memory/static data **resets on full reload**; login is a hardcoded mock with **no real auth and no route guards** (any `/dashboard/*` URL is directly reachable); demo user is always Admin (Manager visibility implemented but untriggered); OTP/Zendesk/analytics figures are mock.
+**Foundation/stability layer (2026-05-30):**
+- **Mock auth** (`contexts/AuthContext.tsx`): `AuthUser { name, email, role, accountId, accountName }`; demo Admin + Manager; session persisted to `localStorage`. `useAuth()` is the single source of truth for role + scoped account id.
+- **Route guards** (`components/RouteGuards.tsx`): `ProtectedRoute` wraps `/dashboard` (unauthenticated → Login); `AdminRoute` wraps Admin-only routes → in-shell `AccessDenied` for Managers.
+- **Admin vs Manager access:** Admin = parent + all subaccount areas. Manager = subaccount nav only; **no** Finance/Payment Settings/Earnings/Billing/Reports/Subaccounts/Users (route-guarded + nav-hidden + account switcher hidden). Financial actions stay Admin-only and OTP-gated.
+- **Persistence** (`lib/storage.ts`, namespaced `ggx.`): auth session, subaccount selection, seed + runtime notification read-state, claims (+cancellations), SLA alerts, recent uploads. Not persisted: OTP values, upload-event read-state, security-log/attention-email events, transient form state.
+- **Notification scoping:** `useNotificationViewer()` derives from `useAuth()` — Manager → their subaccount id + global; Admin → all (or drilled-in subaccount). Visibility matches on `accountId` only.
+- **Bulk Upload scoping:** a Manager uploads under their assigned subaccount (id/name/scope from the session); Admin uses the active `SubAccountContext` account. Upload records/events + completion notifications scope accordingly.
 
-**Remaining foundations (sequence): real authentication + route guards → persistence/localStorage → backend/API integration.**
+## 14. Limitations, risks & next horizon
+**Mock/frontend-only limits:** no backend/API; all data is in-memory/static + `localStorage` (demo fallback only); auth is mock (`DEMO_USERS`, fixed password); analytics figures, OTP (`123456`), and Zendesk are mock; main bundle ~574 kB (slightly over warning).
 
-**Next recommended task: Authentication + Route Guards.** Add an auth/session context (mock-backed) exposing `isAuthenticated` + current user/role/account; wrap `/dashboard/*` in a `ProtectedRoute`/guard that redirects unauthenticated users to `/`; wire the existing mock login/logout to set/clear the session; structure the boundary so a real auth API drops in cleanly. **Do this before persistence** — persisted state should be keyed to the authenticated user/account, and the session becomes the single source of truth (role/account id) that persistence, real APIs, and notification scoping all consume, avoiding rework.
+**Remaining risks:** no real auth/session security (client-side only); no server-side authorization (guards are UI-only); localStorage is unencrypted and per-browser; Manager visibility is correct in notifications/bulk but a few non-critical reads (PaymentMethodTabs billing) still derive from account name; no real roles/permissions service.
 
-See **ROADMAP.md** for the full completed log, shipped feature set, next planning horizon, and auth risks/assumptions.
+**Next planning horizon — Backend / API integration** (last production-track foundation): **start with real authentication + session handling**, then replace mock data modules (transactions, claims, SLA, notifications, analytics) behind async services. Keep persistence/local mock state **only as a demo fallback** until backend exists.
+
+**Next recommended task:** Introduce a data-access seam — convert mock data modules to async service functions behind a thin API client, starting with **auth** (replace `DEMO_USERS` with a real auth/session endpoint) and one read path (transactions), keeping the mock as a fallback adapter so the UI is unchanged while endpoints land. Define API contracts first. Scope as a multi-step task.
+
+**Read first (future sessions):** `PROJECT_HANDOFF.md` (this file) → `ROADMAP.md` (status + horizon) → `IMPLEMENTATION_LOG.md` (per-task detail). Key code: `contexts/AuthContext.tsx`, `components/RouteGuards.tsx`, `lib/storage.ts`, `contexts/SubAccountContext.tsx`, `data/accounts.ts`, `data/notifications.ts`, `routes.tsx`, `layouts/RootLayout.tsx`.
 
 ## 15. Prompting rules for future sessions
 Scope tightly (named files/flows). Mock/frontend-only unless backend pattern exists. No new deps without approval. Preserve DS + routes; don't touch unrelated pages. Run `npm run build` after edits; fix only safe errors. Update `IMPLEMENTATION_LOG.md` briefly per task. Note pre-existing uncommitted changes before staging.

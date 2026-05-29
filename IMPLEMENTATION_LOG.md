@@ -1570,3 +1570,15 @@ Two consistency follow-ups to the auth/persistence layer.
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~431 kB chunk; main bundle ~574 kB.
+
+---
+
+### Checkpoint / Docs — Foundation & stability complete (2026-05-30)
+
+Documentation-only update (no app feature code changed). Refreshed the handoff/checkpoint after the foundation/stability work.
+
+- **PROJECT_HANDOFF.md** updated: §1 current state (auth-guarded, foundations complete, two demo logins, recharts code-split); §5 completed-features summary; §13 now documents the foundation/stability layer (mock auth, route guards, Admin/Manager access, persistence, notification scoping, Bulk Upload scoping) alongside the five shipped roadmap items; §14 rewritten as Limitations, Risks & Next Horizon — backend/API integration is the next foundation, starting with real authentication; added a "Read first" pointer list for future sessions.
+- **ROADMAP.md** already current (foundations 1–2 marked done last task; backend/API is "next") — no change needed.
+- No build run needed — docs only.
+
+**Files changed:** `PROJECT_HANDOFF.md`, `IMPLEMENTATION_LOG.md`.
