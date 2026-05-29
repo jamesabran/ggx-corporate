@@ -1,9 +1,26 @@
 import { useNavigate } from 'react-router';
-import { IconBuilding, IconArrowRight } from '@tabler/icons-react';
+import { IconBuilding, IconArrowRight, IconEdit } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { AddressDisplayCard } from '../components/AddressDisplayCard';
+import type { Address } from '../components/AddressBook';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+
+// Default pickup address shown on the account. Address Book is the source of
+// truth for creating/editing addresses, so this is display-only here.
+const companyAddress: Address = {
+  id: 'company-default',
+  label: 'office',
+  name: 'Acme Corporation',
+  mobileNumber: '+63 917 123 4567',
+  province: 'Metro Manila',
+  city: 'Makati',
+  barangay: 'Poblacion',
+  otherDetails: '5th Floor, ABC Building, Ayala Avenue',
+  postalCode: '1226',
+  isPreferred: true,
+};
 
 export function Settings() {
   const navigate = useNavigate();
@@ -65,22 +82,21 @@ export function Settings() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
-              <Input defaultValue="123 Ayala Avenue, Suite 100" />
-            </div>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">City</label>
-                <Input defaultValue="Makati City" />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-gray-700">Pickup Address</label>
+                <Button variant="ghost" size="sm" className="cursor-pointer" onClick={() => navigate('/dashboard/address-book')}>
+                  <IconEdit className="w-3.5 h-3.5 mr-1.5" />
+                  Edit in Address Book
+                </Button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Province</label>
-                <Input defaultValue="Metro Manila" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">ZIP Code</label>
-                <Input defaultValue="1226" />
-              </div>
+              <Card className="border-blue-300 ring-1 ring-blue-200">
+                <CardContent className="p-5">
+                  <AddressDisplayCard address={companyAddress} />
+                </CardContent>
+              </Card>
+              <p className="text-xs text-gray-500 mt-2">
+                Addresses are managed in the Address Book to keep pickup-supported locations consistent.
+              </p>
             </div>
             <div className="flex gap-3 pt-4">
               <Button>Save Changes</Button>

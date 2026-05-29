@@ -440,3 +440,58 @@ Implementation audit of the working baseline. No code changes made. All 19 route
 **Defer:** real API integration; auth backend; SubAccountContext persistence; dark mode; auto-pay; webhook save/test.
 
 **DS component gaps (in DS, not yet in code):** Textarea, Switch, Checkbox, Dialog, Avatar, Skeleton, Dropdown Menu, Tooltip.
+
+---
+
+## Planned — Address Book Pickup-Location API Integration (Build Next / Data Integration)
+
+**Status:** In progress (2026-05-29)
+
+Integrate the GGX pickup-location API into Address Book and align the Settings → Account Information address with the Address Book card pattern.
+
+- Source: `https://api.gogox.ph/v1/locations/*?pickup=quad-x` (pickup-supported locations only)
+- Cascading Province → City/Municipality → District/Barangay selects, each fetched by parent ID
+- Child selects disabled until parent selected; children reset when parent changes
+- Block save if the location chain is incomplete (enforces pickup-supported-only)
+- Street/building/unit/landmark remain free-text details
+- Account Information becomes a display-focused Address Card; editing routes to Address Book
+
+### Result — Address Book Pickup-Location API Integration (Done, 2026-05-29)
+
+**API integration**
+- New service `src/app/lib/locationApi.ts`: `getProvinces()`, `getCities(provinceId)`, `getDistricts(cityId)`.
+- All requests scoped with `pickup=quad-x&per_page=1000&extended=1` so only GGX pickup-supported locations are returned.
+- Typed against the real response: paginated envelope `{ data: LocationApiItem[], total, per_page, ... }`; normalized to `LocationOption { id, name, postalCode }`. The API returns the string `"null"` for missing postal codes — normalized to `""`.
+- Uses native `fetch` (no existing API client). Throws on non-OK status and unexpected shape; callers map errors to inline UI copy.
+
+**Address Book cascade**
+- `Address` extended with `provinceId`, `cityId`, `districtId`, `postalCode`.
+- Province → City/Municipality → Barangay selects, each fetched using the parent's API ID.
+- Child selects disabled until the parent is chosen; changing a parent resets all descendants and refetches.
+- Loading text per select ("Loading cities…"), empty text ("No pickup cities"), and an inline error row on fetch failure.
+- Province options load when the form opens; editing an address with stored IDs rehydrates its city/barangay options.
+
+**Location validation behavior**
+- Save is blocked unless `provinceId`, `cityId`, and `districtId` are all set — and because the selects are populated only from `pickup=quad-x` results, a valid selection is by definition pickup-supported.
+- Legacy seed addresses (no IDs) display normally but must be re-selected through the cascade before they can be saved.
+- Helper copy in the form: "Only GGX pickup-supported locations can be saved for pickup bookings."
+- Street/building/unit/landmark stay in the free-text "Other Location Details" field.
+
+**Account Information address card**
+- New shared presentational `src/app/components/AddressDisplayCard.tsx` renders the address pattern (label badge, name, mobile, location line, postal code, details). Used by both Address Book entries and Settings.
+- Settings → Account Information now shows a display-only Address Card (no separate address/city/province/zip inputs) with an "Edit in Address Book" button routing to `/dashboard/address-book`. Address Book remains the source of truth; no separate address model.
+
+**Files changed**
+- Added: `src/app/lib/locationApi.ts`, `src/app/components/AddressDisplayCard.tsx`
+- Modified: `src/app/components/AddressBook.tsx` (API cascade, validation, shared card), `src/app/pages/Settings.tsx` (address card display)
+
+**API assumptions**
+- `pickup=quad-x` is the canonical pickup-supported source (same endpoints without it return all locations).
+- `per_page=1000` returns the full list in one page for every level at current data volumes (provinces ~7, cities ~17, districts ≤ ~188); no client pagination implemented.
+- District `postal_code` (e.g. "1400/1408") is treated as the address postal/ZIP code.
+
+**Blockers**
+- None at build time. The API responds successfully from the dev environment (verified via direct request). Browser CORS was not separately verified at runtime — if requests are blocked in-browser, the service abstraction is already isolated in `locationApi.ts` and only error-state copy would show; no workarounds/hacks were added.
+
+**Validation**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Only the pre-existing recharts bundle-size warning remains.

@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { IconMapPin, IconPlus, IconEdit, IconTrash, IconCheck, IconX, IconSearch, IconStar } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
+import { IconMapPin, IconPlus, IconEdit, IconTrash, IconCheck, IconX, IconSearch, IconStar, IconAlertCircle } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
-import { Badge } from './ui/Badge';
+import { AddressDisplayCard } from './AddressDisplayCard';
+import { getProvinces, getCities, getDistricts, type LocationOption } from '../lib/locationApi';
 
 export interface Address {
   id: string;
@@ -17,31 +18,14 @@ export interface Address {
   barangay: string;
   otherDetails: string;
   isPreferred: boolean;
+  // Pickup-supported location IDs from the GGX locations API. Present on
+  // addresses created/edited through the cascading selects; legacy seed
+  // entries may omit them and must be re-selected before they can be saved.
+  provinceId?: number;
+  cityId?: number;
+  districtId?: number;
+  postalCode?: string;
 }
-
-const PROVINCES = ['Metro Manila', 'Cebu', 'Davao', 'Laguna', 'Cavite', 'Bulacan', 'Rizal', 'Pampanga'];
-
-const CITIES: { [key: string]: string[] } = {
-  'Metro Manila': ['Makati', 'Quezon City', 'Manila', 'Taguig', 'Pasig', 'Mandaluyong', 'Pasay'],
-  Cebu: ['Cebu City', 'Mandaue', 'Lapu-Lapu', 'Talisay', 'Toledo'],
-  Davao: ['Davao City', 'Tagum', 'Panabo', 'Samal', 'Digos'],
-  Laguna: ['Calamba', 'Santa Rosa', 'Biñan', 'San Pedro', 'Cabuyao'],
-  Cavite: ['Bacoor', 'Imus', 'Dasmariñas', 'Cavite City', 'Tagaytay'],
-};
-
-const BARANGAYS: { [key: string]: string[] } = {
-  Makati: ['Poblacion', 'Bel-Air', 'San Lorenzo', 'Urdaneta', 'Salcedo'],
-  'Quezon City': ['Barangay Commonwealth', 'Fairview', 'Novaliches', 'Cubao', 'Diliman'],
-  Manila: ['Ermita', 'Malate', 'Intramuros', 'Binondo', 'Sampaloc'],
-  Taguig: ['Fort Bonifacio', 'Western Bicutan', 'Ususan', 'Bagumbayan'],
-};
-
-const labelColors: Record<string, 'info' | 'success' | 'warning' | 'default'> = {
-  office: 'info',
-  home: 'success',
-  warehouse: 'warning',
-  custom: 'default',
-};
 
 const emptyForm: Partial<Address> = {
   label: 'office',
@@ -53,6 +37,10 @@ const emptyForm: Partial<Address> = {
   barangay: '',
   otherDetails: '',
   isPreferred: false,
+  provinceId: undefined,
+  cityId: undefined,
+  districtId: undefined,
+  postalCode: '',
 };
 
 interface AddressBookProps {
@@ -74,8 +62,110 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
   const [search, setSearch] = useState('');
   const [filterLabel, setFilterLabel] = useState('all');
 
+  // Pickup-location cascade state
+  const [provinces, setProvinces] = useState<LocationOption[]>([]);
+  const [cities, setCities] = useState<LocationOption[]>([]);
+  const [districts, setDistricts] = useState<LocationOption[]>([]);
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Load pickup-supported provinces when the form is first opened.
+  useEffect(() => {
+    if (!showForm || provinces.length > 0) return;
+    let cancelled = false;
+    setLoadingProvinces(true);
+    setLocationError(null);
+    getProvinces()
+      .then((data) => { if (!cancelled) setProvinces(data); })
+      .catch(() => { if (!cancelled) setLocationError('Could not load pickup locations. Please try again.'); })
+      .finally(() => { if (!cancelled) setLoadingProvinces(false); });
+    return () => { cancelled = true; };
+  }, [showForm, provinces.length]);
+
+  const loadCities = (provinceId: number) => {
+    setLoadingCities(true);
+    setLocationError(null);
+    getCities(provinceId)
+      .then(setCities)
+      .catch(() => setLocationError('Could not load cities for the selected province.'))
+      .finally(() => setLoadingCities(false));
+  };
+
+  const loadDistricts = (cityId: number) => {
+    setLoadingDistricts(true);
+    setLocationError(null);
+    getDistricts(cityId)
+      .then(setDistricts)
+      .catch(() => setLocationError('Could not load barangays for the selected city.'))
+      .finally(() => setLoadingDistricts(false));
+  };
+
+  const handleProvinceChange = (value: string) => {
+    const provinceId = value ? Number(value) : undefined;
+    const selected = provinces.find((p) => p.id === provinceId);
+    setCities([]);
+    setDistricts([]);
+    setFormData({
+      ...formData,
+      provinceId,
+      province: selected?.name ?? '',
+      cityId: undefined,
+      city: '',
+      districtId: undefined,
+      barangay: '',
+      postalCode: '',
+    });
+    if (provinceId) loadCities(provinceId);
+  };
+
+  const handleCityChange = (value: string) => {
+    const cityId = value ? Number(value) : undefined;
+    const selected = cities.find((c) => c.id === cityId);
+    setDistricts([]);
+    setFormData({
+      ...formData,
+      cityId,
+      city: selected?.name ?? '',
+      districtId: undefined,
+      barangay: '',
+      postalCode: '',
+    });
+    if (cityId) loadDistricts(cityId);
+  };
+
+  const handleDistrictChange = (value: string) => {
+    const districtId = value ? Number(value) : undefined;
+    const selected = districts.find((d) => d.id === districtId);
+    setFormData({
+      ...formData,
+      districtId,
+      barangay: selected?.name ?? '',
+      postalCode: selected?.postalCode ?? '',
+    });
+  };
+
+  const openAddForm = () => {
+    setFormData(emptyForm);
+    setEditingId(null);
+    setCities([]);
+    setDistricts([]);
+    setFormError(null);
+    setShowForm(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Enforce pickup-supported location chain: all three IDs must come from
+    // the API-backed selects, otherwise the address is not valid for pickup.
+    if (!formData.provinceId || !formData.cityId || !formData.districtId) {
+      setFormError('Select a pickup-supported province, city, and barangay before saving.');
+      return;
+    }
+    setFormError(null);
+
     if (editingId) {
       setAddresses(addresses.map((addr) => (addr.id === editingId ? ({ ...formData, id: editingId } as Address) : addr)));
     } else {
@@ -89,6 +179,12 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
   const handleEdit = (address: Address) => {
     setFormData(address);
     setEditingId(address.id);
+    setFormError(null);
+    // Rehydrate child select options when the address already has location IDs.
+    setCities([]);
+    setDistricts([]);
+    if (address.provinceId) loadCities(address.provinceId);
+    if (address.cityId) loadDistricts(address.cityId);
     setShowForm(true);
   };
 
@@ -108,8 +204,6 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
     const matchesFilter = filterLabel === 'all' || addr.label === filterLabel;
     return matchesSearch && matchesFilter;
   });
-
-  const getDisplayLabel = (addr: Address) => (addr.label === 'custom' ? addr.customLabel || 'Custom' : addr.label);
 
   return (
     <div className="space-y-5">
@@ -143,7 +237,7 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
                 <option value="warehouse">Warehouse</option>
                 <option value="custom">Custom</option>
               </Select>
-              <Button onClick={() => { setShowForm(true); setFormData(emptyForm); setEditingId(null); }} className="cursor-pointer whitespace-nowrap">
+              <Button onClick={openAddForm} className="cursor-pointer whitespace-nowrap">
                 <IconPlus className="w-4 h-4 mr-1.5" />
                 Add Address
               </Button>
@@ -172,21 +266,7 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
                     </div>
                   )}
                   <CardContent className="p-5 flex-1 flex flex-col gap-3">
-                    <div>
-                      <Badge variant={labelColors[addr.label] || 'default'} className="text-[10px] px-2 py-0.5 mb-2 capitalize">
-                        {getDisplayLabel(addr)}
-                      </Badge>
-                      <p className="font-semibold text-gray-900 text-sm leading-snug">{addr.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{addr.mobileNumber}</p>
-                    </div>
-
-                    <div className="flex items-start gap-1.5 text-xs text-gray-600">
-                      <IconMapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
-                      <span className="leading-snug">
-                        {[addr.barangay, addr.city, addr.province].filter(Boolean).join(', ')}
-                        {addr.otherDetails && <span className="block text-gray-400">{addr.otherDetails}</span>}
-                      </span>
-                    </div>
+                    <AddressDisplayCard address={addr} />
 
                     <div className="flex items-center gap-1 mt-auto pt-2 border-t border-gray-100">
                       {mode === 'select' ? (
@@ -255,35 +335,73 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Province *</label>
-                  <Select required value={formData.province} onChange={(e) => setFormData({ ...formData, province: e.target.value, city: '', barangay: '' })}>
-                    <option value="">Select province</option>
-                    {PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </Select>
+              {/* Pickup-supported location cascade */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <IconMapPin className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-gray-600 leading-snug">
+                    Only GGX pickup-supported locations can be saved for pickup bookings.
+                    Choose your province, city/municipality, then barangay in order.
+                  </p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">City/Municipality *</label>
-                  <Select required value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value, barangay: '' })} disabled={!formData.province}>
-                    <option value="">Select city</option>
-                    {formData.province && CITIES[formData.province]?.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </Select>
+
+                {locationError && (
+                  <div className="flex items-center gap-2 text-xs text-red-600">
+                    <IconAlertCircle className="w-4 h-4 flex-shrink-0" />
+                    {locationError}
+                  </div>
+                )}
+
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Province *</label>
+                    <Select
+                      value={formData.provinceId ?? ''}
+                      onChange={(e) => handleProvinceChange(e.target.value)}
+                      disabled={loadingProvinces}
+                    >
+                      <option value="">{loadingProvinces ? 'Loading provinces…' : 'Select province'}</option>
+                      {provinces.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">City/Municipality *</label>
+                    <Select
+                      value={formData.cityId ?? ''}
+                      onChange={(e) => handleCityChange(e.target.value)}
+                      disabled={!formData.provinceId || loadingCities}
+                    >
+                      <option value="">
+                        {!formData.provinceId ? 'Select province first' : loadingCities ? 'Loading cities…' : cities.length === 0 ? 'No pickup cities' : 'Select city'}
+                      </option>
+                      {cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Barangay *</label>
+                    <Select
+                      value={formData.districtId ?? ''}
+                      onChange={(e) => handleDistrictChange(e.target.value)}
+                      disabled={!formData.cityId || loadingDistricts}
+                    >
+                      <option value="">
+                        {!formData.cityId ? 'Select city first' : loadingDistricts ? 'Loading barangays…' : districts.length === 0 ? 'No pickup barangays' : 'Select barangay'}
+                      </option>
+                      {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Barangay *</label>
-                  <Select required value={formData.barangay} onChange={(e) => setFormData({ ...formData, barangay: e.target.value })} disabled={!formData.city}>
-                    <option value="">Select barangay</option>
-                    {formData.city && BARANGAYS[formData.city]?.map((b) => <option key={b} value={b}>{b}</option>)}
-                  </Select>
-                </div>
+
+                {formData.postalCode && (
+                  <p className="text-xs text-gray-500">Postal code: <span className="font-medium text-gray-700">{formData.postalCode}</span></p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Other Location Details</label>
                 <textarea
                   className="w-full h-20 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Landmark, floor/unit no., building name, etc."
+                  placeholder="Street, building, floor/unit no., landmark, etc."
                   value={formData.otherDetails}
                   onChange={(e) => setFormData({ ...formData, otherDetails: e.target.value })}
                 />
@@ -294,9 +412,16 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
                 <span className="text-sm text-gray-700">Set as default pickup address</span>
               </label>
 
+              {formError && (
+                <div className="flex items-center gap-2 text-sm text-red-600">
+                  <IconAlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {formError}
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <Button type="submit" className="cursor-pointer">{editingId ? 'Update Address' : 'Add Address'}</Button>
-                <Button type="button" variant="outline" className="cursor-pointer" onClick={() => { setShowForm(false); setEditingId(null); }}>Cancel</Button>
+                <Button type="button" variant="outline" className="cursor-pointer" onClick={() => { setShowForm(false); setEditingId(null); setFormError(null); }}>Cancel</Button>
               </div>
             </form>
           </CardContent>
