@@ -29,6 +29,7 @@ import {
   IconUsers,
   IconFileText,
   IconReceiptRefund,
+  IconActivityHeartbeat,
 } from '@tabler/icons-react';
 import { useState, type ComponentType } from 'react';
 import { cn } from '../lib/utils';
@@ -58,6 +59,7 @@ const standardAccountNavigation: NavItem[] = [
   { name: 'Dashboard',       href: '/dashboard',               icon: IconLayoutDashboard },
   { name: 'Transactions',    href: '/dashboard/transactions',  icon: IconPackage },
   { name: 'Claims',          href: '/dashboard/claims',        icon: IconReceiptRefund },
+  { name: 'SLA Alerts',      href: '/dashboard/sla-alerts',    icon: IconActivityHeartbeat },
   { name: 'Bulk Uploader',   href: '/dashboard/bulk-uploader', icon: IconUpload },
   { name: 'Data Analytics',  href: '/dashboard/analytics',     icon: IconChartBar },
   {
@@ -83,6 +85,7 @@ const mainAccountNavigation: NavItem[] = [
   { name: 'Dashboard',       href: '/dashboard',               icon: IconLayoutDashboard },
   { name: 'Transactions',    href: '/dashboard/transactions',  icon: IconPackage },
   { name: 'Claims',          href: '/dashboard/claims',        icon: IconReceiptRefund },
+  { name: 'SLA Alerts',      href: '/dashboard/sla-alerts',    icon: IconActivityHeartbeat },
   { name: 'Analytics',       href: '/dashboard/analytics',     icon: IconChartBar },
   {
     name: 'Finance',
@@ -108,6 +111,7 @@ const subaccountNavigation: NavItem[] = [
   { name: 'Dashboard',       href: '/dashboard',               icon: IconLayoutDashboard },
   { name: 'Transactions',    href: '/dashboard/transactions',  icon: IconPackage },
   { name: 'Claims',          href: '/dashboard/claims',        icon: IconReceiptRefund },
+  { name: 'SLA Alerts',      href: '/dashboard/sla-alerts',    icon: IconActivityHeartbeat },
   { name: 'Bulk Uploader',   href: '/dashboard/bulk-uploader', icon: IconUpload },
   { name: 'Data Analytics',  href: '/dashboard/analytics',     icon: IconChartBar },
   { name: 'Reports',         href: '/dashboard/reports',       icon: IconFileText },

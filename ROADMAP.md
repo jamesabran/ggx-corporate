@@ -14,7 +14,7 @@ This roadmap captures the next planned enhancements from Business Development pl
 | 0 | **Stable Subaccount IDs** (foundational) | **P0 — do first** | Data-model cleanup | Done (2026-05-30) |
 | 1 | Financial Security / OTP Verification | P1 | Feature (mock) | Done (2026-05-30) |
 | 2 | Claims & Cancellations | P2 | Feature (mock) | Done (2026-05-30) |
-| 3 | SLA Alerts / Operations Monitoring | P2 | Feature (mock) | Planned (next) |
+| 3 | SLA Alerts / Operations Monitoring | P2 | Feature (mock) | Done (2026-05-30) |
 | 4 | Data Analytics Enhancements (Business Review redesign) | P3 — larger effort | Redesign | Planned |
 
 **Rationale:** Stable IDs unblock robust scoping for notifications, claims, SLA, and analytics filters, so it goes first. Financial/OTP is a self-contained, high-value security layer that should land before the larger feature areas. Claims and SLA are peer operational features that both lean on stable IDs and the notification model. Data Analytics is a larger redesign driven by the Business Review metrics — treat it as a project, not a chart refresh.

@@ -1406,3 +1406,39 @@ Added a mock Claims feature (refunds on undelivered transactions) and cancellati
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (988 kB).
+
+---
+
+### Build Next — SLA Alerts / Operations Monitoring (ROADMAP item 3) (2026-05-30)
+
+Added a mock SLA/ops monitoring layer with No Movement / Breach SLA alerts and follow-up tracking, id-scoped and surfaced via notifications.
+
+**SLA data (`src/app/data/slaAlerts.ts`, new)**
+- `SlaAlert` model + `SlaAlertType` (no_movement / breach / follow_up) + `SlaAlertStatus` (open / monitoring / resolved); `SLA_TYPE_META` (icon/colors/badge) and `SLA_STATUS_META` (badge variants).
+- Seed alerts linked to existing in-transit/picked-up/failed transactions, id-scoped (`acme-luzon` / `acme-corporation`), each with an assigned hub/forwarder; two carry follow-up notes.
+- `getSlaAlerts`, `getSlaAlert`.
+- `sendFollowUp(id, note?)` — sets a follow-up note (default "Follow-up sent to {assignedTo}."), bumps `open → monitoring`, and pushes a `transaction`-category notification scoped by `accountId`.
+- `resolveAlert(id)` — marks resolved.
+
+**SLA Alerts page (`src/app/pages/SlaAlerts.tsx`, new)**
+- Route `/dashboard/sla-alerts`. Type filter; summary cards (No Movement, Breach SLA, Action Needed). Alert cards show type + status badges, detail, linked tracking number (→ transaction), assigned hub/forwarder, account, timestamp, and the follow-up note when present. Actions: "Send follow-up" and "Mark resolved" (update module state + local view). Resolved alerts dimmed; empty state included.
+
+**Sidebar**
+- Added "SLA Alerts" nav item (IconActivityHeartbeat) after Claims in all three nav variants.
+
+**Notification category decision**
+- Reused the `transaction` category for SLA follow-up notifications (order-level, id-scoped) — consistent with claims; avoids touching the tabbed Notifications page / CATEGORY_META.
+
+**Files changed**
+- Added: `src/app/data/slaAlerts.ts`, `src/app/pages/SlaAlerts.tsx`
+- Modified: `src/app/routes.tsx` (route), `src/app/layouts/RootLayout.tsx` (nav item + icon), `ROADMAP.md` (status), `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- SLA alerts are static/in-memory mock (no real monitoring engine); follow-up/resolve state resets on full reload.
+- "Send follow-up" uses a default note (no note-entry dialog) for a one-click demo; a custom-note dialog is a possible enhancement.
+- SLA notifications reuse the `transaction` category; a dedicated `sla` category is deferred.
+- No SLA indicator added to Transaction Details this round (alerts link to the transaction); optional follow-up.
+- recharts lazy-load, Analytics redesign, Zendesk/APIs remain deferred.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (997 kB).

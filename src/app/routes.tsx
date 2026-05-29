@@ -24,6 +24,7 @@ import { Notifications } from './pages/Notifications';
 import { Reports } from './pages/Reports';
 import { ServiceAdvisories } from './pages/ServiceAdvisories';
 import { Claims } from './pages/Claims';
+import { SlaAlerts } from './pages/SlaAlerts';
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
       { path: 'transactions', Component: Transactions },
       { path: 'transactions/:id', Component: TransactionDetails },
       { path: 'claims', Component: Claims },
+      { path: 'sla-alerts', Component: SlaAlerts },
       { path: 'bulk-uploader', Component: BulkUploader },
       { path: 'bulk-uploader/summary/:id', Component: BulkUploadSummary },
       { path: 'bulk-upload-summary', Component: BulkUploadSummary },
