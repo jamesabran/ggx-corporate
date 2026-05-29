@@ -21,7 +21,8 @@
       "Bash(python -c ' *)",
       "Bash(python -m pip install --quiet openpyxl)",
       "WebFetch(domain:help-center.gogoxpress.com)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(claude doctor *)"
     ]
   }
 }
