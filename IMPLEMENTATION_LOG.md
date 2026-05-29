@@ -849,3 +849,69 @@ Focused QA pass on the newly built Bulk Upload flow. No new features added.
 
 **Validation**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is pre-existing recharts issue (927 kB, +3 kB from RECEPTACLE_SIZES import — negligible).
+
+---
+
+### Fix — Bulk Upload review pre-ship issues (2026-05-29)
+
+Five targeted fixes to the Bulk Upload review/summary flow before notification bell integration.
+
+**1. Error table input/select visual consistency**
+- `ErrInput` helper component: changed `rounded` (4px) → `rounded-lg` (10px) to match the GGX Corporate DS radius and the DS `Select` component's own `rounded-lg` base class.
+- All inline inputs in the error table now use consistent `rounded-lg border` styling, matching the DS Input/Select components.
+
+**2. Address fields — location API cascade**
+- New `LocationCascadeEditor` component defined at the top of `BulkUploadSummary.tsx` (local, not exported — used only in the review table).
+- Uses `getAllProvinces()`, `getAllCities()`, `getAllDistricts()` from `locationApi.ts` — three new delivery-address variants that fetch without `?pickup=quad-x` so all GGX-served locations are available (not just pickup-supported ones).
+- Cascade behaviour: province → city → barangay in stacked selects. Child selects are disabled until parent is selected. Selecting a new province resets city and barangay. Selecting a new city resets barangay.
+- Initial value pre-population: on mount, provinces fetch and the matching province is found by name → provinceId is set → cities fetch and the matching city is found by name → cityId is set → barangays fetch. The barangay select auto-selects by name since the name is the select value.
+- API error fallback (CORS or network): component replaces the three selects with plain text inputs and shows "Location API unavailable — enter manually." This handles both CORS-blocked and offline scenarios without crashing.
+- Province/City/Barangay columns merged into a single "Location *" column containing the cascade editor. This keeps the table more scannable and avoids managing three related pieces of state in separate narrow cells.
+- `updateLocation(rowNum, province, city, barangay)` handler updates all three fields in `rowEdits` atomically.
+- New functions added to `src/app/lib/locationApi.ts`: `getAllProvinces()`, `getAllCities(provinceId)`, `getAllDistricts(cityId)`. Internal `doFetch(url)` helper extracted to avoid duplication between pickup-filtered and delivery variants.
+
+**3. Item Protection column replaced**
+- Removed `itemProtection: string` display-only field from `ErrorRowData`.
+- Added `insureFull: string` ('Yes' | 'No' | '') — editable select with options "Yes — full COD covered" and "No — free ₱500 only".
+- Added computed "Item Protection Fee" display column (not editable):
+  - Formula: if insureFull = Yes and COD Amount > 500 → fee = (COD Amount − 500) × 0.01
+  - Example: COD 1000 → (1000 − 500) × 0.01 = ₱5.00
+  - If COD ≤ 500 or insureFull ≠ Yes → ₱0.00 (free coverage applies)
+  - Shown as `₱{fee}` with "Free ₱500 coverage" helper text when not insured.
+- `computeItemProtectionFee(edits)` helper function encapsulates the formula.
+- Bottom fee summary: `totalItemProtectionFee` is now computed live from `errorRows` via `computeItemProtectionFee`. `totalFees` updates accordingly. This makes the fee summary reflect actual insure-full selections in error rows.
+- `insureFull` added to `EditableField` type and `rowToEdits`.
+
+**4. Duplicate row removal**
+- Added an "Actions" column (last column) to the error table.
+- For rows whose `errors` array includes "duplicate" or "Possible", a trash icon button is shown: `IconTrash`, tooltip "Remove duplicate row", `aria-label="Remove duplicate row {N}"`.
+- `handleRemoveRow(rowNum)`: removes the row from `errorRows`, cleans up its entry from `rowEdits`. The removed row is discarded (not counted as fixed — it does not increment `fixedCount` or appear in the batch).
+- Info banner updated to mention the trash icon for duplicates alongside Retry Upload.
+- No confirmation dialog — removal is immediate (frontend/mock context, consistent with the existing inline-edit UX).
+
+**5. Booking success payment method copy**
+- `SelectedPaymentMethod` type exported from `PaymentMethodTabs.tsx`: `billing`, `cash (pickup | deduct)`, `ewallet (wallet name)`, `card`, `banking (bank name)`.
+- `onPaymentMethodChange?: (method: SelectedPaymentMethod) => void` prop added to `PaymentMethodTabsProps`.
+- `NormalPaymentCard` gains `onChange?: (method: SelectedPaymentMethod) => void` prop. Each setter (tab change, cash option, wallet, bank) calls `onChange` with the new selection.
+- `PaymentMethodTabs` wires callbacks: billing button → emits `{ type: 'billing' }`; "Other payment options" button → emits the last NormalPaymentCard selection (tracked via `normalMethodRef`); NormalPaymentCard `onChange` → passes through to `onPaymentMethodChange`.
+- `BulkUploadSummary` tracks `selectedPayment: SelectedPaymentMethod | null` state.
+- `paymentCopy(method, billingAvailable)` helper produces human-readable copy for each method: billing → "To be invoiced after service"; cash/pickup → "To be paid on pick-up"; cash/deduct → "Deducted from COD collections"; ewallet → "Prepaid via [wallet]"; card → "Prepaid via card"; banking → "Prepaid via [bank]".
+- Success dialog: "Total fees — [paymentCopy]:" reflects actual selected method.
+- Bottom fee summary: also shows `paymentCopy` as the collection note below the total.
+- Fallback: if `selectedPayment` is null (user never interacted with payment section), defaults to billing/invoice copy for billing accounts and cash/pickup for non-billing — consistent with the component's initial state.
+
+**Files changed**
+- Modified: `src/app/lib/locationApi.ts` (`doFetch` helper, `fetchLocationsAll`, `getAllProvinces`, `getAllCities`, `getAllDistricts`)
+- Modified: `src/app/components/PaymentMethodTabs.tsx` (`SelectedPaymentMethod` export, `onPaymentMethodChange` prop, `NormalPaymentCard.onChange`, per-setter emissions)
+- Modified: `src/app/pages/BulkUploadSummary.tsx` (all five fixes, `LocationCascadeEditor` component, `computeItemProtectionFee`, `paymentCopy`, `handleRemoveRow`)
+
+**Assumptions / deferred**
+- Location cascade uses delivery-endpoint (no pickup filter) as specified. CORS behaviour against `api.gogox.ph` from the browser is untested; the API error fallback (plain text inputs) handles the blocked-CORS case gracefully.
+- Delivery API (no pickup filter) returns all GGX-served locations including areas that may not support pickup. This is correct for recipient addresses.
+- `totalItemProtectionFee` is computed from error rows only (the 100 mock valid orders contribute ₱0 since they're static). Real fee aggregation would come from the backend.
+- Duplicate rows 5 and 6 remain in the error table after row 4's structural errors are fixed; they must be removed via the trash icon separately. Cross-row "no longer a duplicate after source row fixed" logic is deferred.
+- No confirmation dialog on row removal (consistent with inline-edit UX; row count is visible before confirming booking).
+- `SelectedPaymentMethod` is not persisted — reloading the page resets the selection.
+
+**Validation**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is pre-existing recharts issue (932 kB, +5 kB from LocationCascadeEditor and API functions — negligible).

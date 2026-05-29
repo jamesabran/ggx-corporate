@@ -52,23 +52,28 @@ function toOption(item: LocationApiItem): LocationOption {
   return { id: item.id, name: item.name, postalCode: postal };
 }
 
-async function fetchLocations(path: string): Promise<LocationOption[]> {
-  const sep = path.includes('?') ? '&' : '?';
-  const url = `${BASE_URL}${path}${sep}pickup=quad-x&per_page=${PER_PAGE}&extended=1`;
-
+async function doFetch(url: string): Promise<LocationOption[]> {
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!res.ok) {
     throw new Error(`Location request failed (${res.status} ${res.statusText})`);
   }
-
   const body = (await res.json()) as LocationApiResponse;
   if (!body || !Array.isArray(body.data)) {
     throw new Error('Unexpected location response shape');
   }
+  return body.data.map(toOption).sort((a, b) => a.name.localeCompare(b.name));
+}
 
-  return body.data
-    .map(toOption)
-    .sort((a, b) => a.name.localeCompare(b.name));
+/** Pickup-only endpoint (pickup=quad-x). Used for sender/pickup address selection. */
+async function fetchLocations(path: string): Promise<LocationOption[]> {
+  const sep = path.includes('?') ? '&' : '?';
+  return doFetch(`${BASE_URL}${path}${sep}pickup=quad-x&per_page=${PER_PAGE}&extended=1`);
+}
+
+/** All-locations endpoint (no pickup filter). Used for recipient/delivery address selection. */
+async function fetchLocationsAll(path: string): Promise<LocationOption[]> {
+  const sep = path.includes('?') ? '&' : '?';
+  return doFetch(`${BASE_URL}${path}${sep}per_page=${PER_PAGE}&extended=1`);
 }
 
 /** Pickup-supported provinces. */
@@ -84,4 +89,25 @@ export function getCities(provinceId: number): Promise<LocationOption[]> {
 /** Pickup-supported districts/barangays within a city. */
 export function getDistricts(cityId: number): Promise<LocationOption[]> {
   return fetchLocations(`/locations/cities/${cityId}/districts`);
+}
+
+// ---------------------------------------------------------------------------
+// Delivery / recipient address variants (no pickup filter).
+// Use these when selecting a delivery recipient address — all GGX-served
+// locations are valid, not just pickup-supported ones.
+// ---------------------------------------------------------------------------
+
+/** All provinces served by GGX (for recipient delivery address). */
+export function getAllProvinces(): Promise<LocationOption[]> {
+  return fetchLocationsAll('/locations/provinces');
+}
+
+/** All cities within a province (for recipient delivery address). */
+export function getAllCities(provinceId: number): Promise<LocationOption[]> {
+  return fetchLocationsAll(`/locations/provinces/${provinceId}/cities`);
+}
+
+/** All districts/barangays within a city (for recipient delivery address). */
+export function getAllDistricts(cityId: number): Promise<LocationOption[]> {
+  return fetchLocationsAll(`/locations/cities/${cityId}/districts`);
 }

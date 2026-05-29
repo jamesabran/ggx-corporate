@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { IconCash, IconWallet, IconCreditCard, IconBuildingBank, IconReceipt2 } from '@tabler/icons-react';
 import { Badge } from './ui/Badge';
 import { Input } from './ui/Input';
@@ -7,9 +7,9 @@ import { Select } from './ui/Select';
 type Tab = 'cash' | 'ewallet' | 'card' | 'banking';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'cash', label: 'Cash', icon: <IconCash className="w-4 h-4" /> },
-  { id: 'ewallet', label: 'E-wallets', icon: <IconWallet className="w-4 h-4" /> },
-  { id: 'card', label: 'Card', icon: <IconCreditCard className="w-4 h-4" /> },
+  { id: 'cash',    label: 'Cash',           icon: <IconCash className="w-4 h-4" /> },
+  { id: 'ewallet', label: 'E-wallets',      icon: <IconWallet className="w-4 h-4" /> },
+  { id: 'card',    label: 'Card',           icon: <IconCreditCard className="w-4 h-4" /> },
   { id: 'banking', label: 'Online banking', icon: <IconBuildingBank className="w-4 h-4" /> },
 ];
 
@@ -18,12 +18,12 @@ const BANKS = ['BDO', 'BPI', 'Metrobank', 'UnionBank', 'Landbank', 'PNB', 'Secur
 // Brand logo slots. Drop a real asset path into `src` to swap the fallback for
 // an image later — no other change needed. Fallback is a colored initial box.
 const BRAND_LOGOS: Record<string, { src?: string; bg: string; short: string }> = {
-  GCash: { bg: 'bg-blue-600', short: 'G' },
-  Maya: { bg: 'bg-green-600', short: 'M' },
-  GrabPay: { bg: 'bg-emerald-600', short: 'Gp' },
-  'coins.ph': { bg: 'bg-yellow-500', short: 'c' },
-  Visa: { bg: 'bg-blue-700', short: 'V' },
-  Mastercard: { bg: 'bg-orange-500', short: 'MC' },
+  GCash:      { bg: 'bg-blue-600',    short: 'G'  },
+  Maya:       { bg: 'bg-green-600',   short: 'M'  },
+  GrabPay:    { bg: 'bg-emerald-600', short: 'Gp' },
+  'coins.ph': { bg: 'bg-yellow-500',  short: 'c'  },
+  Visa:       { bg: 'bg-blue-700',    short: 'V'  },
+  Mastercard: { bg: 'bg-orange-500',  short: 'MC' },
 };
 
 function BrandLogo({ name, className = 'w-6 h-6' }: { name: string; className?: string }) {
@@ -39,26 +39,80 @@ function BrandLogo({ name, className = 'w-6 h-6' }: { name: string; className?: 
 }
 
 const WALLETS = [
-  { name: 'GCash', available: true },
-  { name: 'Maya', available: false },
-  { name: 'GrabPay', available: false },
-  { name: 'coins.ph', available: false },
+  { name: 'GCash',      available: true  },
+  { name: 'Maya',       available: false },
+  { name: 'GrabPay',    available: false },
+  { name: 'coins.ph',   available: false },
 ];
 
-/** Single bordered card with a tab row for the four normal payment methods. */
-function NormalPaymentCard({ disabled = false }: { disabled?: boolean }) {
-  const [active, setActive] = useState<Tab>('cash');
+// ---------------------------------------------------------------------------
+// Selected payment method shape — exported so callers can type the callback.
+// ---------------------------------------------------------------------------
+
+export type SelectedPaymentMethod =
+  | { type: 'billing' }
+  | { type: 'cash';    cashOption: 'pickup' | 'deduct' }
+  | { type: 'ewallet'; wallet: string }
+  | { type: 'card' }
+  | { type: 'banking'; bank: string };
+
+// ---------------------------------------------------------------------------
+// NormalPaymentCard — the tabbed card for cash / e-wallet / card / banking.
+// ---------------------------------------------------------------------------
+
+interface NormalPaymentCardProps {
+  disabled?: boolean;
+  /** Called whenever the user changes their payment selection. */
+  onChange?: (method: SelectedPaymentMethod) => void;
+}
+
+function NormalPaymentCard({ disabled = false, onChange }: NormalPaymentCardProps) {
+  const [active,     setActive]     = useState<Tab>('cash');
   const [cashOption, setCashOption] = useState<'pickup' | 'deduct'>('pickup');
-  const [wallet, setWallet] = useState('GCash');
-  const [bank, setBank] = useState('');
-  const [card, setCard] = useState({ name: '', number: '', expiry: '', cvv: '' });
+  const [wallet,     setWallet]     = useState('GCash');
+  const [bank,       setBank]       = useState('');
+  const [card,       setCard]       = useState({ name: '', number: '', expiry: '', cvv: '' });
+
+  // Keep a stable ref so callbacks inside handlers always have the latest onChange.
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  const emit = (method: SelectedPaymentMethod) => onChangeRef.current?.(method);
+
+  const handleTabChange = (tab: Tab) => {
+    if (disabled) return;
+    setActive(tab);
+    // Emit the current selection for the newly active tab.
+    if (tab === 'cash')    emit({ type: 'cash',    cashOption });
+    if (tab === 'ewallet') emit({ type: 'ewallet', wallet });
+    if (tab === 'card')    emit({ type: 'card' });
+    if (tab === 'banking') emit({ type: 'banking', bank });
+  };
+
+  const handleCashOption = (opt: 'pickup' | 'deduct') => {
+    if (disabled) return;
+    setCashOption(opt);
+    emit({ type: 'cash', cashOption: opt });
+  };
+
+  const handleWallet = (name: string) => {
+    if (disabled) return;
+    setWallet(name);
+    emit({ type: 'ewallet', wallet: name });
+  };
+
+  const handleBank = (b: string) => {
+    if (disabled) return;
+    setBank(b);
+    emit({ type: 'banking', bank: b });
+  };
 
   return (
     <div
       aria-disabled={disabled}
       className={`rounded-lg border border-gray-200 ${disabled ? 'opacity-60 pointer-events-none select-none' : ''}`}
     >
-      {/* Tab row — rounded-t + overflow-hidden so active styling never overflows the corners */}
+      {/* Tab row */}
       <div className="flex bg-gray-50 rounded-t-lg overflow-hidden border-b border-gray-200 overflow-x-auto">
         {TABS.map((t) => {
           const selected = active === t.id;
@@ -67,7 +121,7 @@ function NormalPaymentCard({ disabled = false }: { disabled?: boolean }) {
               key={t.id}
               type="button"
               disabled={disabled}
-              onClick={() => { if (!disabled) setActive(t.id); }}
+              onClick={() => handleTabChange(t.id)}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 selected ? 'border-blue-600 text-blue-700 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
@@ -83,7 +137,7 @@ function NormalPaymentCard({ disabled = false }: { disabled?: boolean }) {
         {active === 'cash' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {([
-              { id: 'pickup', title: 'Pay upon pick-up', help: 'Hand cash to the rider at pick-up.' },
+              { id: 'pickup', title: 'Pay upon pick-up',       help: 'Hand cash to the rider at pick-up.' },
               { id: 'deduct', title: 'Deduct from order total', help: 'Fees deducted from your COD collections.' },
             ] as const).map((opt) => {
               const selected = cashOption === opt.id;
@@ -92,7 +146,7 @@ function NormalPaymentCard({ disabled = false }: { disabled?: boolean }) {
                   key={opt.id}
                   type="button"
                   disabled={disabled}
-                  onClick={() => { if (!disabled) setCashOption(opt.id); }}
+                  onClick={() => handleCashOption(opt.id)}
                   className={`h-full flex items-start gap-3 px-4 py-3 rounded-lg border text-left transition-colors ${
                     selected ? 'border-blue-500 bg-blue-50/40' : 'border-gray-200 hover:bg-gray-50'
                   }`}
@@ -119,7 +173,7 @@ function NormalPaymentCard({ disabled = false }: { disabled?: boolean }) {
                   key={w.name}
                   type="button"
                   disabled={disabled || !w.available}
-                  onClick={() => { if (!disabled && w.available) setWallet(w.name); }}
+                  onClick={() => { if (w.available) handleWallet(w.name); }}
                   className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-lg border text-center transition-colors ${
                     selected ? 'border-blue-500 bg-blue-50/40' : 'border-gray-200'
                   } ${w.available ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
@@ -140,7 +194,7 @@ function NormalPaymentCard({ disabled = false }: { disabled?: boolean }) {
         {active === 'card' && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <BrandLogo name="Visa" className="w-8 h-5" />
+              <BrandLogo name="Visa"       className="w-8 h-5" />
               <BrandLogo name="Mastercard" className="w-8 h-5" />
             </div>
             <div>
@@ -167,7 +221,11 @@ function NormalPaymentCard({ disabled = false }: { disabled?: boolean }) {
         {active === 'banking' && (
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Bank</label>
-            <Select disabled={disabled} value={bank} onChange={(e) => setBank(e.target.value)}>
+            <Select
+              disabled={disabled}
+              value={bank}
+              onChange={(e) => handleBank(e.target.value)}
+            >
               <option value="">Select preferred bank</option>
               {BANKS.map((b) => <option key={b} value={b}>{b}</option>)}
             </Select>
@@ -178,19 +236,47 @@ function NormalPaymentCard({ disabled = false }: { disabled?: boolean }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Public component
+// ---------------------------------------------------------------------------
+
 interface PaymentMethodTabsProps {
-  // Driven by the selected account/subaccount contract. When true, "Pay via
-  // billing" is the primary/default option; the normal tabs are secondary and
-  // only become usable after the user explicitly selects "Other payment options".
+  /**
+   * Driven by the selected account/subaccount contract. When true, "Pay via
+   * billing" is the primary/default option; the normal tabs are secondary and
+   * only become usable after the user explicitly selects "Other payment options".
+   */
   billingAvailable?: boolean;
+  /** Called whenever the effective payment method selection changes. */
+  onPaymentMethodChange?: (method: SelectedPaymentMethod) => void;
 }
 
-export function PaymentMethodTabs({ billingAvailable = false }: PaymentMethodTabsProps) {
+export function PaymentMethodTabs({ billingAvailable = false, onPaymentMethodChange }: PaymentMethodTabsProps) {
   const [payVia, setPayVia] = useState<'billing' | 'other'>(billingAvailable ? 'billing' : 'other');
 
-  // Non-billing accounts: just the normal tabbed methods, fully enabled.
+  // Track NormalPaymentCard's last emitted method so we can re-emit it when
+  // the user switches from billing → other without touching the card.
+  const normalMethodRef = useRef<SelectedPaymentMethod>({ type: 'cash', cashOption: 'pickup' });
+
+  const handleBillingClick = () => {
+    setPayVia('billing');
+    onPaymentMethodChange?.({ type: 'billing' });
+  };
+
+  const handleOtherClick = () => {
+    setPayVia('other');
+    // Emit the card's current selection (defaults to cash/pickup on first switch).
+    onPaymentMethodChange?.(normalMethodRef.current);
+  };
+
+  const handleNormalChange = (method: SelectedPaymentMethod) => {
+    normalMethodRef.current = method;
+    onPaymentMethodChange?.(method);
+  };
+
+  // Non-billing accounts: only the normal card, fully enabled.
   if (!billingAvailable) {
-    return <NormalPaymentCard />;
+    return <NormalPaymentCard onChange={onPaymentMethodChange} />;
   }
 
   const otherSelected = payVia === 'other';
@@ -199,7 +285,7 @@ export function PaymentMethodTabs({ billingAvailable = false }: PaymentMethodTab
     <div className="space-y-2">
       <button
         type="button"
-        onClick={() => setPayVia('billing')}
+        onClick={handleBillingClick}
         className={`w-full flex items-start gap-3 px-4 py-3 rounded-lg border text-left transition-colors ${
           payVia === 'billing' ? 'border-blue-500 bg-blue-50/40' : 'border-gray-200 hover:bg-gray-50'
         }`}
@@ -219,7 +305,7 @@ export function PaymentMethodTabs({ billingAvailable = false }: PaymentMethodTab
 
       <button
         type="button"
-        onClick={() => setPayVia('other')}
+        onClick={handleOtherClick}
         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-colors ${
           otherSelected ? 'border-blue-500 bg-blue-50/40' : 'border-gray-200 hover:bg-gray-50'
         }`}
@@ -234,7 +320,10 @@ export function PaymentMethodTabs({ billingAvailable = false }: PaymentMethodTab
       </button>
 
       {/* Tabs are disabled (visually + functionally) until "Other payment options" is selected. */}
-      <NormalPaymentCard disabled={!otherSelected} />
+      <NormalPaymentCard
+        disabled={!otherSelected}
+        onChange={otherSelected ? handleNormalChange : undefined}
+      />
     </div>
   );
 }
