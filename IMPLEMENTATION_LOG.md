@@ -495,3 +495,10 @@ Integrate the GGX pickup-location API into Address Book and align the Settings �
 
 **Validation**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Only the pre-existing recharts bundle-size warning remains.
+
+### Follow-up — Dashboard Recent Transactions aligned to shared dataset (2026-05-29)
+
+Dashboard "Recent Transactions" used its own inline mock data, including one tracking number (`GGX-2024-89230`) absent from the shared dataset — clicking it hit the not-found state. Recent rows are now derived from `deliveries` in `src/app/data/transactions.ts` (first 5), with a Dashboard-only `updated` relative-time label, and reuse the shared `statusConfig`. Every row now links to an existing transaction. No layout or DS changes.
+
+- Files changed: `src/app/pages/Dashboard.tsx`
+- Validation: `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).

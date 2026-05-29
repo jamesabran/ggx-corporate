@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { deliveries, statusConfig } from '../data/transactions';
 
 const stats = [
   { title: 'Active Deliveries', value: '2,847', change: '+12.5%', trend: 'up', icon: IconPackage, iconBg: 'bg-blue-600', cardBg: 'bg-blue-50', changeColor: 'text-blue-700' },
@@ -35,21 +36,17 @@ const quickActions = [
   { title: 'Submit a Ticket', description: 'Report issues or follow up on tickets', icon: IconMessage, href: '/dashboard/support-tickets', iconColor: 'text-orange-600', iconBg: 'bg-orange-50' },
 ];
 
-const recentTransactions = [
-  { tracking: 'GGX-2024-89234', recipient: 'Tech Solutions Inc.', destination: 'Makati City, Metro Manila', status: 'delivered', updated: '2 hrs ago' },
-  { tracking: 'GGX-2024-89233', recipient: 'Global Innovations Ltd.', destination: 'Cebu City, Cebu', status: 'in-transit', updated: '4 hrs ago' },
-  { tracking: 'GGX-2024-89232', recipient: 'Acme Corporation', destination: 'Quezon City, Metro Manila', status: 'picked-up', updated: '6 hrs ago' },
-  { tracking: 'GGX-2024-89231', recipient: 'Summit Partners', destination: 'Davao City, Davao', status: 'failed', updated: '8 hrs ago' },
-  { tracking: 'GGX-2024-89230', recipient: 'Metro Supplies Co.', destination: 'Pasig City, Metro Manila', status: 'pending', updated: '12 hrs ago' },
-];
+// Derived from the shared transaction dataset so every row links to a real
+// record. `updated` is a Dashboard-only relative-time label.
+const recentUpdatedLabels = ['2 hrs ago', '4 hrs ago', '6 hrs ago', '8 hrs ago', '12 hrs ago'];
 
-const statusConfig = {
-  delivered: { variant: 'success' as const, label: 'Delivered' },
-  'in-transit': { variant: 'info' as const, label: 'In Transit' },
-  'picked-up': { variant: 'warning' as const, label: 'Picked Up' },
-  failed: { variant: 'danger' as const, label: 'Failed' },
-  pending: { variant: 'pending' as const, label: 'Pending' },
-};
+const recentTransactions = deliveries.slice(0, 5).map((d, i) => ({
+  tracking: d.tracking,
+  recipient: d.recipient,
+  destination: d.destination,
+  status: d.status,
+  updated: recentUpdatedLabels[i],
+}));
 
 const earningsRows = [
   { label: 'Earnings Disbursed', amount: '₱184,320', meta: 'Transferred to your account', icon: IconCircleCheck, iconColor: 'text-emerald-500' },
