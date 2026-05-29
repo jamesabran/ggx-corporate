@@ -1,35 +1,153 @@
-import { IconPlus, IconUserCircle, IconShield, IconEye } from '@tabler/icons-react';
+import { useState } from 'react';
+import { IconPlus, IconUserCircle, IconShield, IconEdit, IconTrash, IconAlertTriangle } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 
-const users = [
-  { id: '1', name: 'John Doe', email: 'john@acme.com', role: 'Owner', level: 'Parent', subaccounts: ['All'], status: 'active' },
-  { id: '2', name: 'Jane Smith', email: 'jane@acme.com', role: 'Admin', level: 'Parent', subaccounts: ['All'], status: 'active' },
-  { id: '3', name: 'Mike Johnson', email: 'mike@acme.com', role: 'Manager', level: 'Subaccount', subaccounts: ['Acme Corporation'], status: 'active' },
-  { id: '4', name: 'Sarah Williams', email: 'sarah@acme.com', role: 'Operator', level: 'Subaccount', subaccounts: ['Acme Luzon'], status: 'active' },
+// Simplified access model:
+// - Exactly two roles: Admin and Manager.
+// - One Admin (the main account holder) with access to all accounts.
+// - Each subaccount can have at most one Manager; a Manager is tied to one subaccount.
+type Role = 'Admin' | 'Manager';
+
+interface AppUser {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  subaccount?: string; // present for Manager only
+}
+
+// Mock subaccounts available for assignment (mirrors the Transactions filters).
+const SUBACCOUNTS = ['Acme Corporation', 'Acme Luzon'];
+
+const initialUsers: AppUser[] = [
+  { id: '1', name: 'John Doe', email: 'john@acme.com', role: 'Admin' },
+  { id: '2', name: 'Mike Johnson', email: 'mike@acme.com', role: 'Manager', subaccount: 'Acme Corporation' },
+  { id: '3', name: 'Sarah Williams', email: 'sarah@acme.com', role: 'Manager', subaccount: 'Acme Luzon' },
 ];
 
-const roleColors = {
-  Owner: 'bg-purple-100 text-purple-700',
-  Admin: 'bg-blue-100 text-blue-700',
-  Finance: 'bg-emerald-100 text-emerald-700',
-  Viewer: 'bg-gray-100 text-gray-700',
-  Manager: 'bg-blue-100 text-blue-700',
-  Operator: 'bg-orange-100 text-orange-700',
-};
+function initials(name: string) {
+  return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function nameFromEmail(email: string) {
+  const local = email.split('@')[0] || email;
+  return local
+    .split(/[._-]/)
+    .filter(Boolean)
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(' ') || email;
+}
 
 export function UsersPermissions() {
+  const [users, setUsers] = useState<AppUser[]>(initialUsers);
+
+  // Add/Edit modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [account, setAccount] = useState(''); // '' = none, 'main' = Admin, else subaccount name
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Confirmation state
+  const [replaceTarget, setReplaceTarget] = useState<AppUser | null>(null); // existing manager to replace
+  const [removeTarget, setRemoveTarget] = useState<AppUser | null>(null);
+
+  const editingUser = editingId ? users.find((u) => u.id === editingId) : null;
+  const isAdminEdit = editingUser?.role === 'Admin';
+
+  const managerOf = (sub: string, excludeId?: string) =>
+    users.find((u) => u.role === 'Manager' && u.subaccount === sub && u.id !== excludeId);
+
+  const openAdd = () => {
+    setEditingId(null);
+    setEmail('');
+    setAccount('');
+    setFormError(null);
+    setModalOpen(true);
+  };
+
+  const openEdit = (u: AppUser) => {
+    setEditingId(u.id);
+    setEmail(u.email);
+    setAccount(u.role === 'Admin' ? 'main' : u.subaccount ?? '');
+    setFormError(null);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingId(null);
+    setEmail('');
+    setAccount('');
+    setFormError(null);
+    setReplaceTarget(null);
+  };
+
+  const commit = () => {
+    setUsers((prev) => {
+      let next = replaceTarget ? prev.filter((u) => u.id !== replaceTarget.id) : [...prev];
+      if (editingId) {
+        next = next.map((u) =>
+          u.id === editingId
+            ? isAdminEdit
+              ? { ...u, email }
+              : { ...u, email, role: 'Manager' as const, subaccount: account }
+            : u
+        );
+      } else {
+        next = [...next, { id: Date.now().toString(), name: nameFromEmail(email), email, role: 'Manager' as const, subaccount: account }];
+      }
+      return next;
+    });
+    closeModal();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !email.includes('@')) {
+      setFormError('Enter a valid email address.');
+      return;
+    }
+    // Admin edit only updates the email (role/access fixed).
+    if (isAdminEdit) {
+      commit();
+      return;
+    }
+    if (!account || account === 'main') {
+      setFormError('Select a subaccount to assign this user as Manager.');
+      return;
+    }
+    const existing = managerOf(account, editingId ?? undefined);
+    if (existing) {
+      setReplaceTarget(existing); // ask for replace confirmation
+      return;
+    }
+    commit();
+  };
+
+  const confirmRemove = () => {
+    if (!removeTarget) return;
+    setUsers((prev) => prev.filter((u) => u.id !== removeTarget.id));
+    setRemoveTarget(null);
+  };
+
+  const managerCount = users.filter((u) => u.role === 'Manager').length;
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Users & Permissions</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage users, roles, and access across your organization</p>
+          <p className="text-sm text-gray-600 mt-1">Manage who can access your account and subaccounts</p>
         </div>
-        <Button>
+        <Button onClick={openAdd}>
           <IconPlus className="w-4 h-4 mr-2" />
-          Invite User
+          Add User
         </Button>
       </div>
 
@@ -55,8 +173,8 @@ export function UsersPermissions() {
                 <IconShield className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{users.filter((u) => u.level === 'Parent').length}</p>
-                <p className="text-sm text-gray-600">Parent-level Users</p>
+                <p className="text-2xl font-bold text-gray-900">{managerCount}</p>
+                <p className="text-sm text-gray-600">Subaccount Managers</p>
               </div>
             </div>
           </CardContent>
@@ -66,107 +184,153 @@ export function UsersPermissions() {
       <Card>
         <CardHeader><CardTitle>User List</CardTitle></CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {users.map((user) => (
-              <div key={user.id} className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-white">{user.name.split(' ').map((n) => n[0]).join('')}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900">{user.name}</div>
-                    <div className="text-sm text-gray-600">{user.email}</div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <div className="text-xs text-gray-500 mb-1">Role</div>
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[user.role as keyof typeof roleColors]}`}>
-                        {user.role}
-                      </span>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Role / Assigned account</TableHead>
+                <TableHead>Access</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-white">{initials(user.name)}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-gray-900 leading-snug">{user.name}</div>
+                        <div className="text-sm text-gray-500 leading-snug">{user.email}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-xs text-gray-500 mb-1">Level</div>
-                      <Badge variant={user.level === 'Parent' ? 'info' : 'default'}>{user.level}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {user.role === 'Admin' ? (
+                      <Badge variant="info">Admin</Badge>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="default">Manager</Badge>
+                        <span className="text-sm text-gray-600">· {user.subaccount}</span>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-gray-600">
+                      {user.role === 'Admin' ? 'All accounts' : 'Assigned subaccount only'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(user)}>
+                        <IconEdit className="w-3.5 h-3.5 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50 disabled:text-gray-300"
+                        disabled={user.role === 'Admin'}
+                        title={user.role === 'Admin' ? 'The account Admin cannot be removed' : 'Remove access'}
+                        onClick={() => setRemoveTarget(user)}
+                      >
+                        <IconTrash className="w-3.5 h-3.5 mr-1" />
+                        Remove
+                      </Button>
                     </div>
-                    <div className="max-w-[150px]">
-                      <div className="text-xs text-gray-500 mb-1">Access</div>
-                      <div className="text-sm text-gray-900 truncate">{user.subaccounts.join(', ')}</div>
-                    </div>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm">Edit</Button>
-              </div>
-            ))}
-          </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Role Definitions</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Parent-level Roles</h4>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <IconShield className="w-5 h-5 text-purple-600 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-gray-900">Owner</div>
-                    <div className="text-sm text-gray-600">Full access to all features, billing, and settings</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <IconShield className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-gray-900">Admin</div>
-                    <div className="text-sm text-gray-600">Manage users, subaccounts, and operational settings</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <IconShield className="w-5 h-5 text-emerald-600 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-gray-900">Finance</div>
-                    <div className="text-sm text-gray-600">Access to billing, payments, and financial reports</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <IconEye className="w-5 h-5 text-gray-600 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-gray-900">Viewer</div>
-                    <div className="text-sm text-gray-600">Read-only access to dashboards and reports</div>
-                  </div>
-                </div>
+      {/* Add / Edit user modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-base font-semibold text-gray-900">{editingId ? 'Edit user access' : 'Add user access'}</h3>
+            <p className="text-sm text-gray-500 mt-1 mb-5">Assign a user to manage an account or subaccount.</p>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                <Input type="email" required placeholder="user@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Subaccount Roles</h4>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <IconShield className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-gray-900">Manager</div>
-                    <div className="text-sm text-gray-600">Full operational access within assigned subaccount</div>
-                  </div>
+
+              {isAdminEdit ? (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
+                  Role: <span className="font-medium text-gray-800">Admin</span> · Access: All accounts. The Admin role cannot be reassigned here.
                 </div>
-                <div className="flex items-start gap-3">
-                  <IconShield className="w-5 h-5 text-orange-600 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-gray-900">Operator</div>
-                    <div className="text-sm text-gray-600">Create and manage shipments within assigned subaccount</div>
-                  </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Assign to account</label>
+                  <Select value={account} onChange={(e) => setAccount(e.target.value)}>
+                    <option value="">Select account</option>
+                    <option value="main" disabled>Main account — Admin already assigned</option>
+                    {SUBACCOUNTS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1.5">
+                    Subaccount assignments are added as <span className="font-medium">Manager</span>. Each subaccount can have only one Manager.
+                  </p>
                 </div>
-                <div className="flex items-start gap-3">
-                  <IconEye className="w-5 h-5 text-gray-600 mt-0.5" />
-                  <div>
-                    <div className="font-medium text-gray-900">Viewer</div>
-                    <div className="text-sm text-gray-600">Read-only access to subaccount operations</div>
-                  </div>
+              )}
+
+              {formError && (
+                <div className="flex items-center gap-2 text-sm text-red-600">
+                  <IconAlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  {formError}
                 </div>
+              )}
+
+              <div className="flex gap-2.5 justify-end pt-2">
+                <Button type="button" variant="outline" size="sm" onClick={closeModal}>Cancel</Button>
+                <Button type="submit" size="sm">{editingId ? 'Save Changes' : 'Add User'}</Button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Replace-manager confirmation */}
+      {replaceTarget && (
+        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-1.5">Replace current manager?</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              <span className="font-medium text-gray-700">{replaceTarget.name}</span> ({replaceTarget.email}) will lose access to{' '}
+              <span className="font-medium text-gray-700">{account}</span> and will no longer be able to manage this subaccount.
+            </p>
+            <div className="flex gap-2.5 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setReplaceTarget(null)}>Cancel</Button>
+              <Button variant="destructive" size="sm" onClick={commit}>Replace Manager</Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
+
+      {/* Remove confirmation */}
+      {removeTarget && (
+        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-1.5">Remove user access?</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              <span className="font-medium text-gray-700">{removeTarget.name}</span> ({removeTarget.email}) will lose access
+              {removeTarget.subaccount ? <> to <span className="font-medium text-gray-700">{removeTarget.subaccount}</span></> : ''}. This can be re-added later.
+            </p>
+            <div className="flex gap-2.5 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setRemoveTarget(null)}>Cancel</Button>
+              <Button variant="destructive" size="sm" onClick={confirmRemove}>
+                <IconTrash className="w-3.5 h-3.5 mr-1.5" />
+                Remove Access
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -523,3 +523,40 @@ Resolved the inert links on the Login page (`src/app/pages/Login.tsx`):
 
 - Files changed: `src/app/pages/Login.tsx`
 - Validation: `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).
+
+### Build Next — Users & Permissions access management + Payment Settings edit/remove (2026-05-29)
+
+**Simplified Admin/Manager access model**
+- Two roles only: `Admin` and `Manager`. One Admin (main account holder) with access to all accounts; each subaccount has at most one Manager tied to that single subaccount.
+- Removed the old multi-role/multi-level model (Owner/Admin/Finance/Viewer/Operator), the `Level` column, and the "Role Definitions" section (no longer applicable).
+- Seed: 1 Admin (John Doe) + 2 Managers (Acme Corporation, Acme Luzon).
+
+**User List layout**
+- Rebuilt as a DS `Table` with columns: User (avatar + name + email grouped) · Role / Assigned account · Access · Actions (right-aligned, compact).
+- Admin → Role `Admin`, Access `All accounts`. Manager → Role `Manager · [Subaccount]`, Access `Assigned subaccount only`.
+- Removed scattered right-aligned metadata and the per-field mini-labels.
+
+**Add User flow**
+- CTA relabeled "Add User"; modal titled "Add user access" with helper "Assign a user to manage an account or subaccount."
+- Fields: email + account select. Role is derived: subaccount → Manager. The Main-account/Admin option is shown but disabled ("Admin already assigned") since only one Admin is allowed.
+- New name is derived from the email local part.
+
+**Manager replacement behavior**
+- Adding/editing a Manager into a subaccount that already has one triggers a replace confirmation dialog stating the existing manager (name + email) will lose access to that subaccount. On confirm, the existing manager is removed from local state and the new assignment applied.
+
+**Edit / Remove actions**
+- Users: Edit opens the same modal pre-filled — Manager can change email + assigned subaccount (with replace confirmation if the target subaccount is taken); Admin edit updates email only (role/access locked). Remove uses a confirmation dialog. The sole Admin's Remove is disabled (no account-owner transfer flow exists — see assumptions).
+- Payment Settings: converted payment methods and bank accounts to local state. Edit opens a modal (cardholder/account name + expiry for cards; account name for banks). Remove opens a confirmation dialog and deletes locally.
+
+**Files changed**
+- `src/app/pages/UsersPermissions.tsx` (rewritten)
+- `src/app/pages/PaymentSettings.tsx` (rewritten)
+
+**Assumptions**
+- No DS `Dialog` component exists; reused the app's inline modal pattern (`fixed inset-0 bg-gray-900/50…`). DS gap: a reusable Dialog/ConfirmDialog component would consolidate the now-several modal instances.
+- The sole Admin cannot be removed and the Admin role cannot be reassigned in-UI; there is no account-owner transfer flow, so that action is disabled.
+- Subaccount list for assignment is a local mock (`Acme Corporation`, `Acme Luzon`) mirroring the Transactions filters; not yet sourced from SubAccountContext.
+- Payment Settings "Set as Default"/"Set as Primary" remain stubs — out of the requested edit/remove scope; left unchanged.
+
+**Validation**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Only the pre-existing recharts bundle-size warning remains.
