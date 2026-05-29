@@ -28,6 +28,7 @@ import { Reports } from './pages/Reports';
 import { ServiceAdvisories } from './pages/ServiceAdvisories';
 import { Claims } from './pages/Claims';
 import { SlaAlerts } from './pages/SlaAlerts';
+import { ProtectedRoute, AdminRoute } from './components/RouteGuards';
 
 export const router = createBrowserRouter([
   {
@@ -36,8 +37,13 @@ export const router = createBrowserRouter([
   },
   {
     path: '/dashboard',
-    Component: RootLayout,
+    element: (
+      <ProtectedRoute>
+        <RootLayout />
+      </ProtectedRoute>
+    ),
     children: [
+      // Shared (Admin + Manager)
       { index: true, Component: DashboardWrapper },
       { path: 'transactions', Component: Transactions },
       { path: 'transactions/:id', Component: TransactionDetails },
@@ -54,23 +60,25 @@ export const router = createBrowserRouter([
           </Suspense>
         ),
       },
-      { path: 'earnings', Component: Earnings },
-      { path: 'billing', Component: BillingStatement },
-      { path: 'payment-settings', Component: PaymentSettings },
       { path: 'address-book', Component: AddressBookPage },
       { path: 'api-access', Component: APIAccess },
       { path: 'support-tickets', Component: SupportTickets },
       { path: 'support-tickets/:id', Component: SupportTicketDetail },
       { path: 'complaints', element: <Navigate to="/dashboard/support-tickets" replace /> },
-      { path: 'subaccounts', Component: SubAccounts },
-      { path: 'subaccounts/enable', Component: EnableSubAccountsIntro },
-      { path: 'subaccounts/enable/setup', Component: EnableSubAccountsSetup },
-      { path: 'subaccounts/request', Component: RequestSubAccount },
-      { path: 'users-permissions', Component: UsersPermissions },
       { path: 'notifications', Component: Notifications },
-      { path: 'reports', Component: Reports },
       { path: 'advisories', Component: ServiceAdvisories },
       { path: 'settings', Component: Settings },
+
+      // Admin-only (parent-level finance, reports, subaccounts, users)
+      { path: 'earnings',          element: <AdminRoute><Earnings /></AdminRoute> },
+      { path: 'billing',           element: <AdminRoute><BillingStatement /></AdminRoute> },
+      { path: 'payment-settings',  element: <AdminRoute><PaymentSettings /></AdminRoute> },
+      { path: 'reports',           element: <AdminRoute><Reports /></AdminRoute> },
+      { path: 'subaccounts',       element: <AdminRoute><SubAccounts /></AdminRoute> },
+      { path: 'subaccounts/enable',       element: <AdminRoute><EnableSubAccountsIntro /></AdminRoute> },
+      { path: 'subaccounts/enable/setup', element: <AdminRoute><EnableSubAccountsSetup /></AdminRoute> },
+      { path: 'subaccounts/request',      element: <AdminRoute><RequestSubAccount /></AdminRoute> },
+      { path: 'users-permissions', element: <AdminRoute><UsersPermissions /></AdminRoute> },
     ],
   },
 ]);

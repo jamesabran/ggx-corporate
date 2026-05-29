@@ -58,9 +58,9 @@ These are infrastructure foundations, not features. Recommended sequence:
 
 | Order | Foundation | Why / Notes |
 |-------|-----------|-------------|
-| **1 (next)** | **Real authentication + route guards** | Most impactful gap: routes are currently open. Establishes the session/identity layer everything else depends on. |
-| 2 | Persistence / localStorage | Survive reloads for context, uploads, claims, SLA, notifications, payment changes. Should be scoped *per authenticated user/account* — hence after auth. |
-| 3 | Backend / API integration | Replace mock data modules with real endpoints (auth, transactions, claims, SLA, notifications, analytics). Largest effort; depends on 1–2 and defined API contracts. |
+| ~~1~~ | ~~Mock authentication + route guards~~ | ✅ **Done (2026-05-30)** — `AuthContext` (Admin/Manager demo users), `ProtectedRoute`/`AdminRoute`, role-aware nav + notification scoping, access-denied state. |
+| ~~2~~ | ~~Persistence / localStorage~~ | ✅ **Done (2026-05-30)** — auth session, subaccount selection, notification read-state, claims, SLA, recent uploads persisted via `lib/storage`. |
+| **3 (next)** | Backend / API integration | Replace mock data modules with real endpoints (auth, transactions, claims, SLA, notifications, analytics). Largest effort; depends on defined API contracts. |
 | — | Secondary | Real notification/Zendesk APIs; real OTP delivery; roles/permissions beyond Admin/Manager; dark mode; further bundle code-splitting. |
 
 ### Recommended next implementation task: Authentication + Route Guards

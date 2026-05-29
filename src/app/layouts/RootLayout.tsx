@@ -36,6 +36,7 @@ import { cn } from '../lib/utils';
 import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ui/Dialog';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   getVisibleNotifications, getVisibleUnreadCount, markVisibleNotificationsRead,
   useNotificationViewer, CATEGORY_META, relativeTime, type AppNotification,
@@ -134,7 +135,13 @@ export function RootLayout() {
     isMainAccountView,
   } = useSubAccounts();
 
-  const navigation = !subAccountsEnabled
+  const { user, logout } = useAuth();
+  const isManager = user?.role === 'manager';
+
+  // Managers always get the subaccount nav (no parent-level finance/reports/etc.).
+  const navigation = isManager
+    ? subaccountNavigation
+    : !subAccountsEnabled
     ? standardAccountNavigation
     : isMainAccountView()
     ? mainAccountNavigation
@@ -150,8 +157,13 @@ export function RootLayout() {
 
   const handleLogout = () => {
     setShowLogoutConfirm(false);
+    logout();
     navigate('/');
   };
+
+  // Display identity from the authenticated user (falls back for safety).
+  const displayName = user?.name ?? 'Max Rodriguez';
+  const displayEmail = user?.email ?? 'max@email.com';
 
   // Account-menu items route into the existing Settings page (no separate
   // profile/security/preferences routes exist).
@@ -313,7 +325,7 @@ export function RootLayout() {
           })}
         </nav>
 
-        {subAccountsEnabled && (
+        {subAccountsEnabled && !isManager && (
           <div className="flex-shrink-0 border-t border-gray-200">
             {subaccountExpanded && (
               <div className="border-b border-gray-200 bg-gray-50/70">
@@ -526,10 +538,12 @@ export function RootLayout() {
                   <IconUser className="w-3.5 h-3.5 text-white" />
                 </div>
                 <div className="hidden md:flex flex-col items-start justify-center gap-0.5">
-                  <span className="text-sm font-medium text-gray-900 leading-none">Max Rodriguez</span>
-                  {subAccountsEnabled && (
+                  <span className="text-sm font-medium text-gray-900 leading-none">{displayName}</span>
+                  {isManager ? (
+                    <span className="text-[11px] text-gray-400 leading-none">{user?.accountName}</span>
+                  ) : subAccountsEnabled ? (
                     <span className="text-[11px] text-gray-400 leading-none">{currentAccountName}</span>
-                  )}
+                  ) : null}
                 </div>
                 <IconChevronDown
                   className={cn(
@@ -549,11 +563,11 @@ export function RootLayout() {
                           <IconUser className="w-4 h-4 text-white" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-gray-900 leading-snug">Max Rodriguez</p>
-                          <p className="text-xs text-gray-400 leading-snug">max@email.com</p>
+                          <p className="text-sm font-semibold text-gray-900 leading-snug">{displayName}</p>
+                          <p className="text-xs text-gray-400 leading-snug">{displayEmail}</p>
                         </div>
                       </div>
-                      {subAccountsEnabled && (
+                      {subAccountsEnabled && !isManager && (
                         <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="w-5 h-5 rounded-md bg-blue-600 flex items-center justify-center flex-shrink-0">

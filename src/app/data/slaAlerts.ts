@@ -8,6 +8,7 @@ import type { ComponentType } from 'react';
 import { IconClockExclamation, IconAlertOctagon, IconMessageDots } from '@tabler/icons-react';
 import { pushNotification } from './notifications';
 import { getAccountIdByName } from './accounts';
+import { loadState, saveState } from '../lib/storage';
 
 export type SlaAlertType = 'no_movement' | 'breach' | 'follow_up';
 export type SlaAlertStatus = 'open' | 'monitoring' | 'resolved';
@@ -48,12 +49,16 @@ export interface SlaAlert {
 }
 
 // Seed alerts linked to existing in-transit / picked-up / failed transactions.
-const SLA_ALERTS: SlaAlert[] = [
+const SEED_SLA_ALERTS: SlaAlert[] = [
   { id: 'SLA-2001', trackingNumber: 'GGX-2024-89236', type: 'breach', title: 'SLA breached — delivery overdue', detail: 'Delivery exceeded the committed 2-day SLA and was marked failed.', status: 'open', assignedTo: 'Pasig Forwarder', createdAt: '6 hours ago', accountId: 'acme-luzon', accountName: 'Acme Luzon' },
   { id: 'SLA-2002', trackingNumber: 'GGX-2024-89239', type: 'no_movement', title: 'No movement for 18 hours', detail: 'Parcel has not scanned at any hub since leaving origin.', status: 'monitoring', assignedTo: 'Cebu Hub', followUpNote: 'Follow-up sent to Cebu Hub at 9:00 AM.', createdAt: '10 hours ago', accountId: 'acme-luzon', accountName: 'Acme Luzon' },
   { id: 'SLA-2003', trackingNumber: 'GGX-2024-89238', type: 'no_movement', title: 'No movement for 12 hours', detail: 'Awaiting first-mile scan after pickup.', status: 'open', assignedTo: 'Davao Hub', createdAt: '12 hours ago', accountId: 'acme-corporation', accountName: 'Acme Corporation' },
   { id: 'SLA-2004', trackingNumber: 'GGX-2024-89232', type: 'breach', title: 'SLA at risk — approaching cutoff', detail: 'Estimated delivery is past the committed window for this lane.', status: 'monitoring', assignedTo: 'Laguna Hub', followUpNote: 'Follow-up sent to assigned forwarder; re-routing requested.', createdAt: '1 day ago', accountId: 'acme-luzon', accountName: 'Acme Luzon' },
 ];
+
+// Hydrate from localStorage; fall back to seed.
+const SLA_ALERTS: SlaAlert[] = loadState<SlaAlert[]>('slaAlerts', SEED_SLA_ALERTS);
+function persistSlaAlerts(): void { saveState('slaAlerts', SLA_ALERTS); }
 
 export function getSlaAlerts(): readonly SlaAlert[] {
   return SLA_ALERTS;
@@ -69,6 +74,7 @@ export function sendFollowUp(id: string, note?: string): void {
   if (!alert) return;
   alert.followUpNote = note?.trim() || `Follow-up sent to ${alert.assignedTo}.`;
   if (alert.status === 'open') alert.status = 'monitoring';
+  persistSlaAlerts();
 
   pushNotification({
     category: 'transaction',
@@ -85,5 +91,5 @@ export function sendFollowUp(id: string, note?: string): void {
 /** Mark an alert resolved. */
 export function resolveAlert(id: string): void {
   const alert = getSlaAlert(id);
-  if (alert) alert.status = 'resolved';
+  if (alert) { alert.status = 'resolved'; persistSlaAlerts(); }
 }

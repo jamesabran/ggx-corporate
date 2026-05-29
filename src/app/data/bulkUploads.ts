@@ -7,6 +7,8 @@
 // RootLayout bell popover and the Notifications page. `event.read` is flipped by
 // `markAllNotificationsRead()` when the popover/page is opened.
 
+import { loadState, saveState } from '../lib/storage';
+
 export type UploadStatus = 'processing' | 'needs-review' | 'awaiting-payment' | 'completed';
 
 // Account scope captured at upload time so notifications and batch linkage are
@@ -52,16 +54,21 @@ export interface UploadNotificationEvent {
 
 export const PENDING_NOTIFICATIONS: UploadNotificationEvent[] = [];
 
-const SESSION_UPLOADS: UploadRecord[] = [];
+// Recent uploads persist across reloads (lightweight continuity). The derived
+// upload-event notifications (PENDING_NOTIFICATIONS) remain session-only.
+const SESSION_UPLOADS: UploadRecord[] = loadState<UploadRecord[]>('recentUploads', []);
+function persistUploads(): void { saveState('recentUploads', SESSION_UPLOADS); }
 
 export function addUpload(record: UploadRecord): void {
   SESSION_UPLOADS.unshift(record);
+  persistUploads();
 }
 
 export function updateUploadStatus(id: string, status: UploadStatus): void {
   const record = SESSION_UPLOADS.find((r) => r.id === id);
   if (!record) return;
   record.status = status;
+  persistUploads();
   if (status === 'needs-review') {
     PENDING_NOTIFICATIONS.push({
       id: `notif-${Date.now()}`,

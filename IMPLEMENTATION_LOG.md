@@ -1485,3 +1485,62 @@ Documentation-only update (no app feature code changed). All five roadmap items 
 - No build run needed — docs only.
 
 **Files changed:** `ROADMAP.md`, `PROJECT_HANDOFF.md`, `IMPLEMENTATION_LOG.md`.
+
+---
+
+### Build Next — Mock auth + route guards + persistence + role QA (2026-05-30)
+
+Added the foundation/stability layer: mock authentication, route protection, localStorage persistence, and a role/access QA pass. Frontend/mock only; no backend.
+
+**Mock authentication (`src/app/contexts/AuthContext.tsx`, new)**
+- `AuthUser` { name, email, role ('admin'|'manager'), accountId, accountName }; `useAuth()` with `login`/`logout`/`isAuthenticated`.
+- `DEMO_USERS`: Admin (`max@email.com` → accountId `main`) and Manager (`manager@email.com` → accountId `acme-luzon`); shared demo password `!1234qwer`.
+- Session persisted to `localStorage` (`ggx.auth`); restored on load.
+- `AuthProvider` wraps the app (outermost, above `SubAccountProvider`).
+
+**Login (`Login.tsx`)**
+- Resolves the demo user, calls `login()`, navigates to `/dashboard`. Added "Demo sign-in" Admin/Manager quick-fill buttons. Redirects to `/dashboard` if already authenticated.
+
+**Route guards (`src/app/components/RouteGuards.tsx`, `AccessDenied.tsx`, new)**
+- `ProtectedRoute` wraps `/dashboard` — unauthenticated users redirect to `/`.
+- `AdminRoute` wraps Admin-only routes (earnings, billing, payment-settings, reports, subaccounts*, users-permissions) — Managers get a minimal in-shell access-denied state (not a blank page).
+- Shared routes (dashboard, transactions, claims, sla-alerts, bulk-uploader, analytics, address-book, api-access, support-tickets, notifications, advisories, settings) available to both roles.
+
+**Role-aware nav + identity (`RootLayout.tsx`)**
+- Managers always get the subaccount nav (no parent-level finance/reports/subaccounts/users). Account switcher and account-menu "Switch" hidden for Managers. Topbar/account-menu identity now driven by the auth user (name/email/accountName).
+- Logout clears the auth session then navigates to `/`.
+
+**Notification scoping by session role (`notifications.ts`)**
+- `useNotificationViewer()` now derives the viewer from `useAuth()`: Manager → `{ role:'manager', accountId: <their subaccount> }`; Admin → existing all/drilled-in logic. Visibility remains id-based.
+
+**Persistence (`src/app/lib/storage.ts`, new + wiring)**
+- Namespaced (`ggx.`) `loadState`/`saveState`/`clearState` with graceful failure.
+- Persisted: auth session; subaccount selection/state (`SubAccountContext` via effect); seed notification read-state (read ids in `notifications.ts`); claims + cancellations (`claims.ts`); SLA alerts (`slaAlerts.ts`); recent uploads (`bulkUploads.ts`).
+- Not persisted (by design): mock OTP values (never stored), runtime/upload-event notification read-state (session-scoped), security-log/attention-email events, transient form state.
+
+**Parent-level financial gate (`PaymentSettings.tsx`)**
+- `financialAccessAllowed` now also requires `role === 'admin'` (defense-in-depth alongside the AdminRoute guard). OTP flow unchanged.
+
+**Role/access QA results (pass)**
+- Unauthenticated direct URL to any `/dashboard/*` → redirected to Login. ✓
+- Admin login → full nav + all routes; Manager login → subaccount nav only. ✓
+- Manager direct URL to Admin-only pages → access-denied (in-shell). ✓
+- Refresh after login keeps session (persisted); visiting `/` while authed → `/dashboard`. ✓
+- Logout clears session → Login. ✓
+- Manager notifications scoped to their subaccount + global (parent/other-subaccount hidden). ✓
+- Claims/SLA/bulk-summary/transaction-detail links intact; OTP still gates financial changes (Admin-only). ✓
+- No stray hardcoded identity in feature UI (only auth demo users, safe fallbacks, seeds).
+
+**Files changed**
+- Added: `src/app/contexts/AuthContext.tsx`, `src/app/components/RouteGuards.tsx`, `src/app/components/AccessDenied.tsx`, `src/app/lib/storage.ts`
+- Modified: `src/app/App.tsx`, `src/app/routes.tsx`, `src/app/pages/Login.tsx`, `src/app/layouts/RootLayout.tsx`, `src/app/data/notifications.ts`, `src/app/data/claims.ts`, `src/app/data/slaAlerts.ts`, `src/app/data/bulkUploads.ts`, `src/app/contexts/SubAccountContext.tsx`, `src/app/pages/PaymentSettings.tsx`, `ROADMAP.md`, `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- Mock auth only (no real provider); `AuthContext` is the seam for a future real auth API.
+- Manager account context is authoritative for notification visibility; other account-context reads (bulk-upload scoping, PaymentMethodTabs billing) still derive from `SubAccountContext` for the demo — deeper manager-context wiring deferred.
+- Runtime/upload-event notification read-state not persisted (session-scoped); only seed read-state persists.
+- No real roles/permissions service; Admin/Manager is the mock model.
+- recharts main bundle (~574 kB) still slightly over the 500 kB warning; backend/API integration is the next foundation.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts remains a separate ~431 kB chunk; main bundle ~574 kB.

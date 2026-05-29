@@ -9,6 +9,7 @@ import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 import { OtpDialog } from '../components/ui/OtpDialog';
 import { recordFinancialChange } from '../data/financialSecurity';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface PaymentMethod {
   id: string;
@@ -56,10 +57,11 @@ const BANKS = ['BDO Unibank', 'BPI', 'Metrobank', 'UnionBank', 'Landbank', 'PNB'
 
 export function PaymentSettings() {
   const { subAccountsEnabled, isMainAccountView } = useSubAccounts();
-  // Financial actions are parent/main-account level only. The Payment Settings
-  // page is already absent from the subaccount nav; this additionally gates the
-  // action controls when an Admin is drilled into a specific subaccount.
-  const financialAccessAllowed = !subAccountsEnabled || isMainAccountView();
+  const { user } = useAuth();
+  // Financial actions are parent/main-account level only and Admin-only. The
+  // route is already AdminRoute-guarded; this also gates the action controls
+  // (defense-in-depth) and when an Admin is drilled into a specific subaccount.
+  const financialAccessAllowed = user?.role === 'admin' && (!subAccountsEnabled || isMainAccountView());
 
   const [methods, setMethods] = useState<PaymentMethod[]>(initialMethods);
   const [banks, setBanks] = useState<BankAccount[]>(initialBanks);

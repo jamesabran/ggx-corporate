@@ -7,6 +7,7 @@
 
 import { pushNotification } from './notifications';
 import { getAccountIdByName } from './accounts';
+import { loadState, saveState } from '../lib/storage';
 import type { TransactionStatus } from './transactions';
 
 export type ClaimStatus = 'open' | 'in-review' | 'approved' | 'denied' | 'settled';
@@ -41,10 +42,14 @@ export interface Claim {
 }
 
 // Seed claims linked to existing undelivered transactions.
-const CLAIMS: Claim[] = [
+const SEED_CLAIMS: Claim[] = [
   { id: 'CLM-1002', trackingNumber: 'GGX-2024-89236', reason: 'Delivery failed', details: 'Rider marked undelivered but recipient was available.', amount: 12300, status: 'open', createdAt: 'May 18, 2026', accountId: 'acme-luzon', accountName: 'Acme Luzon' },
   { id: 'CLM-1001', trackingNumber: 'GGX-2024-89231', reason: 'Undelivered — returned to sender', details: 'Returned after failed delivery attempts; requesting refund of fees.', amount: 4300, status: 'in-review', createdAt: 'May 16, 2026', accountId: 'acme-corporation', accountName: 'Acme Corporation' },
 ];
+
+// Hydrate from localStorage (persisted across reloads); fall back to seed.
+const CLAIMS: Claim[] = loadState<Claim[]>('claims', SEED_CLAIMS);
+function persistClaims(): void { saveState('claims', CLAIMS); }
 
 let claimSeq = 1;
 function nextClaimId(): string {
@@ -87,6 +92,7 @@ export function submitClaim(input: SubmitClaimInput): Claim {
     accountName: input.accountName,
   };
   CLAIMS.unshift(claim);
+  persistClaims();
 
   pushNotification({
     category: 'transaction',
@@ -104,7 +110,7 @@ export function submitClaim(input: SubmitClaimInput): Claim {
 
 // --- Cancellations (newly-booked only) ------------------------------------
 
-const CANCELLED = new Set<string>();
+const CANCELLED = new Set<string>(loadState<string[]>('cancellations', []));
 
 export function isCancelled(tracking: string): boolean {
   return CANCELLED.has(tracking);
@@ -113,6 +119,7 @@ export function isCancelled(tracking: string): boolean {
 /** Request cancellation of a newly-booked transaction; pushes a notification. */
 export function requestCancellation(tracking: string, accountName?: string): void {
   CANCELLED.add(tracking);
+  saveState('cancellations', [...CANCELLED]);
   const accountId = accountName ? getAccountIdByName(accountName) : undefined;
   pushNotification({
     category: 'transaction',

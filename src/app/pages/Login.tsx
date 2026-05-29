@@ -1,13 +1,17 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Navigate, useNavigate } from 'react-router';
 import { IconTrendingUp, IconClock, IconMapPin, IconArrowLeft } from '@tabler/icons-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Card, CardContent } from '../components/ui/Card';
+import { useAuth, DEMO_USERS } from '../contexts/AuthContext';
+
+const DEMO_PASSWORD = '!1234qwer';
 
 export function Login() {
   const navigate = useNavigate();
+  const { isAuthenticated, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showRegister, setShowRegister] = useState(false);
@@ -23,13 +27,23 @@ export function Login() {
     remarks: '',
   });
 
+  // Already signed in → skip Login.
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === 'max@email.com' && password === '!1234qwer') {
+    const user = DEMO_USERS[email.trim().toLowerCase()];
+    if (user && password === DEMO_PASSWORD) {
+      login(user);
       navigate('/dashboard');
     } else {
-      alert('Invalid credentials. Please use max@email.com / !1234qwer');
+      alert('Invalid credentials. Use max@email.com (Admin) or manager@email.com (Manager), password !1234qwer');
     }
+  };
+
+  const demoLogin = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword(DEMO_PASSWORD);
   };
 
   const handleRegister = (e: React.FormEvent) => {
@@ -127,6 +141,15 @@ export function Login() {
                   )}
 
                   <Button type="submit" className="w-full">Sign in</Button>
+
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-xs font-medium text-gray-600 mb-2">Demo sign-in</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => demoLogin('max@email.com')}>Admin</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => demoLogin('manager@email.com')}>Manager</Button>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-2">Fills demo credentials, then click Sign in. Password: {DEMO_PASSWORD}</p>
+                  </div>
 
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">

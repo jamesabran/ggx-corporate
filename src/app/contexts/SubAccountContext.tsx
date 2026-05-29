@@ -1,5 +1,13 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { getAccountIdByName } from '../data/accounts';
+import { loadState, saveState } from '../lib/storage';
+
+interface PersistedSubAccountState {
+  subAccountsEnabled: boolean;
+  mainAccount: MainAccount | null;
+  subAccounts: SubAccount[];
+  currentAccount: string;
+}
 
 export interface SubAccount {
   id: string;
@@ -39,10 +47,16 @@ interface SubAccountContextType {
 const SubAccountContext = createContext<SubAccountContextType | undefined>(undefined);
 
 export function SubAccountProvider({ children }: { children: ReactNode }) {
-  const [subAccountsEnabled, setSubAccountsEnabled] = useState(false);
-  const [mainAccount, setMainAccount] = useState<MainAccount | null>(null);
-  const [subAccounts, setSubAccounts] = useState<SubAccount[]>([]);
-  const [currentAccount, setCurrentAccount] = useState<string>('main');
+  // Hydrate selected account/subaccount state from localStorage for continuity.
+  const persisted = loadState<PersistedSubAccountState | null>('subaccount', null);
+  const [subAccountsEnabled, setSubAccountsEnabled] = useState(persisted?.subAccountsEnabled ?? false);
+  const [mainAccount, setMainAccount] = useState<MainAccount | null>(persisted?.mainAccount ?? null);
+  const [subAccounts, setSubAccounts] = useState<SubAccount[]>(persisted?.subAccounts ?? []);
+  const [currentAccount, setCurrentAccount] = useState<string>(persisted?.currentAccount ?? 'main');
+
+  useEffect(() => {
+    saveState('subaccount', { subAccountsEnabled, mainAccount, subAccounts, currentAccount });
+  }, [subAccountsEnabled, mainAccount, subAccounts, currentAccount]);
 
   const enableSubAccounts = (mainAccountData: MainAccount, firstSubAccount: SubAccount) => {
     setMainAccount(mainAccountData);

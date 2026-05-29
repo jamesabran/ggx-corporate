@@ -15,7 +15,9 @@ import {
   IconUpload, IconPackage, IconUserCog, IconAlertTriangle, IconFileText, IconMessage,
 } from '@tabler/icons-react';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useAuth } from '../contexts/AuthContext';
 import { PENDING_NOTIFICATIONS, type UploadNotificationEvent } from './bulkUploads';
+import { loadState, saveState } from '../lib/storage';
 
 export type NotificationCategory =
   | 'bulk_upload'      // Bulk Upload / Batch Processing
@@ -147,6 +149,18 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
   },
 ];
 
+// Persist read-state of the seed notifications (ids marked read) so the bell
+// badge stays consistent after reload. Runtime + upload-event read-state is
+// session-scoped and not persisted (documented).
+const READ_IDS_KEY = 'notifReadIds';
+{
+  const readIds = new Set(loadState<string[]>(READ_IDS_KEY, []));
+  MOCK_NOTIFICATIONS.forEach((n) => { if (readIds.has(n.id)) n.read = true; });
+}
+function persistSeedReadIds(): void {
+  saveState(READ_IDS_KEY, MOCK_NOTIFICATIONS.filter((n) => n.read).map((n) => n.id));
+}
+
 // Runtime notifications pushed during the session (e.g. a submitted support
 // ticket). Kept separate from the seed so other modules can add notifications
 // without importing the mock array. This is the extension point future sources
@@ -215,6 +229,7 @@ export function markAllNotificationsRead(): void {
   MOCK_NOTIFICATIONS.forEach((n) => { n.read = true; });
   RUNTIME_NOTIFICATIONS.forEach((n) => { n.read = true; });
   PENDING_NOTIFICATIONS.forEach((e) => { e.read = true; });
+  persistSeedReadIds();
 }
 
 // ---------------------------------------------------------------------------
@@ -244,7 +259,15 @@ export interface NotificationViewer {
  * - Admin drilled into a specific subaccount → scoped to that subaccount's id.
  */
 export function useNotificationViewer(): NotificationViewer {
+  const { user } = useAuth();
   const { subAccountsEnabled, currentAccount, getCurrentAccountId, getCurrentAccountName, isMainAccountView } = useSubAccounts();
+
+  // Manager: scoped to their assigned subaccount id (from the auth session).
+  if (user?.role === 'manager') {
+    return { role: 'manager', accountId: user.accountId, accountName: user.accountName };
+  }
+
+  // Admin: 'all' at parent/main view, otherwise the drilled-into subaccount id.
   const isAll = !subAccountsEnabled || isMainAccountView() || currentAccount === 'main';
   return {
     role: 'admin',
@@ -291,6 +314,7 @@ export function markVisibleNotificationsRead(viewer: NotificationViewer): void {
   });
   RUNTIME_NOTIFICATIONS.forEach((n) => { if (isNotificationVisible(n, viewer)) n.read = true; });
   MOCK_NOTIFICATIONS.forEach((n) => { if (isNotificationVisible(n, viewer)) n.read = true; });
+  persistSeedReadIds();
 }
 
 /** Compact relative-time label. */
