@@ -1473,3 +1473,15 @@ Redesigned the Data Analytics page around the Business Review (Zenith PH) metric
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts split into a ~431 kB lazy chunk; main bundle ~570 kB (down from ~997 kB).
+
+---
+
+### Milestone / Docs — Roadmap complete; next horizon documented (2026-05-30)
+
+Documentation-only update (no app feature code changed). All five roadmap items (Stable Subaccount IDs, Financial/OTP, Claims & Cancellations, SLA Alerts, Data Analytics redesign) are complete.
+
+- **ROADMAP.md** rewritten: completed-roadmap summary + what each delivered; current shipped feature set; mock/frontend-only limitations; remaining foundations (auth + route guards → persistence → backend/API); next implementation task (Authentication + Route Guards) with rationale for sequencing it before persistence and a risks/assumptions section.
+- **PROJECT_HANDOFF.md** §13–14 updated: §13 now lists completed roadmap + shipped systems; §14 captures current limitations and sets the next recommended task to Authentication + Route Guards (with the "why before persistence" rationale).
+- No build run needed — docs only.
+
+**Files changed:** `ROADMAP.md`, `PROJECT_HANDOFF.md`, `IMPLEMENTATION_LOG.md`.
