@@ -560,3 +560,10 @@ Resolved the inert links on the Login page (`src/app/pages/Login.tsx`):
 
 **Validation**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Only the pre-existing recharts bundle-size warning remains.
+
+### Follow-up — Name field added to Add User flow (2026-05-29)
+
+Added a required Name field to the "Add user access" modal in Users & Permissions. The name is captured in local user state (replacing the previous derive-from-email behavior; `nameFromEmail` helper removed) and is pre-filled on Edit. Submit is blocked when name is empty; email/account validation unchanged. The User List already displays name + email per row, so no layout change was needed. Admin/Manager model and replace-manager behavior unchanged.
+
+- Files changed: `src/app/pages/UsersPermissions.tsx`
+- Validation: `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).

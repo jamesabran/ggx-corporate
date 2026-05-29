@@ -34,21 +34,13 @@ function initials(name: string) {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-function nameFromEmail(email: string) {
-  const local = email.split('@')[0] || email;
-  return local
-    .split(/[._-]/)
-    .filter(Boolean)
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join(' ') || email;
-}
-
 export function UsersPermissions() {
   const [users, setUsers] = useState<AppUser[]>(initialUsers);
 
   // Add/Edit modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [account, setAccount] = useState(''); // '' = none, 'main' = Admin, else subaccount name
   const [formError, setFormError] = useState<string | null>(null);
@@ -65,6 +57,7 @@ export function UsersPermissions() {
 
   const openAdd = () => {
     setEditingId(null);
+    setName('');
     setEmail('');
     setAccount('');
     setFormError(null);
@@ -73,6 +66,7 @@ export function UsersPermissions() {
 
   const openEdit = (u: AppUser) => {
     setEditingId(u.id);
+    setName(u.name);
     setEmail(u.email);
     setAccount(u.role === 'Admin' ? 'main' : u.subaccount ?? '');
     setFormError(null);
@@ -82,6 +76,7 @@ export function UsersPermissions() {
   const closeModal = () => {
     setModalOpen(false);
     setEditingId(null);
+    setName('');
     setEmail('');
     setAccount('');
     setFormError(null);
@@ -95,12 +90,12 @@ export function UsersPermissions() {
         next = next.map((u) =>
           u.id === editingId
             ? isAdminEdit
-              ? { ...u, email }
-              : { ...u, email, role: 'Manager' as const, subaccount: account }
+              ? { ...u, name: name.trim(), email }
+              : { ...u, name: name.trim(), email, role: 'Manager' as const, subaccount: account }
             : u
         );
       } else {
-        next = [...next, { id: Date.now().toString(), name: nameFromEmail(email), email, role: 'Manager' as const, subaccount: account }];
+        next = [...next, { id: Date.now().toString(), name: name.trim(), email, role: 'Manager' as const, subaccount: account }];
       }
       return next;
     });
@@ -109,6 +104,10 @@ export function UsersPermissions() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim()) {
+      setFormError('Enter the user’s name.');
+      return;
+    }
     if (!email.trim() || !email.includes('@')) {
       setFormError('Enter a valid email address.');
       return;
@@ -256,6 +255,10 @@ export function UsersPermissions() {
             <p className="text-sm text-gray-500 mt-1 mb-5">Assign a user to manage an account or subaccount.</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Name</label>
+                <Input required placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <Input type="email" required placeholder="user@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
