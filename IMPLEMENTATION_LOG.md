@@ -1281,3 +1281,48 @@ Documentation-only update (no app feature code changed). Added `ROADMAP.md` capt
 **Files changed:** added `ROADMAP.md`; updated `PROJECT_HANDOFF.md` (§14); this log note.
 
 **Validation:** docs only — no build impact.
+
+---
+
+### Build Next — Stable Subaccount IDs (foundational, ROADMAP item 0) (2026-05-30)
+
+Migrated account/subaccount visibility & scoping to key off a stable id instead of display names.
+
+**Canonical id map (`src/app/data/accounts.ts`, new)**
+- `ACCOUNTS: AccountRef[]` with fixed ids: `main`, `acme-corporation`, `acme-luzon`, `acme-visayas`.
+- Helpers `getAccountIdByName(name)` / `getAccountNameById(id)`; `MAIN_ACCOUNT_ID`.
+- Single source for stable ids consumed by SubAccountContext, notifications, bulk uploads, transactions (and future claims/SLA/analytics).
+
+**SubAccountContext bridge**
+- Added `getCurrentAccountId()` exposed on the context. Returns `'main'` at parent level; otherwise bridges the (possibly runtime-generated) `currentAccount` to a canonical id via its display name (`getAccountIdByName(getCurrentAccountName()) ?? currentAccount`). This is the single name→id resolution point; everything downstream is id-based.
+
+**Notification visibility migrated to id (`notifications.ts`)**
+- `NotificationViewer` now carries `accountId` (the scoping key) plus `accountName` (display only). `useNotificationViewer()` sets `accountId` to `'all'` or `getCurrentAccountId()`.
+- `isNotificationVisible` matches on `accountId` (Admin/all → all; Admin-in-subaccount → parent + global + matching id; Manager → global + matching id, never parent). `accountName` is no longer used for matching anywhere.
+- Seed notifications tagged with canonical `accountId` (transactions/account/support → `acme-corporation`/`acme-luzon`); parent/global items carry no accountId.
+- `uploadEventToNotification` already passes `accountId` from the event; scope still derived from `accountType` (main → parent, subaccount → subaccount).
+
+**Upload account id (`BulkUploader.tsx`)**
+- `uploadAccount.accountId` now uses `getCurrentAccountId()` (canonical) instead of the raw `currentAccount`. `createUploadRecord`/`updateUploadStatus` already capture and propagate `accountId` onto the notification event — confirmed, no change needed there.
+
+**Transaction batch.accountId (`transactions.ts`)**
+- The three bulk-origin seed transactions now carry canonical `batch.accountId` (`acme-corporation` / `acme-luzon`) alongside `accountName`. `accountName` on the batch remains display only.
+
+**Visibility verification (by id)**
+- Admin / All Accounts (`accountId: 'all'`) → sees everything.
+- Admin drilled into a subaccount (`accountId: 'acme-luzon'`) → global + parent + that subaccount's items.
+- Manager (`accountId: '<subaccount>'`, role `'manager'`) → global + that subaccount's items only; parent hidden. Manager branch is id-based and implemented but not actively triggered (no Manager login; demo viewer is Admin) — documented.
+
+**Files changed**
+- Added: `src/app/data/accounts.ts`
+- Modified: `src/app/contexts/SubAccountContext.tsx`, `src/app/data/notifications.ts`, `src/app/pages/BulkUploader.tsx`, `src/app/data/transactions.ts`
+
+**Assumptions / deferred**
+- `accountName` retained on viewer/notifications/batch for display only; never used for matching.
+- Runtime-created subaccounts (via Enable/Request flows) get arbitrary ids; the name→id bridge resolves known demo names to canonical ids. Assigning canonical ids at subaccount-creation time is deferred.
+- The Transactions list still filters by subaccount *name* (its own UI filter) — out of scope here; batch linkage and notification scoping are now id-based. Migrating the Transactions list filter to ids is a follow-up.
+- Support-ticket runtime notifications still omit accountId (submitting subaccount unknown) → visible to Admin/All; documented.
+- recharts lazy-load and Zendesk/notification APIs remain deferred.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (970 kB).

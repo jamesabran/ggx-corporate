@@ -62,14 +62,15 @@ type Step = 'form' | 'mapping' | 'fast-processing' | 'background-processing';
 export function BulkUploader() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { getCurrentAccountName, currentAccount } = useSubAccounts();
+  const { getCurrentAccountName, getCurrentAccountId, currentAccount } = useSubAccounts();
 
   const activeAccountName = getCurrentAccountName();
   const billingAvailable = isBillingAccount(activeAccountName);
 
   // Account scope captured on the upload record/notification (parent vs subaccount).
+  // accountId is the canonical stable id; accountName is display only.
   const uploadAccount = {
-    accountId: currentAccount === 'main' ? 'main' : currentAccount,
+    accountId: getCurrentAccountId(),
     accountName: activeAccountName,
     accountType: (currentAccount === 'main' ? 'main' : 'subaccount') as 'main' | 'subaccount',
   };

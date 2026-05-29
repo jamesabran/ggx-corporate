@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
+import { getAccountIdByName } from '../data/accounts';
 
 export interface SubAccount {
   id: string;
@@ -30,6 +31,8 @@ interface SubAccountContextType {
   addSubAccount: (subAccount: SubAccount) => void;
   setCurrentAccount: (accountId: string) => void;
   getCurrentAccountName: () => string;
+  /** Stable canonical id for the active account ('main' or a subaccount id). */
+  getCurrentAccountId: () => string;
   isMainAccountView: () => boolean;
 }
 
@@ -60,6 +63,15 @@ export function SubAccountProvider({ children }: { children: ReactNode }) {
     return account?.name || 'Main Account';
   };
 
+  // Stable canonical id for the active account. `currentAccount` may be a
+  // runtime-generated subaccount id; bridge it to a canonical id via its display
+  // name when known, otherwise fall back to the raw id. Visibility/scoping keys
+  // off this id, never the name.
+  const getCurrentAccountId = () => {
+    if (currentAccount === 'main') return 'main';
+    return getAccountIdByName(getCurrentAccountName()) ?? currentAccount;
+  };
+
   const isMainAccountView = () => {
     return subAccountsEnabled && currentAccount === 'main';
   };
@@ -75,6 +87,7 @@ export function SubAccountProvider({ children }: { children: ReactNode }) {
         addSubAccount,
         setCurrentAccount,
         getCurrentAccountName,
+        getCurrentAccountId,
         isMainAccountView,
       }}
     >

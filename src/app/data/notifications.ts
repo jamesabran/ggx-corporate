@@ -83,7 +83,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Delivery exception reported',
     body: 'GGX-2024-89231 could not be delivered — recipient unavailable. Action may be required.',
     timestamp: minsAgo(35), read: false,
-    scope: 'subaccount', accountName: 'Acme Corporation',
+    scope: 'subaccount', accountId: 'acme-corporation', accountName: 'Acme Corporation',
     href: '/dashboard/transactions/GGX-2024-89231', meta: { trackingNumber: 'GGX-2024-89231' },
   },
   {
@@ -91,7 +91,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Pickup scheduled',
     body: '14 orders are scheduled for pickup tomorrow at 9:00 AM.',
     timestamp: minsAgo(180), read: false,
-    scope: 'subaccount', accountName: 'Acme Luzon',
+    scope: 'subaccount', accountId: 'acme-luzon', accountName: 'Acme Luzon',
     href: '/dashboard/transactions',
   },
   {
@@ -100,7 +100,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     body: 'Rina Lopez was granted Manager access to Acme Luzon.',
     timestamp: minsAgo(300), read: false,
     // Directly relevant to the assigned Manager, so subaccount-scoped (not parent-only).
-    scope: 'subaccount', accountName: 'Acme Luzon',
+    scope: 'subaccount', accountId: 'acme-luzon', accountName: 'Acme Luzon',
     href: '/dashboard/users-permissions',
   },
   {
@@ -142,7 +142,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Support ticket update',
     body: 'Ticket TCK-1043 has a new response from the support team.',
     timestamp: minsAgo(1440), read: true,
-    scope: 'subaccount', accountName: 'Acme Corporation',
+    scope: 'subaccount', accountId: 'acme-corporation', accountName: 'Acme Corporation',
     href: '/dashboard/support-tickets/TCK-1043', meta: { ticketId: 'TCK-1043' },
   },
 ];
@@ -223,7 +223,11 @@ export function markAllNotificationsRead(): void {
 
 export interface NotificationViewer {
   role: 'admin' | 'manager';
-  /** 'all' for an Admin on the Main/All-Accounts view; otherwise a subaccount name. */
+  /** Stable account id this viewer is scoped to: 'all' for an Admin on the
+   *  Main/All-Accounts view, otherwise a canonical subaccount id. Visibility
+   *  keys off this id. */
+  accountId: string;
+  /** Display label for the active scope ('all' sentinel or a subaccount name). Display only. */
   accountName: string;
 }
 
@@ -232,38 +236,42 @@ export interface NotificationViewer {
  *
  * The demo user (Max Rodriguez) is the account Admin — there is no separate
  * Manager login in the app, so role is always 'admin' here. The Manager branch
- * of `isNotificationVisible` is implemented and would activate for a real
- * Manager session (documented assumption).
+ * of `isNotificationVisible` is implemented (and id-based) and would activate
+ * for a real Manager session (documented assumption).
  *
  * - Subaccounts disabled, or Main-Account view, or currentAccount === 'main'
  *   → Admin sees ALL accounts.
- * - Admin drilled into a specific subaccount → scoped to that subaccount.
+ * - Admin drilled into a specific subaccount → scoped to that subaccount's id.
  */
 export function useNotificationViewer(): NotificationViewer {
-  const { subAccountsEnabled, currentAccount, getCurrentAccountName, isMainAccountView } = useSubAccounts();
-  const accountName =
-    !subAccountsEnabled || isMainAccountView() || currentAccount === 'main'
-      ? 'all'
-      : getCurrentAccountName();
-  return { role: 'admin', accountName };
+  const { subAccountsEnabled, currentAccount, getCurrentAccountId, getCurrentAccountName, isMainAccountView } = useSubAccounts();
+  const isAll = !subAccountsEnabled || isMainAccountView() || currentAccount === 'main';
+  return {
+    role: 'admin',
+    accountId: isAll ? 'all' : getCurrentAccountId(),
+    accountName: isAll ? 'all' : getCurrentAccountName(),
+  };
 }
 
-/** Whether a notification is visible to the given viewer. */
+/**
+ * Whether a notification is visible to the given viewer.
+ * All matching is by stable account id — `accountName` is never used here.
+ */
 export function isNotificationVisible(n: AppNotification, viewer: NotificationViewer): boolean {
   // Global advisories are visible to everyone.
   if (n.scope === 'global') return true;
 
   if (viewer.role === 'admin') {
     // Parent Admin on All-Accounts view sees everything.
-    if (viewer.accountName === 'all') return true;
+    if (viewer.accountId === 'all') return true;
     // Admin drilled into a subaccount: parent-level items + that subaccount's items.
     if (n.scope === 'parent') return true;
-    return n.accountName === viewer.accountName;
+    return n.accountId === viewer.accountId;
   }
 
   // Manager: only their assigned subaccount; never parent-level items.
   if (n.scope === 'parent') return false;
-  return n.accountName === viewer.accountName;
+  return n.accountId === viewer.accountId;
 }
 
 /** Visible notifications for the viewer (newest first). */
