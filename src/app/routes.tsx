@@ -19,6 +19,7 @@ import { EnableSubAccountsIntro } from './pages/EnableSubAccounts';
 import { EnableSubAccountsSetup } from './pages/EnableSubAccountsSetup';
 import { RequestSubAccount } from './pages/RequestSubAccount';
 import { UsersPermissions } from './pages/UsersPermissions';
+import { Notifications } from './pages/Notifications';
 
 export const router = createBrowserRouter([
   {
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
       { path: 'subaccounts/enable/setup', Component: EnableSubAccountsSetup },
       { path: 'subaccounts/request', Component: RequestSubAccount },
       { path: 'users-permissions', Component: UsersPermissions },
+      { path: 'notifications', Component: Notifications },
       { path: 'settings', Component: Settings },
     ],
   },

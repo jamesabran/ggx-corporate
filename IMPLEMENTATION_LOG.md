@@ -974,3 +974,57 @@ Nine targeted fixes to the error-rows review group, building on the prior pass.
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (934 kB).
+
+---
+
+### Build Next — Corporate Notifications model + bell integration (2026-05-29)
+
+Built a categorized corporate notification experience and wired completed Bulk Upload background events into the bell.
+
+**Notification model (`src/app/data/notifications.ts`, new)**
+- `NotificationCategory`: `bulk_upload` | `transaction` | `account` | `service_advisory` | `report` | `support`.
+- `AppNotification`: `id`, `category`, `title`, `body`, `timestamp` (ISO), `read`, optional `href`, optional `meta` (`batchId` / `trackingNumber` / `ticketId` / `reportId`).
+- `CATEGORY_META`: per-category label + Tabler icon + subtle icon/bg color classes (Bulk Upload=blue/IconUpload, Transaction=indigo/IconPackage, Account=violet/IconUserCog, Service=amber/IconAlertTriangle, Report=emerald/IconFileText, Support=gray/IconMessage). Icons are subtle and functional, not card-heavy.
+- Helpers: `getAllNotifications()` (live upload events + mock seed, newest first), `getUnreadCount()`, `markAllNotificationsRead()`, `relativeTime(iso)`.
+
+**Bulk Upload integration**
+- `PENDING_NOTIFICATIONS` from `bulkUploads.ts` is mapped via `uploadEventToNotification()` into `category: 'bulk_upload'` items.
+- Copy is batch-specific: title "Bulk upload is ready for review" (or "Bulk upload completed successfully" when `errorRows === 0`); body "{fileName} finished processing. {validRows} valid orders, {errorRows} rows need review." Each links to `/dashboard/bulk-uploader/summary/{batchId}`.
+- A completed background upload is presented as a batch-level notification (Bulk Upload category), distinct from order-level Transaction notifications.
+
+**Mock corporate content** (seeded, mutable for session read-state)
+- Transaction: "Delivery exception reported" (links to a transaction), "Pickup scheduled".
+- Account: "New manager access added" (→ Users & Permissions), "Billing contract updated" (→ Billing).
+- Service Advisory: "Pickup cutoff advisory", "Temporary service delay in selected areas" (informational, no link).
+- Report: "Monthly billing report is ready" (→ Billing, `meta.reportId`).
+- Support: "Support ticket update" (→ Support Tickets, `meta.ticketId`) — mock only, future Zendesk-ready (no integration).
+
+**Bell popover (`RootLayout.tsx`)**
+- Replaced the hardcoded 2-item popover with a model-driven list (w-96, compact, scrollable, `max-h-96`).
+- Each row: category icon in a tinted square + small uppercase category label + title + body + relative time. Unread rows get a subtle blue tint, a blue dot, and bolder title (visual priority).
+- Items with `href` are clickable buttons that navigate + close; informational items (no `href`) render as disabled buttons (subdued, non-navigating) — no dead-end clicks.
+- "View all notifications" footer links to the new `/dashboard/notifications` page.
+- Empty state: "No new notifications" / "Important account, upload, and delivery updates will appear here."
+
+**Unread / read behavior**
+- Red dot replaced with a small count badge driven by `getUnreadCount()` (live); shows "9+" past 9.
+- Opening the popover snapshots the current list (shallow copies, so unread emphasis persists while viewing) then calls `markAllNotificationsRead()`, clearing the badge. Closing/reopening shows all as read.
+- The Notifications page also marks all read on mount.
+
+**Notifications page (`src/app/pages/Notifications.tsx`, new)**
+- Low-risk full page reachable via "View all notifications" and route `/dashboard/notifications` (added to `routes.tsx`). Groups notifications by category using DS Cards; clickable rows navigate, informational rows are subdued. Not added to the sidebar nav (kept scope tight; reachable from the bell).
+
+**Files changed**
+- Added: `src/app/data/notifications.ts`, `src/app/pages/Notifications.tsx`
+- Modified: `src/app/layouts/RootLayout.tsx` (bell + popover), `src/app/routes.tsx` (route), `src/app/data/bulkUploads.ts` (TODO comment updated — integration done)
+
+**Assumptions / deferred**
+- Notifications are in-memory (module-level); read-state and live upload events reset on full page reload. No backend notification API.
+- Zendesk / Support Ticket integration NOT implemented — `support` category is mock-only and future-ready (no model refactor needed to connect later).
+- Reports category links to Billing for now; a dedicated Reports/Downloads page is deferred.
+- Service advisories are informational (no link) by design.
+- Notifications page is intentionally minimal (grouped list); richer filtering/pagination deferred.
+- Sidebar nav entry for Notifications not added (bell + View all cover access); can be added later if desired.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (942 kB).

@@ -1,13 +1,11 @@
 // Module-level store for upload sessions (frontend-only).
 // State lives for the lifetime of the browser tab.
 //
-// TODO (next prompt — notification bell integration):
-//   1. Import PENDING_NOTIFICATIONS in RootLayout.tsx
-//   2. In the bell popover, render each UploadNotificationEvent as a list item
-//      with text "{fileName} — {validRows} orders ready to review" and a link to
-//      /dashboard/bulk-uploader/summary/{batchId}
-//   3. Track event.read to clear the red dot after viewing
-//   4. No structural changes needed here — the event shape is final.
+// Notification integration (done): `PENDING_NOTIFICATIONS` is consumed by
+// `src/app/data/notifications.ts`, which maps each UploadNotificationEvent into
+// the unified AppNotification model (category 'bulk_upload') rendered in the
+// RootLayout bell popover and the Notifications page. `event.read` is flipped by
+// `markAllNotificationsRead()` when the popover/page is opened.
 
 export type UploadStatus = 'processing' | 'needs-review' | 'awaiting-payment' | 'completed';
 

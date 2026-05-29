@@ -33,6 +33,10 @@ import { cn } from '../lib/utils';
 import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ui/Dialog';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import {
+  getAllNotifications, getUnreadCount, markAllNotificationsRead,
+  CATEGORY_META, relativeTime, type AppNotification,
+} from '../data/notifications';
 
 interface NavChild {
   name: string;
@@ -141,10 +145,22 @@ export function RootLayout() {
     navigate('/dashboard/settings');
   };
 
-  const notifications = [
-    { icon: IconPackage, title: 'GGX-2024-89240 was delivered', time: '2 hrs ago' },
-    { icon: IconReceipt, title: 'Invoice for May is ready', time: '1 day ago' },
-  ];
+  // Notification bell — unified model (bulk upload events + corporate mock).
+  // Live unread count drives the red dot. Opening the popover snapshots the
+  // current list (so unread emphasis persists while open) then marks all read.
+  const unreadCount = getUnreadCount();
+  const [notifSnapshot, setNotifSnapshot] = useState<AppNotification[]>([]);
+
+  const openNotifications = () => {
+    setNotifSnapshot(getAllNotifications().map((n) => ({ ...n })));
+    setNotificationsOpen(true);
+    markAllNotificationsRead();
+  };
+
+  const handleNotificationClick = (n: AppNotification) => {
+    setNotificationsOpen(false);
+    if (n.href) navigate(n.href);
+  };
 
   const handleSwitchAccount = (accountId: string) => {
     setCurrentAccount(accountId);
@@ -395,41 +411,82 @@ export function RootLayout() {
           <div className="flex items-center gap-1 ml-auto">
             <div className="relative">
               <button
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                onClick={() => (notificationsOpen ? setNotificationsOpen(false) : openNotifications())}
                 className="relative w-9 h-9 flex items-center justify-center text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
               >
                 <IconBell className="w-[18px] h-[18px]" />
-                {notifications.length > 0 && (
-                  <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 min-w-[15px] h-[15px] px-1 flex items-center justify-center text-[9px] font-bold text-white bg-red-500 rounded-full">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
                 )}
               </button>
 
               {notificationsOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setNotificationsOpen(false)} />
-                  <div className="absolute right-0 top-[calc(100%+6px)] w-72 bg-white rounded-xl shadow-lg border border-gray-200 z-20 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-100">
+                  <div className="absolute right-0 top-[calc(100%+6px)] w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-lg border border-gray-200 z-20 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                       <p className="text-sm font-semibold text-gray-900">Notifications</p>
+                      {notifSnapshot.length > 0 && (
+                        <span className="text-xs text-gray-400">{notifSnapshot.length} recent</span>
+                      )}
                     </div>
-                    {notifications.length === 0 ? (
-                      <div className="px-4 py-8 text-center">
+
+                    {notifSnapshot.length === 0 ? (
+                      <div className="px-4 py-10 text-center">
                         <IconBell className="w-6 h-6 text-gray-300 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">No new notifications</p>
+                        <p className="text-sm font-medium text-gray-700">No new notifications</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Important account, upload, and delivery updates will appear here.
+                        </p>
                       </div>
                     ) : (
-                      <div className="py-1">
-                        {notifications.map((n, i) => (
-                          <div key={i} className="flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
-                            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                              <n.icon className="w-4 h-4 text-gray-500" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm text-gray-800 leading-snug">{n.title}</p>
-                              <p className="text-xs text-gray-400 mt-0.5">{n.time}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <>
+                        <div className="max-h-96 overflow-y-auto divide-y divide-gray-50">
+                          {notifSnapshot.map((n) => {
+                            const meta = CATEGORY_META[n.category];
+                            const Icon = meta.icon;
+                            const clickable = !!n.href;
+                            return (
+                              <button
+                                key={n.id}
+                                type="button"
+                                disabled={!clickable}
+                                onClick={clickable ? () => handleNotificationClick(n) : undefined}
+                                className={cn(
+                                  'w-full text-left flex items-start gap-3 px-4 py-3 transition-colors',
+                                  clickable ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default',
+                                  !n.read && 'bg-blue-50/40'
+                                )}
+                              >
+                                <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', meta.bgClass)}>
+                                  <Icon className={cn('w-4 h-4', meta.iconClass)} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{meta.label}</span>
+                                    {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />}
+                                  </div>
+                                  <p className={cn('text-sm leading-snug', n.read ? 'text-gray-700' : 'text-gray-900 font-medium')}>{n.title}</p>
+                                  <p className="text-xs text-gray-500 leading-snug mt-0.5">{n.body}</p>
+                                  <p className="text-[11px] text-gray-400 mt-1">{relativeTime(n.timestamp)}</p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="border-t border-gray-100">
+                          <Link
+                            to="/dashboard/notifications"
+                            onClick={() => setNotificationsOpen(false)}
+                            className="block w-full text-center text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 py-2.5 transition-colors"
+                          >
+                            View all notifications
+                          </Link>
+                        </div>
+                      </>
                     )}
                   </div>
                 </>
