@@ -512,3 +512,14 @@ Wired the previously inert topbar controls in `RootLayout.tsx`:
 
 - Files changed: `src/app/layouts/RootLayout.tsx`
 - Validation: `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).
+
+### Fix Now #6 — Login page dead links resolved (2026-05-29)
+
+Resolved the inert links on the Login page (`src/app/pages/Login.tsx`):
+- Support contact `href="#"` → real `mailto:support@gogoxpress.com`.
+- Social login buttons (Facebook/Google/Apple) marked `disabled` with `opacity-60 cursor-not-allowed` and a "Coming soon" title (no OAuth implemented).
+- "Forgot password?" anchor → button toggling a small inline helper directing users to email support (no reset route created; remains a Needs-decision item).
+- No new routes, dependencies, layout, or DS changes.
+
+- Files changed: `src/app/pages/Login.tsx`
+- Validation: `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).
