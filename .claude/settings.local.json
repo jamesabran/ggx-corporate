@@ -17,7 +17,11 @@
       "Bash(ls src/app/)",
       "Bash(curl -s -m 20 \"https://api.gogox.ph/v1/locations/provinces?pickup=quad-x&per_page=5&extended=1\")",
       "Bash(curl -s -m 20 \"https://api.gogox.ph/v1/locations/provinces/73/cities?pickup=quad-x&per_page=3&extended=1\")",
-      "Bash(curl -s -m 20 \"https://api.gogox.ph/v1/locations/provinces/73/cities?pickup=quad-x&per_page=1&extended=1\")"
+      "Bash(curl -s -m 20 \"https://api.gogox.ph/v1/locations/provinces/73/cities?pickup=quad-x&per_page=1&extended=1\")",
+      "Bash(python -c ' *)",
+      "Bash(python -m pip install --quiet openpyxl)",
+      "WebFetch(domain:help-center.gogoxpress.com)",
+      "Bash(git commit *)"
     ]
   }
 }

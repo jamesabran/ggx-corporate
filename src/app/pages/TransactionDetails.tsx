@@ -1,48 +1,43 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage } from '@tabler/icons-react';
+import { useNavigate, useParams } from 'react-router';
+import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { getTransactionByTracking, statusConfig } from '../data/transactions';
 
 export function TransactionDetails() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const [rating, setRating] = useState(0);
 
-  const transaction = {
-    trackingNumber: 'GGX-2024-89240',
-    createdAt: '2026-05-18 09:30 AM',
-    pickupDate: '2026-05-18',
-    deliveryDate: '2026-05-19',
-    sender: {
-      name: 'Acme Corporation',
-      contactNumber: '+63 917 123 4567',
-      address: '5th Floor, ABC Building, Ayala Avenue, Poblacion, Makati City, Metro Manila',
-    },
-    recipient: {
-      name: 'Juan Dela Cruz',
-      contactNumber: '+63 917 987 6543',
-      address: 'Unit 203, XYZ Residences, Katipunan Avenue, Diliman, Quezon City, Metro Manila',
-    },
-    items: [
-      { name: 'Wireless Mouse', quantity: 2, description: 'Logitech MX Master 3', attributes: { color: 'Black' }, price: 4500 },
-      { name: 'Mechanical Keyboard', quantity: 1, description: 'Keychron K2', attributes: { color: 'White', variant: 'RGB' }, price: 5500 },
-    ],
-    packaging: { size: 'MEDIUM', dimensions: '40cm x 30cm x 20cm', weight: '3.2 kg' },
-    store: { name: 'TechGear Philippines', url: 'techgear.ph' },
-    fees: { serviceFee: 50, shippingFee: 120, protectionFee: 145, discount: -20, processingFee: 30 },
-    payment: { method: 'Cash on Delivery (COD)', paidBy: 'Recipient', codAmount: 14500 },
-    timeline: [
-      { status: 'Delivered', date: '2026-05-19 03:45 PM', note: 'Package delivered successfully', hasProof: true },
-      { status: 'Out for Delivery', date: '2026-05-19 09:15 AM', note: 'Delivery rider on the way' },
-      { status: 'In Transit', date: '2026-05-19 06:00 AM', note: 'Package in transit to destination hub' },
-      { status: 'Picked Up', date: '2026-05-18 02:30 PM', note: 'Package picked up from sender', hasProof: true },
-      { status: 'Pick-up Rider Found', date: '2026-05-18 01:15 PM', note: 'Rider assigned for pickup' },
-      { status: 'Booking Confirmed', date: '2026-05-18 10:00 AM', note: 'Booking confirmed and processing' },
-      { status: 'Order Created', date: '2026-05-18 09:30 AM', note: 'Order placed and awaiting confirmation' },
-    ],
-  };
+  const transaction = getTransactionByTracking(id);
 
+  if (!transaction) {
+    return (
+      <div className="p-6">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/transactions')}>
+          <IconArrowLeft className="w-4 h-4 mr-2" />
+          Back to Transactions
+        </Button>
+        <Card className="mt-6">
+          <CardContent className="p-12 text-center">
+            <IconPackageOff className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-lg font-semibold text-gray-900">Transaction not found</h2>
+            <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
+              We couldn&apos;t find a transaction with tracking number{' '}
+              <span className="font-medium text-gray-700">{id}</span>. It may have been removed or the link is incorrect.
+            </p>
+            <Button className="mt-6" onClick={() => navigate('/dashboard/transactions')}>
+              View All Transactions
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const status = statusConfig[transaction.status];
   const totalFees = Object.values(transaction.fees).reduce((sum, fee) => sum + fee, 0);
   const itemsTotal = transaction.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -62,7 +57,7 @@ export function TransactionDetails() {
             <p className="text-gray-600">
               <span className="font-medium">Tracking Number:</span> {transaction.trackingNumber}
             </p>
-            <Badge variant="success">Delivered</Badge>
+            <Badge variant={status.variant}>{status.label}</Badge>
           </div>
           <p className="text-sm text-gray-500 mt-1">Created: {transaction.createdAt}</p>
         </div>

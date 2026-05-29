@@ -8,28 +8,7 @@ import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { useSubAccounts } from '../contexts/SubAccountContext';
-
-const deliveries = [
-  { tracking: 'GGX-2024-89240', recipient: 'TechStart Solutions', destination: 'Makati City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-18', subaccount: 'Acme Corporation' },
-  { tracking: 'GGX-2024-89239', recipient: 'Innovation Labs Inc.', destination: 'Cebu City, Cebu', status: 'in-transit', type: 'Standard', date: '2026-05-18', subaccount: 'Acme Luzon' },
-  { tracking: 'GGX-2024-89238', recipient: 'Global Enterprises', destination: 'Davao City, Davao', status: 'picked-up', type: 'Express', date: '2026-05-17', subaccount: 'Acme Corporation' },
-  { tracking: 'GGX-2024-89237', recipient: 'Summit Technologies', destination: 'Quezon City, Metro Manila', status: 'pending', type: 'Standard', date: '2026-05-17', subaccount: 'Acme Corporation' },
-  { tracking: 'GGX-2024-89236', recipient: 'Metro Solutions Inc.', destination: 'Pasig City, Metro Manila', status: 'failed', type: 'Express', date: '2026-05-17', subaccount: 'Acme Luzon' },
-  { tracking: 'GGX-2024-89235', recipient: 'Digital Ventures Co.', destination: 'Taguig City, Metro Manila', status: 'delivered', type: 'Standard', date: '2026-05-16', subaccount: 'Acme Corporation' },
-  { tracking: 'GGX-2024-89234', recipient: 'Tech Solutions Inc.', destination: 'Mandaluyong City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-16', subaccount: 'Acme Luzon' },
-  { tracking: 'GGX-2024-89233', recipient: 'Global Innovations Ltd.', destination: 'Caloocan City, Metro Manila', status: 'in-transit', type: 'Standard', date: '2026-05-16', subaccount: 'Acme Corporation' },
-  { tracking: 'GGX-2024-89232', recipient: 'Acme Corporation', destination: 'Santa Rosa, Laguna', status: 'picked-up', type: 'Express', date: '2026-05-15', subaccount: 'Acme Luzon' },
-  { tracking: 'GGX-2024-89231', recipient: 'Summit Partners', destination: 'Bacoor, Cavite', status: 'returned', type: 'Standard', date: '2026-05-15', subaccount: 'Acme Corporation' },
-];
-
-const statusConfig = {
-  delivered: { variant: 'success' as const, label: 'Delivered' },
-  'in-transit': { variant: 'info' as const, label: 'In Transit' },
-  'picked-up': { variant: 'warning' as const, label: 'Picked Up' },
-  failed: { variant: 'danger' as const, label: 'Failed' },
-  pending: { variant: 'pending' as const, label: 'Pending' },
-  returned: { variant: 'default' as const, label: 'Returned' },
-};
+import { deliveries, statusConfig } from '../data/transactions';
 
 export function Transactions() {
   const navigate = useNavigate();
