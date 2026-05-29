@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
+import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 
 // Simplified access model:
 // - Exactly two roles: Admin and Manager.
@@ -248,13 +249,11 @@ export function UsersPermissions() {
       </Card>
 
       {/* Add / Edit user modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-base font-semibold text-gray-900">{editingId ? 'Edit user access' : 'Add user access'}</h3>
-            <p className="text-sm text-gray-500 mt-1 mb-5">Assign a user to manage an account or subaccount.</p>
+      <Dialog open={modalOpen} onClose={closeModal} size="md">
+        <h3 className="text-base font-semibold text-gray-900">{editingId ? 'Edit user access' : 'Add user access'}</h3>
+        <p className="text-sm text-gray-500 mt-1 mb-5">Assign a user to manage an account or subaccount.</p>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Name</label>
                 <Input required placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -294,45 +293,44 @@ export function UsersPermissions() {
                 <Button type="submit" size="sm">{editingId ? 'Save Changes' : 'Add User'}</Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Dialog>
 
       {/* Replace-manager confirmation */}
       {replaceTarget && (
-        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-1.5">Replace current manager?</h3>
-            <p className="text-sm text-gray-500 mb-5">
+        <ConfirmDialog
+          open
+          elevated
+          onClose={() => setReplaceTarget(null)}
+          onConfirm={commit}
+          title="Replace current manager?"
+          description={
+            <>
               <span className="font-medium text-gray-700">{replaceTarget.name}</span> ({replaceTarget.email}) will lose access to{' '}
               <span className="font-medium text-gray-700">{account}</span> and will no longer be able to manage this subaccount.
-            </p>
-            <div className="flex gap-2.5 justify-end">
-              <Button variant="outline" size="sm" onClick={() => setReplaceTarget(null)}>Cancel</Button>
-              <Button variant="destructive" size="sm" onClick={commit}>Replace Manager</Button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+          confirmLabel="Replace Manager"
+          variant="destructive"
+        />
       )}
 
       {/* Remove confirmation */}
       {removeTarget && (
-        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-1.5">Remove user access?</h3>
-            <p className="text-sm text-gray-500 mb-5">
+        <ConfirmDialog
+          open
+          onClose={() => setRemoveTarget(null)}
+          onConfirm={confirmRemove}
+          title="Remove user access?"
+          description={
+            <>
               <span className="font-medium text-gray-700">{removeTarget.name}</span> ({removeTarget.email}) will lose access
               {removeTarget.subaccount ? <> to <span className="font-medium text-gray-700">{removeTarget.subaccount}</span></> : ''}. This can be re-added later.
-            </p>
-            <div className="flex gap-2.5 justify-end">
-              <Button variant="outline" size="sm" onClick={() => setRemoveTarget(null)}>Cancel</Button>
-              <Button variant="destructive" size="sm" onClick={confirmRemove}>
-                <IconTrash className="w-3.5 h-3.5 mr-1.5" />
-                Remove Access
-              </Button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+          confirmLabel="Remove Access"
+          variant="destructive"
+          confirmIcon={<IconTrash className="w-3.5 h-3.5 mr-1.5" />}
+        />
       )}
     </div>
   );

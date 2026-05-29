@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
+import { ConfirmDialog } from '../components/ui/Dialog';
 
 const uploadedData = [
   { row: 1, recipientName: 'TechStart Solutions', contactNumber: '+63-917-555-0100', streetAddress: '123 Ayala Avenue', province: 'Metro Manila', city: 'Makati City', barangay: 'Poblacion', landmarks: '5th Floor, ABC Building', itemName: 'Wireless Mouse', receptacleSize: 'SMALL', collectibleAmount: 4500, collectCOD: 'YES', declaredValue: 4500, insureFullValue: 'YES', recipientPaysFees: 'NO', promoCode: '', referenceId: 'REF-001', valid: true },
@@ -203,24 +204,20 @@ export function BulkUploadSummary() {
       </Card>
 
       {/* Submit confirmation */}
-      {showConfirm && (
-        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-1.5">Submit {validRows} valid {validRows === 1 ? 'booking' : 'bookings'}?</h3>
-            <p className="text-sm text-gray-500 mb-5">
-              {validRows} valid {validRows === 1 ? 'booking' : 'bookings'} will be submitted for processing.
-              {invalidRows > 0 && <> The {invalidRows} row{invalidRows === 1 ? '' : 's'} with errors will be skipped and can be re-uploaded later.</>}
-            </p>
-            <div className="flex gap-2.5 justify-end">
-              <Button variant="outline" size="sm" onClick={() => setShowConfirm(false)}>Cancel</Button>
-              <Button size="sm" onClick={() => { setShowConfirm(false); setSubmitted(true); }}>
-                <IconCircleCheck className="w-4 h-4 mr-1.5" />
-                Confirm & Submit
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={() => { setShowConfirm(false); setSubmitted(true); }}
+        title={`Submit ${validRows} valid ${validRows === 1 ? 'booking' : 'bookings'}?`}
+        description={
+          <>
+            {validRows} valid {validRows === 1 ? 'booking' : 'bookings'} will be submitted for processing.
+            {invalidRows > 0 && <> The {invalidRows} row{invalidRows === 1 ? '' : 's'} with errors will be skipped and can be re-uploaded later.</>}
+          </>
+        }
+        confirmLabel="Confirm & Submit"
+        confirmIcon={<IconCircleCheck className="w-4 h-4 mr-1.5" />}
+      />
     </div>
   );
 }

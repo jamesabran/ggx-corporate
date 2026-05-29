@@ -31,6 +31,7 @@ import {
 import { useState, type ComponentType } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from '../components/ui/Button';
+import { ConfirmDialog } from '../components/ui/Dialog';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 
 interface NavChild {
@@ -532,23 +533,16 @@ export function RootLayout() {
         </main>
       </div>
 
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-1.5">Confirm logout</h3>
-            <p className="text-sm text-gray-500 mb-5">Are you sure you want to log out of your account?</p>
-            <div className="flex gap-2.5 justify-end">
-              <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => setShowLogoutConfirm(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" size="sm" className="cursor-pointer" onClick={handleLogout}>
-                <IconLogout className="w-3.5 h-3.5 mr-1.5" />
-                Log out
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="Confirm logout"
+        description="Are you sure you want to log out of your account?"
+        confirmLabel="Log out"
+        variant="destructive"
+        confirmIcon={<IconLogout className="w-3.5 h-3.5 mr-1.5" />}
+      />
     </div>
   );
 }

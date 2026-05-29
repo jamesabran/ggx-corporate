@@ -598,3 +598,18 @@ Improved the Bulk Upload flow using the Figma prototype (BULK-UPLOAD, node 658-1
 **Deferred**
 - Real file parsing/validation and per-row inline editing of error rows.
 - Carrying pickup/payment/mode selections into the summary and success batch.
+
+### Polish — Reusable Dialog/ConfirmDialog component (DS gap closed, 2026-05-29)
+
+Added `src/app/components/ui/Dialog.tsx` exporting a base `Dialog` (scrim + centered panel matching the prior inline `fixed inset-0 bg-gray-900/50…` pattern; props: `open`, `onClose`, `title`, `children`, `size` sm/md, `elevated` for stacked z-index) and a `ConfirmDialog` wrapper (`title`, `description`, `confirmLabel`/`cancelLabel`, `variant` default/destructive, `onConfirm`, `confirmIcon`, optional `children`).
+
+Refactored all inline modals to use them — no visual/behavioral/copy changes, pure consolidation:
+- `RootLayout` — logout confirm → `ConfirmDialog`
+- `UsersPermissions` — Add/Edit modal → `Dialog`; replace-manager confirm (elevated) and remove confirm → `ConfirmDialog`
+- `PaymentSettings` — edit modal → `Dialog`; remove confirm → `ConfirmDialog` (with extra warning content via children)
+- `BulkUploadSummary` — submit confirm → `ConfirmDialog`
+
+Verified the only remaining `bg-gray-900/50` reference is inside `Dialog.tsx`. This closes the previously logged DS gap (no reusable Dialog component).
+
+- Files changed: `src/app/components/ui/Dialog.tsx` (new), `src/app/layouts/RootLayout.tsx`, `src/app/pages/UsersPermissions.tsx`, `src/app/pages/PaymentSettings.tsx`, `src/app/pages/BulkUploadSummary.tsx`
+- Validation: `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).

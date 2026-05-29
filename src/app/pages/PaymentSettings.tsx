@@ -4,6 +4,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
+import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 
 interface PaymentMethod {
   id: string;
@@ -199,9 +200,9 @@ export function PaymentSettings() {
       </div>
 
       {/* Edit modal */}
-      {edit && (
-        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+      <Dialog open={!!edit} onClose={() => setEdit(null)} size="md">
+        {edit && (
+          <>
             <h3 className="text-base font-semibold text-gray-900 mb-5">
               {edit.type === 'method' ? 'Edit Payment Method' : 'Edit Bank Account'}
             </h3>
@@ -228,33 +229,31 @@ export function PaymentSettings() {
               <Button variant="outline" size="sm" onClick={() => setEdit(null)}>Cancel</Button>
               <Button size="sm" onClick={saveEdit}>Save Changes</Button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Dialog>
 
       {/* Remove confirmation */}
       {remove && (
-        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-1.5">
-              Remove {remove.type === 'method' ? 'payment method' : 'bank account'}?
-            </h3>
-            <p className="text-sm text-gray-500 mb-5">
+        <ConfirmDialog
+          open
+          onClose={() => setRemove(null)}
+          onConfirm={confirmRemove}
+          title={`Remove ${remove.type === 'method' ? 'payment method' : 'bank account'}?`}
+          description={
+            <>
               <span className="font-medium text-gray-700">{remove.label}</span> will be removed from your account. This action cannot be undone.
-            </p>
-            <div className="flex items-start gap-2 mb-5 text-xs text-gray-500">
-              <IconAlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-500 mt-0.5" />
-              Any scheduled payments or payouts using this {remove.type === 'method' ? 'card' : 'account'} will need a new method.
-            </div>
-            <div className="flex gap-2.5 justify-end">
-              <Button variant="outline" size="sm" onClick={() => setRemove(null)}>Cancel</Button>
-              <Button variant="destructive" size="sm" onClick={confirmRemove}>
-                <IconTrash className="w-3.5 h-3.5 mr-1.5" />
-                Remove
-              </Button>
-            </div>
+            </>
+          }
+          confirmLabel="Remove"
+          variant="destructive"
+          confirmIcon={<IconTrash className="w-3.5 h-3.5 mr-1.5" />}
+        >
+          <div className="flex items-start gap-2 mb-5 text-xs text-gray-500">
+            <IconAlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-500 mt-0.5" />
+            Any scheduled payments or payouts using this {remove.type === 'method' ? 'card' : 'account'} will need a new method.
           </div>
-        </div>
+        </ConfirmDialog>
       )}
     </div>
   );
