@@ -162,10 +162,12 @@ function persistSeedReadIds(): void {
 }
 
 // Runtime notifications pushed during the session (e.g. a submitted support
-// ticket). Kept separate from the seed so other modules can add notifications
-// without importing the mock array. This is the extension point future sources
-// (Zendesk, reports, advisories) should use.
-const RUNTIME_NOTIFICATIONS: AppNotification[] = [];
+// ticket, claim, SLA follow-up, financial change). Persisted across reloads so
+// session-generated alerts survive refresh. Capped to the most recent entries.
+const RUNTIME_KEY = 'runtimeNotifs';
+const RUNTIME_CAP = 50;
+const RUNTIME_NOTIFICATIONS: AppNotification[] = loadState<AppNotification[]>(RUNTIME_KEY, []);
+function persistRuntime(): void { saveState(RUNTIME_KEY, RUNTIME_NOTIFICATIONS); }
 
 /** Push a new notification for the current session (newest first). */
 export function pushNotification(
@@ -184,6 +186,8 @@ export function pushNotification(
     href: input.href,
     meta: input.meta,
   });
+  if (RUNTIME_NOTIFICATIONS.length > RUNTIME_CAP) RUNTIME_NOTIFICATIONS.length = RUNTIME_CAP;
+  persistRuntime();
 }
 
 /** Convert a live Bulk Upload event into a unified notification. */
@@ -230,6 +234,7 @@ export function markAllNotificationsRead(): void {
   RUNTIME_NOTIFICATIONS.forEach((n) => { n.read = true; });
   PENDING_NOTIFICATIONS.forEach((e) => { e.read = true; });
   persistSeedReadIds();
+  persistRuntime();
 }
 
 // ---------------------------------------------------------------------------
@@ -315,6 +320,7 @@ export function markVisibleNotificationsRead(viewer: NotificationViewer): void {
   RUNTIME_NOTIFICATIONS.forEach((n) => { if (isNotificationVisible(n, viewer)) n.read = true; });
   MOCK_NOTIFICATIONS.forEach((n) => { if (isNotificationVisible(n, viewer)) n.read = true; });
   persistSeedReadIds();
+  persistRuntime();
 }
 
 /** Compact relative-time label. */

@@ -22,6 +22,7 @@ import {
   generateUploadId, createUploadRecord,
 } from '../data/bulkUploads';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // Static recent uploads seed — session uploads are merged at render time.
 const SEED_UPLOADS = [
@@ -63,17 +64,23 @@ export function BulkUploader() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { getCurrentAccountName, getCurrentAccountId, currentAccount } = useSubAccounts();
+  const { user } = useAuth();
+  const isManager = user?.role === 'manager';
 
-  const activeAccountName = getCurrentAccountName();
+  // A Manager always uploads under their assigned subaccount; an Admin uploads
+  // under the active account/subaccount context.
+  const activeAccountName = isManager ? user!.accountName : getCurrentAccountName();
   const billingAvailable = isBillingAccount(activeAccountName);
 
   // Account scope captured on the upload record/notification (parent vs subaccount).
   // accountId is the canonical stable id; accountName is display only.
-  const uploadAccount = {
-    accountId: getCurrentAccountId(),
-    accountName: activeAccountName,
-    accountType: (currentAccount === 'main' ? 'main' : 'subaccount') as 'main' | 'subaccount',
-  };
+  const uploadAccount = isManager
+    ? { accountId: user!.accountId, accountName: user!.accountName, accountType: 'subaccount' as const }
+    : {
+        accountId: getCurrentAccountId(),
+        accountName: activeAccountName,
+        accountType: (currentAccount === 'main' ? 'main' : 'subaccount') as 'main' | 'subaccount',
+      };
 
   const [step, setStep]             = useState<Step>('form');
   const [uploadMode, setUploadMode] = useState<'standard' | 'same-day'>('standard');

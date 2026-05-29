@@ -1544,3 +1544,29 @@ Added the foundation/stability layer: mock authentication, route protection, loc
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts remains a separate ~431 kB chunk; main bundle ~574 kB.
+
+---
+
+### Follow-up — Persist runtime notifications + Manager bulk-upload context (2026-05-30)
+
+Two consistency follow-ups to the auth/persistence layer.
+
+**Runtime notification persistence (`notifications.ts`)**
+- `RUNTIME_NOTIFICATIONS` (session-generated: claims, SLA follow-ups, financial changes, submitted support tickets) now hydrates from `localStorage` (`ggx.runtimeNotifs`) and persists on push and on read-state changes (`markAllNotificationsRead` / `markVisibleNotificationsRead`). Capped to the latest 50 to bound storage.
+- Result: session-generated alerts and their read-state now survive reload (previously seed read-state only).
+
+**Manager bulk-upload account context (`BulkUploader.tsx`)**
+- Bulk Upload now reads the auth user: a Manager uploads under their assigned subaccount (`accountId`/`accountName` from the session, `accountType: 'subaccount'`); an Admin still uses the active `SubAccountContext` account.
+- `activeAccountName` (drives billing availability + PaymentMethodTabs key) and `uploadAccount` (drives upload record/event scope) both reflect the Manager's subaccount.
+- Result: a Manager's uploads and their completion notifications are correctly scoped to the Manager's subaccount (visible to that Manager and to Admin), instead of defaulting to parent scope.
+
+**Files changed**
+- Modified: `src/app/data/notifications.ts`, `src/app/pages/BulkUploader.tsx`, `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- PaymentMethodTabs billing still derives from account name (now the Manager's subaccount for managers) — unchanged logic, correct result.
+- Upload-event `PENDING_NOTIFICATIONS` read-state remains session-scoped (uploads list persists; their derived bell events do not) — unchanged from prior task.
+- Backend/API integration remains the next foundation.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~431 kB chunk; main bundle ~574 kB.
