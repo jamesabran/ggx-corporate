@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { IconPlus, IconCheck, IconBuilding, IconCreditCard, IconShield, IconTrash, IconAlertTriangle } from '@tabler/icons-react';
+import { IconPlus, IconCheck, IconBuilding, IconCreditCard, IconShield, IconShieldLock, IconTrash, IconAlertTriangle } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
+import { OtpDialog } from '../components/ui/OtpDialog';
+import { recordFinancialChange } from '../data/financialSecurity';
+import { useSubAccounts } from '../contexts/SubAccountContext';
 
 interface PaymentMethod {
   id: string;
@@ -45,30 +49,98 @@ type RemoveState =
   | { type: 'bank'; id: string; label: string }
   | null;
 
+// A sensitive action pending OTP verification.
+type OtpAction = { title: string; action: string; run: () => void } | null;
+
+const BANKS = ['BDO Unibank', 'BPI', 'Metrobank', 'UnionBank', 'Landbank', 'PNB', 'Security Bank'];
+
 export function PaymentSettings() {
+  const { subAccountsEnabled, isMainAccountView } = useSubAccounts();
+  // Financial actions are parent/main-account level only. The Payment Settings
+  // page is already absent from the subaccount nav; this additionally gates the
+  // action controls when an Admin is drilled into a specific subaccount.
+  const financialAccessAllowed = !subAccountsEnabled || isMainAccountView();
+
   const [methods, setMethods] = useState<PaymentMethod[]>(initialMethods);
   const [banks, setBanks] = useState<BankAccount[]>(initialBanks);
   const [edit, setEdit] = useState<EditState>(null);
   const [remove, setRemove] = useState<RemoveState>(null);
+  const [otp, setOtp] = useState<OtpAction>(null);
 
-  const saveEdit = () => {
-    if (!edit) return;
-    if (edit.type === 'method') {
-      setMethods((prev) => prev.map((m) => (m.id === edit.id ? { ...m, holder: edit.holder, expiry: edit.expiry } : m)));
-    } else {
-      setBanks((prev) => prev.map((b) => (b.id === edit.id ? { ...b, accountName: edit.accountName } : b)));
-    }
-    setEdit(null);
+  // Add forms
+  const [addMethod, setAddMethod] = useState<{ brand: string; last4: string; holder: string; expiry: string } | null>(null);
+  const [addBank, setAddBank] = useState<{ bank: string; accountName: string; accountNumber: string } | null>(null);
+
+  // Open the OTP gate for a sensitive action. `run` executes only after verify.
+  const requireOtp = (action: string, run: () => void) =>
+    setOtp({ title: 'Verify financial change', action, run });
+
+  const onOtpVerified = () => {
+    if (!otp) return;
+    otp.run();
+    recordFinancialChange(otp.action);
+    setOtp(null);
   };
 
+  // --- Edit (OTP-gated) ---
+  const saveEdit = () => {
+    if (!edit) return;
+    const e = edit;
+    setEdit(null);
+    requireOtp(e.type === 'method' ? 'Payment method updated' : 'Bank account updated', () => {
+      if (e.type === 'method') {
+        setMethods((prev) => prev.map((m) => (m.id === e.id ? { ...m, holder: e.holder, expiry: e.expiry } : m)));
+      } else {
+        setBanks((prev) => prev.map((b) => (b.id === e.id ? { ...b, accountName: e.accountName } : b)));
+      }
+    });
+  };
+
+  // --- Remove (confirm → OTP → remove) ---
   const confirmRemove = () => {
     if (!remove) return;
-    if (remove.type === 'method') {
-      setMethods((prev) => prev.filter((m) => m.id !== remove.id));
-    } else {
-      setBanks((prev) => prev.filter((b) => b.id !== remove.id));
-    }
+    const r = remove;
     setRemove(null);
+    requireOtp(r.type === 'method' ? 'Payment method removed' : 'Bank account removed', () => {
+      if (r.type === 'method') setMethods((prev) => prev.filter((m) => m.id !== r.id));
+      else setBanks((prev) => prev.filter((b) => b.id !== r.id));
+    });
+  };
+
+  // --- Set default / primary (payout change → OTP) ---
+  const setDefaultMethod = (id: string) =>
+    requireOtp('Default payment method changed', () =>
+      setMethods((prev) => prev.map((m) => ({ ...m, isDefault: m.id === id }))),
+    );
+
+  const setPrimaryBank = (id: string) =>
+    requireOtp('Primary payout account changed', () =>
+      setBanks((prev) => prev.map((b) => ({ ...b, isPrimary: b.id === id }))),
+    );
+
+  // --- Add (form → OTP → add) ---
+  const submitAddMethod = () => {
+    if (!addMethod || !addMethod.last4.trim()) return;
+    const a = addMethod;
+    setAddMethod(null);
+    requireOtp('Payment method added', () => {
+      setMethods((prev) => [
+        ...prev,
+        { id: `pm${Date.now()}`, brand: a.brand, last4: a.last4.slice(-4), expiry: a.expiry, holder: a.holder, isDefault: false, verified: false },
+      ]);
+    });
+  };
+
+  const submitAddBank = () => {
+    if (!addBank || !addBank.bank.trim() || !addBank.accountNumber.trim()) return;
+    const a = addBank;
+    setAddBank(null);
+    requireOtp('Bank account added', () => {
+      setBanks((prev) => [
+        ...prev,
+        { id: `ba${Date.now()}`, bank: a.bank, accountMasked: `•••• •••• •••• ${a.accountNumber.slice(-4)}`, accountName: a.accountName, isPrimary: false, status: 'pending' },
+      ]);
+    });
   };
 
   return (
@@ -77,6 +149,34 @@ export function PaymentSettings() {
         <h1 className="text-3xl font-bold text-gray-900">Payment Settings</h1>
         <p className="text-gray-600 mt-1">Manage how you pay GoGo Xpress and receive earnings</p>
       </div>
+
+      {/* Parent-level financial access notice */}
+      {!financialAccessAllowed && (
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <IconShieldLock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800">
+                Financial settings are managed at the parent (Main Account) level. Switch to the Main Account to add, edit, or remove payment and payout details.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Security note */}
+      {financialAccessAllowed && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <IconShieldLock className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-blue-800">
+                Financial changes require OTP verification before they take effect — this applies to everyone, including the account holder.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-8">
         <div>
@@ -96,26 +196,30 @@ export function PaymentSettings() {
                         <div className="flex items-center gap-2 mb-2">
                           <p className="font-semibold text-gray-900">{m.brand} •••• {m.last4}</p>
                           {m.isDefault && <Badge variant="info">Default</Badge>}
-                          {m.verified && <Badge variant="success">Verified</Badge>}
+                          {m.verified ? <Badge variant="success">Verified</Badge> : <Badge variant="warning">Pending Verification</Badge>}
                         </div>
                         <p className="text-sm text-gray-600">Expires {m.expiry}</p>
                         <p className="text-sm text-gray-600">{m.holder}</p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      {!m.isDefault && <Button variant="outline" size="sm">Set as Default</Button>}
-                      <Button variant="ghost" size="sm" onClick={() => setEdit({ type: 'method', id: m.id, holder: m.holder, expiry: m.expiry })}>Edit</Button>
-                      <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setRemove({ type: 'method', id: m.id, label: `${m.brand} •••• ${m.last4}` })}>Remove</Button>
-                    </div>
+                    {financialAccessAllowed && (
+                      <div className="flex gap-2">
+                        {!m.isDefault && <Button variant="outline" size="sm" onClick={() => setDefaultMethod(m.id)}>Set as Default</Button>}
+                        <Button variant="ghost" size="sm" onClick={() => setEdit({ type: 'method', id: m.id, holder: m.holder, expiry: m.expiry })}>Edit</Button>
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setRemove({ type: 'method', id: m.id, label: `${m.brand} •••• ${m.last4}` })}>Remove</Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ))}
 
-            <Button variant="outline" className="w-full">
-              <IconPlus className="w-4 h-4 mr-2" />
-              Add Payment Method
-            </Button>
+            {financialAccessAllowed && (
+              <Button variant="outline" className="w-full" onClick={() => setAddMethod({ brand: 'Visa', last4: '', holder: 'Acme Corporation', expiry: '' })}>
+                <IconPlus className="w-4 h-4 mr-2" />
+                Add Payment Method
+              </Button>
+            )}
           </div>
 
           <Card className="mt-6 bg-gray-50 border-gray-200">
@@ -156,20 +260,24 @@ export function PaymentSettings() {
                         <p className="text-sm text-gray-600">Account Name: {b.accountName}</p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      {!b.isPrimary && <Button variant="outline" size="sm">Set as Primary</Button>}
-                      <Button variant="ghost" size="sm" onClick={() => setEdit({ type: 'bank', id: b.id, accountName: b.accountName })}>Edit</Button>
-                      <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setRemove({ type: 'bank', id: b.id, label: b.bank })}>Remove</Button>
-                    </div>
+                    {financialAccessAllowed && (
+                      <div className="flex gap-2">
+                        {!b.isPrimary && <Button variant="outline" size="sm" onClick={() => setPrimaryBank(b.id)}>Set as Primary</Button>}
+                        <Button variant="ghost" size="sm" onClick={() => setEdit({ type: 'bank', id: b.id, accountName: b.accountName })}>Edit</Button>
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setRemove({ type: 'bank', id: b.id, label: b.bank })}>Remove</Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ))}
 
-            <Button variant="outline" className="w-full">
-              <IconPlus className="w-4 h-4 mr-2" />
-              Add Bank Account
-            </Button>
+            {financialAccessAllowed && (
+              <Button variant="outline" className="w-full" onClick={() => setAddBank({ bank: '', accountName: 'Acme Corporation', accountNumber: '' })}>
+                <IconPlus className="w-4 h-4 mr-2" />
+                Add Bank Account
+              </Button>
+            )}
           </div>
 
           <Card className="mt-6 bg-blue-50 border-blue-200">
@@ -225,7 +333,11 @@ export function PaymentSettings() {
                 </div>
               )}
             </div>
-            <div className="flex gap-2.5 justify-end pt-5">
+            <p className="text-xs text-gray-500 mt-4 flex items-center gap-1.5">
+              <IconShieldLock className="w-3.5 h-3.5" />
+              You&apos;ll be asked to verify with an OTP before changes save.
+            </p>
+            <div className="flex gap-2.5 justify-end pt-4">
               <Button variant="outline" size="sm" onClick={() => setEdit(null)}>Cancel</Button>
               <Button size="sm" onClick={saveEdit}>Save Changes</Button>
             </div>
@@ -233,7 +345,81 @@ export function PaymentSettings() {
         )}
       </Dialog>
 
-      {/* Remove confirmation */}
+      {/* Add payment method modal */}
+      <Dialog open={!!addMethod} onClose={() => setAddMethod(null)} size="md">
+        {addMethod && (
+          <>
+            <h3 className="text-base font-semibold text-gray-900 mb-5">Add Payment Method</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Card Brand</label>
+                <Select value={addMethod.brand} onChange={(e) => setAddMethod({ ...addMethod, brand: e.target.value })}>
+                  <option value="Visa">Visa</option>
+                  <option value="Mastercard">Mastercard</option>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Card Number</label>
+                <Input value={addMethod.last4} onChange={(e) => setAddMethod({ ...addMethod, last4: e.target.value })} placeholder="1234 5678 9012 3456" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Cardholder</label>
+                  <Input value={addMethod.holder} onChange={(e) => setAddMethod({ ...addMethod, holder: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Expiry (MM/YYYY)</label>
+                  <Input value={addMethod.expiry} onChange={(e) => setAddMethod({ ...addMethod, expiry: e.target.value })} placeholder="12/2028" />
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-4 flex items-center gap-1.5">
+              <IconShieldLock className="w-3.5 h-3.5" />
+              OTP verification is required before this is added.
+            </p>
+            <div className="flex gap-2.5 justify-end pt-4">
+              <Button variant="outline" size="sm" onClick={() => setAddMethod(null)}>Cancel</Button>
+              <Button size="sm" disabled={!addMethod.last4.trim()} onClick={submitAddMethod}>Continue</Button>
+            </div>
+          </>
+        )}
+      </Dialog>
+
+      {/* Add bank account modal */}
+      <Dialog open={!!addBank} onClose={() => setAddBank(null)} size="md">
+        {addBank && (
+          <>
+            <h3 className="text-base font-semibold text-gray-900 mb-5">Add Bank Account</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Bank</label>
+                <Select value={addBank.bank} onChange={(e) => setAddBank({ ...addBank, bank: e.target.value })}>
+                  <option value="">Select bank</option>
+                  {BANKS.map((b) => <option key={b} value={b}>{b}</option>)}
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Account Name</label>
+                <Input value={addBank.accountName} onChange={(e) => setAddBank({ ...addBank, accountName: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Account Number</label>
+                <Input value={addBank.accountNumber} onChange={(e) => setAddBank({ ...addBank, accountNumber: e.target.value })} placeholder="Account number" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-4 flex items-center gap-1.5">
+              <IconShieldLock className="w-3.5 h-3.5" />
+              OTP verification is required before this is added.
+            </p>
+            <div className="flex gap-2.5 justify-end pt-4">
+              <Button variant="outline" size="sm" onClick={() => setAddBank(null)}>Cancel</Button>
+              <Button size="sm" disabled={!addBank.bank.trim() || !addBank.accountNumber.trim()} onClick={submitAddBank}>Continue</Button>
+            </div>
+          </>
+        )}
+      </Dialog>
+
+      {/* Remove confirmation (confirm → OTP → remove) */}
       {remove && (
         <ConfirmDialog
           open
@@ -251,10 +437,18 @@ export function PaymentSettings() {
         >
           <div className="flex items-start gap-2 mb-5 text-xs text-gray-500">
             <IconAlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-500 mt-0.5" />
-            Any scheduled payments or payouts using this {remove.type === 'method' ? 'card' : 'account'} will need a new method.
+            Any scheduled payments or payouts using this {remove.type === 'method' ? 'card' : 'account'} will need a new method. You&apos;ll verify with an OTP next.
           </div>
         </ConfirmDialog>
       )}
+
+      {/* OTP verification gate for all sensitive financial actions */}
+      <OtpDialog
+        open={!!otp}
+        onClose={() => setOtp(null)}
+        onVerified={onOtpVerified}
+        actionLabel={otp?.action}
+      />
     </div>
   );
 }

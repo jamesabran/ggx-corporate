@@ -1326,3 +1326,43 @@ Migrated account/subaccount visibility & scoping to key off a stable id instead 
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (970 kB).
+
+---
+
+### Build Next — Financial Security / OTP Verification (ROADMAP item 1) (2026-05-30)
+
+Added an always-required OTP gate for sensitive parent-level financial actions, plus a mock attention-email event and security log.
+
+**Reusable OTP dialog (`src/app/components/ui/OtpDialog.tsx`, new)**
+- DS `Dialog`-based; props: `open`, `onClose`, `onVerified`, `title`, `description`, `actionLabel`, `elevated`.
+- 6-digit numeric input (digits only, max 6), Verify disabled until 6 digits; mock code `123456`; inline "Invalid code. Please try again." on mismatch with retry; helper note "For this mock, use 123456." Verify via button or Enter. Resets on open.
+
+**OTP behavior**
+- Required before committing every sensitive financial change — applies even to the Admin/account holder.
+- Sequential modal flow (no triple-stacking): the originating form/confirm closes, then OTP opens; values are captured in a closure (`OtpAction.run`) and only execute on successful verify. Wrong code blocks completion and allows retry.
+
+**Sensitive parent-level financial actions covered (all OTP-gated)**
+- Bank account: add, edit, remove, set as primary (payout change).
+- Payment method: add, edit, remove, set as default.
+- Add flows are now functional (previously stub buttons): Add Payment Method and Add Bank Account dialogs → OTP → local save.
+- Remove keeps the existing confirm dialog, then requires OTP before final removal (Remove → Confirm → OTP → remove → event).
+
+**Parent-level financial access assumption**
+- Financial actions are parent/main-account only. Payment Settings is already absent from `subaccountNavigation`; additionally `financialAccessAllowed = !subAccountsEnabled || isMainAccountView()` hides all action controls when an Admin is drilled into a specific subaccount, showing an amber "managed at the parent level" notice. No Manager-level financial restrictions were built because Managers have no financial actions at all (no access). No broader permissions system added.
+
+**Attention email + security event (`src/app/data/financialSecurity.ts`, new)**
+- `recordFinancialChange(action, accountName?)` runs after a verified change and: (1) pushes a mock `AttentionEmailEvent` (eventType `financial_update_attention`, recipient = account holder, subject "Important: Financial account details were updated", body, action, timestamp, accountName?) — no real email; (2) appends a `SecurityLogEntry` ({ action, actor, accountName?, timestamp, otpVerified: true }); (3) surfaces a parent-scoped `account` notification via `pushNotification` (Admin-only).
+- `getAttentionEmails()` / `getSecurityLog()` exported for a future Security/Activity screen.
+
+**Files changed**
+- Added: `src/app/components/ui/OtpDialog.tsx`, `src/app/data/financialSecurity.ts`
+- Modified: `src/app/pages/PaymentSettings.tsx` (parent-level gate, OTP-gated add/edit/remove/set-default, functional add forms)
+
+**Assumptions / deferred**
+- OTP is mock (`123456`); no real delivery. Account holder hardcoded as "Max Rodriguez" (matches topbar); a real app resolves from session.
+- Security/audit log and attention-email events are in-memory with no UI to browse them yet (getters exported; Security/Activity screen deferred).
+- "Set as Default/Primary" are now OTP-gated and functional (were stubs).
+- recharts lazy-load and Zendesk/notification APIs remain deferred.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (979 kB).
