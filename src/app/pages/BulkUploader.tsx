@@ -1,6 +1,10 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { IconUpload, IconDownload, IconFileSpreadsheet, IconMapPin, IconClock, IconChevronRight, IconLink, IconX, IconTruckDelivery, IconBuildingStore, IconPhone } from '@tabler/icons-react';
+import {
+  IconUpload, IconDownload, IconFileSpreadsheet, IconMapPin, IconClock,
+  IconChevronRight, IconLink, IconX, IconTruckDelivery, IconBuildingStore,
+  IconPhone, IconArrowUp,
+} from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -9,63 +13,91 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog } from '../components/ui/Dialog';
 import { AddressBook, type Address } from '../components/AddressBook';
 import { PaymentMethodTabs } from '../components/PaymentMethodTabs';
+import { BulkColumnMapper } from '../components/BulkColumnMapper';
 import { downloadBulkTemplate, BULK_TEMPLATE_COLUMNS } from '../data/bulkTemplate';
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
 import { isBillingAccount } from '../data/paymentAccounts';
+import {
+  addUpload, updateUploadStatus, getSessionUploads,
+  generateUploadId, createUploadRecord,
+} from '../data/bulkUploads';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 
-const recentUploads = [
-  { id: 'UPLOAD-2026-05-19-001', fileName: 'bulk_shipments_may19.xlsx', uploadedAt: '2026-05-19 10:30 AM', totalRows: 5, validRows: 3, errorRows: 2, status: 'needs-review' },
-  { id: 'UPLOAD-2026-05-18-003', fileName: 'daily_orders_batch3.xlsx', uploadedAt: '2026-05-18 04:15 PM', totalRows: 25, validRows: 25, errorRows: 0, status: 'completed' },
-  { id: 'UPLOAD-2026-05-18-002', fileName: 'weekend_deliveries.xlsx', uploadedAt: '2026-05-18 02:45 PM', totalRows: 12, validRows: 10, errorRows: 2, status: 'completed' },
-  { id: 'UPLOAD-2026-05-18-001', fileName: 'morning_batch.xlsx', uploadedAt: '2026-05-18 09:20 AM', totalRows: 8, validRows: 8, errorRows: 0, status: 'completed' },
+// Static recent uploads seed — session uploads are merged at render time.
+const SEED_UPLOADS = [
+  { id: 'UPLOAD-2026-05-19-001', fileName: 'bulk_shipments_may19.xlsx', uploadedAt: '2026-05-19 10:30 AM', totalRows: 5, validRows: 3, errorRows: 2, status: 'needs-review' as const },
+  { id: 'UPLOAD-2026-05-18-003', fileName: 'daily_orders_batch3.xlsx',  uploadedAt: '2026-05-18 04:15 PM', totalRows: 25, validRows: 25, errorRows: 0, status: 'completed' as const },
+  { id: 'UPLOAD-2026-05-18-002', fileName: 'weekend_deliveries.xlsx',   uploadedAt: '2026-05-18 02:45 PM', totalRows: 12, validRows: 10, errorRows: 2, status: 'completed' as const },
+  { id: 'UPLOAD-2026-05-18-001', fileName: 'morning_batch.xlsx',        uploadedAt: '2026-05-18 09:20 AM', totalRows: 8,  validRows: 8,  errorRows: 0, status: 'completed' as const },
 ];
 
-const statusConfig = {
-  processing: { variant: 'info' as const, label: 'Processing' },
-  'needs-review': { variant: 'warning' as const, label: 'Needs Review' },
+const STATUS_CONFIG = {
+  processing:       { variant: 'info'    as const, label: 'Processing'      },
+  'needs-review':   { variant: 'warning' as const, label: 'Needs Review'    },
   'awaiting-payment': { variant: 'pending' as const, label: 'Awaiting Payment' },
-  completed: { variant: 'success' as const, label: 'Completed' },
+  completed:        { variant: 'success' as const, label: 'Completed'       },
 };
 
-const NEW_UPLOAD_ID = 'UPLOAD-2026-05-19-001';
+// Mock file headers and sample data returned when a file is NOT the GGX template.
+// Mirrors the column-mapping screenshot reference.
+const MOCK_CUSTOM_HEADERS = [
+  'Buyer Name', 'CP#', 'Street Address', 'Province', 'City / Town',
+  'Barangay', 'Unit/Floor', 'Item Name', 'Pouch/box size', 'Cash on delivery (COD)',
+  'COD Amount', 'Item Protection', 'Recipient Pays', 'Promo', 'Ref ID',
+];
+const MOCK_SAMPLE_DATA = [
+  ['Jen Ramos',  '+639176543210', '123 Penarubia St.',           'Metro Manila', 'Mandaluyong City', 'Malamig',    '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'No',  '–',      '–', 'No', '–', '–'],
+  ['Ramon Jee',  '+639101234567', '2287 Allegro Center, Chin...', 'Metro Manila', 'Makati City',      'Magallanes', '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'Yes', '500.00', '–', '–', '–', '–'],
+  ['Rena Jams',  '+639123456789', '1234 Harmony Lane St.',       'Metro Manila', 'Quezon City',      'Barangay 1', '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'No',  '–',      '–', '–', '–', '–'],
+];
+
+/** Whether the uploaded file already uses GGX template headers (skip mapping). */
+function isGgxTemplate(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+  return lower.includes('template') || lower.includes('ggx') || lower.includes('gogo') || lower.endsWith('.csv');
+}
+
+type Step = 'form' | 'mapping' | 'fast-processing' | 'background-processing';
 
 export function BulkUploader() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { getCurrentAccountName } = useSubAccounts();
 
-  // Billing availability is derived from the active account/subaccount contract,
-  // not a separate selector. Finance is handled at the parent account level.
   const activeAccountName = getCurrentAccountName();
   const billingAvailable = isBillingAccount(activeAccountName);
 
+  const [step, setStep]             = useState<Step>('form');
   const [uploadMode, setUploadMode] = useState<'standard' | 'same-day'>('standard');
-  const [firstMile, setFirstMile] = useState<'pickup' | 'dropoff'>('pickup');
+  const [firstMile, setFirstMile]   = useState<'pickup' | 'dropoff'>('pickup');
   const [pickupDate, setPickupDate] = useState('');
   const [showDropoffs, setShowDropoffs] = useState(false);
-  const [uploadUrl, setUploadUrl] = useState('');
+  const [uploadUrl, setUploadUrl]   = useState('');
 
   const [selectedFile, setSelectedFile] = useState<{ name: string; size: string } | null>(null);
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading'>('idle');
+  const [pendingUploadId, setPendingUploadId] = useState<string | null>(null);
+
+  // Force a re-render when background uploads complete so Recent Uploads updates.
+  const [sessionTick, setSessionTick] = useState(0);
 
   const [showAddressBook, setShowAddressBook] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>({
-    id: '1',
-    label: 'office',
-    name: 'Acme Corporation',
-    mobileNumber: '+63 917 123 4567',
-    province: 'Metro Manila',
-    city: 'Makati',
-    barangay: 'Poblacion',
-    otherDetails: '5th Floor, ABC Building, Ayala Avenue',
-    isPreferred: true,
+    id: '1', label: 'office', name: 'Acme Corporation',
+    mobileNumber: '+63 917 123 4567', province: 'Metro Manila',
+    city: 'Makati', barangay: 'Poblacion',
+    otherDetails: '5th Floor, ABC Building, Ayala Avenue', isPreferred: true,
   });
 
-  const handleSelectAddress = (address: Address) => {
-    setSelectedAddress(address);
-    setShowAddressBook(false);
-  };
+  // Dismiss the fast-processing modal if the navigate fires before unmount.
+  useEffect(() => {
+    if (step !== 'fast-processing') return;
+    const timer = setTimeout(() => {
+      if (pendingUploadId) {
+        navigate(`/dashboard/bulk-uploader/summary/${pendingUploadId}`);
+      }
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [step, pendingUploadId, navigate]);
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -83,11 +115,88 @@ export function BulkUploader() {
     captureFile(e.dataTransfer.files?.[0]);
   };
 
-  // Frontend-only: no real parsing. Proceeds to the validation summary mock.
-  const startUpload = () => {
-    setUploadStatus('uploading');
-    setTimeout(() => navigate(`/dashboard/bulk-uploader/summary/${NEW_UPLOAD_ID}`), 700);
+  /**
+   * After file selection or URL import: check headers, then either show
+   * column mapping (custom file) or proceed directly to processing.
+   * uploadMode === 'same-day' → background processing flow
+   * uploadMode === 'standard' → fast processing flow
+   */
+  const startUpload = (fileName?: string) => {
+    const name = fileName ?? selectedFile?.name ?? 'upload.csv';
+    const id = generateUploadId();
+    setPendingUploadId(id);
+
+    if (!isGgxTemplate(name) && !uploadUrl.trim()) {
+      // Non-template file via drag/browse → show mapping step
+      setStep('mapping');
+      return;
+    }
+
+    proceedToProcessing(id, name);
   };
+
+  const proceedToProcessing = (id: string, fileName: string) => {
+    if (uploadMode === 'same-day') {
+      // Background processing — will return to this page
+      const record = createUploadRecord(id, fileName, uploadMode, firstMile, 'processing');
+      addUpload(record);
+      setStep('background-processing');
+    } else {
+      // Fast processing — will navigate to summary
+      const record = createUploadRecord(id, fileName, uploadMode, firstMile, 'needs-review');
+      addUpload(record);
+      setStep('fast-processing');
+    }
+  };
+
+  const handleMappingConfirm = () => {
+    const id = pendingUploadId ?? generateUploadId();
+    const fileName = selectedFile?.name ?? 'upload.csv';
+    setPendingUploadId(id);
+    proceedToProcessing(id, fileName);
+  };
+
+  const handleBackgroundAck = () => {
+    setStep('form');
+    setSelectedFile(null);
+    setUploadUrl('');
+    if (!pendingUploadId) return;
+    const idToComplete = pendingUploadId;
+    // Mock background completion after 8 seconds.
+    setTimeout(() => {
+      updateUploadStatus(idToComplete, 'needs-review');
+      setSessionTick((t) => t + 1);
+    }, 8000);
+  };
+
+  const handleSelectAddress = (address: Address) => {
+    setSelectedAddress(address);
+    setShowAddressBook(false);
+  };
+
+  // Merge session uploads (newest first) with the static seed list, deduping by id.
+  const sessionUploads = getSessionUploads();
+  const sessionIds = new Set(sessionUploads.map((u) => u.id));
+  const allUploads = [
+    ...sessionUploads,
+    ...SEED_UPLOADS.filter((u) => !sessionIds.has(u.id)),
+  ];
+
+  // --- Mapping step renders instead of the main form ---
+  if (step === 'mapping') {
+    return (
+      <div className="p-6">
+        <BulkColumnMapper
+          fileName={selectedFile?.name ?? ''}
+          fileHeaders={MOCK_CUSTOM_HEADERS}
+          sampleData={MOCK_SAMPLE_DATA}
+          onConfirm={handleMappingConfirm}
+          onBack={() => setStep('form')}
+          onDownloadTemplate={downloadBulkTemplate}
+        />
+      </div>
+    );
+  }
 
   if (showAddressBook) {
     return (
@@ -98,6 +207,9 @@ export function BulkUploader() {
   }
 
   const accentText = uploadMode === 'same-day' ? 'text-orange-700' : 'text-blue-700';
+
+  // Suppress TypeScript "unused" warning — sessionTick drives re-render only.
+  void sessionTick;
 
   return (
     <div className="p-6 space-y-6">
@@ -145,16 +257,22 @@ export function BulkUploader() {
                 <IconClock className="w-5 h-5 shrink-0" />
                 <div className="text-left">
                   <div className="font-semibold">Same-Day Delivery</div>
-                  <div className={`text-xs ${uploadMode === 'same-day' ? 'text-orange-100' : 'text-gray-500'}`}>Express same-day processing</div>
+                  <div className={`text-xs ${uploadMode === 'same-day' ? 'text-orange-100' : 'text-gray-500'}`}>Express same-day processing · background upload</div>
                 </div>
               </div>
             </button>
           </div>
+          {uploadMode === 'same-day' && (
+            <p className="text-xs text-orange-700 mt-2 flex items-center gap-1">
+              <IconClock className="w-3.5 h-3.5 shrink-0" />
+              Same-day uploads process in the background. You can continue using the app and review the results from Recent Uploads once done.
+            </p>
+          )}
         </CardContent>
       </Card>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Left: sender + schedule + payment config */}
+        {/* Left column */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -198,7 +316,7 @@ export function BulkUploader() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>First-mile & Schedule</CardTitle></CardHeader>
+            <CardHeader><CardTitle>First-mile &amp; Schedule</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Pick-up or Drop-off</label>
@@ -224,7 +342,9 @@ export function BulkUploader() {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Pick-up Date</label>
                   <Input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} />
                   <p className="text-xs text-gray-500 mt-1.5">
-                    {uploadMode === 'same-day' ? 'Same-day cut-off is 11:00 AM. Orders after cut-off move to next day.' : 'Pick-ups are scheduled the next business day by default.'}
+                    {uploadMode === 'same-day'
+                      ? 'Same-day cut-off is 10:00 AM. Orders booked after cut-off move to next day.'
+                      : 'Pick-ups are scheduled the next business day by default.'}
                   </p>
                 </div>
               )}
@@ -255,7 +375,7 @@ export function BulkUploader() {
           </Card>
         </div>
 
-        {/* Right: upload */}
+        {/* Right column — upload */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -277,7 +397,12 @@ export function BulkUploader() {
                       className="w-full h-10 pl-9 pr-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                   </div>
-                  <Button disabled={!uploadUrl.trim() || uploadStatus === 'uploading'} onClick={startUpload}>Import</Button>
+                  <Button
+                    disabled={!uploadUrl.trim() || step !== 'form'}
+                    onClick={() => startUpload('import-from-url.csv')}
+                  >
+                    Import
+                  </Button>
                 </div>
               </div>
 
@@ -324,24 +449,15 @@ export function BulkUploader() {
                       <p className="font-medium text-gray-900 truncate">{selectedFile.name}</p>
                       <p className="text-xs text-gray-500">{selectedFile.size} · ready to validate</p>
                     </div>
-                    {uploadStatus === 'idle' && (
+                    {step === 'form' && (
                       <button onClick={() => setSelectedFile(null)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Remove file">
                         <IconX className="w-4 h-4" />
                       </button>
                     )}
                   </div>
-                  <Button className="w-full mt-4" disabled={uploadStatus === 'uploading'} onClick={startUpload}>
-                    {uploadStatus === 'uploading' ? (
-                      <>
-                        <IconClock className="w-4 h-4 mr-2 animate-spin" />
-                        Uploading & validating…
-                      </>
-                    ) : (
-                      <>
-                        <IconFileSpreadsheet className="w-4 h-4 mr-2" />
-                        Upload & Validate
-                      </>
-                    )}
+                  <Button className="w-full mt-4" disabled={step !== 'form'} onClick={() => startUpload()}>
+                    <IconFileSpreadsheet className="w-4 h-4 mr-2" />
+                    Upload &amp; Validate
                   </Button>
                 </div>
               )}
@@ -359,10 +475,10 @@ export function BulkUploader() {
                   </Button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Required columns: {BULK_TEMPLATE_COLUMNS.slice(0, 9).join(', ')}, and more.
+                  Required columns: {BULK_TEMPLATE_COLUMNS.slice(0, 6).join(', ')}, and more.
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  Province, City/Municipality, and Barangay must be valid GGX-supported locations — the same options shown when selecting an address in the Address Book.
+                  Province, City/Municipality, and Barangay must be valid GGX-supported locations.
                 </p>
               </div>
             </CardContent>
@@ -370,51 +486,62 @@ export function BulkUploader() {
         </div>
       </div>
 
+      {/* Recent Uploads */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Uploads</CardTitle>
-          <CardDescription>Your recently uploaded batches. Completed uploads appear in the Transactions page.</CardDescription>
+          <CardDescription>Your recently uploaded batches. Click a row to review or open the batch details.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Upload Batch ID</TableHead>
+                <TableHead>Batch ID</TableHead>
                 <TableHead>File Name</TableHead>
                 <TableHead>Date Created</TableHead>
-                <TableHead>Total Orders</TableHead>
+                <TableHead>Total</TableHead>
                 <TableHead>Valid</TableHead>
                 <TableHead>Errors</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentUploads.map((upload) => (
-                <TableRow key={upload.id} className="cursor-pointer hover:bg-gray-50" onClick={() => navigate(`/dashboard/bulk-uploader/summary/${upload.id}`)}>
-                  <TableCell className="font-medium text-blue-600">{upload.id}</TableCell>
-                  <TableCell>{upload.fileName}</TableCell>
-                  <TableCell className="text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <IconClock className="w-3 h-3" />
-                      {upload.uploadedAt}
-                    </div>
-                  </TableCell>
-                  <TableCell>{upload.totalRows}</TableCell>
-                  <TableCell className="text-green-700 font-medium">{upload.validRows}</TableCell>
-                  <TableCell className={upload.errorRows > 0 ? 'text-red-700 font-medium' : 'text-gray-500'}>{upload.errorRows}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusConfig[upload.status as keyof typeof statusConfig].variant}>
-                      {statusConfig[upload.status as keyof typeof statusConfig].label}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {allUploads.map((upload) => {
+                const cfg = STATUS_CONFIG[upload.status] ?? STATUS_CONFIG['completed'];
+                return (
+                  <TableRow
+                    key={upload.id}
+                    className={`cursor-pointer hover:bg-gray-50 ${upload.status === 'processing' ? 'opacity-70' : ''}`}
+                    onClick={() => upload.status !== 'processing' && navigate(`/dashboard/bulk-uploader/summary/${upload.id}`)}
+                  >
+                    <TableCell className="font-medium text-blue-600">{upload.id}</TableCell>
+                    <TableCell>{upload.fileName}</TableCell>
+                    <TableCell className="text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <IconClock className="w-3 h-3" />
+                        {upload.uploadedAt}
+                      </div>
+                    </TableCell>
+                    <TableCell>{upload.totalRows}</TableCell>
+                    <TableCell className="text-green-700 font-medium">{upload.validRows}</TableCell>
+                    <TableCell className={upload.errorRows > 0 ? 'text-red-700 font-medium' : 'text-gray-500'}>{upload.errorRows}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={cfg.variant}>{cfg.label}</Badge>
+                        {upload.status === 'processing' && (
+                          <span className="text-xs text-gray-500">Processing in background…</span>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Drop-off locations */}
+      {/* Drop-off locations dialog */}
       <Dialog open={showDropoffs} onClose={() => setShowDropoffs(false)} size="md" title="Drop-off locations">
         <p className="text-sm text-gray-500 mb-4">Bring your parcels to any of these GoGo Xpress branches.</p>
         <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -438,6 +565,36 @@ export function BulkUploader() {
         </div>
         <div className="flex justify-end pt-4">
           <Button variant="outline" size="sm" onClick={() => setShowDropoffs(false)}>Close</Button>
+        </div>
+      </Dialog>
+
+      {/* Fast processing modal */}
+      <Dialog open={step === 'fast-processing'} onClose={() => {}} size="sm">
+        <div className="text-center py-2 space-y-4">
+          <h3 className="text-base font-bold text-gray-900 uppercase tracking-wide">Uploading Orders</h3>
+          <div className="w-16 h-16 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-gray-600">Please wait while we upload your orders…</p>
+        </div>
+      </Dialog>
+
+      {/* Background processing modal */}
+      <Dialog open={step === 'background-processing'} onClose={() => {}} size="sm">
+        <div className="text-center py-2 space-y-4">
+          <h3 className="text-base font-bold text-gray-900 uppercase tracking-wide">Processing Upload</h3>
+          {/* Illustration approximated with Tabler icons */}
+          <div className="relative w-20 h-20 mx-auto">
+            <div className="w-14 h-16 bg-blue-100 rounded-lg border-2 border-blue-200 mx-auto mt-1" />
+            <div className="w-12 h-14 bg-yellow-100 rounded-lg border-2 border-yellow-200 absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 -z-10" />
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center shadow-md">
+              <IconArrowUp className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 max-w-xs mx-auto">
+            Your orders are being processed. We&apos;ll notify you immediately when the upload is complete.
+          </p>
+          <Button className="w-full" onClick={handleBackgroundAck}>
+            Okay, got it!
+          </Button>
         </div>
       </Dialog>
     </div>

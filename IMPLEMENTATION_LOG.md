@@ -700,3 +700,111 @@ Follow-up to the Bulk Upload flow (did not rebuild the page).
 
 **Validation**
 - `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).
+
+---
+
+### Build Next — Bulk Upload realistic flow: mapping, processing, review, booking (2026-05-29)
+
+Replaced the simple upload → summary flow with a full demo-ready flow covering header detection, column mapping, fast/background processing, editable error rows, and booking completion.
+
+**File upload + header check**
+- After file selection, `isGgxTemplate(fileName)` checks if the file looks like the GGX template (name contains "template", "ggx", "gogo", or ends in `.csv`).
+- Template files skip column mapping and go directly to processing.
+- Non-template files (`.xlsx` with a custom name) show the column mapping step first.
+- URL import always skips mapping (treated as a direct feed).
+
+**Column mapping step (`BulkColumnMapper.tsx`)**
+- Full-page step rendered within the app shell (not a modal), replacing the BulkUploader form content.
+- Three-column table: GGX field name (with required asterisks) | file header dropdown | sample data from file (3 rows, scrollable).
+- Auto-maps obvious exact/substring matches on mount; leaves ambiguous fields as "Select column".
+- Confirm Fields and Upload button is disabled until all 6 required fields are mapped (Recipient Name, Mobile Number, Street Address, Province, City/Municipality, Barangay).
+- Download Template button in header. Back button returns to the upload form.
+- Mock file headers and sample data (mirrors the column-mapping screenshot reference) are provided by BulkUploader for non-template files.
+
+**Fast vs background processing decision**
+- `uploadMode === 'standard'` → fast processing flow.
+- `uploadMode === 'same-day'` → background processing flow.
+- This gives clear demo control: use Standard to see the fast spinner; use Same-Day to see the background flow.
+
+**Fast processing**
+- Shows a spinner Dialog modal: "UPLOADING ORDERS / Please wait while we upload your orders…"
+- CSS `animate-spin` + `border-t-emerald-500` ring approximates the teal spinner from the reference screenshots.
+- Auto-navigates to the review/summary page after 2.5 seconds via `useEffect` + `setTimeout`.
+- Dialog has no close button (non-dismissable during processing).
+
+**Background processing**
+- Shows a "PROCESSING UPLOAD" Dialog modal with a stacked-pages illustration (built from Tailwind divs + Tabler `IconArrowUp`) and the message "Your orders are being processed…".
+- "Okay, got it!" button dismisses the modal and returns the user to the Bulk Upload page.
+- The upload is added to the module-level store (`bulkUploads.ts`) immediately as `status: 'processing'`.
+- A `setTimeout` of 8 seconds simulates background completion: status updates to `needs-review` and a notification event is pushed to `PENDING_NOTIFICATIONS`.
+- Recent Uploads re-renders via `sessionTick` state increment on completion.
+- Processing rows show a "Processing in background…" label and are non-clickable until done.
+
+**Module-level upload store (`src/app/data/bulkUploads.ts`)**
+- `SESSION_UPLOADS[]` — mutable array, lives for the tab lifetime.
+- `addUpload(record)` / `updateUploadStatus(id, status)` — called by BulkUploader.
+- `getSessionUploads()` — called by BulkUploader (Recent Uploads table) and BulkUploadSummary (batch metadata).
+- `PENDING_NOTIFICATIONS[]` — notification event queue ready for bell integration.
+- TODO: next prompt should import `PENDING_NOTIFICATIONS` in `RootLayout.tsx` and render items in the bell popover (batchId, fileName, validRows/errorRows counts, link to review page). Event shape is final; no structural changes needed to this file.
+
+**Recent Uploads table**
+- Session uploads (newest first) are merged with the static seed list, deduplicating by ID.
+- Rows with `status: 'processing'` are rendered with `opacity-70` and are non-clickable.
+
+**Review page rebuild (`BulkUploadSummary.tsx`)**
+- Header: "Review Upload Details" with date uploaded and Batch ID from the session store (falls back to static defaults for seed uploads).
+- **Valid orders card**: green check icon, "{N} orders uploaded successfully", compact 5-row table (Recipient, Item Name, Item Price, Fees paid by, Fees), "View all N in transactions page" link.
+- **Error rows card** (shown when errors exist): red border card, error count + "Download Failed Orders" button, horizontally scrollable editable table, info banner with Retry Upload action.
+- **Duplicate rows**: deferred — a TODO comment marks where the section will go once server-side reference-ID deduplication is available.
+
+**Editable error rows**
+- Columns: Row # | Error list | Recipient Name * | Mobile Number * | Street Address * | Province * | City/Municipality *.
+- Invalid fields get `border-red-500 bg-red-50 focus:ring-red-500`; helper text appears below.
+- `rowEdits` state tracks inline changes separately from original `errorRows` so original error context is preserved.
+- Province is a Select (mock PH province list); City/Municipality and other fields are plain `<input>` elements (not the DS Select/Input — DS Input/Select don't accept className overrides for error state easily; raw inputs with matching classes used for the compact table row context).
+- Row-level errors include: field-required, invalid pouch size, COD exceeds limit, possible duplicate.
+- Field-level errors: mobileNumber, recipientName, streetAddress only (others are structural).
+
+**Retry Upload / revalidation**
+- `handleRetryUpload()`: re-validates each error row against `rowEdits`. Required-field errors are cleared if the field is now filled. Structural errors (pouch size, COD, duplicates) remain.
+- Fully resolved rows are moved to the valid count (`fixedCount` increments).
+- A green confirmation note appears in the valid orders card after fixing rows.
+- Frontend/mock only — no real server validation.
+
+**Bottom booking section**
+- Three-column grid: Pick-up options | Payment | Summary.
+- Pick-up options: Pick-up / Drop-off toggle; Pick-up Date input with formatted label and "Change pick-up date" link; drop-off shows "Check drop-off locations" dialog (reuses DROPOFF_LOCATIONS).
+- Payment: `PaymentMethodTabs` component (billing/non-billing behavior preserved, key= reset on account change).
+- Summary: Number of orders (updates when rows are fixed), mock fee breakdown (Shipping ₱1,200, Item Protection ₱0, Fuel Surcharge ₱500, Total ₱1,700), collection note based on billing vs cash vs pickup vs dropoff.
+- Complete Booking CTA disabled when totalValidCount === 0.
+
+**Booking/payment success**
+- Shows a Dialog modal: "YOUR BOOKING IS COMPLETE", green check, order count, pickup date, total fees note, three actions: Upload Another Batch, Go to Batch Details (closes modal), Go to Home.
+- "Go to Batch Details" closes the success modal and returns to the review page.
+- Payment note is conditional: billing → "To be invoiced after service"; cash pickup → "To be paid on pick-up"; drop-off → "To be paid at drop-off".
+- Frontend/mock only — no real payment processing.
+
+**Files changed**
+- Added: `src/app/data/bulkUploads.ts` (module store + notification TODO structure)
+- Added: `src/app/components/BulkColumnMapper.tsx` (column mapping step)
+- Modified: `src/app/pages/BulkUploader.tsx` (step machine, fast/background processing, session uploads merge)
+- Modified: `src/app/pages/BulkUploadSummary.tsx` (full rebuild: valid table, editable error rows, booking section, success modal)
+
+**Frontend/mock limitations**
+- No real file parsing — header detection is name-based. Sample data in the mapper is always the same mock dataset regardless of actual file content.
+- Processing times are mocked (fast: 2.5s; background: 8s).
+- Fee breakdown is a static mock; real fees would come from an API.
+- Background upload state is in-memory (module-level); reloading the page resets it.
+- Retry revalidation only checks required-field presence; structural errors (pouch size, COD, duplicates) are never cleared inline.
+- Duplicate rows section is deferred (TODO comment left in place).
+- Payment method selection within PaymentMethodTabs is not read back by BulkUploadSummary; the fee note is based on billing/non-billing + firstMile only.
+
+**Deferred**
+- Duplicate reference ID section in the review page.
+- Notification bell integration (PENDING_NOTIFICATIONS ready; wire into RootLayout in next prompt).
+- Real file parsing / server-side validation.
+- Carrying pickup/payment selections from BulkUploader into BulkUploadSummary via store (currently summary manages its own).
+- Per-row inline editing of pouch size, COD, and other structural error fields.
+
+**Validation**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is pre-existing recharts issue (924 kB, same root cause).
