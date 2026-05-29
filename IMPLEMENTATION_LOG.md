@@ -422,3 +422,21 @@ Terminology rename of the Complaints feature to Support Tickets. Rename only —
 **Remaining "complaint" references:** Only the intentional redirect path string `'complaints'` in `routes.tsx`. No other code or doc references remain.
 
 **Validation:** `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Only the pre-existing recharts bundle-size warning remains.
+
+---
+
+## Audit & Action Plan (2026-05-29)
+
+Implementation audit of the working baseline. No code changes made. All 19 routes resolve; no broken `navigate()`/`<Link>` targets. Issues are dead-end CTAs (no handler), two DS-component UI bugs, and stubbed management actions.
+
+**Fix now:** Select chevron flush to edge (Select.tsx); button icon squish (no `shrink-0`); topbar account menu items (My Profile/Security/Preferences) have no handler; notification bell dead-ends; TransactionDetails ignores `:id` (always same record); Login dead links (Forgot password `#`, support email `#`, social buttons no-op).
+
+**Build next (implied, not new Figma pages):** Invite User flow (evidence: UsersPermissions "Invite User" + ParentDashboard CTA — stubs); Edit/Remove actions on PaymentSettings & UsersPermissions (stubs).
+
+**Polish later:** pagination wiring; search/filter wiring; Export/Download actions; loading skeletons & empty states; recharts lazy-load; replace raw `<textarea>`/checkboxes with DS Textarea/Switch; logout modal → DS Dialog; avatar initials → DS Avatar.
+
+**Needs user decision:** Forgot Password page (inferred from Login link only — NOT in Figma Make); Notifications page vs. popover; whether My Profile/Security/Preferences are separate pages or Settings sections; real auth + route guards scope.
+
+**Defer:** real API integration; auth backend; SubAccountContext persistence; dark mode; auto-pay; webhook save/test.
+
+**DS component gaps (in DS, not yet in code):** Textarea, Switch, Checkbox, Dialog, Avatar, Skeleton, Dropdown Menu, Tooltip.

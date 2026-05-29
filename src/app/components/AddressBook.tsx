@@ -143,7 +143,7 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
                 <option value="warehouse">Warehouse</option>
                 <option value="custom">Custom</option>
               </Select>
-              <Button onClick={() => { setShowForm(true); setFormData(emptyForm); setEditingId(null); }} className="cursor-pointer">
+              <Button onClick={() => { setShowForm(true); setFormData(emptyForm); setEditingId(null); }} className="cursor-pointer whitespace-nowrap">
                 <IconPlus className="w-4 h-4 mr-1.5" />
                 Add Address
               </Button>
