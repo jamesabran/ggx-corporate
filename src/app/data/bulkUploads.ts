@@ -31,6 +31,8 @@ export interface UploadNotificationEvent {
   errorRows: number;
   timestamp: string;
   read: boolean;
+  /** Subaccount the batch was uploaded under (optional; not yet captured at upload time). */
+  accountName?: string;
 }
 
 export const PENDING_NOTIFICATIONS: UploadNotificationEvent[] = [];

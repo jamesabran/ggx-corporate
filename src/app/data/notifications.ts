@@ -14,6 +14,7 @@ import type { ComponentType } from 'react';
 import {
   IconUpload, IconPackage, IconUserCog, IconAlertTriangle, IconFileText, IconMessage,
 } from '@tabler/icons-react';
+import { useSubAccounts } from '../contexts/SubAccountContext';
 import { PENDING_NOTIFICATIONS, type UploadNotificationEvent } from './bulkUploads';
 
 export type NotificationCategory =
@@ -24,6 +25,12 @@ export type NotificationCategory =
   | 'report'           // Reports / Downloads
   | 'support';         // Support Tickets (future Zendesk)
 
+// Audience scope for account/subaccount visibility:
+//   global     — everyone (e.g. nationwide service advisory)
+//   parent     — parent/main-account level, Admin-only (e.g. billing, reports)
+//   subaccount — tied to one subaccount (accountName set); Admin + that Manager
+export type NotificationScope = 'global' | 'parent' | 'subaccount';
+
 export interface AppNotification {
   id: string;
   category: NotificationCategory;
@@ -32,6 +39,10 @@ export interface AppNotification {
   /** ISO timestamp. */
   timestamp: string;
   read: boolean;
+  /** Audience scope for account/subaccount visibility filtering. */
+  scope: NotificationScope;
+  /** Subaccount name this item belongs to (required when scope === 'subaccount'). */
+  accountName?: string;
   /** Navigation target. Omit for informational-only items (non-clickable). */
   href?: string;
   /** Optional related-entity metadata, populated when applicable. */
@@ -70,6 +81,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Delivery exception reported',
     body: 'GGX-2024-89231 could not be delivered — recipient unavailable. Action may be required.',
     timestamp: minsAgo(35), read: false,
+    scope: 'subaccount', accountName: 'Acme Corporation',
     href: '/dashboard/transactions/GGX-2024-89231', meta: { trackingNumber: 'GGX-2024-89231' },
   },
   {
@@ -77,6 +89,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Pickup scheduled',
     body: '14 orders are scheduled for pickup tomorrow at 9:00 AM.',
     timestamp: minsAgo(180), read: false,
+    scope: 'subaccount', accountName: 'Acme Luzon',
     href: '/dashboard/transactions',
   },
   {
@@ -84,6 +97,8 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'New manager access added',
     body: 'Rina Lopez was granted Manager access to Acme Luzon.',
     timestamp: minsAgo(300), read: false,
+    // Directly relevant to the assigned Manager, so subaccount-scoped (not parent-only).
+    scope: 'subaccount', accountName: 'Acme Luzon',
     href: '/dashboard/users-permissions',
   },
   {
@@ -91,6 +106,8 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Billing contract updated',
     body: 'Billing terms for Acme Corporation were updated by your account manager.',
     timestamp: minsAgo(1500), read: true,
+    // Finance/billing is handled at the parent level → Admin-only.
+    scope: 'parent',
     href: '/dashboard/billing',
   },
   {
@@ -98,6 +115,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Pickup cutoff advisory',
     body: 'Same-day pickup cutoff moves to 9:00 AM on June 12 due to holiday volume.',
     timestamp: minsAgo(600), read: false,
+    scope: 'global',
     href: '/dashboard/advisories',
   },
   {
@@ -105,6 +123,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Temporary service delay in selected areas',
     body: 'Deliveries to parts of Cebu may be delayed due to weather conditions.',
     timestamp: minsAgo(2880), read: true,
+    scope: 'global',
     href: '/dashboard/advisories',
   },
   {
@@ -112,6 +131,8 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Monthly billing report is ready',
     body: 'Your May 2026 billing report is available to download.',
     timestamp: minsAgo(720), read: false,
+    // Reports/finance are parent-level → Admin-only.
+    scope: 'parent',
     href: '/dashboard/reports', meta: { reportId: 'RPT-2026-05' },
   },
   {
@@ -119,6 +140,7 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     title: 'Support ticket update',
     body: 'Ticket TCK-1043 has a new response from the support team.',
     timestamp: minsAgo(1440), read: true,
+    scope: 'subaccount', accountName: 'Acme Corporation',
     href: '/dashboard/support-tickets/TCK-1043', meta: { ticketId: 'TCK-1043' },
   },
 ];
@@ -140,6 +162,8 @@ export function pushNotification(
     category: input.category,
     title: input.title,
     body: input.body,
+    scope: input.scope,
+    accountName: input.accountName,
     href: input.href,
     meta: input.meta,
   });
@@ -153,10 +177,15 @@ function uploadEventToNotification(e: UploadNotificationEvent): AppNotification 
     category: 'bulk_upload',
     title: clean ? 'Bulk upload completed successfully' : 'Bulk upload is ready for review',
     body: clean
-      ? `${e.fileName} finished processing. ${e.validRows} valid orders ready.`
+      ? `${e.fileName} finished processing with ${e.validRows} valid orders.`
       : `${e.fileName} finished processing. ${e.validRows} valid orders, ${e.errorRows} rows need review.`,
     timestamp: e.timestamp,
     read: e.read,
+    // Batch-level: belongs to a subaccount. Live events don't yet carry the
+    // uploading subaccount, so accountName is left undefined — visible to Admin
+    // in the All-Accounts view (see assumptions in IMPLEMENTATION_LOG).
+    scope: 'subaccount',
+    accountName: e.accountName,
     href: `/dashboard/bulk-uploader/summary/${e.batchId}`,
     meta: { batchId: e.batchId },
   };
@@ -182,6 +211,74 @@ export function markAllNotificationsRead(): void {
   MOCK_NOTIFICATIONS.forEach((n) => { n.read = true; });
   RUNTIME_NOTIFICATIONS.forEach((n) => { n.read = true; });
   PENDING_NOTIFICATIONS.forEach((e) => { e.read = true; });
+}
+
+// ---------------------------------------------------------------------------
+// Account-scope visibility
+// ---------------------------------------------------------------------------
+
+export interface NotificationViewer {
+  role: 'admin' | 'manager';
+  /** 'all' for an Admin on the Main/All-Accounts view; otherwise a subaccount name. */
+  accountName: string;
+}
+
+/**
+ * Derive the current viewer from SubAccountContext.
+ *
+ * The demo user (Max Rodriguez) is the account Admin — there is no separate
+ * Manager login in the app, so role is always 'admin' here. The Manager branch
+ * of `isNotificationVisible` is implemented and would activate for a real
+ * Manager session (documented assumption).
+ *
+ * - Subaccounts disabled, or Main-Account view, or currentAccount === 'main'
+ *   → Admin sees ALL accounts.
+ * - Admin drilled into a specific subaccount → scoped to that subaccount.
+ */
+export function useNotificationViewer(): NotificationViewer {
+  const { subAccountsEnabled, currentAccount, getCurrentAccountName, isMainAccountView } = useSubAccounts();
+  const accountName =
+    !subAccountsEnabled || isMainAccountView() || currentAccount === 'main'
+      ? 'all'
+      : getCurrentAccountName();
+  return { role: 'admin', accountName };
+}
+
+/** Whether a notification is visible to the given viewer. */
+export function isNotificationVisible(n: AppNotification, viewer: NotificationViewer): boolean {
+  // Global advisories are visible to everyone.
+  if (n.scope === 'global') return true;
+
+  if (viewer.role === 'admin') {
+    // Parent Admin on All-Accounts view sees everything.
+    if (viewer.accountName === 'all') return true;
+    // Admin drilled into a subaccount: parent-level items + that subaccount's items.
+    if (n.scope === 'parent') return true;
+    return n.accountName === viewer.accountName;
+  }
+
+  // Manager: only their assigned subaccount; never parent-level items.
+  if (n.scope === 'parent') return false;
+  return n.accountName === viewer.accountName;
+}
+
+/** Visible notifications for the viewer (newest first). */
+export function getVisibleNotifications(viewer: NotificationViewer): AppNotification[] {
+  return getAllNotifications().filter((n) => isNotificationVisible(n, viewer));
+}
+
+/** Count of unread *visible* notifications (drives the bell badge). */
+export function getVisibleUnreadCount(viewer: NotificationViewer): number {
+  return getVisibleNotifications(viewer).filter((n) => !n.read).length;
+}
+
+/** Mark only the viewer's visible notifications as read. */
+export function markVisibleNotificationsRead(viewer: NotificationViewer): void {
+  PENDING_NOTIFICATIONS.forEach((e) => {
+    if (isNotificationVisible(uploadEventToNotification(e), viewer)) e.read = true;
+  });
+  RUNTIME_NOTIFICATIONS.forEach((n) => { if (isNotificationVisible(n, viewer)) n.read = true; });
+  MOCK_NOTIFICATIONS.forEach((n) => { if (isNotificationVisible(n, viewer)) n.read = true; });
 }
 
 /** Compact relative-time label. */

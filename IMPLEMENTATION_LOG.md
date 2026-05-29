@@ -1165,3 +1165,55 @@ Gave the last link-less notification category a dedicated read surface. All six 
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (965 kB).
+
+---
+
+### Build Next — Tabbed Notifications, account-scope visibility, sidebar entry (2026-05-29)
+
+Reworked the Notifications experience: tabbed page, parent/subaccount visibility rules, and a sidebar entry.
+
+**Notification visibility / account-scope model (`notifications.ts`)**
+- Added `NotificationScope` (`global` | `parent` | `subaccount`) and `scope` + `accountName` to `AppNotification`.
+- `NotificationViewer` ({ role, accountName }). `useNotificationViewer()` derives the viewer from `SubAccountContext`: the demo user (Max) is the **Admin**; scope is `'all'` when subaccounts are disabled / Main-Account view / `currentAccount === 'main'`, otherwise the drilled-into subaccount name.
+- `isNotificationVisible(n, viewer)` rules:
+  - `global` → everyone.
+  - Admin on All-Accounts → everything; Admin in a subaccount → parent-level + that subaccount's items.
+  - Manager → global + their subaccount only; never parent-level.
+- `getVisibleNotifications`, `getVisibleUnreadCount`, `markVisibleNotificationsRead` operate per-viewer.
+- Seed scoping: transactions → subaccount (Acme Corporation / Acme Luzon); account "manager access added" → subaccount (Acme Luzon, relevant to that Manager); billing-contract + monthly report → `parent` (Admin-only, finance at parent level); service advisories → `global`; support ticket → subaccount (Acme Corporation).
+- The Manager branch is fully implemented but not actively triggered (no Manager login exists); documented assumption.
+
+**Category-specific visibility (per task)**
+- Bulk Upload & Transaction → Admin + owning-subaccount Manager (subaccount scope).
+- Account/access → subaccount-scoped only when relevant to a Manager; otherwise parent (Admin-only).
+- Billing/report → parent (Admin-only).
+- Service advisories → global (location-based).
+- Support → subaccount (Admin + owning Manager).
+
+**Tabbed Notifications page (`Notifications.tsx`)**
+- Replaced vertically-stacked category sections with tabs: All · Bulk Uploads · Transactions · Account · Service · Reports · Support.
+- All tab = mixed visible list, newest-first; category tabs filter to that category. Per-tab unread count badges (snapshot at open, so badges/emphasis reflect unread-at-open while the store is marked read for the bell). Unread rows get blue tint + dot + bolder title. Category icon/label kept on every row. Per-tab empty states.
+- Visibility-filtered via `getVisibleNotifications(viewer)`; marks visible read on mount.
+
+**Bulk Upload notifications**
+- Still sourced from `PENDING_NOTIFICATIONS`; appear under All + Bulk Uploads. Copy: errors>0 → "Bulk upload is ready for review" / "{file} finished processing. {valid} valid orders, {errors} rows need review."; errors=0 → "Bulk upload completed successfully" / "{file} finished processing with {valid} valid orders." Scope `subaccount` (live events carry no subaccount yet → `accountName` undefined, visible to Admin/All).
+
+**Bell popover**
+- Now viewer-scoped: `getVisibleUnreadCount` drives the badge, snapshot uses `getVisibleNotifications`, opening marks visible read. Compact list unchanged otherwise.
+
+**Sidebar discoverability**
+- Added a "Notifications" nav item (IconBell) to all three nav variants, before Settings, routing to `/dashboard/notifications`, with a red unread-count badge (`ml-auto`) when visible unread > 0.
+- Service Advisories: NOT given a second sidebar item — reachable via the Notifications **Service** tab and the advisory notifications (its `/dashboard/advisories` page remains). Avoids nav clutter; Support deliberately not re-emphasized in nav.
+
+**Files changed**
+- Modified: `src/app/data/notifications.ts` (scope model, viewer, visibility helpers), `src/app/data/bulkUploads.ts` (optional `accountName` on event), `src/app/data/supportTickets.ts` (scope on pushed notification), `src/app/pages/Notifications.tsx` (tabbed rewrite), `src/app/layouts/RootLayout.tsx` (viewer-scoped bell + sidebar item + badge)
+
+**Assumptions / deferred**
+- No real auth/roles: viewer is always the Admin derived from SubAccountContext. Manager visibility logic is implemented and unit-correct but only activates with a Manager session (none exists). Documented.
+- Live bulk-upload events don't carry the uploading subaccount yet → `accountName` undefined; visible to Admin in All-Accounts view. Capturing the subaccount at upload time is deferred.
+- Bell unread badge reflects newly pushed notifications on RootLayout's next render (no global event bus).
+- **Deferred performance task:** the recharts DataAnalytics route is still in the main bundle (~968 kB) — lazy-loading it remains a separate future task (explicitly out of scope here).
+- **Deferred:** Zendesk integration and real notification APIs remain stubbed/mock.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (968 kB).

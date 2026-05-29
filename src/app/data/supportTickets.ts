@@ -157,6 +157,10 @@ export function submitTicket(input: SubmitTicketInput): SupportTicket {
     category: 'support',
     title: 'Support ticket submitted',
     body: `${id} (${ticket.issueType}) was created. Our team will respond shortly.`,
+    // Support tickets are subaccount-scoped (Admin + the owning Manager). The
+    // submitting account isn't tracked here, so accountName is left undefined —
+    // visible to Admin in the All-Accounts view.
+    scope: 'subaccount',
     href: `/dashboard/support-tickets/${id}`,
     meta: { ticketId: id, trackingNumber: ticket.trackingNumber },
   });

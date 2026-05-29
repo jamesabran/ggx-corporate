@@ -35,8 +35,8 @@ import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ui/Dialog';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import {
-  getAllNotifications, getUnreadCount, markAllNotificationsRead,
-  CATEGORY_META, relativeTime, type AppNotification,
+  getVisibleNotifications, getVisibleUnreadCount, markVisibleNotificationsRead,
+  useNotificationViewer, CATEGORY_META, relativeTime, type AppNotification,
 } from '../data/notifications';
 
 interface NavChild {
@@ -73,6 +73,7 @@ const standardAccountNavigation: NavItem[] = [
   { name: 'API Integration', href: '/dashboard/api-access',    icon: IconCode },
   { name: 'Support Tickets', href: '/dashboard/support-tickets',    icon: IconMessage },
   { name: 'Subaccounts',     href: '/dashboard/subaccounts',   icon: IconBuilding },
+  { name: 'Notifications',   href: '/dashboard/notifications', icon: IconBell },
   { name: 'Settings',        href: '/dashboard/settings',      icon: IconSettings },
 ];
 
@@ -96,6 +97,7 @@ const mainAccountNavigation: NavItem[] = [
   { name: 'Support Tickets',     href: '/dashboard/support-tickets',        icon: IconMessage },
   { name: 'Subaccounts',         href: '/dashboard/subaccounts',       icon: IconBuilding },
   { name: 'Users & Permissions', href: '/dashboard/users-permissions', icon: IconUsers },
+  { name: 'Notifications',       href: '/dashboard/notifications',     icon: IconBell },
   { name: 'Settings',            href: '/dashboard/settings',          icon: IconSettings },
 ];
 
@@ -108,6 +110,7 @@ const subaccountNavigation: NavItem[] = [
   { name: 'Address Book',    href: '/dashboard/address-book',  icon: IconMapPin },
   { name: 'API Integration', href: '/dashboard/api-access',    icon: IconCode },
   { name: 'Support Tickets', href: '/dashboard/support-tickets',    icon: IconMessage },
+  { name: 'Notifications',   href: '/dashboard/notifications', icon: IconBell },
   { name: 'Settings',        href: '/dashboard/settings',      icon: IconSettings },
 ];
 
@@ -149,16 +152,17 @@ export function RootLayout() {
     navigate('/dashboard/settings');
   };
 
-  // Notification bell — unified model (bulk upload events + corporate mock).
-  // Live unread count drives the red dot. Opening the popover snapshots the
-  // current list (so unread emphasis persists while open) then marks all read.
-  const unreadCount = getUnreadCount();
+  // Notification bell — unified model filtered by the current viewer's account
+  // scope. Live unread count drives the badge. Opening the popover snapshots the
+  // visible list (so unread emphasis persists while open) then marks them read.
+  const notificationViewer = useNotificationViewer();
+  const unreadCount = getVisibleUnreadCount(notificationViewer);
   const [notifSnapshot, setNotifSnapshot] = useState<AppNotification[]>([]);
 
   const openNotifications = () => {
-    setNotifSnapshot(getAllNotifications().map((n) => ({ ...n })));
+    setNotifSnapshot(getVisibleNotifications(notificationViewer).map((n) => ({ ...n })));
     setNotificationsOpen(true);
-    markAllNotificationsRead();
+    markVisibleNotificationsRead(notificationViewer);
   };
 
   const handleNotificationClick = (n: AppNotification) => {
@@ -278,6 +282,7 @@ export function RootLayout() {
             }
 
             const isActive = location.pathname === item.href;
+            const isNotifications = item.href === '/dashboard/notifications';
             return (
               <Link
                 key={item.name}
@@ -290,6 +295,11 @@ export function RootLayout() {
               >
                 <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
                 <span>{item.name}</span>
+                {isNotifications && unreadCount > 0 && (
+                  <span className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
             );
           })}
