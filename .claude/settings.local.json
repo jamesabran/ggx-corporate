@@ -8,7 +8,9 @@
       "Bash(ls \"C:/Users/james/Projects/\" 2>/dev/null || ls \"C:/Users/james/\" 2>/dev/null | head -20)",
       "mcp__plugin_figma_figma__get_design_context",
       "Bash(npm install *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
