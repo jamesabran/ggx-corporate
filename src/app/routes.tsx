@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, Navigate } from 'react-router';
 import { RootLayout } from './layouts/RootLayout';
 import { Login } from './pages/Login';
 import { DashboardWrapper } from './pages/DashboardWrapper';
@@ -12,7 +12,7 @@ import { BillingStatement } from './pages/BillingStatement';
 import { PaymentSettings } from './pages/PaymentSettings';
 import { AddressBookPage } from './pages/AddressBookPage';
 import { APIAccess } from './pages/APIAccess';
-import { Complaints } from './pages/Complaints';
+import { SupportTickets } from './pages/SupportTickets';
 import { SubAccounts } from './pages/SubAccounts';
 import { Settings } from './pages/Settings';
 import { EnableSubAccountsIntro } from './pages/EnableSubAccounts';
@@ -41,7 +41,8 @@ export const router = createBrowserRouter([
       { path: 'payment-settings', Component: PaymentSettings },
       { path: 'address-book', Component: AddressBookPage },
       { path: 'api-access', Component: APIAccess },
-      { path: 'complaints', Component: Complaints },
+      { path: 'support-tickets', Component: SupportTickets },
+      { path: 'complaints', element: <Navigate to="/dashboard/support-tickets" replace /> },
       { path: 'subaccounts', Component: SubAccounts },
       { path: 'subaccounts/enable', Component: EnableSubAccountsIntro },
       { path: 'subaccounts/enable/setup', Component: EnableSubAccountsSetup },

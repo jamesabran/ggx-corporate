@@ -32,7 +32,7 @@ const quickActions = [
   { title: 'Upload Bulk Bookings', description: 'Import CSV to create multiple shipments at once', icon: IconUpload, href: '/dashboard/bulk-uploader', iconColor: 'text-blue-600', iconBg: 'bg-blue-50' },
   { title: 'View Billing Statement', description: 'Download invoices and billing reports', icon: IconReceipt, href: '/dashboard/billing', iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
   { title: 'Generate API Key', description: 'Connect and integrate your own systems', icon: IconKey, href: '/dashboard/api-access', iconColor: 'text-violet-600', iconBg: 'bg-violet-50' },
-  { title: 'File a Complaint', description: 'Report issues or follow up on tickets', icon: IconMessage, href: '/dashboard/complaints', iconColor: 'text-orange-600', iconBg: 'bg-orange-50' },
+  { title: 'Submit a Ticket', description: 'Report issues or follow up on tickets', icon: IconMessage, href: '/dashboard/support-tickets', iconColor: 'text-orange-600', iconBg: 'bg-orange-50' },
 ];
 
 const recentTransactions = [

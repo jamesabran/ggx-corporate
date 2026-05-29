@@ -90,7 +90,7 @@ Login is a client-side mock. No backend. Entering any other credentials shows an
 | `/dashboard/payment-settings` | Payment methods and bank accounts | Done |
 | `/dashboard/address-book` | Address Book (CRUD with local state) | Done |
 | `/dashboard/api-access` | API Integration (keys, webhooks) | Done |
-| `/dashboard/complaints` | Support Tickets (list + new ticket form) | Done |
+| `/dashboard/support-tickets` | Support Tickets (list + new ticket form) | Done |
 | `/dashboard/subaccounts` | Subaccounts (gated by context) | Done |
 | `/dashboard/subaccounts/enable` | Enable Subaccounts intro | Done |
 | `/dashboard/subaccounts/enable/setup` | Enable Subaccounts confirm + execute | Done |

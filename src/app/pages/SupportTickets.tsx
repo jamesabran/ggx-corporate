@@ -36,7 +36,7 @@ const summaryCards = [
   { count: '2.4 hrs', label: 'Avg. Response', bg: 'bg-gray-100', color: 'text-gray-600' },
 ];
 
-export function Complaints() {
+export function SupportTickets() {
   const [showNewTicketForm, setShowNewTicketForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -45,11 +45,11 @@ export function Complaints() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Support Tickets</h1>
-          <p className="text-gray-600 mt-1">File support tickets and track your requests</p>
+          <p className="text-gray-600 mt-1">Submit support tickets and track your requests</p>
         </div>
         <Button onClick={() => setShowNewTicketForm(true)}>
           <IconPlus className="w-4 h-4 mr-2" />
-          File New Complaint
+          Submit a Ticket
         </Button>
       </div>
 
@@ -73,7 +73,7 @@ export function Complaints() {
 
       {showNewTicketForm && (
         <Card className="border-blue-200 bg-blue-50/50">
-          <CardHeader><CardTitle>File New Complaint</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Submit a Ticket</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
@@ -104,7 +104,7 @@ export function Complaints() {
             </div>
 
             <div className="flex gap-3">
-              <Button>Submit Complaint</Button>
+              <Button>Submit Ticket</Button>
               <Button variant="outline" onClick={() => setShowNewTicketForm(false)}>Cancel</Button>
             </div>
           </CardContent>

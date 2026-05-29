@@ -17,7 +17,7 @@
 
 ### Dashboard (`/dashboard` — standard or subaccount view)
 - 4 KPI stat cards: Active Deliveries, Pending Pickups, Failed/Delayed, Monthly Spend
-- 4 Quick Action cards linking to Bulk Uploader, Billing, API Access, Complaints
+- 4 Quick Action cards linking to Bulk Uploader, Billing, API Access, Support Tickets
 - 3 side-by-side panels: Recent Transactions (5 rows), Earnings Report (3 rows), Delivery Performance
 - Subaccount banner shown when viewing a specific subaccount (not main)
 - `DashboardWrapper` decides between `Dashboard` and `ParentDashboard` based on `isMainAccountView()`
@@ -102,9 +102,9 @@
 - Save/Test Webhook buttons (non-functional)
 - Security Best Practices card
 
-### Support Tickets (`/dashboard/complaints`)
+### Support Tickets (`/dashboard/support-tickets`)
 - 4 summary cards: Open, In Review, Resolved, Avg Response Time
-- "File New Complaint" form panel (toggleable): tracking number, issue type, description
+- "Submit a Ticket" form panel (toggleable): tracking number, issue type, description
 - Tickets table with priority + status badges, assignee, last update
 - Status and type filters (UI only)
 - Pagination UI (non-functional)
@@ -198,7 +198,7 @@
 - `src/app/pages/PaymentSettings.tsx`
 - `src/app/pages/AddressBookPage.tsx`
 - `src/app/pages/APIAccess.tsx`
-- `src/app/pages/Complaints.tsx`
+- `src/app/pages/SupportTickets.tsx`
 - `src/app/pages/SubAccounts.tsx`
 - `src/app/pages/EnableSubAccounts.tsx`
 - `src/app/pages/EnableSubAccountsSetup.tsx`
@@ -220,7 +220,7 @@
 | Card / CardHeader / CardContent / CardTitle / CardDescription / CardFooter | `ui/Card.tsx` | Used on every page |
 | Input | `ui/Input.tsx` | Forms throughout |
 | Native Select | `ui/Select.tsx` | Filters and forms |
-| Table / TableHeader / TableBody / TableRow / TableHead / TableCell | `ui/Table.tsx` | Transactions, Earnings, Billing, Bulk, Complaints |
+| Table / TableHeader / TableBody / TableRow / TableHead / TableCell | `ui/Table.tsx` | Transactions, Earnings, Billing, Bulk, Support Tickets |
 | Tabs / TabsList / TabsTrigger / TabsContent | `ui/Tabs.tsx` | Available but not actively used in current pages |
 
 ---
@@ -275,7 +275,7 @@
 - Risk level: low.
 
 ### DS Gap: Textarea Component
-- Figma Make reference: multiple pages use `<textarea>` elements (Login registration, AddressBook, RequestSubAccount, Complaints).
+- Figma Make reference: multiple pages use `<textarea>` elements (Login registration, AddressBook, RequestSubAccount, Support Tickets).
 - Current workaround: raw `<textarea className="... border border-gray-300 ... focus:ring-primary ...">` inline in each page.
 - Recommended DS addition: a `Textarea` UI component at `src/app/components/ui/Textarea.tsx` matching the Input style.
 - Risk level: low — purely cosmetic consistency.
@@ -313,14 +313,14 @@
 - Status: deferred
 
 ### Blocker: Real Data Layer
-- Area affected: all pages with data tables (Transactions, Earnings, Billing, Complaints, Bulk Upload)
+- Area affected: all pages with data tables (Transactions, Earnings, Billing, Support Tickets, Bulk Upload)
 - Why deferred: no API contract defined. POC uses static mock arrays.
 - Recommended decision: define API contracts, add React Query or SWR for data fetching, move mock data to a mock server or fixture files.
 - Workaround used: hardcoded `const` arrays at the top of each page file.
 - Status: deferred
 
 ### Blocker: Inline Form Validation
-- Area affected: Login, Registration, RequestSubAccount, Complaints new ticket form, AddressBook form
+- Area affected: Login, Registration, RequestSubAccount, Support Tickets new ticket form, AddressBook form
 - Why deferred: DS `Input` error state does not exist yet.
 - Recommended decision: add `State=error` to the Input DS component, create error/helper-text pattern, then apply `react-hook-form` or similar for form state.
 - Workaround used: `alert()` for auth error; HTML5 `required` attribute for other forms.
@@ -340,7 +340,7 @@
 1. **Bundle size 871 kB** — recharts is not code-split. Not a production issue for a POC.
 2. **`alert()` for login errors** — should be inline field validation.
 3. **TransactionDetails ignores URL param** — same static transaction always shown regardless of which tracking number was clicked.
-4. **Filters do not filter data** — all select/input filters on Transactions, Earnings, Billing, Complaints render but the filtering logic is not wired to the displayed data.
+4. **Filters do not filter data** — all select/input filters on Transactions, Earnings, Billing, Support Tickets render but the filtering logic is not wired to the displayed data.
 5. **Pagination is non-functional** — Previous/Next buttons render with `disabled` on Previous, but clicking Next does nothing.
 6. **Logo loaded from external CDN** — `https://gogoxpress.com/wp-content/uploads/2022/07/gogox-logo.png` will fail offline.
 7. **Province/city/barangay coverage is incomplete** — AddressBook location cascade only covers a subset of Philippine locations.
@@ -378,7 +378,7 @@ tsc -b && vite build
 
 **Priority 2 — Before any real user testing:**
 3. Add route guards (protect all `/dashboard/*` routes)
-4. Wire filter state to the data arrays on Transactions, Earnings, Billing, Complaints pages
+4. Wire filter state to the data arrays on Transactions, Earnings, Billing, Support Tickets pages
 5. Make pagination functional (slice the data arrays)
 6. Add a `Textarea` UI component to replace the raw `<textarea>` elements
 
@@ -389,3 +389,36 @@ tsc -b && vite build
 10. Port the DS `Switch` component to code and use it in APIAccess environment toggle
 11. Add `localStorage` persistence for SubAccountContext (or move to backend session)
 12. Bundle the logo locally instead of loading from external CDN
+
+---
+
+## Refactor — Complaints → Support Tickets (2026-05-29)
+
+Terminology rename of the Complaints feature to Support Tickets. Rename only — no logic or design-system changes.
+
+**Naming applied:**
+- Page label: Support Tickets · Singular: Ticket · CTA: Submit a Ticket
+- Component `Complaints` → `SupportTickets`
+- File `pages/Complaints.tsx` → `pages/SupportTickets.tsx` (via `git mv`, history preserved)
+
+**Route changes:**
+- Routes are nested under `/dashboard`, so the new path is `/dashboard/support-tickets` (preserves existing structure; the requested `/support-tickets` would break the nested-layout pattern used by every other page).
+- Added backward-compat redirect: `/dashboard/complaints` → `/dashboard/support-tickets` via `<Navigate replace />`.
+- No detail route existed for this feature; `/support-tickets/:id` / "Ticket Details" were **not** created (out of rename scope — would be a new feature).
+
+**Copy changes:**
+- "File New Complaint" (header button + form title) → "Submit a Ticket"
+- "Submit Complaint" → "Submit Ticket"
+- "File support tickets…" → "Submit support tickets…"
+- Dashboard quick action "File a Complaint" → "Submit a Ticket"
+
+**Files changed:**
+- `src/app/pages/SupportTickets.tsx` (renamed + copy)
+- `src/app/routes.tsx` (import, path, redirect, `Navigate` import)
+- `src/app/layouts/RootLayout.tsx` (3× nav href)
+- `src/app/pages/Dashboard.tsx` (quick action label + href)
+- Docs: `IMPLEMENTATION_LOG.md`, `GGX_CORPORATE_APP_STRUCTURE.md`, `DS_USAGE_GUIDE.md`, `PROJECT_CHECKPOINT.md`
+
+**Remaining "complaint" references:** Only the intentional redirect path string `'complaints'` in `routes.tsx`. No other code or doc references remain.
+
+**Validation:** `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Only the pre-existing recharts bundle-size warning remains.

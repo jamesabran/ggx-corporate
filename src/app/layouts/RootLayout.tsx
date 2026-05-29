@@ -64,7 +64,7 @@ const standardAccountNavigation: NavItem[] = [
   },
   { name: 'Address Book',    href: '/dashboard/address-book',  icon: IconMapPin },
   { name: 'API Integration', href: '/dashboard/api-access',    icon: IconCode },
-  { name: 'Support Tickets', href: '/dashboard/complaints',    icon: IconMessage },
+  { name: 'Support Tickets', href: '/dashboard/support-tickets',    icon: IconMessage },
   { name: 'Subaccounts',     href: '/dashboard/subaccounts',   icon: IconBuilding },
   { name: 'Settings',        href: '/dashboard/settings',      icon: IconSettings },
 ];
@@ -85,7 +85,7 @@ const mainAccountNavigation: NavItem[] = [
   },
   { name: 'Address Book',        href: '/dashboard/address-book',      icon: IconMapPin },
   { name: 'API Integration',     href: '/dashboard/api-access',        icon: IconCode },
-  { name: 'Support Tickets',     href: '/dashboard/complaints',        icon: IconMessage },
+  { name: 'Support Tickets',     href: '/dashboard/support-tickets',        icon: IconMessage },
   { name: 'Subaccounts',         href: '/dashboard/subaccounts',       icon: IconBuilding },
   { name: 'Users & Permissions', href: '/dashboard/users-permissions', icon: IconUsers },
   { name: 'Settings',            href: '/dashboard/settings',          icon: IconSettings },
@@ -98,7 +98,7 @@ const subaccountNavigation: NavItem[] = [
   { name: 'Data Analytics',  href: '/dashboard/analytics',     icon: IconChartBar },
   { name: 'Address Book',    href: '/dashboard/address-book',  icon: IconMapPin },
   { name: 'API Integration', href: '/dashboard/api-access',    icon: IconCode },
-  { name: 'Support Tickets', href: '/dashboard/complaints',    icon: IconMessage },
+  { name: 'Support Tickets', href: '/dashboard/support-tickets',    icon: IconMessage },
   { name: 'Settings',        href: '/dashboard/settings',      icon: IconSettings },
 ];
 

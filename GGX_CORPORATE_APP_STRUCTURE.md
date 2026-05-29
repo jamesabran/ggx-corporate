@@ -58,7 +58,7 @@ C:/Users/james/Projects/GGX Corporate/
         │   ├── PaymentSettings.tsx     # /dashboard/payment-settings
         │   ├── AddressBookPage.tsx     # /dashboard/address-book
         │   ├── APIAccess.tsx           # /dashboard/api-access
-        │   ├── Complaints.tsx          # /dashboard/complaints
+        │   ├── SupportTickets.tsx      # /dashboard/support-tickets
         │   ├── SubAccounts.tsx         # /dashboard/subaccounts
         │   ├── EnableSubAccounts.tsx   # /dashboard/subaccounts/enable
         │   ├── EnableSubAccountsSetup.tsx # /dashboard/subaccounts/enable/setup
@@ -103,7 +103,8 @@ C:/Users/james/Projects/GGX Corporate/
 | `/dashboard/payment-settings` | `PaymentSettings` | `PaymentSettings.tsx` |
 | `/dashboard/address-book` | `AddressBookPage` | `AddressBookPage.tsx` |
 | `/dashboard/api-access` | `APIAccess` | `APIAccess.tsx` |
-| `/dashboard/complaints` | `Complaints` | `Complaints.tsx` |
+| `/dashboard/support-tickets` | `SupportTickets` | `SupportTickets.tsx` |
+| `/dashboard/complaints` | → redirect to `/dashboard/support-tickets` | `routes.tsx` |
 | `/dashboard/subaccounts` | `SubAccounts` | `SubAccounts.tsx` |
 | `/dashboard/subaccounts/enable` | `EnableSubAccountsIntro` | `EnableSubAccounts.tsx` |
 | `/dashboard/subaccounts/enable/setup` | `EnableSubAccountsSetup` | `EnableSubAccountsSetup.tsx` |
@@ -253,7 +254,7 @@ No API, no database, no localStorage. Data resets on every page reload.
 | DataAnalytics | `DataAnalytics.tsx` | `monthlyVolumeData[]`, `statusBreakdownData[]`, `performanceData[]`, `stats[]` |
 | Earnings | `Earnings.tsx` | `settlements[]` — 5 rows |
 | BillingStatement | `BillingStatement.tsx` | `invoices[]` — 6 rows, `summaryStats[]` |
-| Complaints | `Complaints.tsx` | `tickets[]` — 6 rows |
+| Support Tickets | `SupportTickets.tsx` | `tickets[]` — 6 rows |
 | UsersPermissions | `UsersPermissions.tsx` | `users[]` — 4 rows |
 | AddressBook | `AddressBook.tsx` | Initial `addresses[]` — 3 rows (lives in component state) |
 

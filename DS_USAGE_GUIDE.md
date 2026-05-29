@@ -321,7 +321,7 @@ Always import only what you need (named imports only — no default import).
 | Payment | `IconCreditCard` | Sidebar nav, PaymentSettings |
 | Address Book | `IconMapPin` | Sidebar nav, AddressBook |
 | API | `IconCode` | Sidebar nav |
-| Support | `IconMessage` | Sidebar nav, Complaints |
+| Support | `IconMessage` | Sidebar nav, Support Tickets |
 | Subaccounts | `IconBuilding` | Sidebar nav, SubAccounts |
 | Users | `IconUsers` | Sidebar nav, UsersPermissions |
 | Settings | `IconSettings` | Sidebar nav |
