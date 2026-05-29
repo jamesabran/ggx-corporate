@@ -915,3 +915,62 @@ Five targeted fixes to the Bulk Upload review/summary flow before notification b
 
 **Validation**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is pre-existing recharts issue (932 kB, +5 kB from LocationCascadeEditor and API functions — negligible).
+
+---
+
+### Fix — Bulk Upload error-row review usability + validation (2026-05-29)
+
+Nine targeted fixes to the error-rows review group, building on the prior pass.
+
+**1. Restored Province / City / Barangay as separate columns**
+- The merged single "Location" column was reverted to three distinct columns with their original headers: Province *, City/Municipality *, Barangay *.
+- `LocationCascadeEditor` (single stacked cell) replaced with `LocationCascadeCells` — a component that returns a fragment of three `<td>` cells, one per location level. Each error row renders one instance (own cascade state/effects).
+- Cascade rules preserved: city disabled until province chosen, barangay disabled until city chosen, children reset when a parent changes. Still uses the delivery-address API variants (`getAllProvinces/Cities/Districts`, no pickup filter). CORS/network fallback renders three plain text inputs.
+
+**2. Input/select readability**
+- Increased column `min-w` values across the table (e.g. Street Address 200px, Province 175px, City 190px, Barangay 175px, Item Name 185px) and bumped the table `min-w` to 2700px so values are not clipped.
+- Native `<select>` elements render the browser arrow (no `appearance-none`), so option text is fully readable.
+- Horizontal scroll remains scoped to the error card (`overflow-x-auto`); the page itself does not scroll.
+
+**3. Input/select border radius**
+- Editable table fields now use `rounded-md` (was `rounded-lg`), applied consistently via shared `TABLE_INPUT_BASE` / `TABLE_SELECT_CLS` constants and the `YesNoToggle`. Pouch size converted from the DS `Select` (rounded-lg) to a native select using `TABLE_SELECT_CLS` for radius consistency. Red/invalid states preserved.
+
+**4. Yes/No fields**
+- New `YesNoToggle` segmented control (Yes | No) used consistently for COD?, Recipient Pays Fees, and Insure full item value?. Supports an unset state ('') so required fields show a red border until answered.
+- COD? and Recipient Pays Fees are now editable (previously display-only text). "Recipient Pays" header renamed to "Recipient Pays Fees".
+- `cod` and `recipientPaysFees` added to `EditableField`, `RowEdits`, and `rowToEdits`.
+
+**5. Insure full item value error naming + fixability**
+- Error text changed from '"Item protection" field is required' to '"Insure full item value?" field is required'.
+- The error is now fixable: selecting Yes or No on the toggle clears it. `validateEdits` and `fieldHasError` updated to key off the new message and the `insureFull` value. After fixing and clicking Retry Upload (or once all errors resolve), the row moves to the valid group.
+
+**6. Item protection columns**
+- "Insure full item value?" stays editable (now a Yes/No toggle); "Item Protection Fee" stays a non-editable calculated display.
+- `computeItemProtectionFee`: Yes & COD > 500 → (COD − 500) × 0.01; otherwise ₱0. Recalculates live whenever COD Amount or Insure full item value? changes (computed in render from edits). Bottom fee summary aggregates the per-row fees.
+
+**7. Duplicate row handling — dynamic + auto-revalidate**
+- Mock data adjusted: rows 5 & 6 are duplicates of each other (shared Reference ID REF-005), otherwise valid. Row 4 keeps its own structural errors (REF-004, unique).
+- Duplicate detection is now dynamic by Reference ID inside `validateEdits`: a row is flagged only while another row in the current set shares its Reference ID.
+- Actions column retains the trash button (`aria-label="Remove duplicate row {N}"`, tooltip "Remove duplicate row").
+- `handleRemoveRow` now removes the row AND immediately revalidates the remaining rows (shared `revalidateAll` helper). Removing one duplicate makes the survivor's Reference ID unique, so it auto-moves to the valid group (increments `fixedCount`). No separate Retry click needed.
+
+**8. Error group empty state**
+- When `errorRows` becomes empty (all fixed or removed) and the batch originally had errors (`HAD_ERRORS`), a positive green empty-state card shows instead of a blank area: title "No rows with errors", body "All affected rows have been fixed or removed. You can proceed with the valid orders below."
+
+**9. Booking success payment method (confirmed + reinforced)**
+- The previous `selectedPayment` + `paymentCopy` wiring remains; success and summary copy reflect the actual selected method (billing → invoice copy; cash/pickup → pay-on-pickup; cash/deduct → deducted from COD; prepaid → "Payment completed — prepaid via {method}"). No longer defaults to billing. Prepaid wording strengthened to read as completed.
+
+**Validation behavior**
+- `revalidateAll` re-runs full validation after any retry or duplicate removal, covering location, COD?, Recipient Pays Fees, Insure full item value?, COD Amount edits, and duplicate removal. Booking CTA uses live `totalValidCount`; fee summary includes computed item protection fees.
+
+**Files changed**
+- Modified: `src/app/pages/BulkUploadSummary.tsx` (all nine fixes; `YesNoToggle`, `LocationCascadeCells`, `revalidateAll`, dynamic duplicate detection, empty state)
+
+**Assumptions / deferred**
+- Duplicate detection only spans the error-row set (not the 100 mock valid orders). Real cross-batch dedup is backend work.
+- COD Amount over-limit check still evaluates even when COD? is toggled to No (minor; acceptable for mock).
+- Location cascade still depends on `api.gogox.ph` reachability; the text-input fallback covers CORS/offline.
+- Payment selection and edits are in-memory; reload resets them.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (934 kB).
