@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { IconUpload, IconDownload, IconFileSpreadsheet, IconMapPin, IconClock } from '@tabler/icons-react';
+import { useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { IconUpload, IconDownload, IconFileSpreadsheet, IconMapPin, IconClock, IconChevronRight, IconLink, IconX, IconTruckDelivery, IconBuildingStore } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { AddressBook, type Address } from '../components/AddressBook';
 
@@ -21,9 +23,20 @@ const statusConfig = {
   completed: { variant: 'success' as const, label: 'Completed' },
 };
 
+const NEW_UPLOAD_ID = 'UPLOAD-2026-05-19-001';
+
 export function BulkUploader() {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [uploadMode, setUploadMode] = useState<'standard' | 'same-day'>('standard');
+  const [firstMile, setFirstMile] = useState<'pickup' | 'dropoff'>('pickup');
+  const [pickupDate, setPickupDate] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('visa');
+  const [uploadUrl, setUploadUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState<{ name: string; size: string } | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading'>('idle');
+
   const [showAddressBook, setShowAddressBook] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>({
     id: '1',
@@ -42,8 +55,26 @@ export function BulkUploader() {
     setShowAddressBook(false);
   };
 
-  const handleFileUpload = () => {
-    navigate('/dashboard/bulk-uploader/summary/UPLOAD-2026-05-19-001');
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const captureFile = (file: File | undefined) => {
+    if (!file) return;
+    setSelectedFile({ name: file.name, size: formatSize(file.size) });
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    captureFile(e.dataTransfer.files?.[0]);
+  };
+
+  // Frontend-only: no real parsing. Proceeds to the validation summary mock.
+  const startUpload = () => {
+    setUploadStatus('uploading');
+    setTimeout(() => navigate(`/dashboard/bulk-uploader/summary/${NEW_UPLOAD_ID}`), 700);
   };
 
   if (showAddressBook) {
@@ -54,23 +85,41 @@ export function BulkUploader() {
     );
   }
 
+  const accentText = uploadMode === 'same-day' ? 'text-orange-700' : 'text-blue-700';
+
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Bulk Uploader</h1>
-        <p className="text-gray-600 mt-1">Upload CSV files to create multiple shipments at once</p>
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-sm text-gray-500">
+        <Link to="/dashboard/transactions" className="hover:text-gray-700">Transactions</Link>
+        <IconChevronRight className="w-3.5 h-3.5" />
+        <span className="text-gray-900 font-medium">Bulk Upload</span>
+      </nav>
+
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Bulk Upload</h1>
+          <p className="text-gray-600 mt-1 max-w-2xl">
+            Book multiple transactions (up to 1,000) in one go. Download the template, fill in your order details, then upload the file or paste a sheet link.
+          </p>
+        </div>
+        <Button variant="outline" className="flex-shrink-0">
+          <IconDownload className="w-4 h-4 mr-2" />
+          Download Template
+        </Button>
       </div>
 
+      {/* Mode toggle */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch gap-2">
             <button
               onClick={() => setUploadMode('standard')}
               className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${uploadMode === 'standard' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             >
               <div className="flex items-center justify-center gap-2">
-                <IconUpload className="w-5 h-5" />
-                <div>
+                <IconUpload className="w-5 h-5 shrink-0" />
+                <div className="text-left">
                   <div className="font-semibold">Standard Upload</div>
                   <div className={`text-xs ${uploadMode === 'standard' ? 'text-blue-100' : 'text-gray-500'}`}>Regular delivery processing</div>
                 </div>
@@ -81,8 +130,8 @@ export function BulkUploader() {
               className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${uploadMode === 'same-day' ? 'bg-orange-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             >
               <div className="flex items-center justify-center gap-2">
-                <IconClock className="w-5 h-5" />
-                <div>
+                <IconClock className="w-5 h-5 shrink-0" />
+                <div className="text-left">
                   <div className="font-semibold">Same-Day Delivery</div>
                   <div className={`text-xs ${uploadMode === 'same-day' ? 'text-orange-100' : 'text-gray-500'}`}>Express same-day processing</div>
                 </div>
@@ -92,110 +141,213 @@ export function BulkUploader() {
         </CardContent>
       </Card>
 
-      <Card className="border-blue-200 bg-blue-50">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-blue-900">Pickup Address</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => setShowAddressBook(true)} className="bg-white">
-              <IconMapPin className="w-4 h-4 mr-1" />
-              Change Address
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {selectedAddress ? (
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
-                <IconMapPin className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant={selectedAddress.label === 'office' ? 'info' : selectedAddress.label === 'home' ? 'success' : 'default'}>
-                    {selectedAddress.label === 'custom' ? selectedAddress.customLabel : selectedAddress.label}
-                  </Badge>
-                  {selectedAddress.isPreferred && <Badge variant="warning">Preferred Pickup</Badge>}
-                </div>
-                <p className="font-semibold text-blue-900 mb-1">{selectedAddress.name}</p>
-                <p className="text-sm text-blue-800">{selectedAddress.mobileNumber}</p>
-                <p className="text-sm text-blue-800 mt-1">{selectedAddress.barangay}, {selectedAddress.city}, {selectedAddress.province}</p>
-                {selectedAddress.otherDetails && <p className="text-sm text-blue-700 mt-1">{selectedAddress.otherDetails}</p>}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-blue-800 mb-3">No pickup address selected</p>
-              <Button onClick={() => setShowAddressBook(true)}>
-                <IconMapPin className="w-4 h-4 mr-2" />
-                Select Pickup Address
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Upload File</CardTitle>
-            <CardDescription>Drag and drop your Excel file or click to browse</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-blue-400 transition-colors cursor-pointer bg-gray-50 hover:bg-blue-50/50" onClick={handleFileUpload}>
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-                  <IconUpload className="w-8 h-8 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-lg font-medium text-gray-900 mb-1">Drop your Excel file here</p>
-                  <p className="text-sm text-gray-600">or <span className="text-blue-600 font-medium">browse files</span></p>
-                </div>
-                <p className="text-xs text-gray-500">Supported format: .xlsx | Maximum file size: 10MB</p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex justify-center">
-              <Button onClick={handleFileUpload}>
-                <IconFileSpreadsheet className="w-4 h-4 mr-2" />
-                Simulate Upload
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Left: sender + schedule + payment config */}
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Sender / Pickup Details</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setShowAddressBook(true)}>
+                  <IconMapPin className="w-4 h-4 mr-1.5" />
+                  Change
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {selectedAddress ? (
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                    <IconMapPin className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Badge variant={selectedAddress.label === 'office' ? 'info' : selectedAddress.label === 'home' ? 'success' : 'default'} className="capitalize">
+                        {selectedAddress.label === 'custom' ? selectedAddress.customLabel : selectedAddress.label}
+                      </Badge>
+                      {selectedAddress.isPreferred && <Badge variant="warning">Preferred</Badge>}
+                    </div>
+                    <p className="font-semibold text-gray-900">{selectedAddress.name}</p>
+                    <p className="text-sm text-gray-600">{selectedAddress.mobileNumber}</p>
+                    <p className="text-sm text-gray-600 mt-1">{[selectedAddress.barangay, selectedAddress.city, selectedAddress.province].filter(Boolean).join(', ')}</p>
+                    {selectedAddress.otherDetails && <p className="text-sm text-gray-500 mt-1">{selectedAddress.otherDetails}</p>}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-gray-600 mb-3">No pickup address selected</p>
+                  <Button onClick={() => setShowAddressBook(true)}>
+                    <IconMapPin className="w-4 h-4 mr-2" />
+                    Select Pickup Address
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>First-mile & Schedule</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Pick-up or Drop-off</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setFirstMile('pickup')}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors ${firstMile === 'pickup' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    <IconTruckDelivery className="w-4 h-4 shrink-0" />
+                    Pick-up
+                  </button>
+                  <button
+                    onClick={() => setFirstMile('dropoff')}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors ${firstMile === 'dropoff' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    <IconBuildingStore className="w-4 h-4 shrink-0" />
+                    Drop-off
+                  </button>
+                </div>
+              </div>
+              {firstMile === 'pickup' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Pick-up Date</label>
+                  <Input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} />
+                  <p className="text-xs text-gray-500 mt-1.5">
+                    {uploadMode === 'same-day' ? 'Same-day cut-off is 11:00 AM. Orders after cut-off move to next day.' : 'Pick-ups are scheduled the next business day by default.'}
+                  </p>
+                </div>
+              )}
+              {firstMile === 'dropoff' && (
+                <p className="text-sm text-gray-600">Drop off your parcels at any GoGo Xpress branch. No pick-up scheduling required.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment</CardTitle>
+              <CardDescription>Choose how to pay for GoGo Xpress fees</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                <option value="visa">Visa •••• 4242 (Default)</option>
+                <option value="mastercard">Mastercard •••• 8888</option>
+                <option value="recipient">Recipient pays fees (COD)</option>
+              </Select>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: upload */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload Orders</CardTitle>
+              <CardDescription>Paste a sheet link or upload your filled-in template</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* URL option */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Sheet / file URL</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <IconLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="url"
+                      value={uploadUrl}
+                      onChange={(e) => setUploadUrl(e.target.value)}
+                      placeholder="Google Sheet, CSV, or XLS link"
+                      className="w-full h-10 pl-9 pr-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  </div>
+                  <Button disabled={!uploadUrl.trim() || uploadStatus === 'uploading'} onClick={startUpload}>Import</Button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 border-t border-gray-200" />
+                <span className="text-xs text-gray-400">or</span>
+                <div className="flex-1 border-t border-gray-200" />
+              </div>
+
+              {/* File option */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.csv"
+                className="hidden"
+                onChange={(e) => captureFile(e.target.files?.[0])}
+              />
+
+              {!selectedFile ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDrop={handleDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                  className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center hover:border-blue-400 transition-colors cursor-pointer bg-gray-50 hover:bg-blue-50/50"
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
+                      <IconUpload className="w-7 h-7 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Drop filled-in template here</p>
+                      <p className="text-sm text-gray-600">or <span className="text-blue-600 font-medium">browse files</span></p>
+                    </div>
+                    <p className="text-xs text-gray-500">.xlsx or .csv · up to 1,000 orders · max 10MB</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-gray-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                      <IconFileSpreadsheet className="w-5 h-5 text-emerald-700" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{selectedFile.name}</p>
+                      <p className="text-xs text-gray-500">{selectedFile.size} · ready to validate</p>
+                    </div>
+                    {uploadStatus === 'idle' && (
+                      <button onClick={() => setSelectedFile(null)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Remove file">
+                        <IconX className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <Button className="w-full mt-4" disabled={uploadStatus === 'uploading'} onClick={startUpload}>
+                    {uploadStatus === 'uploading' ? (
+                      <>
+                        <IconClock className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading & validating…
+                      </>
+                    ) : (
+                      <>
+                        <IconFileSpreadsheet className="w-4 h-4 mr-2" />
+                        Upload & Validate
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              <p className={`text-xs ${accentText}`}>
+                Mode: {uploadMode === 'same-day' ? 'Same-Day Delivery' : 'Standard Upload'} · First-mile: {firstMile === 'pickup' ? 'Pick-up' : 'Drop-off'}
+              </p>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader><CardTitle>Template & Resources</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <Button variant="outline" className="w-full justify-start">
                 <IconDownload className="w-4 h-4 mr-2" />
-                Download Template
+                Download Order Template
               </Button>
               <Button variant="outline" className="w-full justify-start">
                 <IconDownload className="w-4 h-4 mr-2" />
                 Download Location Reference
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>Requirements</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-sm space-y-2">
-                <p className="text-gray-700 font-medium">Required Columns:</p>
-                <ul className="space-y-1 text-gray-600 text-xs">
-                  <li>• Recipient Name, Contact, Address</li>
-                  <li>• Province, City, Barangay</li>
-                  <li>• Item Name, Receptacle Size</li>
-                  <li>• COD Settings, Insurance</li>
-                </ul>
-              </div>
-              <div className="pt-3 border-t border-gray-200">
-                <p className="text-sm text-gray-700 font-medium mb-2">Receptacle Sizes:</p>
-                <div className="flex flex-wrap gap-1">
-                  {['SMALL', 'MEDIUM', 'LARGE', 'BOX', 'OVERSIZED'].map((size) => (
-                    <Badge key={size} variant="default" className="text-xs">{size}</Badge>
-                  ))}
-                </div>
+              <div className="pt-2 text-sm">
+                <p className="text-gray-700 font-medium mb-1">Required columns</p>
+                <p className="text-xs text-gray-600">Recipient Name, Contact, Address, Province/City/Barangay, Item Name, Receptacle Size, COD Settings, Insurance.</p>
               </div>
             </CardContent>
           </Card>
@@ -205,16 +357,16 @@ export function BulkUploader() {
       <Card>
         <CardHeader>
           <CardTitle>Recent Uploads</CardTitle>
-          <CardDescription>View and manage your recent bulk upload batches</CardDescription>
+          <CardDescription>Your recently uploaded batches. Completed uploads appear in the Transactions page.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Upload ID</TableHead>
+                <TableHead>Upload Batch ID</TableHead>
                 <TableHead>File Name</TableHead>
-                <TableHead>Upload Time</TableHead>
-                <TableHead>Total Rows</TableHead>
+                <TableHead>Date Created</TableHead>
+                <TableHead>Total Orders</TableHead>
                 <TableHead>Valid</TableHead>
                 <TableHead>Errors</TableHead>
                 <TableHead>Status</TableHead>

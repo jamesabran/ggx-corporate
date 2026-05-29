@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { IconArrowLeft, IconFileSpreadsheet, IconCircleCheck, IconCircleX, IconAlertCircle, IconDownload } from '@tabler/icons-react';
+import { IconArrowLeft, IconFileSpreadsheet, IconCircleCheck, IconCircleX, IconAlertCircle, IconDownload, IconPackage, IconArrowRight } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -16,10 +17,42 @@ const uploadedData = [
 export function BulkUploadSummary() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const validRows = uploadedData.filter((row) => row.valid).length;
   const invalidRows = uploadedData.filter((row) => !row.valid).length;
   const totalRows = uploadedData.length;
+
+  // Success / processed state after the batch is submitted.
+  if (submitted) {
+    return (
+      <div className="p-6">
+        <Card className="max-w-xl mx-auto mt-8">
+          <CardContent className="p-10 text-center">
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5">
+              <IconCircleCheck className="w-9 h-9 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">Batch submitted for processing</h2>
+            <p className="text-sm text-gray-600 mt-2 max-w-md mx-auto">
+              {validRows} valid {validRows === 1 ? 'booking is' : 'bookings are'} now being processed. You can track them in the Transactions page once confirmed.
+            </p>
+            <p className="text-xs text-gray-400 mt-3">Batch ID: {id || 'UPLOAD-2026-05-19-001'}</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-7">
+              <Button onClick={() => navigate('/dashboard/transactions')}>
+                <IconPackage className="w-4 h-4 mr-2" />
+                View in Transactions
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/dashboard/bulk-uploader')}>
+                Upload Another Batch
+                <IconArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -149,15 +182,45 @@ export function BulkUploadSummary() {
             </Table>
           </div>
 
-          <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600">{validRows} valid bookings ready to proceed</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-6 pt-6 border-t border-gray-200">
+            {validRows === 0 ? (
+              <div className="flex items-center gap-2 text-sm text-red-600">
+                <IconAlertCircle className="w-4 h-4 flex-shrink-0" />
+                No valid bookings to submit. Fix the errors in your file and re-upload.
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600">
+                {validRows} valid {validRows === 1 ? 'booking' : 'bookings'} ready to proceed
+                {invalidRows > 0 && <span className="text-gray-400"> · {invalidRows} row{invalidRows === 1 ? '' : 's'} with errors will be skipped</span>}
+              </p>
+            )}
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => navigate('/dashboard/bulk-uploader')}>Cancel</Button>
-              <Button disabled={validRows === 0}>Proceed with Valid Bookings ({validRows})</Button>
+              <Button disabled={validRows === 0} onClick={() => setShowConfirm(true)}>Proceed with Valid Bookings ({validRows})</Button>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Submit confirmation */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-1.5">Submit {validRows} valid {validRows === 1 ? 'booking' : 'bookings'}?</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              {validRows} valid {validRows === 1 ? 'booking' : 'bookings'} will be submitted for processing.
+              {invalidRows > 0 && <> The {invalidRows} row{invalidRows === 1 ? '' : 's'} with errors will be skipped and can be re-uploaded later.</>}
+            </p>
+            <div className="flex gap-2.5 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setShowConfirm(false)}>Cancel</Button>
+              <Button size="sm" onClick={() => { setShowConfirm(false); setSubmitted(true); }}>
+                <IconCircleCheck className="w-4 h-4 mr-1.5" />
+                Confirm & Submit
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

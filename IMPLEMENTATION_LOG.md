@@ -567,3 +567,34 @@ Added a required Name field to the "Add user access" modal in Users & Permission
 
 - Files changed: `src/app/pages/UsersPermissions.tsx`
 - Validation: `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).
+
+### Build Next — Bulk Upload flow improvements (2026-05-29)
+
+Improved the Bulk Upload flow using the Figma prototype (BULK-UPLOAD, node 658-11047) as a UX reference only; all styling uses the GGX Corporate DS (not Figma styling).
+
+**Bulk Upload flow summary**
+- Entry (`BulkUploader`): added breadcrumb (Transactions › Bulk Upload), kept Standard vs Same-Day mode toggle, restructured into a two-column config + upload layout.
+  - Left: Sender/Pickup details (Address Book select), First-mile (Pick-up vs Drop-off) + Pick-up Date, Payment method select ("Choose how to pay for GoGo Xpress fees").
+  - Right: Upload Orders via sheet/file URL (Import) OR file drag-drop/browse with a real selected-file state (name + size, remove) and an "Upload & Validate" CTA showing a brief uploading state before navigating to the summary. Template & resources card retained.
+  - Recent Uploads table retained with a note that completed uploads appear in Transactions.
+- Summary (`BulkUploadSummary`): kept validation summary + data preview; added a submit confirmation dialog → success/processed state (batch submitted, links to Transactions / upload another). Added an all-invalid notice when validRows === 0 and a skipped-rows note when some rows have errors.
+
+**Figma prototype flow assumptions**
+- The prototype's single config screen was interpreted as the entry/upload step; data preview, confirm, and success were mapped onto the existing summary route. Pickup/drop-off, pickup date, and payment options were inferred from the prototype's left column.
+- "Up to 1,000 orders" used from the prototype intro copy (the drop zone in the proto says 200); kept 1,000 to match the headline. Low-risk copy choice.
+
+**Files changed**
+- `src/app/pages/BulkUploader.tsx` (rewritten)
+- `src/app/pages/BulkUploadSummary.tsx` (confirm + success + empty/all-invalid states)
+
+**Mock / frontend-only limitations**
+- No real file parsing or upload. Selecting a file captures name/size only; "Upload & Validate" and URL "Import" both navigate to the same mock validation summary (`UPLOAD-2026-05-19-001`).
+- The summary's rows are static mock data; validRows/invalidRows are derived from it. Submit sets local success state only — no backend.
+- Payment method, pickup date, and first-mile selections are local state and not yet persisted or passed to the summary.
+
+**Validation**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Only the pre-existing recharts bundle-size warning.
+
+**Deferred**
+- Real file parsing/validation and per-row inline editing of error rows.
+- Carrying pickup/payment/mode selections into the summary and success batch.
