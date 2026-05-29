@@ -613,3 +613,38 @@ Verified the only remaining `bg-gray-900/50` reference is inside `Dialog.tsx`. T
 
 - Files changed: `src/app/components/ui/Dialog.tsx` (new), `src/app/layouts/RootLayout.tsx`, `src/app/pages/UsersPermissions.tsx`, `src/app/pages/PaymentSettings.tsx`, `src/app/pages/BulkUploadSummary.tsx`
 - Validation: `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).
+
+### Build Next — Bulk Upload template, drop-off, and payment options (2026-05-29)
+
+Follow-up to the Bulk Upload flow (did not rebuild the page).
+
+**Template field source & generated template**
+- Fields taken from the official `GoGo_Xpress_Template (9).xlsx` (sheet `GGX_Template_v1`), 17 columns: Recipient Name, Contact Number (Recipient), Street Address (Recipient), Province/City-Municipality/Barangay (Recipient), Landmarks/Floor/Unit, Item Name, Receptacle Size, Collectible Amount, Collect Item Value (COD)?, Declared Value, Insure full item value?, Item Protection Fee, Recipient Pays Fees, Promo Code, Reference ID (Optional).
+- New `src/app/data/bulkTemplate.ts` exports the columns, 2 sample rows (mirroring the XLS), and `downloadBulkTemplate()`.
+- **Limitation:** no spreadsheet library exists and none was added, so the generated template is a **CSV** (Excel-compatible, UTF-8 BOM) named `GoGo_Xpress_Bulk_Upload_Template.csv` — a documented fallback for the .xlsx original. The page header button and an inline "Download Template" both trigger it.
+
+**Removed Template and Resources card**
+- The right-column "Template & Resources" card was removed. The primary template download now lives in the page header plus a compact inline "Need the template?" block in the Upload card (with required-columns summary).
+
+**Location Reference decision**
+- Removed. The XLS `LocationReference` sheet is just a manual province/city/barangay lookup (~42k rows). The app already provides validated GGX-supported location selection via the live pickup API in the Address Book, and recipient locations are template columns. Replaced the download with inline guidance noting locations must match the GGX-supported options shown in the Address Book.
+
+**Drop-off behavior**
+- Selecting Drop-off now shows a "Check drop-off locations nearby" action; opening it shows a DS `Dialog` listing locations (name, address, contact, operating hours).
+- **Blocker:** the help-center drop-off page returned HTTP 403 to automated fetch, so `src/app/data/dropoffLocations.ts` is a small local mock matching the expected structure. No geolocation; "nearby" is a static list.
+
+**Payment options**
+- New `src/app/components/BulkPaymentOptions.tsx`. Mock corporate account is "via billing": "Pay via billing" is the default/primary option with invoice copy ("you'll receive an invoice after the service"), and a collapsible "Pay with another method instead" reveals the standard options.
+- Standard options: Cash (Pay upon pick-up / Deduct from order total), E-wallets (GCash available; Maya/GrabPay/coins.ph "Coming soon", disabled), Credit or Debit card (frontend-only mock fields), Online banking (bank select dropdown). For non-billing accounts the standard options render directly. No real payment processing/tokenization/API.
+
+**Files changed**
+- Added: `src/app/data/bulkTemplate.ts`, `src/app/data/dropoffLocations.ts`, `src/app/components/BulkPaymentOptions.tsx`
+- Modified: `src/app/pages/BulkUploader.tsx`
+
+**Assumptions / deferred**
+- "Via billing" is mocked as always true for the corporate account (no contract data in SubAccountContext). Deferred: drive it from real account contract data.
+- CSV template instead of XLSX (no library). Deferred: true .xlsx generation if a library is later approved.
+- Drop-off locations are mock pending an accessible data source. Payment/drop-off selections are local state, not persisted to the upload batch.
+
+**Validation**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Only the pre-existing recharts bundle-size warning.

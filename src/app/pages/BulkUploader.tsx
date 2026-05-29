@@ -1,13 +1,16 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { IconUpload, IconDownload, IconFileSpreadsheet, IconMapPin, IconClock, IconChevronRight, IconLink, IconX, IconTruckDelivery, IconBuildingStore } from '@tabler/icons-react';
+import { IconUpload, IconDownload, IconFileSpreadsheet, IconMapPin, IconClock, IconChevronRight, IconLink, IconX, IconTruckDelivery, IconBuildingStore, IconPhone } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
-import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
+import { Dialog } from '../components/ui/Dialog';
 import { AddressBook, type Address } from '../components/AddressBook';
+import { BulkPaymentOptions } from '../components/BulkPaymentOptions';
+import { downloadBulkTemplate, BULK_TEMPLATE_COLUMNS } from '../data/bulkTemplate';
+import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
 
 const recentUploads = [
   { id: 'UPLOAD-2026-05-19-001', fileName: 'bulk_shipments_may19.xlsx', uploadedAt: '2026-05-19 10:30 AM', totalRows: 5, validRows: 3, errorRows: 2, status: 'needs-review' },
@@ -32,7 +35,7 @@ export function BulkUploader() {
   const [uploadMode, setUploadMode] = useState<'standard' | 'same-day'>('standard');
   const [firstMile, setFirstMile] = useState<'pickup' | 'dropoff'>('pickup');
   const [pickupDate, setPickupDate] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('visa');
+  const [showDropoffs, setShowDropoffs] = useState(false);
   const [uploadUrl, setUploadUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState<{ name: string; size: string } | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading'>('idle');
@@ -103,7 +106,7 @@ export function BulkUploader() {
             Book multiple transactions (up to 1,000) in one go. Download the template, fill in your order details, then upload the file or paste a sheet link.
           </p>
         </div>
-        <Button variant="outline" className="flex-shrink-0">
+        <Button variant="outline" className="flex-shrink-0" onClick={downloadBulkTemplate}>
           <IconDownload className="w-4 h-4 mr-2" />
           Download Template
         </Button>
@@ -217,7 +220,17 @@ export function BulkUploader() {
                 </div>
               )}
               {firstMile === 'dropoff' && (
-                <p className="text-sm text-gray-600">Drop off your parcels at any GoGo Xpress branch. No pick-up scheduling required.</p>
+                <div>
+                  <p className="text-sm text-gray-600">Drop off your parcels at any GoGo Xpress branch. No pick-up scheduling required.</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowDropoffs(true)}
+                    className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    <IconMapPin className="w-4 h-4" />
+                    Check drop-off locations nearby
+                  </button>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -228,11 +241,7 @@ export function BulkUploader() {
               <CardDescription>Choose how to pay for GoGo Xpress fees</CardDescription>
             </CardHeader>
             <CardContent>
-              <Select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                <option value="visa">Visa •••• 4242 (Default)</option>
-                <option value="mastercard">Mastercard •••• 8888</option>
-                <option value="recipient">Recipient pays fees (COD)</option>
-              </Select>
+              <BulkPaymentOptions billingAccount />
             </CardContent>
           </Card>
         </div>
@@ -331,23 +340,21 @@ export function BulkUploader() {
               <p className={`text-xs ${accentText}`}>
                 Mode: {uploadMode === 'same-day' ? 'Same-Day Delivery' : 'Standard Upload'} · First-mile: {firstMile === 'pickup' ? 'Pick-up' : 'Drop-off'}
               </p>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader><CardTitle>Template & Resources</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
-                <IconDownload className="w-4 h-4 mr-2" />
-                Download Order Template
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <IconDownload className="w-4 h-4 mr-2" />
-                Download Location Reference
-              </Button>
-              <div className="pt-2 text-sm">
-                <p className="text-gray-700 font-medium mb-1">Required columns</p>
-                <p className="text-xs text-gray-600">Recipient Name, Contact, Address, Province/City/Barangay, Item Name, Receptacle Size, COD Settings, Insurance.</p>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-gray-700">Need the template?</p>
+                  <Button variant="outline" size="sm" onClick={downloadBulkTemplate}>
+                    <IconDownload className="w-3.5 h-3.5 mr-1.5" />
+                    Download Template
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Required columns: {BULK_TEMPLATE_COLUMNS.slice(0, 9).join(', ')}, and more.
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Province, City/Municipality, and Barangay must be valid GGX-supported locations — the same options shown when selecting an address in the Address Book.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -397,6 +404,33 @@ export function BulkUploader() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Drop-off locations */}
+      <Dialog open={showDropoffs} onClose={() => setShowDropoffs(false)} size="md" title="Drop-off locations">
+        <p className="text-sm text-gray-500 mb-4">Bring your parcels to any of these GoGo Xpress branches.</p>
+        <div className="space-y-3 max-h-96 overflow-y-auto">
+          {DROPOFF_LOCATIONS.map((loc) => (
+            <div key={loc.id} className="rounded-lg border border-gray-200 p-3">
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <IconMapPin className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">{loc.name}</p>
+                  <p className="text-xs text-gray-600 mt-0.5">{loc.address}</p>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-gray-500">
+                    <span className="inline-flex items-center gap-1"><IconPhone className="w-3 h-3" />{loc.contact}</span>
+                    <span className="inline-flex items-center gap-1"><IconClock className="w-3 h-3" />{loc.hours}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end pt-4">
+          <Button variant="outline" size="sm" onClick={() => setShowDropoffs(false)}>Close</Button>
+        </div>
+      </Dialog>
     </div>
   );
 }
