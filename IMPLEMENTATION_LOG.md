@@ -808,3 +808,44 @@ Replaced the simple upload → summary flow with a full demo-ready flow covering
 
 **Validation**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is pre-existing recharts issue (924 kB, same root cause).
+
+---
+
+### QA / Stabilization — Bulk Upload flow (2026-05-29)
+
+Focused QA pass on the newly built Bulk Upload flow. No new features added.
+
+**Issues fixed:**
+
+1. **Error rows table — missing columns (primary known issue)**
+   - `ErrorRowData` interface extended with all template-relevant fields: `landmarks`, `itemName`, `pouchSize`, `cod`, `codAmount`, `itemProtection`, `recipientPaysFees`, `referenceId`.
+   - `EditableField` type extended: `barangay` (was in interface but absent from table), `landmarks`, `itemName`, `pouchSize`, `codAmount`, `referenceId`.
+   - `INITIAL_ERROR_ROWS` updated with full mock values for all rows (row 4 uses `pouchSize: 'SUPERSIZED'` and `codAmount: '75000'` to demonstrate both structural error types).
+   - `rowToEdits` updated to include all editable fields.
+   - Table now has 16 columns: Row | Error | Recipient Name * | Mobile Number * | Street Address * | Province * | City/Municipality * | Barangay * | Landmarks/Unit # | Item Name | Pouch/box size | COD? | COD Amount | Item Protection | Recipient Pays | Reference ID.
+   - `min-w` set to `1800px` so all columns render at readable widths; scroll is contained to the error card's `overflow-x-auto` wrapper (not the page).
+   - `COD?`, `Item Protection`, and `Recipient Pays Fees` are display-only (values shown as text).
+   - `Pouch/box size` uses a Select with `RECEPTACLE_SIZES` values imported from `bulkTemplate.ts`; shows red border when invalid or empty.
+   - `COD Amount` shows red border and "Exceeds ₱50,000 limit" helper when value exceeds the limit.
+   - Extracted a small `ErrInput` helper component to remove repetition in the table row render.
+
+2. **`validateEdits` improved — fixable structural errors now clearable**
+   - "Invalid pouch size" clears on retry if user selects a valid size from `RECEPTACLE_SIZES`.
+   - "COD must not exceed ₱50,000.00" clears on retry if user enters a value ≤ 50,000.
+   - "Possible duplicate" errors remain unfixable inline (correct — requires source file change).
+
+3. **`fieldHasError` extended** — now highlights `pouchSize` and `codAmount` cells red when their respective errors are active.
+
+4. **Dead early-return success block removed** — The `if (showSuccess) { return (...) }` block was redundant with the bottom `<Dialog open={showSuccess}>`. Removed; the Dialog at the bottom is the single success UI. "Go to Batch Details" correctly closes the modal and shows the review page; "Upload Another Batch" navigates away.
+
+5. **"Upload Another Batch" icon fixed** — Changed from `IconArrowLeft` (semantically wrong back arrow) to `IconUpload` in the booking success dialog.
+
+6. **Unused `Badge` import removed** from `BulkUploadSummary.tsx`.
+
+**Notification store confirmed intact** — `PENDING_NOTIFICATIONS` in `src/app/data/bulkUploads.ts` is exported and populated by `updateUploadStatus`. TODO comment and event shape unchanged; ready for bell integration in the next prompt.
+
+**Files changed**
+- Modified: `src/app/pages/BulkUploadSummary.tsx` (all fixes above)
+
+**Validation**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is pre-existing recharts issue (927 kB, +3 kB from RECEPTACLE_SIZES import — negligible).
