@@ -42,6 +42,15 @@ export interface Party {
   address: string;
 }
 
+/** Bulk Upload origin for transactions created from a batch. */
+export interface TransactionBatch {
+  batchId: string;
+  fileName: string;
+  uploadedVia: 'bulk_upload';
+  accountId?: string;
+  accountName?: string;
+}
+
 export interface Transaction {
   // List + summary fields
   trackingNumber: string;
@@ -62,6 +71,8 @@ export interface Transaction {
   fees: { serviceFee: number; shippingFee: number; protectionFee: number; discount: number; processingFee: number };
   payment: { method: string; paidBy: string; codAmount: number };
   timeline: TimelineEvent[];
+  /** Present only when this transaction was created from a Bulk Upload batch. */
+  batch?: TransactionBatch;
 }
 
 const sender: Party = {
@@ -129,16 +140,19 @@ interface RowSeed {
   date: string;
   subaccount: string;
   codAmount: number;
+  /** Set when the transaction originated from a Bulk Upload batch. batchId values
+   *  match the seed batches shown in BulkUploader's Recent Uploads. */
+  batch?: TransactionBatch;
 }
 
 const rows: RowSeed[] = [
-  { tracking: 'GGX-2024-89240', recipient: 'TechStart Solutions', destination: 'Makati City, Metro Manila', contactNumber: '+63 917 987 6543', recipientAddress: 'Unit 1203, Salcedo Tower, Makati City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-18', subaccount: 'Acme Corporation', codAmount: 14500 },
-  { tracking: 'GGX-2024-89239', recipient: 'Innovation Labs Inc.', destination: 'Cebu City, Cebu', contactNumber: '+63 918 222 1010', recipientAddress: 'IT Park, Lahug, Cebu City, Cebu', status: 'in-transit', type: 'Standard', date: '2026-05-18', subaccount: 'Acme Luzon', codAmount: 8900 },
+  { tracking: 'GGX-2024-89240', recipient: 'TechStart Solutions', destination: 'Makati City, Metro Manila', contactNumber: '+63 917 987 6543', recipientAddress: 'Unit 1203, Salcedo Tower, Makati City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-18', subaccount: 'Acme Corporation', codAmount: 14500, batch: { batchId: 'UPLOAD-2026-05-18-003', fileName: 'daily_orders_batch3.xlsx', uploadedVia: 'bulk_upload', accountName: 'Acme Corporation' } },
+  { tracking: 'GGX-2024-89239', recipient: 'Innovation Labs Inc.', destination: 'Cebu City, Cebu', contactNumber: '+63 918 222 1010', recipientAddress: 'IT Park, Lahug, Cebu City, Cebu', status: 'in-transit', type: 'Standard', date: '2026-05-18', subaccount: 'Acme Luzon', codAmount: 8900, batch: { batchId: 'UPLOAD-2026-05-18-002', fileName: 'weekend_deliveries.xlsx', uploadedVia: 'bulk_upload', accountName: 'Acme Luzon' } },
   { tracking: 'GGX-2024-89238', recipient: 'Global Enterprises', destination: 'Davao City, Davao', contactNumber: '+63 919 333 2020', recipientAddress: 'Km 5, JP Laurel Ave, Davao City, Davao', status: 'picked-up', type: 'Express', date: '2026-05-17', subaccount: 'Acme Corporation', codAmount: 21000 },
   { tracking: 'GGX-2024-89237', recipient: 'Summit Technologies', destination: 'Quezon City, Metro Manila', contactNumber: '+63 917 444 3030', recipientAddress: 'Eastwood City, Bagumbayan, Quezon City, Metro Manila', status: 'pending', type: 'Standard', date: '2026-05-17', subaccount: 'Acme Corporation', codAmount: 5600 },
   { tracking: 'GGX-2024-89236', recipient: 'Metro Solutions Inc.', destination: 'Pasig City, Metro Manila', contactNumber: '+63 918 555 4040', recipientAddress: 'Ortigas Center, San Antonio, Pasig City, Metro Manila', status: 'failed', type: 'Express', date: '2026-05-17', subaccount: 'Acme Luzon', codAmount: 12300 },
   { tracking: 'GGX-2024-89235', recipient: 'Digital Ventures Co.', destination: 'Taguig City, Metro Manila', contactNumber: '+63 919 666 5050', recipientAddress: 'BGC, Fort Bonifacio, Taguig City, Metro Manila', status: 'delivered', type: 'Standard', date: '2026-05-16', subaccount: 'Acme Corporation', codAmount: 7400 },
-  { tracking: 'GGX-2024-89234', recipient: 'Tech Solutions Inc.', destination: 'Mandaluyong City, Metro Manila', contactNumber: '+63 917 777 6060', recipientAddress: 'Greenfield District, Mandaluyong City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-16', subaccount: 'Acme Luzon', codAmount: 9800 },
+  { tracking: 'GGX-2024-89234', recipient: 'Tech Solutions Inc.', destination: 'Mandaluyong City, Metro Manila', contactNumber: '+63 917 777 6060', recipientAddress: 'Greenfield District, Mandaluyong City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-16', subaccount: 'Acme Luzon', codAmount: 9800, batch: { batchId: 'UPLOAD-2026-05-18-001', fileName: 'morning_batch.xlsx', uploadedVia: 'bulk_upload', accountName: 'Acme Luzon' } },
   { tracking: 'GGX-2024-89233', recipient: 'Global Innovations Ltd.', destination: 'Caloocan City, Metro Manila', contactNumber: '+63 918 888 7070', recipientAddress: 'Grace Park, Caloocan City, Metro Manila', status: 'in-transit', type: 'Standard', date: '2026-05-16', subaccount: 'Acme Corporation', codAmount: 6200 },
   { tracking: 'GGX-2024-89232', recipient: 'Acme Corporation', destination: 'Santa Rosa, Laguna', contactNumber: '+63 919 999 8080', recipientAddress: 'Nuvali, Santa Rosa, Laguna', status: 'picked-up', type: 'Express', date: '2026-05-15', subaccount: 'Acme Luzon', codAmount: 17600 },
   { tracking: 'GGX-2024-89231', recipient: 'Summit Partners', destination: 'Bacoor, Cavite', contactNumber: '+63 917 101 9090', recipientAddress: 'Molino Boulevard, Bacoor, Cavite', status: 'returned', type: 'Standard', date: '2026-05-15', subaccount: 'Acme Corporation', codAmount: 4300 },
@@ -162,6 +176,7 @@ export const transactions: Transaction[] = rows.map((r) => ({
   fees: defaultFees,
   payment: { method: 'Cash on Delivery (COD)', paidBy: 'Recipient', codAmount: r.codAmount },
   timeline: buildTimeline(r.status, r.date),
+  batch: r.batch,
 }));
 
 /** Summary rows for the Transactions list. */

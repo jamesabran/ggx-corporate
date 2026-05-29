@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff } from '@tabler/icons-react';
+import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff, IconUpload, IconArrowRight } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -181,6 +181,41 @@ export function TransactionDetails() {
               </div>
             </CardContent>
           </Card>
+
+          {transaction.batch && (
+            <Card>
+              <CardHeader><CardTitle>Upload Source</CardTitle></CardHeader>
+              <CardContent>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <IconUpload className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="font-medium text-gray-900">Uploaded via Bulk Upload</p>
+                      <Badge variant="info">Batch</Badge>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+                      <div><p className="text-sm font-medium text-gray-600">Batch File</p><p className="text-gray-900 text-sm">{transaction.batch.fileName}</p></div>
+                      <div><p className="text-sm font-medium text-gray-600">Batch ID</p><p className="text-gray-900 text-sm">{transaction.batch.batchId}</p></div>
+                      {transaction.batch.accountName && (
+                        <div><p className="text-sm font-medium text-gray-600">Account</p><p className="text-gray-900 text-sm">{transaction.batch.accountName}</p></div>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4"
+                      onClick={() => navigate(`/dashboard/bulk-uploader/summary/${transaction.batch!.batchId}`)}
+                    >
+                      View batch summary
+                      <IconArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="p-6">

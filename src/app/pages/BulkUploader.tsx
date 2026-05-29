@@ -62,10 +62,17 @@ type Step = 'form' | 'mapping' | 'fast-processing' | 'background-processing';
 export function BulkUploader() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { getCurrentAccountName } = useSubAccounts();
+  const { getCurrentAccountName, currentAccount } = useSubAccounts();
 
   const activeAccountName = getCurrentAccountName();
   const billingAvailable = isBillingAccount(activeAccountName);
+
+  // Account scope captured on the upload record/notification (parent vs subaccount).
+  const uploadAccount = {
+    accountId: currentAccount === 'main' ? 'main' : currentAccount,
+    accountName: activeAccountName,
+    accountType: (currentAccount === 'main' ? 'main' : 'subaccount') as 'main' | 'subaccount',
+  };
 
   const [step, setStep]             = useState<Step>('form');
   const [uploadMode, setUploadMode] = useState<'standard' | 'same-day'>('standard');
@@ -138,12 +145,12 @@ export function BulkUploader() {
   const proceedToProcessing = (id: string, fileName: string) => {
     if (uploadMode === 'same-day') {
       // Background processing — will return to this page
-      const record = createUploadRecord(id, fileName, uploadMode, firstMile, 'processing');
+      const record = createUploadRecord(id, fileName, uploadMode, firstMile, 'processing', uploadAccount);
       addUpload(record);
       setStep('background-processing');
     } else {
       // Fast processing — will navigate to summary
-      const record = createUploadRecord(id, fileName, uploadMode, firstMile, 'needs-review');
+      const record = createUploadRecord(id, fileName, uploadMode, firstMile, 'needs-review', uploadAccount);
       addUpload(record);
       setStep('fast-processing');
     }

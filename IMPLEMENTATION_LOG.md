@@ -1217,3 +1217,47 @@ Reworked the Notifications experience: tabbed page, parent/subaccount visibility
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (968 kB).
+
+---
+
+### Build Next — Bulk Upload account scoping + transaction batch linkage (2026-05-29)
+
+Captured the uploading account on Bulk Upload records/events and linked bulk-origin transactions back to their batch.
+
+**Upload account scoping (`bulkUploads.ts`)**
+- New `UploadAccount` ({ accountId, accountName, accountType: 'main' | 'subaccount' }).
+- `UploadRecord` and `UploadNotificationEvent` now carry `accountId`, `accountName`, `accountType`.
+- `createUploadRecord(..., account)` requires the account; `updateUploadStatus` copies account fields onto the pushed notification event.
+
+**Threading the active account (`BulkUploader.tsx`)**
+- Reads `currentAccount` from `SubAccountContext` alongside `getCurrentAccountName()` and builds `uploadAccount` (`main`/'Main Account'/'main' when at parent; subaccount id + name + 'subaccount' otherwise). Passed into both `createUploadRecord` calls (fast + background).
+
+**Notification scoping fix (`notifications.ts`)**
+- Added optional `accountId` to `AppNotification` (carried through `pushNotification`).
+- `uploadEventToNotification` now derives scope from the upload account:
+  - main-account upload → `scope: 'parent'` (Admin-only),
+  - subaccount upload → `scope: 'subaccount'` with the real `accountName`/`accountId`.
+- Result: an Acme Luzon upload is visible to Admin (All Accounts), Admin drilled into Acme Luzon, and the Acme Luzon Manager — and hidden from other subaccount Managers. No more fake undefined-account uploads when an account is available. Unread/read behavior unchanged.
+
+**Transaction batch linkage (`transactions.ts`)**
+- New `TransactionBatch` ({ batchId, fileName, uploadedVia: 'bulk_upload', accountId?, accountName? }); optional `batch` field on `Transaction` and `RowSeed`.
+- Three seed transactions tagged as bulk-origin with batchIds matching BulkUploader's Recent Uploads seeds (no dangling links):
+  - GGX-2024-89240 → UPLOAD-2026-05-18-003 / daily_orders_batch3.xlsx / Acme Corporation
+  - GGX-2024-89239 → UPLOAD-2026-05-18-002 / weekend_deliveries.xlsx / Acme Luzon
+  - GGX-2024-89234 → UPLOAD-2026-05-18-001 / morning_batch.xlsx / Acme Luzon
+- All other transactions remain normal non-bulk (no `batch`).
+
+**Transaction Details display (`TransactionDetails.tsx`)**
+- New "Upload Source" card rendered only when `transaction.batch` exists: "Uploaded via Bulk Upload" + Batch badge, batch file name, batch ID, account name, and a "View batch summary" button → `/dashboard/bulk-uploader/summary/:batchId`. Non-bulk transactions show nothing (section omitted). No redesign of the existing layout.
+
+**Files changed**
+- Modified: `src/app/data/bulkUploads.ts`, `src/app/pages/BulkUploader.tsx`, `src/app/data/notifications.ts`, `src/app/data/transactions.ts`, `src/app/pages/TransactionDetails.tsx`
+
+**Assumptions / deferred**
+- Subaccount ids in transaction batch data use names only (`accountName`); transaction mock has no stable subaccount id, so `batch.accountId` is left unset there. Upload records/events carry the real `accountId` from SubAccountContext.
+- The batch summary page renders mock content for any batchId (no per-batch persistence), so seed-batch links resolve to a valid summary view.
+- Still no real auth/roles — Manager visibility activates only with a Manager session (none exists); demo viewer is Admin.
+- recharts DataAnalytics lazy-load remains a separate deferred performance task (~970 kB). Zendesk/notification APIs remain mock/stubbed.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (970 kB).

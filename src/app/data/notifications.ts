@@ -43,6 +43,8 @@ export interface AppNotification {
   scope: NotificationScope;
   /** Subaccount name this item belongs to (required when scope === 'subaccount'). */
   accountName?: string;
+  /** Subaccount id this item belongs to (when known). */
+  accountId?: string;
   /** Navigation target. Omit for informational-only items (non-clickable). */
   href?: string;
   /** Optional related-entity metadata, populated when applicable. */
@@ -164,6 +166,7 @@ export function pushNotification(
     body: input.body,
     scope: input.scope,
     accountName: input.accountName,
+    accountId: input.accountId,
     href: input.href,
     meta: input.meta,
   });
@@ -181,11 +184,12 @@ function uploadEventToNotification(e: UploadNotificationEvent): AppNotification 
       : `${e.fileName} finished processing. ${e.validRows} valid orders, ${e.errorRows} rows need review.`,
     timestamp: e.timestamp,
     read: e.read,
-    // Batch-level: belongs to a subaccount. Live events don't yet carry the
-    // uploading subaccount, so accountName is left undefined — visible to Admin
-    // in the All-Accounts view (see assumptions in IMPLEMENTATION_LOG).
-    scope: 'subaccount',
-    accountName: e.accountName,
+    // Batch-level scope derived from the uploading account:
+    //   main account upload  → parent (Admin-only)
+    //   subaccount upload    → subaccount (Admin + that subaccount's Manager)
+    scope: e.accountType === 'main' ? 'parent' : 'subaccount',
+    accountName: e.accountType === 'main' ? undefined : e.accountName,
+    accountId: e.accountId,
     href: `/dashboard/bulk-uploader/summary/${e.batchId}`,
     meta: { batchId: e.batchId },
   };

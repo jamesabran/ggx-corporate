@@ -9,6 +9,14 @@
 
 export type UploadStatus = 'processing' | 'needs-review' | 'awaiting-payment' | 'completed';
 
+// Account scope captured at upload time so notifications and batch linkage are
+// correctly scoped. `main` = parent/Main Account; `subaccount` = a specific one.
+export interface UploadAccount {
+  accountId: string;     // 'main' or a subaccount id
+  accountName: string;   // 'Main Account' or the subaccount name
+  accountType: 'main' | 'subaccount';
+}
+
 export interface UploadRecord {
   id: string;
   fileName: string;
@@ -19,6 +27,10 @@ export interface UploadRecord {
   status: UploadStatus;
   uploadMode: 'standard' | 'same-day';
   firstMile: 'pickup' | 'dropoff';
+  // Account scope of the uploading account/subaccount.
+  accountId: string;
+  accountName: string;
+  accountType: 'main' | 'subaccount';
 }
 
 // Notification event shape — ready for bell integration (see TODO above).
@@ -31,8 +43,11 @@ export interface UploadNotificationEvent {
   errorRows: number;
   timestamp: string;
   read: boolean;
-  /** Subaccount the batch was uploaded under (optional; not yet captured at upload time). */
-  accountName?: string;
+  // Account scope, copied from the upload record so the notification model can
+  // resolve visibility (parent vs subaccount).
+  accountId: string;
+  accountName: string;
+  accountType: 'main' | 'subaccount';
 }
 
 export const PENDING_NOTIFICATIONS: UploadNotificationEvent[] = [];
@@ -57,6 +72,9 @@ export function updateUploadStatus(id: string, status: UploadStatus): void {
       errorRows: record.errorRows,
       timestamp: new Date().toISOString(),
       read: false,
+      accountId: record.accountId,
+      accountName: record.accountName,
+      accountType: record.accountType,
     });
   }
 }
@@ -84,6 +102,7 @@ export function createUploadRecord(
   uploadMode: 'standard' | 'same-day',
   firstMile: 'pickup' | 'dropoff',
   status: UploadStatus,
+  account: UploadAccount,
 ): UploadRecord {
   return {
     id,
@@ -95,5 +114,8 @@ export function createUploadRecord(
     status,
     uploadMode,
     firstMile,
+    accountId: account.accountId,
+    accountName: account.accountName,
+    accountType: account.accountType,
   };
 }
