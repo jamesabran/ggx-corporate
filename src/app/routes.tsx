@@ -23,6 +23,7 @@ import { UsersPermissions } from './pages/UsersPermissions';
 import { Notifications } from './pages/Notifications';
 import { Reports } from './pages/Reports';
 import { ServiceAdvisories } from './pages/ServiceAdvisories';
+import { Claims } from './pages/Claims';
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
       { index: true, Component: DashboardWrapper },
       { path: 'transactions', Component: Transactions },
       { path: 'transactions/:id', Component: TransactionDetails },
+      { path: 'claims', Component: Claims },
       { path: 'bulk-uploader', Component: BulkUploader },
       { path: 'bulk-uploader/summary/:id', Component: BulkUploadSummary },
       { path: 'bulk-upload-summary', Component: BulkUploadSummary },

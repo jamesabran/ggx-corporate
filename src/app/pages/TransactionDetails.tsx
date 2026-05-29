@@ -1,10 +1,17 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff, IconUpload, IconArrowRight } from '@tabler/icons-react';
+import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff, IconUpload, IconArrowRight, IconReceiptRefund, IconX, IconCircleCheck } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 import { getTransactionByTracking, statusConfig } from '../data/transactions';
+import {
+  getClaimByTracking, submitClaim, requestCancellation, isCancelled,
+  isClaimEligible, isCancelEligible, CLAIM_STATUS_META, CLAIM_REASONS, type Claim,
+} from '../data/claims';
 
 export function TransactionDetails() {
   const navigate = useNavigate();
@@ -12,6 +19,13 @@ export function TransactionDetails() {
   const [rating, setRating] = useState(0);
 
   const transaction = getTransactionByTracking(id);
+
+  // Claims & cancellation (frontend/mock) — local view state.
+  const [claim, setClaim] = useState<Claim | undefined>(() => (id ? getClaimByTracking(id) : undefined));
+  const [showClaimForm, setShowClaimForm] = useState(false);
+  const [claimForm, setClaimForm] = useState({ reason: '', details: '' });
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelled, setCancelled] = useState(() => (id ? isCancelled(id) : false));
 
   if (!transaction) {
     return (
@@ -40,6 +54,29 @@ export function TransactionDetails() {
   const status = statusConfig[transaction.status];
   const totalFees = Object.values(transaction.fees).reduce((sum, fee) => sum + fee, 0);
   const itemsTotal = transaction.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const claimEligible = isClaimEligible(transaction.status) && !claim;
+  const cancelEligible = isCancelEligible(transaction.status) && !cancelled;
+
+  const handleSubmitClaim = () => {
+    if (!claimForm.reason) return;
+    const created = submitClaim({
+      trackingNumber: transaction.trackingNumber,
+      reason: claimForm.reason,
+      details: claimForm.details,
+      amount: transaction.payment.codAmount || undefined,
+      accountName: transaction.subaccount,
+    });
+    setClaim(created);
+    setShowClaimForm(false);
+    setClaimForm({ reason: '', details: '' });
+  };
+
+  const handleCancel = () => {
+    requestCancellation(transaction.trackingNumber, transaction.subaccount);
+    setCancelled(true);
+    setShowCancelConfirm(false);
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -182,6 +219,54 @@ export function TransactionDetails() {
             </CardContent>
           </Card>
 
+          {/* Claims & Cancellation */}
+          {(claim || cancelled || claimEligible || cancelEligible) && (
+            <Card>
+              <CardHeader><CardTitle>Claims &amp; Cancellation</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {cancelled && (
+                  <div className="flex items-start gap-2.5 rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5">
+                    <IconX className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-gray-700">This booking has been cancelled.</p>
+                  </div>
+                )}
+
+                {claim && (
+                  <div className="flex items-start justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2.5">
+                    <div className="flex items-start gap-2.5">
+                      <IconReceiptRefund className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Claim {claim.id}</p>
+                        <p className="text-xs text-gray-500">{claim.reason}</p>
+                      </div>
+                    </div>
+                    <Badge variant={CLAIM_STATUS_META[claim.status].variant}>{CLAIM_STATUS_META[claim.status].label}</Badge>
+                  </div>
+                )}
+
+                {claimEligible && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">This delivery is undelivered. You can file a refund claim linked to this tracking number.</p>
+                    <Button variant="outline" size="sm" onClick={() => setShowClaimForm(true)}>
+                      <IconReceiptRefund className="w-4 h-4 mr-1.5" />
+                      File a Claim
+                    </Button>
+                  </div>
+                )}
+
+                {cancelEligible && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">This booking is newly created and can still be cancelled.</p>
+                    <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setShowCancelConfirm(true)}>
+                      <IconX className="w-4 h-4 mr-1.5" />
+                      Cancel Booking
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {transaction.batch && (
             <Card>
               <CardHeader><CardTitle>Upload Source</CardTitle></CardHeader>
@@ -294,6 +379,57 @@ export function TransactionDetails() {
           </Card>
         </div>
       </div>
+
+      {/* File a claim */}
+      <Dialog open={showClaimForm} onClose={() => setShowClaimForm(false)} size="md" title="File a Claim">
+        <p className="text-sm text-gray-500 mb-4">
+          Claim linked to <span className="font-medium text-gray-700">{transaction.trackingNumber}</span>. Our claims team will review your request.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Reason <span className="text-red-500">*</span></label>
+            <Select value={claimForm.reason} onChange={(e) => setClaimForm({ ...claimForm, reason: e.target.value })}>
+              <option value="">Select a reason</option>
+              {CLAIM_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Details</label>
+            <textarea
+              className="w-full h-24 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Describe the issue (optional)..."
+              value={claimForm.details}
+              onChange={(e) => setClaimForm({ ...claimForm, details: e.target.value })}
+            />
+          </div>
+          {transaction.payment.codAmount > 0 && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <IconCircleCheck className="w-4 h-4 text-gray-400" />
+              Requested refund amount: <span className="font-medium text-gray-900">₱{transaction.payment.codAmount.toLocaleString()}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2.5 justify-end pt-5">
+          <Button variant="outline" size="sm" onClick={() => setShowClaimForm(false)}>Cancel</Button>
+          <Button size="sm" disabled={!claimForm.reason} onClick={handleSubmitClaim}>Submit Claim</Button>
+        </div>
+      </Dialog>
+
+      {/* Cancel booking confirmation */}
+      <ConfirmDialog
+        open={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={handleCancel}
+        title="Cancel this booking?"
+        description={
+          <>
+            Booking <span className="font-medium text-gray-700">{transaction.trackingNumber}</span> will be cancelled. This can only be done for newly-booked transactions.
+          </>
+        }
+        confirmLabel="Cancel Booking"
+        variant="destructive"
+        confirmIcon={<IconX className="w-3.5 h-3.5 mr-1.5" />}
+      />
     </div>
   );
 }

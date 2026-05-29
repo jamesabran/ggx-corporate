@@ -28,6 +28,7 @@ import {
   IconArrowsLeftRight,
   IconUsers,
   IconFileText,
+  IconReceiptRefund,
 } from '@tabler/icons-react';
 import { useState, type ComponentType } from 'react';
 import { cn } from '../lib/utils';
@@ -56,6 +57,7 @@ interface NavItem {
 const standardAccountNavigation: NavItem[] = [
   { name: 'Dashboard',       href: '/dashboard',               icon: IconLayoutDashboard },
   { name: 'Transactions',    href: '/dashboard/transactions',  icon: IconPackage },
+  { name: 'Claims',          href: '/dashboard/claims',        icon: IconReceiptRefund },
   { name: 'Bulk Uploader',   href: '/dashboard/bulk-uploader', icon: IconUpload },
   { name: 'Data Analytics',  href: '/dashboard/analytics',     icon: IconChartBar },
   {
@@ -80,6 +82,7 @@ const standardAccountNavigation: NavItem[] = [
 const mainAccountNavigation: NavItem[] = [
   { name: 'Dashboard',       href: '/dashboard',               icon: IconLayoutDashboard },
   { name: 'Transactions',    href: '/dashboard/transactions',  icon: IconPackage },
+  { name: 'Claims',          href: '/dashboard/claims',        icon: IconReceiptRefund },
   { name: 'Analytics',       href: '/dashboard/analytics',     icon: IconChartBar },
   {
     name: 'Finance',
@@ -104,6 +107,7 @@ const mainAccountNavigation: NavItem[] = [
 const subaccountNavigation: NavItem[] = [
   { name: 'Dashboard',       href: '/dashboard',               icon: IconLayoutDashboard },
   { name: 'Transactions',    href: '/dashboard/transactions',  icon: IconPackage },
+  { name: 'Claims',          href: '/dashboard/claims',        icon: IconReceiptRefund },
   { name: 'Bulk Uploader',   href: '/dashboard/bulk-uploader', icon: IconUpload },
   { name: 'Data Analytics',  href: '/dashboard/analytics',     icon: IconChartBar },
   { name: 'Reports',         href: '/dashboard/reports',       icon: IconFileText },

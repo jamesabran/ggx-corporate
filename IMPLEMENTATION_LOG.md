@@ -1366,3 +1366,43 @@ Added an always-required OTP gate for sensitive parent-level financial actions, 
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (979 kB).
+
+---
+
+### Build Next — Claims & Cancellations (ROADMAP item 2) (2026-05-30)
+
+Added a mock Claims feature (refunds on undelivered transactions) and cancellation for newly-booked transactions, id-scoped via the canonical account map.
+
+**Claims data (`src/app/data/claims.ts`, new)**
+- `Claim` model + `ClaimStatus` (open/in-review/approved/denied/settled) + `CLAIM_STATUS_META` (badge variants) + `CLAIM_REASONS`.
+- Seed claims linked to existing undelivered transactions (GGX-2024-89236 / Acme Luzon, GGX-2024-89231 / Acme Corporation) with canonical `accountId`.
+- `getClaims`, `getClaim`, `getClaimByTracking`.
+- `submitClaim(input)` → creates a claim, prepends it, and pushes a `transaction`-category notification scoped by `accountId` (resolved via `getAccountIdByName`); links to `/dashboard/claims`.
+- Cancellations: `requestCancellation(tracking, accountName?)` records the tracking number and pushes a `transaction` notification; `isCancelled(tracking)` query.
+- Eligibility helpers: `isClaimEligible(status)` (failed/returned/in-transit/picked-up) and `isCancelEligible(status)` (pending only).
+
+**Claims page (`src/app/pages/Claims.tsx`, new)**
+- Route `/dashboard/claims`. Status filter, info card, and a claims table (Claim ID, Tracking, Reason, Amount, Status, Filed); rows link to the related transaction. Empty state included.
+
+**Transaction Details integration**
+- New "Claims & Cancellation" card (no redesign): shows existing claim + status badge; "File a Claim" when eligible (undelivered, no existing claim) → claim dialog (reason select + details, prefilled refund = COD amount) → `submitClaim`; "Cancel Booking" when eligible (pending) → confirm dialog → `requestCancellation` → cancelled banner. The card only renders when at least one of these applies.
+- File-a-claim and cancel use the transaction's `subaccount` for id-scoped notifications.
+
+**Sidebar**
+- Added a "Claims" nav item (IconReceiptRefund) after Transactions in all three nav variants (standard / main / subaccount) — claims are order-level and relevant in subaccount context too.
+
+**Notification category decision**
+- Reused the existing `transaction` category for claim/cancellation notifications (order-level) rather than adding a new category — avoids touching the tabbed Notifications page + CATEGORY_META. Scoped by `accountId`.
+
+**Files changed**
+- Added: `src/app/data/claims.ts`, `src/app/pages/Claims.tsx`
+- Modified: `src/app/routes.tsx` (route), `src/app/layouts/RootLayout.tsx` (nav item + icon), `src/app/pages/TransactionDetails.tsx` (claims/cancellation card + dialogs), `ROADMAP.md` (statuses), `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- Claims/cancellations are in-memory mock; reset on full reload. No claim detail page (claims link to the related transaction); a dedicated claim detail/lifecycle-management screen is deferred.
+- Cancellation does not mutate the static transactions array — it records a cancelled flag + notification and shows a cancelled banner on the detail page (documented). Reflecting cancelled status in the Transactions list is deferred.
+- Claim notifications reuse the `transaction` category; a dedicated `claim` category is deferred.
+- recharts lazy-load, SLA Alerts, Analytics redesign, Zendesk/APIs remain deferred.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size warning is the pre-existing recharts issue (988 kB).
