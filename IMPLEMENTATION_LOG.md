@@ -502,3 +502,13 @@ Dashboard "Recent Transactions" used its own inline mock data, including one tra
 
 - Files changed: `src/app/pages/Dashboard.tsx`
 - Validation: `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).
+
+### Fix Now #3 — Topbar dead-end interactions resolved (2026-05-29)
+
+Wired the previously inert topbar controls in `RootLayout.tsx`:
+- Account-menu items "My Profile", "Security", and "Preferences" now navigate to `/dashboard/settings` and close the menu (no separate profile/security/preferences routes exist).
+- Notification bell now opens a small popover (same outside-click overlay pattern as the account menu) showing a short static list of notifications, with a "No new notifications" empty state and the red dot shown only when items exist.
+- No layout, routing, or DS changes; uses existing Tabler icons (IconPackage, IconReceipt, IconBell).
+
+- Files changed: `src/app/layouts/RootLayout.tsx`
+- Validation: `npm run build` passes — 0 TypeScript errors (pre-existing recharts bundle-size warning only).

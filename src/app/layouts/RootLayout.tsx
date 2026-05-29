@@ -122,6 +122,7 @@ export function RootLayout() {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [financeExpanded, setFinanceExpanded] = useState(true);
   const [subaccountExpanded, setSubaccountExpanded] = useState(false);
@@ -131,6 +132,18 @@ export function RootLayout() {
     setShowLogoutConfirm(false);
     navigate('/');
   };
+
+  // Account-menu items route into the existing Settings page (no separate
+  // profile/security/preferences routes exist).
+  const goToSettings = () => {
+    setAccountMenuOpen(false);
+    navigate('/dashboard/settings');
+  };
+
+  const notifications = [
+    { icon: IconPackage, title: 'GGX-2024-89240 was delivered', time: '2 hrs ago' },
+    { icon: IconReceipt, title: 'Invoice for May is ready', time: '1 day ago' },
+  ];
 
   const handleSwitchAccount = (accountId: string) => {
     setCurrentAccount(accountId);
@@ -379,10 +392,48 @@ export function RootLayout() {
           </div>
 
           <div className="flex items-center gap-1 ml-auto">
-            <button className="relative w-9 h-9 flex items-center justify-center text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
-              <IconBell className="w-[18px] h-[18px]" />
-              <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className="relative w-9 h-9 flex items-center justify-center text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+              >
+                <IconBell className="w-[18px] h-[18px]" />
+                {notifications.length > 0 && (
+                  <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setNotificationsOpen(false)} />
+                  <div className="absolute right-0 top-[calc(100%+6px)] w-72 bg-white rounded-xl shadow-lg border border-gray-200 z-20 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-900">Notifications</p>
+                    </div>
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center">
+                        <IconBell className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">No new notifications</p>
+                      </div>
+                    ) : (
+                      <div className="py-1">
+                        {notifications.map((n, i) => (
+                          <div key={i} className="flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                              <n.icon className="w-4 h-4 text-gray-500" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm text-gray-800 leading-snug">{n.title}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">{n.time}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="w-px h-5 bg-gray-200 mx-2" />
 
@@ -446,15 +497,15 @@ export function RootLayout() {
 
                     <div className="py-1">
                       <p className="px-4 pt-1.5 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Account</p>
-                      <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
+                      <button onClick={goToSettings} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
                         <IconUserCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         My Profile
                       </button>
-                      <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
+                      <button onClick={goToSettings} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
                         <IconLock className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         Security
                       </button>
-                      <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
+                      <button onClick={goToSettings} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
                         <IconAdjustmentsHorizontal className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         Preferences
                       </button>
