@@ -4,8 +4,9 @@ import {
 } from 'recharts';
 import {
   IconPackage, IconCircleCheck, IconArrowBackUp, IconReceiptRefund,
-  IconClockCheck, IconCash, IconTruckReturn, IconGauge,
+  IconClockCheck, IconCash, IconTruckReturn, IconGauge, IconInfoCircle,
 } from '@tabler/icons-react';
+import { useSubAccounts } from '../contexts/SubAccountContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Select } from '../components/ui/Select';
 import { Badge } from '../components/ui/Badge';
@@ -62,6 +63,9 @@ const returnsByReason = [
 ];
 
 export function DataAnalytics() {
+  const { subAccountsEnabled, isMainAccountView, getCurrentAccountName } = useSubAccounts();
+  const inSubaccountView = subAccountsEnabled && !isMainAccountView();
+
   // Derived figures from existing mock modules.
   const claims = getClaims();
   const claimsTotal = claims.length;
@@ -114,6 +118,17 @@ export function DataAnalytics() {
           </Select>
         </div>
       </div>
+
+      {/* Subaccount context banner */}
+      {inSubaccountView && (
+        <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
+          <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-800">
+            Showing analytics for <span className="font-semibold">{getCurrentAccountName()}</span>.
+            Switch to Main Account to see consolidated data across all subaccounts.
+          </p>
+        </div>
+      )}
 
       {/* Performance Overview */}
       <div>

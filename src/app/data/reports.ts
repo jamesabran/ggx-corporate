@@ -22,6 +22,9 @@ export interface ReportItem {
   status: ReportStatus;
   format: 'CSV' | 'PDF';
   sizeLabel: string;
+  /** Subaccount this report belongs to (absent = parent-level / all accounts). */
+  accountId?: string;
+  accountName?: string;
 }
 
 export interface ReportTypeMeta {
@@ -47,12 +50,14 @@ export const REPORT_STATUS_META: Record<ReportStatus, { label: string; variant: 
 // Seed reports. RPT-2026-05 matches the `report` notification meta.reportId so
 // the bell "Monthly billing report is ready" notification lands on a real row.
 export const SEED_REPORTS: ReportItem[] = [
-  { id: 'RPT-2026-05', name: 'Monthly Billing Report — May 2026', type: 'billing',    period: 'May 2026',          generatedAt: 'Jun 1, 2026, 09:12 AM', status: 'ready',      format: 'CSV', sizeLabel: '48 KB' },
-  { id: 'RPT-STL-0521', name: 'Settlement Summary — May 16–31',   type: 'settlement', period: 'May 16–31, 2026',   generatedAt: 'Jun 1, 2026, 08:40 AM', status: 'ready',      format: 'CSV', sizeLabel: '22 KB' },
-  { id: 'RPT-DLV-0526', name: 'Delivery Performance — May 2026',  type: 'delivery',   period: 'May 2026',          generatedAt: 'May 31, 2026, 06:05 PM', status: 'ready',     format: 'CSV', sizeLabel: '64 KB' },
-  { id: 'RPT-ANL-Q2',   name: 'Quarterly Analytics — Q2 2026',    type: 'analytics',  period: 'Apr–Jun 2026',      generatedAt: 'In progress',            status: 'generating', format: 'CSV', sizeLabel: '—' },
-  { id: 'RPT-2026-04',  name: 'Monthly Billing Report — Apr 2026', type: 'billing',   period: 'April 2026',        generatedAt: 'May 1, 2026, 09:05 AM',  status: 'ready',      format: 'CSV', sizeLabel: '46 KB' },
-  { id: 'RPT-DLV-0426', name: 'Delivery Performance — Apr 2026',  type: 'delivery',   period: 'April 2026',        generatedAt: 'Apr 30, 2026, 05:58 PM', status: 'ready',      format: 'CSV', sizeLabel: '61 KB' },
+  // Parent-level (no accountId) — visible to Admin in all views.
+  { id: 'RPT-2026-05', name: 'Monthly Billing Report — May 2026',  type: 'billing',    period: 'May 2026',        generatedAt: 'Jun 1, 2026, 09:12 AM',  status: 'ready',      format: 'CSV', sizeLabel: '48 KB' },
+  { id: 'RPT-2026-04', name: 'Monthly Billing Report — Apr 2026',  type: 'billing',    period: 'April 2026',      generatedAt: 'May 1, 2026, 09:05 AM',  status: 'ready',      format: 'CSV', sizeLabel: '46 KB' },
+  // Subaccount-scoped — tagged so Main Account view can show attribution.
+  { id: 'RPT-STL-0521', name: 'Settlement Summary — May 16–31',    type: 'settlement', period: 'May 16–31, 2026', generatedAt: 'Jun 1, 2026, 08:40 AM',  status: 'ready',      format: 'CSV', sizeLabel: '22 KB', accountId: 'acme-luzon',       accountName: 'Acme Luzon' },
+  { id: 'RPT-DLV-0526', name: 'Delivery Performance — May 2026',   type: 'delivery',   period: 'May 2026',        generatedAt: 'May 31, 2026, 06:05 PM', status: 'ready',      format: 'CSV', sizeLabel: '64 KB', accountId: 'acme-luzon',       accountName: 'Acme Luzon' },
+  { id: 'RPT-DLV-0426', name: 'Delivery Performance — Apr 2026',   type: 'delivery',   period: 'April 2026',      generatedAt: 'Apr 30, 2026, 05:58 PM', status: 'ready',      format: 'CSV', sizeLabel: '61 KB', accountId: 'acme-corporation', accountName: 'Acme Corporation' },
+  { id: 'RPT-ANL-Q2',   name: 'Quarterly Analytics — Q2 2026',     type: 'analytics',  period: 'Apr–Jun 2026',    generatedAt: 'In progress',            status: 'generating', format: 'CSV', sizeLabel: '—',    accountId: 'acme-corporation', accountName: 'Acme Corporation' },
 ];
 
 // Mock summary rows per report type so a downloaded file is not empty.

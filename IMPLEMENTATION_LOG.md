@@ -1733,3 +1733,54 @@ If the browser still shows a duplicate, clear the `ggx.subaccount` key from loca
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~431 kB lazy chunk; main bundle ~591 kB (unchanged).
+
+---
+
+### Housekeeping — Batch 2: Account-scoped views and notification subaccount tags (2026-05-30)
+
+All changes are frontend/mock only. Pattern follows `Transactions.tsx` (existing reference implementation).
+
+**Claims.tsx — account-scoped view**
+- Imports `useSubAccounts` and `SUBACCOUNT_OPTIONS`.
+- Main Account view: shows all claims + subaccount filter Select (by canonical id) + "Subaccount" table column (shows `accountName`).
+- Subaccount view: filters `getClaims()` to `c.accountId === getCurrentAccountId()`; hides filter + column. Summary count reflects scoped claims only.
+
+**SlaAlerts.tsx — account-scoped view**
+- Same pattern. Main Account view: all alerts + subaccount filter + existing `accountName` inline label retained.
+- Subaccount view: scoped to `a.accountId === getCurrentAccountId()`; stat cards count from scoped alerts only.
+
+**data/reports.ts — accountId/accountName fields**
+- Added `accountId?: string` and `accountName?: string` to `ReportItem` interface.
+- `SEED_REPORTS` updated: settlement + delivery reports tagged to `acme-luzon`; analytics + delivery (Apr) tagged to `acme-corporation`; billing reports stay parent-level (no accountId).
+
+**Reports.tsx — account-scoped view**
+- Main Account view: shows all reports + subaccount filter in Available Reports card header + "Scope" column (shows `accountName ?? 'All accounts'`).
+- Subaccount view: keeps untagged (parent-level) reports visible plus those matching `getCurrentAccountId()`; hides filter + Scope column.
+- Page description updated to clarify Reports as a centralised export centre.
+
+**Notifications subaccount tag (RootLayout.tsx + Notifications.tsx)**
+- `NotificationRow` in Notifications.tsx: adds a compact gray pill tag below the title when `n.scope === 'subaccount' && n.accountName`.
+- Bell popover in RootLayout.tsx: same tag in the same position.
+- No visibility, tab, or read-state changes.
+
+**ParentDashboard.tsx**
+- "View All" on Subaccount Performance: changed link from `/dashboard/subaccounts` → `/dashboard/analytics` (points to deeper performance data). Button label changed to "View analytics".
+- Bottom row: changed from 2-column to 3-column grid.
+- New "Active SLA Alerts" card (third column): reads `getSlaAlerts()`, shows up to 3 open alerts with type icon, title, and subaccount name. Empty state shows green check "No active alerts". Footer links to `/dashboard/sla-alerts`.
+
+**DataAnalytics.tsx — subaccount context banner**
+- Imports `useSubAccounts` (hook only — no recharts changes).
+- When `subAccountsEnabled && !isMainAccountView()`: renders a blue info banner above the KPI row: "Showing analytics for [name]. Switch to Main Account to see consolidated data."
+- All charts and data unchanged; this is framing only.
+
+**Files changed**
+- Modified: `src/app/pages/Claims.tsx`, `src/app/pages/SlaAlerts.tsx`, `src/app/data/reports.ts`, `src/app/pages/Reports.tsx`, `src/app/layouts/RootLayout.tsx`, `src/app/pages/Notifications.tsx`, `src/app/pages/ParentDashboard.tsx`, `src/app/pages/DataAnalytics.tsx`, `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- Claims and SLA Alerts are pre-filtered by `accountId` from their seed data; Acme Visayas has no seed claims/alerts (vacant by design — correct behaviour).
+- Reports `subaccountFilter` state is local; reset on navigation. Persistence deferred until backend.
+- Analytics charts show the same curated mock data in both views — the banner is framing only. Per-subaccount chart data needs real backend metrics.
+- Transactions subaccount filter still uses display names (not IDs) — out of scope for this batch; flagged as a follow-up.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~595 kB (pre-existing warning).

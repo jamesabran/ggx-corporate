@@ -6,14 +6,32 @@ import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { getClaims, CLAIM_STATUS_META, type Claim, type ClaimStatus } from '../data/claims';
+import { useSubAccounts } from '../contexts/SubAccountContext';
+import { SUBACCOUNT_OPTIONS } from '../data/users';
 
 export function Claims() {
   const navigate = useNavigate();
-  const [claims] = useState<Claim[]>(() => [...getClaims()]);
-  const [statusFilter, setStatusFilter] = useState<'all' | ClaimStatus>('all');
+  const { isMainAccountView, getCurrentAccountId } = useSubAccounts();
+  const mainView = isMainAccountView();
 
-  const visible = claims.filter((c) => statusFilter === 'all' || c.status === statusFilter);
-  const openCount = claims.filter((c) => c.status === 'open' || c.status === 'in-review').length;
+  const [allClaims] = useState<Claim[]>(() => [...getClaims()]);
+  const [statusFilter, setStatusFilter] = useState<'all' | ClaimStatus>('all');
+  const [subaccountFilter, setSubaccountFilter] = useState('');
+
+  // In subaccount view, scope to current account only.
+  const scopedClaims = mainView
+    ? allClaims
+    : allClaims.filter((c) => c.accountId === getCurrentAccountId());
+
+  const visible = scopedClaims.filter((c) => {
+    const statusOk = statusFilter === 'all' || c.status === statusFilter;
+    const subOk    = !subaccountFilter || c.accountId === subaccountFilter;
+    return statusOk && subOk;
+  });
+
+  const openCount = scopedClaims.filter(
+    (c) => c.status === 'open' || c.status === 'in-review'
+  ).length;
 
   return (
     <div className="p-6 space-y-6">
@@ -22,11 +40,27 @@ export function Claims() {
           <h1 className="text-3xl font-bold text-gray-900">Claims</h1>
           <p className="text-gray-600 mt-1">
             Refund requests for undelivered transactions.
-            {openCount > 0 && <span className="text-amber-700 font-medium"> {openCount} in progress.</span>}
+            {openCount > 0 && (
+              <span className="text-amber-700 font-medium"> {openCount} in progress.</span>
+            )}
           </p>
         </div>
-        <div className="w-full md:w-48">
-          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | ClaimStatus)}>
+        <div className="flex gap-3">
+          {mainView && (
+            <Select
+              value={subaccountFilter}
+              onChange={(e) => setSubaccountFilter(e.target.value)}
+            >
+              <option value="">All subaccounts</option>
+              {SUBACCOUNT_OPTIONS.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </Select>
+          )}
+          <Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | ClaimStatus)}
+          >
             <option value="all">All claims</option>
             <option value="open">Open</option>
             <option value="in-review">In Review</option>
@@ -42,7 +76,9 @@ export function Claims() {
           <div className="flex items-start gap-3">
             <IconInfoCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-blue-800">
-              File a claim from a transaction&apos;s details page when a delivery remains undelivered. Claims are linked to the tracking number and reviewed by the GoGo Xpress claims team.
+              File a claim from a transaction&apos;s details page when a delivery remains
+              undelivered. Claims are linked to the tracking number and reviewed by the
+              GoGo Xpress claims team.
             </p>
           </div>
         </CardContent>
@@ -71,6 +107,7 @@ export function Claims() {
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Filed</TableHead>
+                    {mainView && <TableHead>Subaccount</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -85,9 +122,18 @@ export function Claims() {
                         <TableCell className="font-medium">{c.id}</TableCell>
                         <TableCell className="text-blue-600">{c.trackingNumber}</TableCell>
                         <TableCell className="text-gray-600">{c.reason}</TableCell>
-                        <TableCell className="text-right text-gray-900">{c.amount ? `₱${c.amount.toLocaleString()}` : '—'}</TableCell>
-                        <TableCell><Badge variant={meta.variant}>{meta.label}</Badge></TableCell>
+                        <TableCell className="text-right text-gray-900">
+                          {c.amount ? `₱${c.amount.toLocaleString()}` : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={meta.variant}>{meta.label}</Badge>
+                        </TableCell>
                         <TableCell className="text-gray-600">{c.createdAt}</TableCell>
+                        {mainView && (
+                          <TableCell className="text-gray-600 text-sm">
+                            {c.accountName ?? '—'}
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}

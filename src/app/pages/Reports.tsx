@@ -9,6 +9,8 @@ import {
   SEED_REPORTS, REPORT_TYPE_META, REPORT_STATUS_META, downloadReport,
   type ReportItem, type ReportType,
 } from '../data/reports';
+import { useSubAccounts } from '../contexts/SubAccountContext';
+import { SUBACCOUNT_OPTIONS } from '../data/users';
 
 const GENERATABLE: { type: ReportType; name: string; period: string }[] = [
   { type: 'billing',    name: 'Monthly Billing Report — Jun 2026',  period: 'June 2026' },
@@ -18,13 +20,22 @@ const GENERATABLE: { type: ReportType; name: string; period: string }[] = [
 ];
 
 export function Reports() {
-  const [reports, setReports] = useState<ReportItem[]>(SEED_REPORTS);
+  const { isMainAccountView, getCurrentAccountId } = useSubAccounts();
+  const mainView = isMainAccountView();
+
+  const [allReports, setAllReports] = useState<ReportItem[]>(SEED_REPORTS);
   const [genType, setGenType] = useState<ReportType>('billing');
+  const [subaccountFilter, setSubaccountFilter] = useState('');
 
-  const readyCount      = reports.filter((r) => r.status === 'ready').length;
-  const generatingCount = reports.filter((r) => r.status === 'generating').length;
+  // In subaccount view keep untagged (parent-level) reports visible alongside
+  // subaccount-specific ones; in main view apply optional filter.
+  const visibleReports = mainView
+    ? allReports.filter((r) => !subaccountFilter || r.accountId === subaccountFilter)
+    : allReports.filter((r) => !r.accountId || r.accountId === getCurrentAccountId());
 
-  // Mock generation: append a 'generating' report, then flip to 'ready'.
+  const readyCount      = visibleReports.filter((r) => r.status === 'ready').length;
+  const generatingCount = visibleReports.filter((r) => r.status === 'generating').length;
+
   const handleGenerate = () => {
     const tmpl = GENERATABLE.find((g) => g.type === genType)!;
     const id = `RPT-${genType.slice(0, 3).toUpperCase()}-${Math.floor(Math.random() * 9000) + 1000}`;
@@ -32,9 +43,9 @@ export function Reports() {
       id, name: tmpl.name, type: genType, period: tmpl.period,
       generatedAt: 'In progress', status: 'generating', format: 'CSV', sizeLabel: '—',
     };
-    setReports((prev) => [newReport, ...prev]);
+    setAllReports((prev) => [newReport, ...prev]);
     setTimeout(() => {
-      setReports((prev) => prev.map((r) =>
+      setAllReports((prev) => prev.map((r) =>
         r.id === id
           ? { ...r, status: 'ready', generatedAt: 'Just now', sizeLabel: `${Math.floor(Math.random() * 50) + 20} KB` }
           : r
@@ -47,7 +58,10 @@ export function Reports() {
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Reports &amp; Downloads</h1>
-          <p className="text-gray-600 mt-1">Generate and download billing, settlement, delivery, and analytics reports.</p>
+          <p className="text-gray-600 mt-1">
+            Centralised export centre for billing, settlement, delivery, and analytics reports.
+            Contextual downloads on Analytics, Billing, and Earnings pages are also available.
+          </p>
         </div>
       </div>
 
@@ -56,7 +70,7 @@ export function Reports() {
         <Card>
           <CardContent className="p-6">
             <p className="text-sm font-medium text-gray-600 mb-2">Total Reports</p>
-            <p className="text-2xl font-bold text-gray-900">{reports.length}</p>
+            <p className="text-2xl font-bold text-gray-900">{visibleReports.length}</p>
             <p className="text-sm text-gray-500 mt-2">Available in your account</p>
           </CardContent>
         </Card>
@@ -88,7 +102,9 @@ export function Reports() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Report type</label>
               <Select value={genType} onChange={(e) => setGenType(e.target.value as ReportType)}>
                 {GENERATABLE.map((g) => (
-                  <option key={g.type} value={g.type}>{REPORT_TYPE_META[g.type].label} — {g.period}</option>
+                  <option key={g.type} value={g.type}>
+                    {REPORT_TYPE_META[g.type].label} — {g.period}
+                  </option>
                 ))}
               </Select>
             </div>
@@ -103,11 +119,28 @@ export function Reports() {
       {/* Reports list */}
       <Card>
         <CardHeader>
-          <CardTitle>Available Reports</CardTitle>
-          <CardDescription>Download completed reports (CSV).</CardDescription>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle>Available Reports</CardTitle>
+              <CardDescription>Download completed reports (CSV).</CardDescription>
+            </div>
+            {mainView && (
+              <div className="w-48 flex-shrink-0">
+                <Select
+                  value={subaccountFilter}
+                  onChange={(e) => setSubaccountFilter(e.target.value)}
+                >
+                  <option value="">All subaccounts</option>
+                  {SUBACCOUNT_OPTIONS.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </Select>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          {reports.length === 0 ? (
+          {visibleReports.length === 0 ? (
             <div className="py-10 text-center">
               <IconFileText className="w-8 h-8 text-gray-300 mx-auto mb-2" />
               <p className="text-sm font-medium text-gray-700">No reports yet</p>
@@ -121,15 +154,16 @@ export function Reports() {
                     <TableHead>Report</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Period</TableHead>
+                    {mainView && <TableHead>Scope</TableHead>}
                     <TableHead>Generated</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.map((r) => {
-                    const meta = REPORT_TYPE_META[r.type];
-                    const Icon = meta.icon;
+                  {visibleReports.map((r) => {
+                    const meta   = REPORT_TYPE_META[r.type];
+                    const Icon   = meta.icon;
                     const status = REPORT_STATUS_META[r.status];
                     return (
                       <TableRow key={r.id}>
@@ -146,6 +180,11 @@ export function Reports() {
                         </TableCell>
                         <TableCell className="text-gray-600">{meta.label}</TableCell>
                         <TableCell className="text-gray-600">{r.period}</TableCell>
+                        {mainView && (
+                          <TableCell className="text-gray-600 text-sm">
+                            {r.accountName ?? 'All accounts'}
+                          </TableCell>
+                        )}
                         <TableCell className="text-gray-600">
                           <div className="flex items-center gap-1">
                             <IconClock className="w-3 h-3" />
@@ -157,7 +196,11 @@ export function Reports() {
                         </TableCell>
                         <TableCell className="text-right">
                           {r.status === 'ready' && (
-                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => downloadReport(r)}>
+                            <Button
+                              variant="ghost" size="sm"
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => downloadReport(r)}
+                            >
                               <IconDownload className="w-3.5 h-3.5 mr-1.5" />
                               Download
                             </Button>

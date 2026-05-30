@@ -10,10 +10,13 @@ import {
   IconUsers,
   IconActivity,
   IconPlus,
+  IconActivityHeartbeat,
+  IconCircleCheck,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { getSlaAlerts, SLA_TYPE_META } from '../data/slaAlerts';
 
 const stats = [
   { title: 'Total Shipments', value: '8,942', change: '+15.3%', trend: 'up', icon: IconPackage, iconBg: 'bg-blue-600', cardBg: 'bg-blue-50', changeColor: 'text-blue-700' },
@@ -95,14 +98,14 @@ export function ParentDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <Card className="flex flex-col">
           <CardHeader className="px-6 pt-5 pb-0">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold text-gray-900">Subaccount Performance</CardTitle>
-              <Link to="/dashboard/subaccounts">
+              <Link to="/dashboard/analytics">
                 <Button variant="ghost" size="sm" className="h-8 px-2.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 cursor-pointer gap-1.5 -mr-1">
-                  View all
+                  View analytics
                   <IconArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </Link>
@@ -137,7 +140,7 @@ export function ParentDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col">
+        <Card className="flex flex-col xl:col-span-1">
           <CardHeader className="px-6 pt-5 pb-0">
             <CardTitle className="text-base font-semibold text-gray-900">Recent Activity</CardTitle>
           </CardHeader>
@@ -164,6 +167,72 @@ export function ParentDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Active SLA Alerts card */}
+        {(() => {
+          const openAlerts = getSlaAlerts().filter((a) => a.status !== 'resolved');
+          return (
+            <Card className="flex flex-col">
+              <CardHeader className="px-6 pt-5 pb-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+                      <IconActivityHeartbeat className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <CardTitle className="text-base font-semibold text-gray-900">Active SLA Alerts</CardTitle>
+                  </div>
+                  <Link to="/dashboard/sla-alerts">
+                    <Button variant="ghost" size="sm" className="h-8 px-2.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 cursor-pointer gap-1.5 -mr-1">
+                      View all
+                      <IconArrowRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="px-4 pt-3 pb-4 flex-1">
+                {openAlerts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-6 gap-2">
+                    <IconCircleCheck className="w-7 h-7 text-emerald-400" />
+                    <p className="text-sm text-gray-500">No active alerts</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {openAlerts.slice(0, 3).map((a) => {
+                      const meta = SLA_TYPE_META[a.type];
+                      return (
+                        <div key={a.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${meta.bgClass}`}>
+                            <meta.icon className={`w-3.5 h-3.5 ${meta.iconClass}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900 leading-snug truncate">{a.title}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-gray-400">{meta.label}</span>
+                              {a.accountName && (
+                                <>
+                                  <span className="text-xs text-gray-300">·</span>
+                                  <span className="text-xs text-gray-500">{a.accountName}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <Badge variant={meta.badge} className="text-[10px] px-1.5 py-0.5 flex-shrink-0 mt-0.5">
+                            {meta.label}
+                          </Badge>
+                        </div>
+                      );
+                    })}
+                    {openAlerts.length > 3 && (
+                      <p className="text-xs text-gray-400 text-center pt-1">
+                        +{openAlerts.length - 3} more alert{openAlerts.length - 3 > 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
       </div>
     </div>
   );

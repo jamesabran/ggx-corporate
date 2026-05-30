@@ -504,6 +504,11 @@ export function RootLayout() {
                                     {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />}
                                   </div>
                                   <p className={cn('text-sm leading-snug', n.read ? 'text-gray-700' : 'text-gray-900 font-medium')}>{n.title}</p>
+                                  {n.scope === 'subaccount' && n.accountName && (
+                                    <span className="inline-flex items-center text-[10px] font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 mt-0.5 mb-0.5">
+                                      {n.accountName}
+                                    </span>
+                                  )}
                                   <p className="text-xs text-gray-500 leading-snug mt-0.5">{n.body}</p>
                                   <p className="text-[11px] text-gray-400 mt-1">{relativeTime(n.timestamp)}</p>
                                 </div>

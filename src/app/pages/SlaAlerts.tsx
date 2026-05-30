@@ -9,22 +9,36 @@ import {
   getSlaAlerts, sendFollowUp, resolveAlert,
   SLA_TYPE_META, SLA_STATUS_META, type SlaAlert, type SlaAlertType,
 } from '../data/slaAlerts';
+import { useSubAccounts } from '../contexts/SubAccountContext';
+import { SUBACCOUNT_OPTIONS } from '../data/users';
 
 export function SlaAlerts() {
   const navigate = useNavigate();
-  const [alerts, setAlerts] = useState<SlaAlert[]>(() => [...getSlaAlerts()]);
+  const { isMainAccountView, getCurrentAccountId } = useSubAccounts();
+  const mainView = isMainAccountView();
+
+  const [allAlerts, setAllAlerts] = useState<SlaAlert[]>(() => [...getSlaAlerts()]);
   const [typeFilter, setTypeFilter] = useState<'all' | SlaAlertType>('all');
+  const [subaccountFilter, setSubaccountFilter] = useState('');
 
-  const refresh = () => setAlerts([...getSlaAlerts()]);
-
+  const refresh = () => setAllAlerts([...getSlaAlerts()]);
   const handleFollowUp = (id: string) => { sendFollowUp(id); refresh(); };
-  const handleResolve = (id: string) => { resolveAlert(id); refresh(); };
+  const handleResolve  = (id: string) => { resolveAlert(id); refresh(); };
 
-  const noMovement = alerts.filter((a) => a.type === 'no_movement' && a.status !== 'resolved').length;
-  const breaches = alerts.filter((a) => a.type === 'breach' && a.status !== 'resolved').length;
-  const actionNeeded = alerts.filter((a) => a.status === 'open').length;
+  // In subaccount view, scope stat counts and visible list to current account.
+  const scopedAlerts = mainView
+    ? allAlerts
+    : allAlerts.filter((a) => a.accountId === getCurrentAccountId());
 
-  const visible = alerts.filter((a) => typeFilter === 'all' || a.type === typeFilter);
+  const noMovement  = scopedAlerts.filter((a) => a.type === 'no_movement' && a.status !== 'resolved').length;
+  const breaches    = scopedAlerts.filter((a) => a.type === 'breach'      && a.status !== 'resolved').length;
+  const actionNeeded = scopedAlerts.filter((a) => a.status === 'open').length;
+
+  const visible = scopedAlerts.filter((a) => {
+    const typeOk = typeFilter === 'all' || a.type === typeFilter;
+    const subOk  = !subaccountFilter || a.accountId === subaccountFilter;
+    return typeOk && subOk;
+  });
 
   return (
     <div className="p-6 space-y-6">
@@ -33,8 +47,22 @@ export function SlaAlerts() {
           <h1 className="text-3xl font-bold text-gray-900">SLA Alerts</h1>
           <p className="text-gray-600 mt-1">Operations monitoring for delivery SLA risks and follow-ups.</p>
         </div>
-        <div className="w-full md:w-48">
-          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as 'all' | SlaAlertType)}>
+        <div className="flex gap-3">
+          {mainView && (
+            <Select
+              value={subaccountFilter}
+              onChange={(e) => setSubaccountFilter(e.target.value)}
+            >
+              <option value="">All subaccounts</option>
+              {SUBACCOUNT_OPTIONS.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </Select>
+          )}
+          <Select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as 'all' | SlaAlertType)}
+          >
             <option value="all">All alert types</option>
             <option value="no_movement">No Movement</option>
             <option value="breach">Breach SLA</option>
@@ -42,7 +70,7 @@ export function SlaAlerts() {
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Summary cards — counts from scoped alerts (all in main view, filtered in subaccount view) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <Card>
           <CardContent className="p-6">
@@ -79,8 +107,8 @@ export function SlaAlerts() {
       ) : (
         <div className="space-y-4">
           {visible.map((a) => {
-            const meta = SLA_TYPE_META[a.type];
-            const Icon = meta.icon;
+            const meta   = SLA_TYPE_META[a.type];
+            const Icon   = meta.icon;
             const status = SLA_STATUS_META[a.status];
             return (
               <Card key={a.id} className={a.status === 'resolved' ? 'opacity-75' : ''}>
