@@ -21,6 +21,7 @@ export interface AppUser {
 export const SUBACCOUNT_OPTIONS: { id: string; name: string }[] = [
   { id: 'acme-corporation', name: 'Acme Corporation' },
   { id: 'acme-luzon',       name: 'Acme Luzon' },
+  { id: 'acme-visayas',     name: 'Acme Visayas' },
 ];
 
 /** Resolve a subaccount ID to its display name. Falls back to the raw ID. */

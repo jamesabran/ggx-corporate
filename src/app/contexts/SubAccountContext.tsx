@@ -73,17 +73,34 @@ export const DEMO_SUBACCOUNTS: SubAccount[] = [
     pickupAddress: '456 Luzon Ave, Quezon City, Metro Manila',
     contactNumber: '+63 917 987 6543',
   },
+  {
+    id: 'acme-visayas',
+    name: 'Acme Visayas',
+    type: 'additional',
+    assignedManager: '',
+    status: 'active',
+    bookingCount: 1842,
+    senderName: 'Acme Visayas',
+    pickupAddress: '789 Visayas Blvd, Cebu City, Cebu',
+    contactNumber: '+63 917 456 7890',
+  },
 ];
 
-const DEMO_IDS = new Set(DEMO_SUBACCOUNTS.map((d) => d.id));
+const DEMO_IDS   = new Set(DEMO_SUBACCOUNTS.map((d) => d.id));
+const DEMO_NAMES = new Set(DEMO_SUBACCOUNTS.map((d) => d.name));
 
 /**
- * When subaccounts are enabled, always ensure both canonical demo subaccounts
+ * When subaccounts are enabled, always ensure all canonical demo subaccounts
  * are present with up-to-date data. Runtime-added subaccounts (from the
  * Request flow) are preserved alongside them.
+ *
+ * Filters by both ID and name so that old localStorage entries that used
+ * legacy ids (e.g. 'sub-1') but share a demo name do not create duplicates.
  */
 function mergeWithDemoSubaccounts(existing: SubAccount[]): SubAccount[] {
-  const runtime = existing.filter((sa) => !DEMO_IDS.has(sa.id));
+  const runtime = existing.filter(
+    (sa) => !DEMO_IDS.has(sa.id) && !DEMO_NAMES.has(sa.name)
+  );
   return [...DEMO_SUBACCOUNTS, ...runtime];
 }
 

@@ -1696,3 +1696,40 @@ Follow-up corrections to Batch 1. Addresses the root cause of missing subaccount
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~431 kB lazy chunk; main bundle ~591 kB (pre-existing warning).
+
+---
+
+### Fix — Canonical subaccount list: remove duplicate, add Acme Visayas (2026-05-30)
+
+Targeted two-file fix. No UI or logic changes beyond the data correction.
+
+**Root cause of duplicate Acme Corporation**
+`mergeWithDemoSubaccounts()` was filtering persisted localStorage entries by ID only. Old sessions stored Acme Corporation with `id: 'sub-1'` (the legacy id used before Batch 1). Since `'sub-1'` is not in `DEMO_IDS`, it passed the filter and appeared alongside the new canonical `acme-corporation` entry — two cards with the same name.
+
+**Fix: filter by both ID and name**
+```
+const runtime = existing.filter(
+  (sa) => !DEMO_IDS.has(sa.id) && !DEMO_NAMES.has(sa.name)
+);
+```
+Any entry that matches a demo subaccount by either ID or name is replaced by the canonical `DEMO_SUBACCOUNTS` entry.
+
+**Acme Visayas added**
+- Added to `DEMO_SUBACCOUNTS` in `SubAccountContext.tsx` with canonical id `acme-visayas`, type `additional`, status `active`, bookingCount 1842, Cebu pickup address. No manager assigned by default.
+- Added to `SUBACCOUNT_OPTIONS` in `data/users.ts` so it appears in the Users & Permissions Add/Edit modal and in `getSubaccountName()` lookups.
+- `data/accounts.ts` already contained `acme-visayas` — no change needed there.
+
+**UI areas fixed by these two changes**
+- Switch Account modal (topbar): now shows Main Account + 3 subaccounts, no duplicates.
+- Bottom-left sidebar switcher: same fix (both derive from `subAccounts` in context).
+- Subaccounts page: now shows 3 cards.
+- Users & Permissions Add/Edit modal: Acme Visayas appears as an assignable option with capacity display.
+
+**Files changed**
+- Modified: `src/app/contexts/SubAccountContext.tsx`, `src/app/data/users.ts`, `IMPLEMENTATION_LOG.md`
+
+**Note for testers**
+If the browser still shows a duplicate, clear the `ggx.subaccount` key from localStorage (DevTools → Application → Local Storage) and reload. The `mergeWithDemoSubaccounts` migration handles it on next load, but a very old persisted session may need a manual clear once.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~431 kB lazy chunk; main bundle ~591 kB (unchanged).
