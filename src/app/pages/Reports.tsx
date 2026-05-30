@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { IconDownload, IconRefresh, IconClock, IconPlus, IconFileText } from '@tabler/icons-react';
+import { IconDownload, IconRefresh, IconClock, IconPlus, IconFileText, IconCalendar } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
+import { Input } from '../components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import {
   SEED_REPORTS, REPORT_TYPE_META, REPORT_STATUS_META, downloadReport,
@@ -12,20 +13,49 @@ import {
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { SUBACCOUNT_OPTIONS } from '../data/users';
 
-const GENERATABLE: { type: ReportType; name: string; period: string }[] = [
-  { type: 'billing',    name: 'Monthly Billing Report — Jun 2026',  period: 'June 2026' },
-  { type: 'settlement', name: 'Settlement Summary — Jun 1–15',      period: 'June 1–15, 2026' },
-  { type: 'delivery',   name: 'Delivery Performance — Jun 2026',    period: 'June 2026' },
-  { type: 'analytics',  name: 'Custom Analytics Export',            period: 'Custom range' },
+type DateRange = 'today' | 'last7' | 'last30' | 'custom';
+
+const REPORT_TYPE_OPTIONS: { type: ReportType; label: string }[] = [
+  { type: 'billing',    label: 'Billing Report' },
+  { type: 'settlement', label: 'Settlement Summary' },
+  { type: 'delivery',   label: 'Delivery Performance' },
+  { type: 'analytics',  label: 'Analytics Export' },
 ];
+
+const DATE_RANGE_OPTIONS: { value: DateRange; label: string }[] = [
+  { value: 'today',  label: 'Today' },
+  { value: 'last7',  label: 'Last 7 days' },
+  { value: 'last30', label: 'Last 30 days' },
+  { value: 'custom', label: 'Custom range' },
+];
+
+function resolvePeriod(range: DateRange, from: string, to: string): string {
+  if (range === 'today')  return 'Today';
+  if (range === 'last7')  return 'Last 7 days';
+  if (range === 'last30') return 'Last 30 days';
+  if (from && to) return `${from} to ${to}`;
+  return 'Custom range';
+}
+
+function resolveReportName(type: ReportType, range: DateRange): string {
+  const label = REPORT_TYPE_OPTIONS.find((o) => o.type === type)?.label ?? 'Report';
+  const period = DATE_RANGE_OPTIONS.find((o) => o.value === range)?.label ?? 'Custom';
+  return `${label} — ${period}`;
+}
 
 export function Reports() {
   const { isMainAccountView, getCurrentAccountId } = useSubAccounts();
   const mainView = isMainAccountView();
 
   const [allReports, setAllReports] = useState<ReportItem[]>(SEED_REPORTS);
-  const [genType, setGenType] = useState<ReportType>('billing');
+  const [genType,    setGenType]    = useState<ReportType>('billing');
+  const [dateRange,  setDateRange]  = useState<DateRange>('last30');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo,   setCustomTo]   = useState('');
   const [subaccountFilter, setSubaccountFilter] = useState('');
+
+  const customRangeValid = dateRange !== 'custom' || (customFrom !== '' && customTo !== '');
+  const canGenerate = customRangeValid;
 
   // In subaccount view keep untagged (parent-level) reports visible alongside
   // subaccount-specific ones; in main view apply optional filter.
@@ -37,10 +67,12 @@ export function Reports() {
   const generatingCount = visibleReports.filter((r) => r.status === 'generating').length;
 
   const handleGenerate = () => {
-    const tmpl = GENERATABLE.find((g) => g.type === genType)!;
+    if (!canGenerate) return;
+    const period = resolvePeriod(dateRange, customFrom, customTo);
+    const name   = resolveReportName(genType, dateRange);
     const id = `RPT-${genType.slice(0, 3).toUpperCase()}-${Math.floor(Math.random() * 9000) + 1000}`;
     const newReport: ReportItem = {
-      id, name: tmpl.name, type: genType, period: tmpl.period,
+      id, name, type: genType, period,
       generatedAt: 'In progress', status: 'generating', format: 'CSV', sizeLabel: '—',
     };
     setAllReports((prev) => [newReport, ...prev]);
@@ -94,25 +126,70 @@ export function Reports() {
       <Card>
         <CardHeader>
           <CardTitle>Generate a Report</CardTitle>
-          <CardDescription>Choose a report type. Generated reports appear in the list below.</CardDescription>
+          <CardDescription>
+            Select a report type and date range, then generate. Results appear in the list below.
+            Analytics, Billing, and Earnings pages also offer contextual downloads.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-            <div className="flex-1 max-w-xs">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
+            {/* Report Type */}
+            <div className="flex-1 min-w-[160px] max-w-xs">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Report type</label>
               <Select value={genType} onChange={(e) => setGenType(e.target.value as ReportType)}>
-                {GENERATABLE.map((g) => (
-                  <option key={g.type} value={g.type}>
-                    {REPORT_TYPE_META[g.type].label} — {g.period}
-                  </option>
+                {REPORT_TYPE_OPTIONS.map((o) => (
+                  <option key={o.type} value={o.type}>{o.label}</option>
                 ))}
               </Select>
             </div>
-            <Button onClick={handleGenerate}>
+
+            {/* Date Range */}
+            <div className="flex-1 min-w-[160px] max-w-xs">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Date range</label>
+              <Select value={dateRange} onChange={(e) => setDateRange(e.target.value as DateRange)}>
+                {DATE_RANGE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Custom date inputs — revealed when "Custom range" is selected */}
+            {dateRange === 'custom' && (
+              <div className="flex items-end gap-2 flex-wrap">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <IconCalendar className="w-3.5 h-3.5 inline mr-1 text-gray-400" />
+                    From
+                  </label>
+                  <Input
+                    type="date"
+                    className="w-36"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">To</label>
+                  <Input
+                    type="date"
+                    className="w-36"
+                    value={customTo}
+                    min={customFrom || undefined}
+                    onChange={(e) => setCustomTo(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <Button onClick={handleGenerate} disabled={!canGenerate} className="self-end">
               <IconPlus className="w-4 h-4 mr-2" />
               Generate Report
             </Button>
           </div>
+
+          {dateRange === 'custom' && !customRangeValid && (
+            <p className="text-xs text-amber-600 mt-2">Select both a From and To date to generate a custom report.</p>
+          )}
         </CardContent>
       </Card>
 

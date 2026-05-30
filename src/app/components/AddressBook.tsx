@@ -257,14 +257,27 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
                   className={`relative flex flex-col transition-shadow hover:shadow-md ${addr.isPreferred ? 'border-blue-300 ring-1 ring-blue-200' : ''} ${mode === 'select' ? 'cursor-pointer hover:border-blue-400' : ''}`}
                   onClick={mode === 'select' ? () => onSelectAddress?.(addr) : undefined}
                 >
-                  {addr.isPreferred && (
-                    <div className="absolute top-3 right-3">
+                  {/* Top-right slot: "Default" badge when preferred, "Set as default"
+                      button otherwise. Both occupy the same position so the user
+                      can see the result of their action without scanning the card. */}
+                  <div className="absolute top-3 right-3">
+                    {addr.isPreferred ? (
                       <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
                         <IconStar className="w-2.5 h-2.5 fill-current" />
                         Default
                       </span>
-                    </div>
-                  )}
+                    ) : mode !== 'select' ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleSetPreferred(addr.id); }}
+                        title="Set as default pickup address"
+                        className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 hover:text-blue-600 px-2 py-0.5 rounded-full border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-colors cursor-pointer"
+                      >
+                        <IconStar className="w-2.5 h-2.5" />
+                        Set default
+                      </button>
+                    ) : null}
+                  </div>
+
                   <CardContent className="p-5 flex-1 flex flex-col gap-3">
                     <AddressDisplayCard address={addr} />
 
@@ -275,22 +288,14 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
                           Select
                         </Button>
                       ) : (
-                        <>
-                          {!addr.isPreferred && (
-                            <button onClick={() => handleSetPreferred(addr.id)} title="Set as default" className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 px-2 py-1.5 rounded hover:bg-blue-50 transition-colors cursor-pointer">
-                              <IconStar className="w-3.5 h-3.5" />
-                              Set Default
-                            </button>
-                          )}
-                          <div className="ml-auto flex items-center gap-1">
-                            <button onClick={() => handleEdit(addr)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors cursor-pointer" title="Edit">
-                              <IconEdit className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => handleDelete(addr.id)} className="p-1.5 rounded hover:bg-red-50 text-gray-500 hover:text-red-600 transition-colors cursor-pointer" title="Delete">
-                              <IconTrash className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </>
+                        <div className="ml-auto flex items-center gap-1">
+                          <button onClick={() => handleEdit(addr)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors cursor-pointer" title="Edit">
+                            <IconEdit className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDelete(addr.id)} className="p-1.5 rounded hover:bg-red-50 text-gray-500 hover:text-red-600 transition-colors cursor-pointer" title="Delete">
+                            <IconTrash className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </CardContent>

@@ -1822,3 +1822,45 @@ All changes are frontend/mock only. No new dependencies. No redesigns.
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~610 kB (+15 kB from new pages/data — pre-existing warning).
+
+---
+
+### Housekeeping — Batch 4: UI polish and component alignment (2026-05-30)
+
+All changes are frontend/mock only. No new dependencies. No redesigns.
+
+**Issue 23 — SLA Alerts: CTAs moved to right-aligned column**
+- `SlaAlerts.tsx`: refactored the alert card from a single-column content layout to a two-column layout.
+- Left column (flexible): title, detail, metadata row (tracking, assignee, account, time), follow-up note.
+- Right column (fixed-width, `min-w-[130px]`): type and status badges stacked, then CTA buttons below them (`flex-col`, full-width, `text-xs`).
+- Badges removed from the title row (they lived inline with the title text before); now clearly separated in the right column.
+- Cards are no longer tall and crowded — the right column keeps actions scannable without expanding the card vertically.
+
+**Issues 24–27 — Reports: separate type + date range controls, custom date inputs, positioning note**
+- `Reports.tsx`: replaced the single combined `Select` (type + period in one option) with two independent controls:
+  - **Report type** Select: Billing Report / Settlement Summary / Delivery Performance / Analytics Export.
+  - **Date range** Select: Today / Last 7 days / Last 30 days / Custom range.
+  - **Custom date inputs**: when "Custom range" is selected, two `<Input type="date">` fields (From / To) are revealed. The To field has `min={customFrom}` to prevent invalid ranges. A helper text appears when custom is selected but dates are not yet filled.
+  - Generate button is disabled until a valid range is available.
+- `resolveReportName()` and `resolvePeriod()` helpers derive the report name and period string from the two independent selections.
+- Card description updated to clarify the export-centre positioning: "Analytics, Billing, and Earnings pages also offer contextual downloads."
+- `GENERATABLE` array removed; replaced by `REPORT_TYPE_OPTIONS` and `DATE_RANGE_OPTIONS` arrays.
+
+**Issue 28 — Address Book: "Set as default" aligned with "Default" badge**
+- `AddressBook.tsx`: both the "Default" badge and the "Set as default" button now occupy the same `absolute top-3 right-3` slot on each address card.
+- When `isPreferred`: shows the blue "Default" badge.
+- When not preferred (full mode only): shows a subtle "Set default" button with `text-[10px]` styling, matching the badge size. Clicking it calls `handleSetPreferred` directly.
+- "Set Default" button removed from the bottom action row entirely — no more spatial separation between action and result indicator.
+- The button uses `e.stopPropagation()` so it doesn't accidentally trigger card clicks in `select` mode.
+
+**Files changed**
+- Modified: `src/app/pages/SlaAlerts.tsx`, `src/app/pages/Reports.tsx`, `src/app/components/AddressBook.tsx`, `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- SLA card right column has a `min-w-[130px]` fixed width; on very narrow screens (< 480px) the buttons may wrap — acceptable since the layout is already responsive at `sm:` breakpoint.
+- Custom date range validation is client-side only (no date arithmetic — no "From must be before To" enforcement beyond the HTML `min` attribute).
+- Report generation with date range produces a static mock report regardless of the selected dates; real date-filtered reports require backend.
+- Issue 27 (Reports positioning note): description text updated; no structural page change made since the contextual downloads on Analytics/Billing/Earnings already exist.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~612 kB (pre-existing warning, +2 kB from new controls).
