@@ -8,6 +8,7 @@ import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { getTickets, submitTicket, type SupportTicket, type TicketAttachment } from '../data/supportTickets';
+import { SearchInput } from '../components/SearchInput';
 
 const MAX_ATTACHMENTS = 5;
 
@@ -225,10 +226,10 @@ export function SupportTickets() {
         <CardHeader>
           <div className="flex flex-col lg:flex-row lg:items-center gap-4">
             <div className="flex-1">
-              <Input
+              <SearchInput
                 placeholder="Search by ticket ID or tracking number..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={setSearchQuery}
               />
             </div>
             <div className="flex gap-3">

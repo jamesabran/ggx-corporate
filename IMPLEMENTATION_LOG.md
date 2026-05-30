@@ -1910,3 +1910,84 @@ Wired the existing and new search inputs across five pages. All filtering is cli
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~614 kB (pre-existing warning).
+
+---
+
+### UX Fix Pass — Post-batch housekeeping and functionality fixes (2026-05-31)
+
+Focused pass fixing 12 UX/functionality issues. All changes are frontend/mock only.
+
+**1. Topbar search (RootLayout.tsx)**
+- Wired the previously decorative topbar search input.
+- Typing 2+ characters shows a grouped-result dropdown: Transactions (by tracking/recipient), Claims (by id/tracking), Support Tickets (by id/tracking). Max 4/3/3 results per group.
+- Clicking a result navigates to the detail page and closes the dropdown.
+- Clear (×) button added to the input.
+- Closes on outside click and on route change (see #11).
+- Global Cmd+K deferred — requires backend search API.
+
+**2. Subaccount Dashboard finance card (Dashboard.tsx)**
+- When viewing a subaccount (`subAccountsEnabled && currentAccount !== 'main'`): the "Earnings Report" card is replaced with a live "SLA Alerts" card showing up to 4 open alerts with type icon, title, tracking number, and status badge. Empty state shows a green check.
+- Main Account / standard view: "Earnings Report" card unchanged.
+- Finance is Admin-only; Managers should never see earnings cards.
+
+**3. Reports access for subaccounts (routes.tsx, Reports.tsx)**
+- `reports` route moved from `AdminRoute` to shared (accessible to Managers).
+- In subaccount view (`subAccountsEnabled && !isMainAccountView()`): finance report types (Billing, Settlement) are hidden from the type select. An info banner explains that billing/settlement reports are Main Account Admin only.
+- Available types in subaccount view: Delivery Performance, Analytics Export.
+- Report list still scoped to subaccount (Batch 2 logic unchanged).
+
+**4. Transactions filter layout (Transactions.tsx)**
+- Toolbar changed from `flex-col lg:flex-row` to `flex-col md:flex-row` so search and selects align on one row starting at the `md` breakpoint (768px), not just `lg` (1024px).
+
+**5. Clear search behavior (SearchInput.tsx — new component; Transactions, Claims, SlaAlerts, SupportTickets, UsersPermissions, AddressBook)**
+- New `src/app/components/SearchInput.tsx`: reusable search input with `IconSearch` prefix and a visible `×` clear button that appears when the field has text.
+- Replaces the plain `Input` in Transactions, Claims, SLA Alerts, Support Tickets, Users & Permissions.
+- AddressBook uses a custom raw `<input>` (has its own icon positioning) — added the same inline `×` clear button pattern.
+
+**6. SLA Alerts card layout (SlaAlerts.tsx)**
+- Badges (type + status) moved back to the left side, inline with/below the title.
+- CTAs ("Send follow-up", "Mark resolved") are now `flex-row` (side by side) on `sm+` screens, stacked on mobile.
+- Follow-up note changed from full-width block to `inline-flex max-w-sm` — no longer spans the full card width awkwardly.
+- "Assigned: …" label removed (was redundant with the assignee name already present).
+
+**7. Main page headers (AddressBookPage.tsx, BulkUploader.tsx)**
+- `AddressBookPage.tsx`: now renders a proper `<h1>` ("Address Book") and description above the AddressBook component (was bare component with no header).
+- `BulkUploader.tsx`: removed the `Transactions › Bulk Upload` breadcrumb. Bulk Upload is a top-level sidebar page; breadcrumbs are for nested detail pages only. Unused `Link` and `IconChevronRight` imports also removed.
+
+**8. Address Book delete confirmation (AddressBook.tsx)**
+- `handleDelete` now sets `deleteTarget` state instead of deleting immediately.
+- A `ConfirmDialog` ("Delete address? / This address will be permanently removed…") with destructive variant appears before deletion is committed. Uses the existing `ConfirmDialog` component.
+- `confirmDelete` performs the actual removal.
+
+**9. Minimum font size (AddressBook.tsx)**
+- All `text-[10px]` occurrences in AddressBook replaced with `text-xs` (12px). Affected: "Default" badge, "Set as default" button text.
+
+**10. Empty state consistency (Claims.tsx, SlaAlerts.tsx)**
+- Claims: icon updated to `w-10 h-10`, title to `font-semibold`, container to `py-12`.
+- SLA Alerts: same icon/title updates; empty-state text differentiates search-no-match from filter-no-match.
+
+**11. Popovers close on navigation (RootLayout.tsx)**
+- Added `useEffect(() => { setAccountMenuOpen(false); setNotificationsOpen(false); setTopbarOpen(false); setTopbarQuery(''); setMobileMenuOpen(false); }, [location.pathname])`.
+- All transient UI (account menu, notifications popover, topbar search dropdown, mobile nav) now auto-closes when the user navigates to a different route.
+
+**12. Users & Permissions checkbox double-toggle fix (UsersPermissions.tsx)**
+- The custom visual checkbox div had an `onClick` handler that called `toggleSub()`. The parent `<label>` click already fired the hidden `<input>`'s `onChange`, which also called `toggleSub()`. Result: clicking a checkbox toggled it on then immediately off.
+- Fixed by adding `pointer-events-none` to the visual div and removing its `onClick`. The `<input>`'s `onChange` is the single toggle source.
+
+**Files changed**
+- Added: `src/app/components/SearchInput.tsx`
+- Modified: `src/app/layouts/RootLayout.tsx`, `src/app/pages/Dashboard.tsx`, `src/app/routes.tsx`, `src/app/pages/Reports.tsx`, `src/app/pages/Transactions.tsx`, `src/app/pages/Claims.tsx`, `src/app/pages/SlaAlerts.tsx`, `src/app/pages/SupportTickets.tsx`, `src/app/pages/UsersPermissions.tsx`, `src/app/pages/AddressBookPage.tsx`, `src/app/pages/BulkUploader.tsx`, `src/app/components/AddressBook.tsx`, `IMPLEMENTATION_LOG.md`
+
+**Product/access decisions applied**
+- Finance (Earnings, Billing, Settlement) is Main Account/Admin only — hidden from all subaccount views.
+- Reports & Downloads is now accessible to Managers but scoped to operational report types only.
+- Manager assignment remains Admin-only (no changes to that guard).
+
+**Assumptions / deferred**
+- Topbar search is frontend-only (queries in-memory mock data). Global Cmd+K with backend search deferred.
+- SupportTickets page `Input` was swapped for `SearchInput` but the wired `searchQuery` state from Batch 5 is unchanged — only the visual component changed.
+- `text-[10px]` in `AddressDisplayCard.tsx` was not touched (it appears on the label badge there — intentional compact size for a display card). Only AddressBook.tsx was fixed.
+- Transactions empty-state row and footer count already use live filter count (Batch 5); no changes needed there.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~622 kB (pre-existing warning, +8 kB from new search dropdown logic).

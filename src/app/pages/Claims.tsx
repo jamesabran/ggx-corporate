@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { IconInfoCircle, IconReceiptRefund } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { Input } from '../components/ui/Input';
+import { SearchInput } from '../components/SearchInput';
 import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { getClaims, CLAIM_STATUS_META, type Claim, type ClaimStatus } from '../data/claims';
@@ -53,10 +53,10 @@ export function Claims() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <Input
+          <SearchInput
             placeholder="Search by claim ID or tracking number..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={setSearchQuery}
             className="w-full sm:w-64"
           />
           {mainView && (
@@ -104,9 +104,9 @@ export function Claims() {
         </CardHeader>
         <CardContent>
           {visible.length === 0 ? (
-            <div className="py-10 text-center">
-              <IconReceiptRefund className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-700">
+            <div className="py-12 text-center">
+              <IconReceiptRefund className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-gray-700">
                 {searchQuery.trim().length >= 2 ? 'No claims match your search.' : 'No claims'}
               </p>
               <p className="text-xs text-gray-400 mt-1">

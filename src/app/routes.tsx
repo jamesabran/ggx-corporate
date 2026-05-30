@@ -74,12 +74,14 @@ export const router = createBrowserRouter([
       // Shared: subaccount settings (Managers can view their own subaccount's settings)
       { path: 'subaccounts/:id/settings', Component: SubAccountSettings },
 
-      // Admin-only (parent-level finance, reports, subaccounts, users)
+      // Shared: reports visible to Managers (scoped to operational types in subaccount view)
+      { path: 'reports', Component: Reports },
+
+      // Admin-only (parent-level finance, subaccounts, users)
       { path: 'earnings',                        element: <AdminRoute><Earnings /></AdminRoute> },
       { path: 'earnings/:settlementId',          element: <AdminRoute><EarningsSettlementDetail /></AdminRoute> },
       { path: 'billing',           element: <AdminRoute><BillingStatement /></AdminRoute> },
       { path: 'payment-settings',  element: <AdminRoute><PaymentSettings /></AdminRoute> },
-      { path: 'reports',           element: <AdminRoute><Reports /></AdminRoute> },
       { path: 'subaccounts',       element: <AdminRoute><SubAccounts /></AdminRoute> },
       { path: 'subaccounts/enable',       element: <AdminRoute><EnableSubAccountsIntro /></AdminRoute> },
       { path: 'subaccounts/enable/setup', element: <AdminRoute><EnableSubAccountsSetup /></AdminRoute> },

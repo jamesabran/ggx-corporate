@@ -19,6 +19,7 @@ import {
   getUsers,
   setUsers,
 } from '../data/users';
+import { SearchInput } from '../components/SearchInput';
 
 // ---------------------------------------------------------------------------
 // Access model
@@ -233,10 +234,10 @@ export function UsersPermissions() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <CardTitle>User List</CardTitle>
-            <Input
+            <SearchInput
               placeholder="Search by name or email..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={setSearchQuery}
               className="w-full sm:w-64"
             />
           </div>
@@ -397,13 +398,14 @@ export function UsersPermissions() {
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
+                        {/* Visual checkbox — sr-only input handles the toggle via the
+                            parent label click. No onClick here to prevent double-fire. */}
                         <div
-                          className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                          className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 pointer-events-none ${
                             alreadySelected
                               ? 'bg-blue-600 border-blue-600'
                               : 'border-gray-300 bg-white'
                           }`}
-                          onClick={!full ? () => toggleSub(s.id) : undefined}
                         >
                           {alreadySelected && <IconCheck className="w-2.5 h-2.5 text-white" />}
                         </div>

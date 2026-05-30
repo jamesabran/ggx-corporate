@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
-import { Input } from '../components/ui/Input';
+import { SearchInput } from '../components/SearchInput';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { deliveries, statusConfig } from '../data/transactions';
@@ -33,11 +33,11 @@ export function Transactions() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-            <div className="flex-1">
-              <Input placeholder="Search by tracking number, recipient, or destination..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <SearchInput placeholder="Search by tracking number, recipient, or destination..." value={searchQuery} onChange={setSearchQuery} />
             </div>
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-2 flex-shrink-0 flex-wrap">
               {isMainAccountView() && (
                 <Select value={subaccountFilter} onChange={(e) => setSubaccountFilter(e.target.value)}>
                   <option value="all">All Subaccounts</option>

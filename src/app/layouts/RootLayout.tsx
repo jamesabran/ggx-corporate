@@ -31,7 +31,10 @@ import {
   IconReceiptRefund,
   IconActivityHeartbeat,
 } from '@tabler/icons-react';
-import { useState, type ComponentType } from 'react';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
+import { deliveries } from '../data/transactions';
+import { getClaims } from '../data/claims';
+import { getTickets } from '../data/supportTickets';
 import { cn } from '../lib/utils';
 import { Button } from '../components/ui/Button';
 import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
@@ -155,6 +158,20 @@ export function RootLayout() {
   const [financeExpanded, setFinanceExpanded] = useState(true);
   const [subaccountExpanded, setSubaccountExpanded] = useState(false);
   const [subaccountSearch, setSubaccountSearch] = useState('');
+
+  // Topbar search state
+  const [topbarQuery, setTopbarQuery] = useState('');
+  const [topbarOpen, setTopbarOpen] = useState(false);
+  const topbarRef = useRef<HTMLDivElement>(null);
+
+  // Close all transient popovers/dropdowns when the route changes.
+  useEffect(() => {
+    setAccountMenuOpen(false);
+    setNotificationsOpen(false);
+    setTopbarOpen(false);
+    setTopbarQuery('');
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     setShowLogoutConfirm(false);
@@ -431,15 +448,115 @@ export function RootLayout() {
             <IconMenu2 className="w-5 h-5" />
           </button>
 
-          <div className="flex-1 max-w-md">
+          {/* Topbar search — lightweight grouped-result dropdown.
+              Global Cmd+K is deferred until backend search is available. */}
+          <div className="flex-1 max-w-md relative" ref={topbarRef}>
             <div className="relative">
               <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search tracking numbers, orders..."
+                value={topbarQuery}
+                onChange={(e) => {
+                  setTopbarQuery(e.target.value);
+                  setTopbarOpen(e.target.value.trim().length >= 2);
+                }}
+                onFocus={() => topbarQuery.trim().length >= 2 && setTopbarOpen(true)}
                 className="w-full h-9 pl-10 pr-4 rounded-lg border border-gray-200 bg-gray-50 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-colors"
               />
+              {topbarQuery && (
+                <button
+                  type="button"
+                  onClick={() => { setTopbarQuery(''); setTopbarOpen(false); }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  <IconX className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
+
+            {topbarOpen && (() => {
+              const q = topbarQuery.trim().toLowerCase();
+              const txResults = deliveries
+                .filter((d) => d.tracking.toLowerCase().includes(q) || d.recipient.toLowerCase().includes(q))
+                .slice(0, 4);
+              const claimResults = getClaims()
+                .filter((c) => c.id.toLowerCase().includes(q) || c.trackingNumber.toLowerCase().includes(q))
+                .slice(0, 3);
+              const ticketResults = getTickets()
+                .filter((t) => t.id.toLowerCase().includes(q) || t.trackingNumber.toLowerCase().includes(q))
+                .slice(0, 3);
+              const hasResults = txResults.length > 0 || claimResults.length > 0 || ticketResults.length > 0;
+              return (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setTopbarOpen(false)} />
+                  <div className="absolute left-0 top-[calc(100%+6px)] w-full min-w-[320px] bg-white rounded-xl shadow-lg border border-gray-200 z-20 overflow-hidden">
+                    {!hasResults ? (
+                      <div className="px-4 py-6 text-center">
+                        <p className="text-sm text-gray-500">No results for <span className="font-medium">"{topbarQuery}"</span></p>
+                      </div>
+                    ) : (
+                      <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                        {txResults.length > 0 && (
+                          <div>
+                            <p className="px-4 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Transactions</p>
+                            {txResults.map((d) => (
+                              <button key={d.tracking} type="button"
+                                onClick={() => { navigate(`/dashboard/transactions/${d.tracking}`); setTopbarOpen(false); setTopbarQuery(''); }}
+                                className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer"
+                              >
+                                <IconPackage className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 leading-snug">{d.tracking}</p>
+                                  <p className="text-xs text-gray-500 leading-snug truncate">{d.recipient} · {d.destination}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {claimResults.length > 0 && (
+                          <div>
+                            <p className="px-4 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Claims</p>
+                            {claimResults.map((c) => (
+                              <button key={c.id} type="button"
+                                onClick={() => { navigate(`/dashboard/transactions/${c.trackingNumber}`); setTopbarOpen(false); setTopbarQuery(''); }}
+                                className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer"
+                              >
+                                <IconReceiptRefund className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 leading-snug">{c.id}</p>
+                                  <p className="text-xs text-gray-500 leading-snug">{c.trackingNumber} · {c.reason}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {ticketResults.length > 0 && (
+                          <div>
+                            <p className="px-4 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Support Tickets</p>
+                            {ticketResults.map((t) => (
+                              <button key={t.id} type="button"
+                                onClick={() => { navigate(`/dashboard/support-tickets/${t.id}`); setTopbarOpen(false); setTopbarQuery(''); }}
+                                className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer"
+                              >
+                                <IconMessage className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 leading-snug">{t.id}</p>
+                                  <p className="text-xs text-gray-500 leading-snug truncate">{t.issueType} · {t.trackingNumber}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <div className="px-4 py-2 border-t border-gray-100">
+                          <p className="text-[11px] text-gray-400">Global Cmd+K search deferred — backend search required.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           <div className="flex items-center gap-1 ml-auto">

@@ -1,8 +1,8 @@
 import { useRef, useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import {
   IconUpload, IconDownload, IconFileSpreadsheet, IconMapPin, IconClock,
-  IconChevronRight, IconLink, IconX, IconTruckDelivery, IconBuildingStore,
+  IconLink, IconX, IconTruckDelivery, IconBuildingStore,
   IconPhone, IconArrowUp,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
@@ -228,13 +228,6 @@ export function BulkUploader() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-sm text-gray-500">
-        <Link to="/dashboard/transactions" className="hover:text-gray-700">Transactions</Link>
-        <IconChevronRight className="w-3.5 h-3.5" />
-        <span className="text-gray-900 font-medium">Bulk Upload</span>
-      </nav>
-
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Bulk Upload</h1>

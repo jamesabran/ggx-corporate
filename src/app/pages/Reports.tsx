@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IconDownload, IconRefresh, IconClock, IconPlus, IconFileText, IconCalendar } from '@tabler/icons-react';
+import { IconDownload, IconRefresh, IconClock, IconPlus, IconFileText, IconCalendar, IconInfoCircle } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -15,12 +15,15 @@ import { SUBACCOUNT_OPTIONS } from '../data/users';
 
 type DateRange = 'today' | 'last7' | 'last30' | 'custom';
 
-const REPORT_TYPE_OPTIONS: { type: ReportType; label: string }[] = [
-  { type: 'billing',    label: 'Billing Report' },
-  { type: 'settlement', label: 'Settlement Summary' },
+// All report types — finance types are hidden/disabled in subaccount view.
+const ALL_REPORT_TYPE_OPTIONS: { type: ReportType; label: string; financeOnly?: boolean }[] = [
+  { type: 'billing',    label: 'Billing Report',        financeOnly: true },
+  { type: 'settlement', label: 'Settlement Summary',    financeOnly: true },
   { type: 'delivery',   label: 'Delivery Performance' },
   { type: 'analytics',  label: 'Analytics Export' },
 ];
+
+const REPORT_TYPE_OPTIONS = ALL_REPORT_TYPE_OPTIONS;
 
 const DATE_RANGE_OPTIONS: { value: DateRange; label: string }[] = [
   { value: 'today',  label: 'Today' },
@@ -44,11 +47,17 @@ function resolveReportName(type: ReportType, range: DateRange): string {
 }
 
 export function Reports() {
-  const { isMainAccountView, getCurrentAccountId } = useSubAccounts();
+  const { isMainAccountView, getCurrentAccountId, subAccountsEnabled } = useSubAccounts();
   const mainView = isMainAccountView();
 
+  // In subaccount view only operational (non-finance) report types are available.
+  const isSubaccountView = subAccountsEnabled && !mainView;
+  const availableReportTypes = isSubaccountView
+    ? REPORT_TYPE_OPTIONS.filter((o) => !o.financeOnly)
+    : REPORT_TYPE_OPTIONS;
+
   const [allReports, setAllReports] = useState<ReportItem[]>(SEED_REPORTS);
-  const [genType,    setGenType]    = useState<ReportType>('billing');
+  const [genType,    setGenType]    = useState<ReportType>(isSubaccountView ? 'delivery' : 'billing');
   const [dateRange,  setDateRange]  = useState<DateRange>('last30');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo,   setCustomTo]   = useState('');
@@ -132,12 +141,21 @@ export function Reports() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {isSubaccountView && (
+            <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-blue-50 border border-blue-200 mb-4">
+              <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-blue-800">
+                Showing operational reports for this subaccount. Billing and settlement reports are available to the Main Account admin only.
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
             {/* Report Type */}
             <div className="flex-1 min-w-[160px] max-w-xs">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Report type</label>
               <Select value={genType} onChange={(e) => setGenType(e.target.value as ReportType)}>
-                {REPORT_TYPE_OPTIONS.map((o) => (
+                {availableReportTypes.map((o) => (
                   <option key={o.type} value={o.type}>{o.label}</option>
                 ))}
               </Select>

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { ConfirmDialog } from './ui/Dialog';
 import { AddressDisplayCard } from './AddressDisplayCard';
 import { getProvinces, getCities, getDistricts, type LocationOption } from '../lib/locationApi';
 
@@ -61,6 +62,7 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
   const [formData, setFormData] = useState<Partial<Address>>(emptyForm);
   const [search, setSearch] = useState('');
   const [filterLabel, setFilterLabel] = useState('all');
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // Pickup-location cascade state
   const [provinces, setProvinces] = useState<LocationOption[]>([]);
@@ -189,7 +191,12 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
   };
 
   const handleDelete = (id: string) => {
-    setAddresses(addresses.filter((addr) => addr.id !== id));
+    setDeleteTarget(id); // shows ConfirmDialog
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget) setAddresses(addresses.filter((addr) => addr.id !== deleteTarget));
+    setDeleteTarget(null);
   };
 
   const handleSetPreferred = (id: string) => {
@@ -220,14 +227,24 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
         <>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="relative flex-1 min-w-0">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search by name or location..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-9 pl-9 pr-4 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full h-10 pl-9 pr-8 rounded-lg border border-gray-200 bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  aria-label="Clear search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                >
+                  <IconX className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <Select value={filterLabel} onChange={(e) => setFilterLabel(e.target.value)} className="h-9 text-sm">
@@ -262,7 +279,7 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
                       can see the result of their action without scanning the card. */}
                   <div className="absolute top-3 right-3">
                     {addr.isPreferred ? (
-                      <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                      <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
                         <IconStar className="w-2.5 h-2.5 fill-current" />
                         Default
                       </span>
@@ -270,7 +287,7 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
                       <button
                         onClick={(e) => { e.stopPropagation(); handleSetPreferred(addr.id); }}
                         title="Set as default pickup address"
-                        className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 hover:text-blue-600 px-2 py-0.5 rounded-full border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-blue-600 px-2 py-0.5 rounded-full border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-colors cursor-pointer"
                       >
                         <IconStar className="w-2.5 h-2.5" />
                         Set default
@@ -432,6 +449,17 @@ export function AddressBook({ mode = 'full', onSelectAddress, onClose }: Address
           </CardContent>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete address?"
+        description="This address will be permanently removed from your address book. This cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        confirmIcon={<IconTrash className="w-3.5 h-3.5 mr-1.5" />}
+      />
     </div>
   );
 }

@@ -15,12 +15,14 @@ import {
   IconHourglass,
   IconCalendar,
   IconBuilding,
+  IconActivityHeartbeat,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { deliveries, statusConfig } from '../data/transactions';
+import { getSlaAlerts, SLA_TYPE_META, SLA_STATUS_META } from '../data/slaAlerts';
 
 const stats = [
   { title: 'Active Deliveries', value: '2,847', change: '+12.5%', trend: 'up', icon: IconPackage, iconBg: 'bg-blue-600', cardBg: 'bg-blue-50', changeColor: 'text-blue-700' },
@@ -172,44 +174,104 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col">
-          <CardHeader className="px-6 pt-5 pb-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold text-gray-900">Earnings Report</CardTitle>
-              <Link to="/dashboard/earnings">
-                <Button variant="ghost" size="sm" className="h-8 px-2.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 cursor-pointer gap-1.5 -mr-1">
-                  Full report
-                  <IconArrowRight className="w-3.5 h-3.5" />
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent className="px-6 pt-4 pb-5 flex-1 flex flex-col">
-            <div className="flex-1 divide-y divide-gray-100">
-              {earningsRows.map((row, i) => (
-                <div key={i} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <row.icon className={`w-4 h-4 ${row.iconColor}`} />
+        {/* Finance card — shown only in Main Account / standard view.
+            Subaccount view shows SLA Alerts instead (finance is Admin-only). */}
+        {subAccountsEnabled && currentAccount !== 'main' ? (
+          <Card className="flex flex-col">
+            <CardHeader className="px-6 pt-5 pb-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <IconActivityHeartbeat className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <CardTitle className="text-base font-semibold text-gray-900">SLA Alerts</CardTitle>
+                </div>
+                <Link to="/dashboard/sla-alerts">
+                  <Button variant="ghost" size="sm" className="h-8 px-2.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 cursor-pointer gap-1.5 -mr-1">
+                    View all
+                    <IconArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pt-3 pb-4 flex-1">
+              {(() => {
+                const openAlerts = getSlaAlerts().filter((a) => a.status !== 'resolved').slice(0, 4);
+                if (openAlerts.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-6 gap-2">
+                      <IconCircleCheck className="w-7 h-7 text-emerald-400" />
+                      <p className="text-sm text-gray-500">No active SLA alerts</p>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 leading-snug">{row.label}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        {row.metaIcon && <row.metaIcon className="w-3 h-3 text-gray-400 flex-shrink-0" />}
-                        <p className="text-sm text-gray-400 leading-snug">{row.meta}</p>
+                  );
+                }
+                return (
+                  <div className="space-y-1">
+                    {openAlerts.map((a) => {
+                      const meta = SLA_TYPE_META[a.type];
+                      const st   = SLA_STATUS_META[a.status];
+                      return (
+                        <div
+                          key={a.id}
+                          onClick={() => navigate(`/dashboard/transactions/${a.trackingNumber}`)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors"
+                        >
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${meta.bgClass}`}>
+                            <meta.icon className={`w-3.5 h-3.5 ${meta.iconClass}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900 truncate leading-snug">{a.title}</p>
+                            <p className="text-xs text-gray-500 leading-snug">{a.trackingNumber}</p>
+                          </div>
+                          <Badge variant={st.variant} className="text-[10px] px-1.5 flex-shrink-0">{st.label}</Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="flex flex-col">
+            <CardHeader className="px-6 pt-5 pb-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-semibold text-gray-900">Earnings Report</CardTitle>
+                <Link to="/dashboard/earnings">
+                  <Button variant="ghost" size="sm" className="h-8 px-2.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 cursor-pointer gap-1.5 -mr-1">
+                    Full report
+                    <IconArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pt-4 pb-5 flex-1 flex flex-col">
+              <div className="flex-1 divide-y divide-gray-100">
+                {earningsRows.map((row, i) => (
+                  <div key={i} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <row.icon className={`w-4 h-4 ${row.iconColor}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 leading-snug">{row.label}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          {row.metaIcon && <row.metaIcon className="w-3 h-3 text-gray-400 flex-shrink-0" />}
+                          <p className="text-sm text-gray-400 leading-snug">{row.meta}</p>
+                        </div>
                       </div>
                     </div>
+                    <p className="text-base font-bold text-gray-900 flex-shrink-0 ml-4 tabular-nums">{row.amount}</p>
                   </div>
-                  <p className="text-base font-bold text-gray-900 flex-shrink-0 ml-4 tabular-nums">{row.amount}</p>
-                </div>
-              ))}
-            </div>
-            <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
-              <p className="text-sm text-gray-400">Total COD collected</p>
-              <p className="text-base font-bold text-gray-900 tabular-nums">₱264,360</p>
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+              <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+                <p className="text-sm text-gray-400">Total COD collected</p>
+                <p className="text-base font-bold text-gray-900 tabular-nums">₱264,360</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="flex flex-col">
           <CardHeader className="px-6 pt-5 pb-0">
