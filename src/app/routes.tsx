@@ -23,6 +23,7 @@ import { EnableSubAccountsIntro } from './pages/EnableSubAccounts';
 import { EnableSubAccountsSetup } from './pages/EnableSubAccountsSetup';
 import { RequestSubAccount } from './pages/RequestSubAccount';
 import { UsersPermissions } from './pages/UsersPermissions';
+import { SubAccountSettings } from './pages/SubAccountSettings';
 import { Notifications } from './pages/Notifications';
 import { Reports } from './pages/Reports';
 import { ServiceAdvisories } from './pages/ServiceAdvisories';
@@ -68,6 +69,9 @@ export const router = createBrowserRouter([
       { path: 'notifications', Component: Notifications },
       { path: 'advisories', Component: ServiceAdvisories },
       { path: 'settings', Component: Settings },
+
+      // Shared: subaccount settings (Managers can view their own subaccount's settings)
+      { path: 'subaccounts/:id/settings', Component: SubAccountSettings },
 
       // Admin-only (parent-level finance, reports, subaccounts, users)
       { path: 'earnings',          element: <AdminRoute><Earnings /></AdminRoute> },

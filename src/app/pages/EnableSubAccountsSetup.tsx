@@ -4,10 +4,11 @@ import { IconCircleCheck, IconInfoCircle } from '@tabler/icons-react';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import type { SubAccount } from '../contexts/SubAccountContext';
 
 export function EnableSubAccountsSetup() {
   const navigate = useNavigate();
-  const { enableSubAccounts } = useSubAccounts();
+  const { enableSubAccounts, addSubAccount } = useSubAccounts();
   const [step, setStep] = useState<'setup' | 'success'>('setup');
 
   const mainAccountData = {
@@ -19,18 +20,34 @@ export function EnableSubAccountsSetup() {
     businessAddress: '123 Business St, Makati City, Metro Manila',
   };
 
+  // Second subaccount seeded alongside the default so the Subaccounts page
+  // always shows two entries matching the Users & Permissions seed data.
+  const acmeLuzon: SubAccount = {
+    id: 'acme-luzon',
+    name: 'Acme Luzon',
+    type: 'additional',
+    assignedManager: 'Sarah Williams',
+    status: 'active',
+    bookingCount: 3708,
+    senderName: 'Acme Luzon',
+    pickupAddress: '456 Luzon Ave, Quezon City, Metro Manila',
+    contactNumber: '+63 917 987 6543',
+  };
+
   const handleEnable = () => {
     enableSubAccounts(mainAccountData, {
-      id: 'sub-1',
+      id: 'acme-corporation',
       name: mainAccountData.legalName,
       type: 'default',
-      assignedManager: mainAccountData.accountHolder,
+      assignedManager: 'Mike Johnson',
       status: 'active',
-      bookingCount: 0,
+      bookingCount: 5234,
       senderName: mainAccountData.legalName,
       pickupAddress: mainAccountData.businessAddress,
       contactNumber: mainAccountData.contactNumber,
     });
+    // Add the second subaccount so both appear in the Subaccounts list.
+    addSubAccount(acmeLuzon);
     setStep('success');
   };
 

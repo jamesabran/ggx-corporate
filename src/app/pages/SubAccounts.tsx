@@ -122,11 +122,19 @@ export function SubAccounts() {
                       <IconChartBar className="w-4 h-4 mr-1.5" />
                       View Dashboard
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/dashboard/users-permissions?subaccount=${subAccount.id}`)}
+                    >
                       <IconUsers className="w-4 h-4 mr-1.5" />
                       Manage Users
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/dashboard/subaccounts/${subAccount.id}/settings`)}
+                    >
                       <IconSettings className="w-4 h-4 mr-1.5" />
                       Settings
                     </Button>

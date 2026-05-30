@@ -1582,3 +1582,60 @@ Documentation-only update (no app feature code changed). Refreshed the handoff/c
 - No build run needed — docs only.
 
 **Files changed:** `PROJECT_HANDOFF.md`, `IMPLEMENTATION_LOG.md`.
+
+---
+
+### Housekeeping — Batch 1: Subaccount and user-management alignment (2026-05-30)
+
+Five targeted fixes to align subaccount data, user terminology, navigation, and the account-switcher UX. Frontend/mock only. No new dependencies.
+
+**Change 1 — "Invite User" → "Add User" (ParentDashboard.tsx)**
+- Quick Action card label changed from "Invite User" to "Add User"; description updated to "Assign managers to subaccounts". Aligns with the terminology used throughout the rest of the app (Users & Permissions uses "Add user access" / "Add User" button).
+- Recent Activity copy updated: "New user invited" → "New user added".
+
+**Change 2 — Subaccounts seed alignment (EnableSubAccountsSetup.tsx)**
+- `enableSubAccounts` now creates Acme Corporation (`id: acme-corporation`) as the default subaccount with canonical id and realistic mock data (bookingCount, manager, address).
+- `addSubAccount` immediately appends Acme Luzon (`id: acme-luzon`, `assignedManager: Sarah Williams`) so the Subaccounts page always shows two entries matching the Users & Permissions seed.
+- SubAccountContext API unchanged.
+
+**Change 3 — 2-Manager cap + multi-subaccount Manager assignment (UsersPermissions.tsx, data/users.ts)**
+- Extracted shared user seed to `src/app/data/users.ts` (`AppUser`, `INITIAL_USERS`, `SUBACCOUNT_OPTIONS`) so SubAccountSettings can also reference the manager data without duplicating it.
+- `AppUser.subaccount: string` → `AppUser.subaccounts: string[]` (array of assigned subaccount names).
+- Cap raised to 2 Managers per subaccount (`MAX_MANAGERS_PER_SUBACCOUNT = 2`).
+- Subaccounts at capacity show a `(Full)` suffix and are `disabled` in the assignment Select. The replace-manager dialog is removed — the disabled option is the UX gate.
+- Adding a user whose email already exists as a Manager merges the new subaccount into their existing row rather than creating a duplicate.
+- Table "Role / Assigned accounts" cell lists all subaccounts stacked under the Manager badge.
+- Access column reads "N subaccounts" for multi-subaccount managers.
+- Seed updated: Mike Johnson is assigned to both Acme Corporation and Acme Luzon to demonstrate the capability.
+
+**Change 4 — Wire "Manage Users" / "Settings" + SubAccount Settings page (SubAccounts.tsx, SubAccountSettings.tsx, routes.tsx)**
+- "Manage Users" button on each subaccount card now navigates to `/dashboard/users-permissions?subaccount=<canonical-id>`.
+- UsersPermissions reads `?subaccount` param via `useSearchParams`, filters the user list, and shows a dismissible blue info banner ("Showing users for [Name]. Clear filter to see all.").
+- "Settings" button navigates to `/dashboard/subaccounts/:id/settings`.
+- New `SubAccountSettings.tsx` page at that route (shared — not Admin-only so Managers can view their own). Three sections:
+  1. **Subaccount Info** — name, canonical id, type badge, status badge, booking count, contact.
+  2. **Assigned Managers** — reads from `INITIAL_USERS` filtered by subaccount name; shows avatar + name + email + Manager badge. Links to Users & Permissions filtered view.
+  3. **Pickup Address** — displays `subAccount.pickupAddress` text with "Edit in Address Book" link.
+  - Breadcrumb: `Subaccounts › [Name] › Settings`.
+  - Not-found state with warning banner for invalid/unloaded ids.
+
+**Change 5 — Account switcher: centered Dialog modal (RootLayout.tsx)**
+- Replaced `handleOpenAccountSwitcher` → sidebar expansion with a centered `Dialog` modal (`switchAccountModalOpen` state).
+- The "Switch" button in the topbar account menu now opens the modal (previously opened the bottom-left sidebar panel — spatially confusing).
+- Modal body: scrollable list of Main Account + all subaccounts. Active account has a blue highlight + `IconCheck`. Each row calls `handleSwitchAccount(id)` and closes the modal.
+- Footer: "Manage Subaccounts" link to `/dashboard/subaccounts`.
+- The sidebar bottom account-switcher panel remains intact as a secondary path.
+- `Dialog` added to the RootLayout import (previously only `ConfirmDialog` was imported).
+
+**Files changed**
+- Added: `src/app/data/users.ts`, `src/app/pages/SubAccountSettings.tsx`
+- Modified: `src/app/pages/ParentDashboard.tsx`, `src/app/pages/EnableSubAccountsSetup.tsx`, `src/app/pages/UsersPermissions.tsx`, `src/app/pages/SubAccounts.tsx`, `src/app/routes.tsx`, `src/app/layouts/RootLayout.tsx`, `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- `SubAccount.assignedManager` (single string on the context type) is kept for SubAccounts list display. The definitive manager list for a subaccount lives in `data/users.ts` and is consumed by SubAccountSettings. Aligning the context type to an array is deferred.
+- SubAccountSettings reads from `INITIAL_USERS` (static seed) — runtime adds/removes from UsersPermissions local state are not reflected until those are wired to a shared store.
+- The 2-manager cap is enforced only in the Add/Edit modal UI (disabled select option); no server-side guard exists.
+- Acme Visayas remains in `data/accounts.ts` canonical map but has no corresponding subaccount seed (it's used for notification scoping tests only).
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts remains a separate ~431 kB chunk; main bundle ~584 kB (pre-existing warning).

@@ -29,14 +29,14 @@ const subaccountPerformance = [
 
 const recentActivity = [
   { type: 'upload', subaccount: 'Acme Corporation', description: 'Bulk upload - 125 shipments', time: '2 hours ago' },
-  { type: 'user', subaccount: 'Main Account', description: 'New user invited: sarah@acme.com', time: '5 hours ago' },
+  { type: 'user', subaccount: 'Main Account', description: 'New user added: sarah@acme.com', time: '5 hours ago' },
   { type: 'issue', subaccount: 'Acme Luzon', description: '8 failed deliveries reported', time: '1 day ago' },
   { type: 'billing', subaccount: 'Main Account', description: 'Invoice #2024-102 generated', time: '2 days ago' },
 ];
 
 const quickActions = [
   { to: '/dashboard/subaccounts/request', icon: IconPlus, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', title: 'Add Subaccount', desc: 'Request new operational unit' },
-  { to: '/dashboard/users-permissions', icon: IconUsers, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', title: 'Invite User', desc: 'Add team members and managers' },
+  { to: '/dashboard/users-permissions', icon: IconUsers, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', title: 'Add User', desc: 'Assign managers to subaccounts' },
   { to: '/dashboard/analytics', icon: IconActivity, iconBg: 'bg-violet-50', iconColor: 'text-violet-600', title: 'View Reports', desc: 'Access analytics and insights' },
   { to: '/dashboard/earnings', icon: IconCurrencyDollar, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', title: 'View Finance', desc: 'Check earnings and billing' },
 ];

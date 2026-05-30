@@ -34,7 +34,7 @@ import {
 import { useState, type ComponentType } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from '../components/ui/Button';
-import { ConfirmDialog } from '../components/ui/Dialog';
+import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -151,6 +151,7 @@ export function RootLayout() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [switchAccountModalOpen, setSwitchAccountModalOpen] = useState(false);
   const [financeExpanded, setFinanceExpanded] = useState(true);
   const [subaccountExpanded, setSubaccountExpanded] = useState(false);
   const [subaccountSearch, setSubaccountSearch] = useState('');
@@ -198,8 +199,7 @@ export function RootLayout() {
 
   const handleOpenAccountSwitcher = () => {
     setAccountMenuOpen(false);
-    setSubaccountExpanded(true);
-    setSubaccountSearch('');
+    setSwitchAccountModalOpen(true);
   };
 
   const accountOptions = subAccountsEnabled
@@ -625,6 +625,67 @@ export function RootLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Switch Account modal — triggered from the topbar "Switch" button.
+          Lists Main Account + all subaccounts; active account has a checkmark. */}
+      <Dialog
+        open={switchAccountModalOpen}
+        onClose={() => setSwitchAccountModalOpen(false)}
+        title="Switch Account"
+        size="sm"
+      >
+        <p className="text-sm text-gray-500 mb-4">Select an account to switch to.</p>
+        <div className="space-y-1">
+          {accountOptions.map((acc) => {
+            const isSel = acc.id === currentAccount;
+            const accInit = acc.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+            return (
+              <button
+                key={acc.id}
+                onClick={() => {
+                  handleSwitchAccount(acc.id);
+                  setSwitchAccountModalOpen(false);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors cursor-pointer text-left',
+                  isSel ? 'bg-blue-50' : 'hover:bg-gray-50'
+                )}
+              >
+                <div
+                  className={cn(
+                    'w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0',
+                    isSel ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                  )}
+                >
+                  {accInit}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={cn(
+                      'text-sm font-medium truncate leading-snug',
+                      isSel ? 'text-blue-700' : 'text-gray-800'
+                    )}
+                  >
+                    {acc.name}
+                  </p>
+                  <p className="text-xs text-gray-400 leading-snug">{acc.type}</p>
+                </div>
+                {isSel && <IconCheck className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <Link
+            to="/dashboard/subaccounts"
+            onClick={() => setSwitchAccountModalOpen(false)}
+            className="flex items-center justify-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 transition-colors py-1 rounded-lg hover:bg-blue-50 cursor-pointer"
+          >
+            <IconBuilding className="w-3.5 h-3.5" />
+            Manage Subaccounts
+          </Link>
+        </div>
+      </Dialog>
 
       <ConfirmDialog
         open={showLogoutConfirm}
