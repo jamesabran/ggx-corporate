@@ -1991,3 +1991,43 @@ Focused pass fixing 12 UX/functionality issues. All changes are frontend/mock on
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~622 kB (pre-existing warning, +8 kB from new search dropdown logic).
+
+---
+
+### Architecture — Mock service layer (2026-05-31)
+
+Added an API-ready service layer on top of existing mock data modules. No UI consumers were migrated; services exist as infrastructure ready for future API swap-in. All changes are additive — nothing was removed or modified from the existing data modules.
+
+**New files**
+
+Mock data files (`src/app/data/mock/`):
+- `accounts.mock.ts` — canonical `MOCK_MAIN_ACCOUNT` + `MOCK_SUBACCOUNTS` (all three subaccounts with full data), lookup maps. Single source of truth for account/subaccount objects.
+- `auth.mock.ts` — `MOCK_AUTH_USERS` with `MockPermissions` per role; `MOCK_CREDENTIALS`. Extends AuthContext demo users with richer permission model.
+- `users.mock.ts` — thin re-export of `data/users.ts` to single-entry import point.
+- `transactions.mock.ts` — thin re-export of `data/transactions.ts`.
+- `notifications.mock.ts` — thin re-export of `data/notifications.ts`.
+- `bulkUploads.mock.ts` — thin re-export of `data/bulkUploads.ts`.
+
+Service files (`src/app/services/`):
+- `authService.ts` — `loginMockUser`, `logoutMockUser`, `getCurrentUser`, `getSessionContext`, `hasPermission`. Async facade over MOCK_AUTH_USERS + localStorage.
+- `accountService.ts` — `getMainAccount`, `getSubaccounts`, `getSubaccountById`, `getAccountSwitcherItems`, `getSubaccountName`. Canonical account data source.
+- `userService.ts` — `getUsers_`, `getUserById`, `getManagersBySubaccountId`, `getAvailableManagersForSubaccount`, `createUser`, `updateUser`, `updateUserSubaccountAssignments`, `removeUser`. Business rules (2-manager cap, Admin-only assignment) enforced here.
+- `transactionService.ts` — `getTransactions`, `getTransactionById`, `getTransactionsBySubaccountId`, `getTransactionsBySettlementId`, `getRecentTransactions`. Typed filters.
+- `notificationService.ts` — `getNotifications`, `getUnreadCount`, `markAllNotificationsRead`, `markVisibleRead`, `pushNotification`, `getAllNotificationsAdmin`.
+- `bulkUploadService.ts` — `getBulkUploads`, `getBulkUploadById`, `getBulkUploadSummary`, `getBulkUploadsBySubaccountId`. Merges session records with seed records.
+
+Documentation:
+- `MOCK_SERVICE_LAYER.md` — full architecture document: why the layer exists, all service + mock files, canonical account IDs, UI modules still using data directly, deferred migrations, backend API contracts needed, scope rules, recommended migration sequence.
+
+**Canonical account IDs (confirmed)**
+- Parent/Main Account: `main` (NOT `main-account` — changing would be a large breaking migration)
+- Acme Corporation: `acme-corporation`
+- Acme Luzon: `acme-luzon`
+- Acme Visayas: `acme-visayas`
+
+**UI consumers migrated:** None (intentional — service layer exists in parallel, no risk to working UI).
+
+**Deferred service modules:** claims, SLA alerts, reports, earnings/settlements, support tickets, service advisories, payment accounts, financial security. See MOCK_SERVICE_LAYER.md §7.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size unchanged (~622 kB main + ~432 kB recharts). Service and mock files are not imported by any page, so they add 0 kB to the production bundle.
