@@ -11,6 +11,7 @@ import { BulkUploadSummary } from './pages/BulkUploadSummary';
 // main bundle smaller; resolves the long-standing bundle-size warning).
 const DataAnalytics = lazy(() => import('./pages/DataAnalytics').then((m) => ({ default: m.DataAnalytics })));
 import { Earnings } from './pages/Earnings';
+import { EarningsSettlementDetail } from './pages/EarningsSettlementDetail';
 import { BillingStatement } from './pages/BillingStatement';
 import { PaymentSettings } from './pages/PaymentSettings';
 import { AddressBookPage } from './pages/AddressBookPage';
@@ -74,7 +75,8 @@ export const router = createBrowserRouter([
       { path: 'subaccounts/:id/settings', Component: SubAccountSettings },
 
       // Admin-only (parent-level finance, reports, subaccounts, users)
-      { path: 'earnings',          element: <AdminRoute><Earnings /></AdminRoute> },
+      { path: 'earnings',                        element: <AdminRoute><Earnings /></AdminRoute> },
+      { path: 'earnings/:settlementId',          element: <AdminRoute><EarningsSettlementDetail /></AdminRoute> },
       { path: 'billing',           element: <AdminRoute><BillingStatement /></AdminRoute> },
       { path: 'payment-settings',  element: <AdminRoute><PaymentSettings /></AdminRoute> },
       { path: 'reports',           element: <AdminRoute><Reports /></AdminRoute> },

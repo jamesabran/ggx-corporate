@@ -1,10 +1,18 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { IconArrowLeft, IconSend, IconUser, IconHeadset, IconPackage, IconCalendar, IconUserCheck } from '@tabler/icons-react';
+import { IconArrowLeft, IconSend, IconUser, IconHeadset, IconPackage, IconCalendar, IconUserCheck, IconPaperclip, IconX } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { getTicket, getTicketMessages, addTicketReply, type TicketMessage } from '../data/supportTickets';
+import { getTicket, getTicketMessages, addTicketReply, type TicketMessage, type TicketAttachment } from '../data/supportTickets';
+
+const MAX_ATTACHMENTS = 5;
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
 
 const statusConfig = {
   open:        { variant: 'pending' as const, label: 'Open' },
@@ -26,6 +34,19 @@ export function SupportTicketDetail() {
 
   const [messages, setMessages] = useState<TicketMessage[]>(() => (id ? [...getTicketMessages(id)] : []));
   const [reply, setReply] = useState('');
+  const [replyAttachments, setReplyAttachments] = useState<TicketAttachment[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+    const slots = MAX_ATTACHMENTS - replyAttachments.length;
+    const added: TicketAttachment[] = Array.from(files).slice(0, slots).map((f) => ({
+      name: f.name,
+      size: formatFileSize(f.size),
+    }));
+    setReplyAttachments((prev) => [...prev, ...added]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   // Not-found state for unknown ticket ids.
   if (!ticket) {
@@ -50,9 +71,10 @@ export function SupportTicketDetail() {
 
   const handleSend = () => {
     if (!id || !reply.trim()) return;
-    addTicketReply(id, reply);
+    addTicketReply(id, reply, replyAttachments.length ? replyAttachments : undefined);
     setMessages([...getTicketMessages(id)]);
     setReply('');
+    setReplyAttachments([]);
   };
 
   return (
@@ -91,6 +113,16 @@ export function SupportTicketDetail() {
                     <div className={`max-w-[80%] ${isCustomer ? 'items-end text-right' : ''}`}>
                       <div className={`inline-block rounded-xl px-3.5 py-2.5 text-sm ${isCustomer ? 'bg-blue-50 text-gray-800' : 'bg-gray-100 text-gray-800'}`}>
                         {m.body}
+                        {m.attachments && m.attachments.length > 0 && (
+                          <div className={`flex flex-wrap gap-1.5 mt-2 ${isCustomer ? 'justify-end' : ''}`}>
+                            {m.attachments.map((a, i) => (
+                              <span key={i} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-white/70 text-gray-600 border border-gray-200">
+                                <IconPaperclip className="w-2.5 h-2.5 text-gray-400" />
+                                {a.name} · {a.size}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <p className="text-[11px] text-gray-400 mt-1">{m.author} · {m.timestamp}</p>
                     </div>
@@ -99,15 +131,52 @@ export function SupportTicketDetail() {
               })}
 
               {/* Reply box */}
-              <div className="border-t border-gray-100 pt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Add a reply</label>
+              <div className="border-t border-gray-100 pt-4 space-y-3">
+                <label className="block text-sm font-medium text-gray-700">Add a reply</label>
                 <textarea
                   className="w-full h-24 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Type your message to the support team..."
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
                 />
-                <div className="flex justify-end mt-2">
+                {/* Attachment chips */}
+                {replyAttachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {replyAttachments.map((f, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-xs text-gray-700">
+                        <IconPaperclip className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                        <span className="max-w-[120px] truncate">{f.name}</span>
+                        <span className="text-gray-400">· {f.size}</span>
+                        <button type="button" onClick={() => setReplyAttachments((p) => p.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500">
+                          <IconX className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    {replyAttachments.length < MAX_ATTACHMENTS && (
+                      <>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept="image/*,.pdf,.csv,.xlsx,.docx"
+                          className="sr-only"
+                          onChange={(e) => handleFileSelect(e.target.files)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors cursor-pointer"
+                        >
+                          <IconPaperclip className="w-3.5 h-3.5" />
+                          Attach file ({replyAttachments.length}/{MAX_ATTACHMENTS})
+                        </button>
+                      </>
+                    )}
+                  </div>
                   <Button disabled={!reply.trim()} onClick={handleSend}>
                     <IconSend className="w-4 h-4 mr-2" />
                     Send Reply

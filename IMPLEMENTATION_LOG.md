@@ -1784,3 +1784,41 @@ All changes are frontend/mock only. Pattern follows `Transactions.tsx` (existing
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~595 kB (pre-existing warning).
+
+---
+
+### Housekeeping — Batch 3: Transaction/support/earnings flows (2026-05-30)
+
+All changes are frontend/mock only. No new dependencies. No redesigns.
+
+**Issue 18 — Transaction Details: inline "Send a Report" ticket modal**
+- `TransactionDetails.tsx`: added `showReportModal`, `reportForm`, `reportSubmittedId` state; imported `submitTicket`.
+- "Send a Report" button now opens a `Dialog` modal overlaid on the details page (no navigation away).
+- Modal pre-displays the tracking number, has Issue Type Select (pre-selected "Delivery Failed") and Description textarea.
+- On submit: calls `submitTicket()`, sets `reportSubmittedId`, closes modal. The "Need Help?" card then shows a green "Ticket submitted. View [ID]" link instead of the button.
+- No page navigation needed to create a support ticket from a transaction.
+
+**Issue 17 — Support Ticket file attachments (up to 5 files)**
+- `data/supportTickets.ts`: added `TicketAttachment { name, size }` interface; added `attachments?` to `SupportTicket`, `TicketMessage`, and `SubmitTicketInput`; updated `submitTicket` and `addTicketReply` to accept and store attachments.
+- `SupportTickets.tsx`: added `attachments` state, hidden `<input type="file">` via `ref`, `handleFileSelect`, `removeAttachment` helpers, `formatFileSize` utility. Attachment chips rendered with remove button. "Attach file (N/5)" trigger button shown when under cap. `handleSubmit` passes attachments to `submitTicket`.
+- `SupportTicketDetail.tsx`: same pattern for reply composer. Attached files displayed as small chips inside the message bubble after send.
+- Max 5 files. Accepted: `image/*,.pdf,.csv,.xlsx,.docx`. Files captured in local state only — no real upload.
+
+**Issues 19-22 — Earnings: Settlement Detail page with breadcrumb and linked transactions**
+- New `src/app/data/earnings.ts`: `Settlement` and `SettlementTransaction` interfaces, `SETTLEMENT_STATUS_CONFIG`, `SETTLEMENTS` array (5 settlements with 2-4 mock transactions each), `getSettlement(id)`. Tracking numbers re-use existing transactions.ts IDs where applicable.
+- `Earnings.tsx`: imports settlements from `data/earnings` (removed inline const); uses `SETTLEMENT_STATUS_CONFIG` in place of local `statusConfig`; Settlement ID cells are now `<Link>` elements to `/dashboard/earnings/:id`.
+- New `src/app/pages/EarningsSettlementDetail.tsx`: breadcrumb `Earnings › [Settlement ID]`; back button; 3 summary cards (gross / fees / net payout); transaction table (tracking number links → `/dashboard/transactions/:id`, recipient, destination, COD, fees, net, status badge); totals row; not-found state.
+- `routes.tsx`: added `earnings/:settlementId` route under AdminRoute.
+
+**Files changed**
+- Added: `src/app/data/earnings.ts`, `src/app/pages/EarningsSettlementDetail.tsx`
+- Modified: `src/app/pages/Earnings.tsx`, `src/app/pages/TransactionDetails.tsx`, `src/app/data/supportTickets.ts`, `src/app/pages/SupportTickets.tsx`, `src/app/pages/SupportTicketDetail.tsx`, `src/app/routes.tsx`, `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- Settlement transactions are a small curated mock set per settlement; real reconciliation data would come from a backend ledger API.
+- File attachments are local state only (no real upload). The Zendesk `syncTicketToZendesk` stub does not pass attachments through — noted as a future extension point.
+- The "Send a Report" modal on TransactionDetails does not pre-select an issue type based on the transaction's delivery status (always defaults to "Delivery Failed"); a smarter default is a future enhancement.
+- `EarningsSettlementDetail` is Admin-only (behind AdminRoute) matching the Earnings route.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~610 kB (+15 kB from new pages/data — pre-existing warning).

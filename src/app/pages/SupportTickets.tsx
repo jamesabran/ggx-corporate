@@ -1,13 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { IconPlus, IconMessage, IconEye } from '@tabler/icons-react';
+import { IconPlus, IconMessage, IconEye, IconPaperclip, IconX } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
-import { getTickets, submitTicket, type SupportTicket } from '../data/supportTickets';
+import { getTickets, submitTicket, type SupportTicket, type TicketAttachment } from '../data/supportTickets';
+
+const MAX_ATTACHMENTS = 5;
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
 
 const statusConfig = {
   open: { variant: 'pending' as const, label: 'Open' },
@@ -40,6 +48,22 @@ export function SupportTickets() {
 
   // New-ticket form state.
   const [form, setForm] = useState({ trackingNumber: '', issueType: '', description: '' });
+  const [attachments, setAttachments] = useState<TicketAttachment[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+    const slots = MAX_ATTACHMENTS - attachments.length;
+    const added: TicketAttachment[] = Array.from(files).slice(0, slots).map((f) => ({
+      name: f.name,
+      size: formatFileSize(f.size),
+    }));
+    setAttachments((prev) => [...prev, ...added]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (idx: number) =>
+    setAttachments((prev) => prev.filter((_, i) => i !== idx));
 
   // Deep-link from notifications: ?new=1 opens the submit form.
   useEffect(() => {
@@ -47,12 +71,12 @@ export function SupportTickets() {
   }, [searchParams]);
 
   const handleSubmit = () => {
-    if (!form.issueType) return; // issue type required
-    const created = submitTicket(form);
+    if (!form.issueType) return;
+    const created = submitTicket({ ...form, attachments: attachments.length ? attachments : undefined });
     setTickets([...getTickets()]);
     setForm({ trackingNumber: '', issueType: '', description: '' });
+    setAttachments([]);
     setShowNewTicketForm(false);
-    // Open the newly created ticket's detail view.
     navigate(`/dashboard/support-tickets/${created.id}`);
   };
 
@@ -130,9 +154,60 @@ export function SupportTickets() {
               />
             </div>
 
+            {/* File attachments */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Attachments
+                <span className="ml-1.5 text-gray-400 font-normal">
+                  (optional · up to {MAX_ATTACHMENTS} files · images, PDF, CSV)
+                </span>
+              </label>
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {attachments.map((f, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-100 text-xs text-gray-700"
+                    >
+                      <IconPaperclip className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                      <span className="max-w-[140px] truncate">{f.name}</span>
+                      <span className="text-gray-400 flex-shrink-0">· {f.size}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(i)}
+                        className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                      >
+                        <IconX className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {attachments.length < MAX_ATTACHMENTS && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf,.csv,.xlsx,.docx"
+                    className="sr-only"
+                    onChange={(e) => handleFileSelect(e.target.files)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors cursor-pointer"
+                  >
+                    <IconPaperclip className="w-3.5 h-3.5" />
+                    Attach file ({attachments.length}/{MAX_ATTACHMENTS})
+                  </button>
+                </>
+              )}
+            </div>
+
             <div className="flex gap-3">
               <Button disabled={!form.issueType} onClick={handleSubmit}>Submit Ticket</Button>
-              <Button variant="outline" onClick={() => setShowNewTicketForm(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => { setShowNewTicketForm(false); setAttachments([]); }}>Cancel</Button>
             </div>
           </CardContent>
         </Card>

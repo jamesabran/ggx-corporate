@@ -14,6 +14,11 @@ import { pushNotification } from './notifications';
 export type TicketStatus = 'open' | 'in-review' | 'resolved' | 'closed';
 export type TicketPriority = 'high' | 'medium' | 'low';
 
+export interface TicketAttachment {
+  name: string;
+  size: string;
+}
+
 export interface SupportTicket {
   id: string;
   trackingNumber: string;
@@ -24,6 +29,8 @@ export interface SupportTicket {
   created: string;
   lastUpdate: string;
   assignee: string;
+  /** Files attached at submission time (captured in-browser, not uploaded). */
+  attachments?: TicketAttachment[];
   /** External system reference (e.g. Zendesk id) once synced. */
   externalRef?: string;
 }
@@ -56,6 +63,7 @@ export interface TicketMessage {
   role: 'customer' | 'support';
   body: string;
   timestamp: string;
+  attachments?: TicketAttachment[];
 }
 
 // Per-ticket message threads (lazily seeded for tickets without an explicit one).
@@ -89,7 +97,11 @@ export function getTicketMessages(id: string): TicketMessage[] {
 }
 
 /** Append a customer reply to a ticket thread (frontend mock). */
-export function addTicketReply(id: string, body: string): TicketMessage | null {
+export function addTicketReply(
+  id: string,
+  body: string,
+  attachments?: TicketAttachment[]
+): TicketMessage | null {
   const ticket = getTicket(id);
   if (!ticket || !body.trim()) return null;
   const thread = getTicketMessages(id);
@@ -99,6 +111,7 @@ export function addTicketReply(id: string, body: string): TicketMessage | null {
     role: 'customer',
     body: body.trim(),
     timestamp: 'Just now',
+    attachments: attachments?.length ? attachments : undefined,
   };
   thread.push(message);
   ticket.lastUpdate = 'Just now';
@@ -128,6 +141,7 @@ export interface SubmitTicketInput {
   trackingNumber: string;
   issueType: string; // form value (e.g. 'failed')
   description: string;
+  attachments?: TicketAttachment[];
 }
 
 /**
@@ -146,6 +160,7 @@ export function submitTicket(input: SubmitTicketInput): SupportTicket {
     created: new Date().toISOString().split('T')[0],
     lastUpdate: 'Just now',
     assignee: 'Support Team',
+    attachments: input.attachments?.length ? input.attachments : undefined,
   };
 
   const { externalRef } = syncTicketToZendesk(ticket);

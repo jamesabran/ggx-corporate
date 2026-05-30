@@ -12,6 +12,7 @@ import {
   getClaimByTracking, submitClaim, requestCancellation, isCancelled,
   isClaimEligible, isCancelEligible, CLAIM_STATUS_META, CLAIM_REASONS, type Claim,
 } from '../data/claims';
+import { submitTicket } from '../data/supportTickets';
 
 export function TransactionDetails() {
   const navigate = useNavigate();
@@ -19,6 +20,11 @@ export function TransactionDetails() {
   const [rating, setRating] = useState(0);
 
   const transaction = getTransactionByTracking(id);
+
+  // Report ticket modal state.
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportForm, setReportForm] = useState({ issueType: 'failed', description: '' });
+  const [reportSubmittedId, setReportSubmittedId] = useState<string | null>(null);
 
   // Claims & cancellation (frontend/mock) — local view state.
   const [claim, setClaim] = useState<Claim | undefined>(() => (id ? getClaimByTracking(id) : undefined));
@@ -308,11 +314,26 @@ export function TransactionDetails() {
                 <IconMessage className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <h4 className="font-semibold text-blue-900 mb-1">Need Help?</h4>
-                  <p className="text-sm text-blue-800 mb-3">Have questions or issues with this delivery? Our support team is ready to assist you.</p>
-                  <Button size="sm">
-                    <IconFileText className="w-4 h-4 mr-2" />
-                    Send a Report
-                  </Button>
+                  <p className="text-sm text-blue-800 mb-3">
+                    Have questions or issues with this delivery? Our support team is ready to assist you.
+                  </p>
+                  {reportSubmittedId ? (
+                    <div className="flex items-center gap-2 text-sm text-emerald-700">
+                      <IconCircleCheck className="w-4 h-4" />
+                      Ticket submitted.{' '}
+                      <button
+                        className="underline hover:text-emerald-900"
+                        onClick={() => navigate(`/dashboard/support-tickets/${reportSubmittedId}`)}
+                      >
+                        View {reportSubmittedId}
+                      </button>
+                    </div>
+                  ) : (
+                    <Button size="sm" onClick={() => setShowReportModal(true)}>
+                      <IconFileText className="w-4 h-4 mr-2" />
+                      Send a Report
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -412,6 +433,61 @@ export function TransactionDetails() {
         <div className="flex gap-2.5 justify-end pt-5">
           <Button variant="outline" size="sm" onClick={() => setShowClaimForm(false)}>Cancel</Button>
           <Button size="sm" disabled={!claimForm.reason} onClick={handleSubmitClaim}>Submit Claim</Button>
+        </div>
+      </Dialog>
+
+      {/* Send a Report — inline ticket modal */}
+      <Dialog open={showReportModal} onClose={() => setShowReportModal(false)} size="md" title="Send a Report">
+        <p className="text-sm text-gray-500 mb-4">
+          Tracking: <span className="font-medium text-gray-700">{transaction.trackingNumber}</span>.
+          A support ticket will be created and our team will follow up.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Issue type <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={reportForm.issueType}
+              onChange={(e) => setReportForm({ ...reportForm, issueType: e.target.value })}
+            >
+              <option value="failed">Delivery Failed</option>
+              <option value="delayed">Delayed Delivery</option>
+              <option value="damaged">Package Damaged</option>
+              <option value="missing">Missing Package</option>
+              <option value="wrong-address">Wrong Address</option>
+              <option value="billing">Billing Inquiry</option>
+              <option value="other">Other</option>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+            <textarea
+              className="w-full h-24 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Describe the issue (optional)..."
+              value={reportForm.description}
+              onChange={(e) => setReportForm({ ...reportForm, description: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="flex gap-2.5 justify-end pt-5">
+          <Button variant="outline" size="sm" onClick={() => setShowReportModal(false)}>Cancel</Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              const created = submitTicket({
+                trackingNumber: transaction.trackingNumber,
+                issueType: reportForm.issueType,
+                description: reportForm.description,
+              });
+              setReportSubmittedId(created.id);
+              setShowReportModal(false);
+              setReportForm({ issueType: 'failed', description: '' });
+            }}
+          >
+            <IconFileText className="w-3.5 h-3.5 mr-1.5" />
+            Submit Ticket
+          </Button>
         </div>
       </Dialog>
 

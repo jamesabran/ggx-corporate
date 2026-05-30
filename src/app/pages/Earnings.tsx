@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { IconDownload, IconBuilding, IconCircleCheck, IconAlertCircle } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -7,23 +8,9 @@ import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { SETTLEMENTS, SETTLEMENT_STATUS_CONFIG } from '../data/earnings';
 
-const settlements = [
-  { id: 'SET-2026-05-003', source: 'COD', period: 'May 13-18, 2026', grossAmount: 487500, fees: 14625, netAmount: 472875, status: 'scheduled', expectedDate: '2026-05-22', subaccount: 'Acme Corporation' },
-  { id: 'SET-2026-05-002', source: 'COD', period: 'May 6-12, 2026', grossAmount: 523000, fees: 15690, netAmount: 507310, status: 'deposited', expectedDate: '2026-05-15', subaccount: 'Acme Luzon' },
-  { id: 'SET-2026-05-001', source: 'COD', period: 'May 1-5, 2026', grossAmount: 398200, fees: 11946, netAmount: 386254, status: 'deposited', expectedDate: '2026-05-08', subaccount: 'Acme Corporation' },
-  { id: 'SET-2026-04-006', source: 'COD', period: 'Apr 27-30, 2026', grossAmount: 445600, fees: 13368, netAmount: 432232, status: 'deposited', expectedDate: '2026-05-02', subaccount: 'Acme Luzon' },
-  { id: 'SET-2026-04-005', source: 'Online Payment', period: 'Apr 20-26, 2026', grossAmount: 612800, fees: 18384, netAmount: 594416, status: 'processing', expectedDate: '2026-04-29', subaccount: 'Acme Corporation' },
-];
-
-const statusConfig = {
-  pending: { variant: 'pending' as const, label: 'Pending Collection' },
-  processing: { variant: 'info' as const, label: 'Processing' },
-  scheduled: { variant: 'warning' as const, label: 'Scheduled' },
-  deposited: { variant: 'success' as const, label: 'Deposited' },
-  failed: { variant: 'danger' as const, label: 'Failed' },
-  'on-hold': { variant: 'default' as const, label: 'On Hold' },
-};
+const settlements = SETTLEMENTS;
 
 export function Earnings() {
   const { isMainAccountView } = useSubAccounts();
@@ -175,7 +162,14 @@ export function Earnings() {
             <TableBody>
               {settlements.map((settlement) => (
                 <TableRow key={settlement.id}>
-                  <TableCell className="font-medium">{settlement.id}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      to={`/dashboard/earnings/${settlement.id}`}
+                      className="text-blue-600 hover:text-blue-700 hover:underline"
+                    >
+                      {settlement.id}
+                    </Link>
+                  </TableCell>
                   {isMainAccountView() && (
                     <TableCell><span className="text-sm font-medium text-gray-700">{settlement.subaccount}</span></TableCell>
                   )}
@@ -187,8 +181,8 @@ export function Earnings() {
                   <TableCell className="text-gray-600">-₱{settlement.fees.toLocaleString()}</TableCell>
                   <TableCell className="font-medium text-green-700">₱{settlement.netAmount.toLocaleString()}</TableCell>
                   <TableCell>
-                    <Badge variant={statusConfig[settlement.status as keyof typeof statusConfig].variant}>
-                      {statusConfig[settlement.status as keyof typeof statusConfig].label}
+                    <Badge variant={SETTLEMENT_STATUS_CONFIG[settlement.status as keyof typeof SETTLEMENT_STATUS_CONFIG].variant}>
+                      {SETTLEMENT_STATUS_CONFIG[settlement.status as keyof typeof SETTLEMENT_STATUS_CONFIG].label}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-gray-600">{settlement.expectedDate}</TableCell>
