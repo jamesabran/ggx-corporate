@@ -51,9 +51,19 @@ export function UsersPermissions() {
     setSearchParams((prev) => { prev.delete('subaccount'); return prev; });
 
   // When a subaccount filter is active, show the Admin + managers assigned to that account.
-  const displayedUsers = subaccountFilterId
-    ? users.filter((u) => u.role === 'Admin' || u.subaccounts?.includes(subaccountFilterId))
-    : users;
+  // Then apply search on top (name or email, min 2 chars).
+  const displayedUsers = users
+    .filter((u) =>
+      !subaccountFilterId || u.role === 'Admin' || u.subaccounts?.includes(subaccountFilterId)
+    )
+    .filter((u) => {
+      const q = searchQuery.trim().toLowerCase();
+      return (
+        q.length < 2 ||
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q)
+      );
+    });
 
   // ---- Add/Edit modal state ----
   const [modalOpen, setModalOpen] = useState(false);
@@ -155,6 +165,7 @@ export function UsersPermissions() {
     setRemoveTarget(null);
   };
 
+  const [searchQuery, setSearchQuery] = useState('');
   const managerCount = users.filter((u) => u.role === 'Manager').length;
 
   return (
@@ -219,7 +230,17 @@ export function UsersPermissions() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>User List</CardTitle></CardHeader>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle>User List</CardTitle>
+            <Input
+              placeholder="Search by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full sm:w-64"
+            />
+          </div>
+        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
@@ -231,6 +252,15 @@ export function UsersPermissions() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {displayedUsers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-gray-400 text-sm">
+                    {searchQuery.trim().length >= 2
+                      ? 'No users match your search.'
+                      : 'No users found.'}
+                  </TableCell>
+                </TableRow>
+              )}
               {displayedUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>

@@ -1864,3 +1864,49 @@ All changes are frontend/mock only. No new dependencies. No redesigns.
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~612 kB (pre-existing warning, +2 kB from new controls).
+
+---
+
+### Housekeeping — Batch 5: Frontend search (2026-05-30)
+
+Wired the existing and new search inputs across five pages. All filtering is client-side, real-time, min-2-char activation. No new dependencies.
+
+**Transactions.tsx**
+- `searchQuery` state was already declared but never applied. Now filters by tracking number, recipient, and destination (case-insensitive substring).
+- All three existing filter selects (statusFilter, typeFilter, subaccountFilter) were also unconnected — wired in the same pass.
+- Table renders an empty-state row ("No transactions match your search or filters.") when no rows remain.
+- Footer count now reads "Showing N of M transactions" computed from the filtered set.
+- Pagination "Next" button disabled (was already non-functional; clarified visually).
+
+**Claims.tsx**
+- Added `searchQuery` state and `<Input>` in the filter row. Filters by claim ID and tracking number.
+- Empty state copy changes when a search is active ("No claims match your search. Try a different claim ID or tracking number.").
+
+**SlaAlerts.tsx**
+- Added `searchQuery` state and `<Input>` in the filter row. Filters by tracking number and assigned hub/forwarder name.
+- Existing type and subaccount filters stack alongside the search input.
+
+**SupportTickets.tsx**
+- Search `<Input>` already existed with the correct placeholder but had no value/onChange. Wired to new `searchQuery` state. Filters by ticket ID and tracking number.
+- Added empty-state `<TableRow>` for zero-result states.
+
+**UsersPermissions.tsx**
+- Added `searchQuery` state and `<Input>` in the User List card header (right-aligned). Filters by name and email.
+- Added empty-state `<TableRow>` for zero-result states.
+- Search composes with the existing URL-param subaccount filter (`.filter().filter()` chain).
+
+**Search pattern used (consistent across all five pages)**
+- Minimum 2 characters to activate filtering (prevents instant empty results on focus).
+- `query.trim().toLowerCase()` + `.includes()` on relevant string fields.
+- No debounce (data sets are small; real-time is fine).
+- Empty-state messaging distinguishes "no search match" from "genuinely empty".
+
+**Deferred**
+- Global cross-page search (Cmd+K command palette): deferred until backend search APIs exist.
+- Pagination wiring: still non-functional (Next/Previous are visual only); deferred.
+
+**Files changed**
+- Modified: `src/app/pages/Transactions.tsx`, `src/app/pages/Claims.tsx`, `src/app/pages/SlaAlerts.tsx`, `src/app/pages/SupportTickets.tsx`, `src/app/pages/UsersPermissions.tsx`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~614 kB (pre-existing warning).

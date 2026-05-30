@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { IconInfoCircle, IconReceiptRefund } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { getClaims, CLAIM_STATUS_META, type Claim, type ClaimStatus } from '../data/claims';
@@ -17,6 +18,7 @@ export function Claims() {
   const [allClaims] = useState<Claim[]>(() => [...getClaims()]);
   const [statusFilter, setStatusFilter] = useState<'all' | ClaimStatus>('all');
   const [subaccountFilter, setSubaccountFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // In subaccount view, scope to current account only.
   const scopedClaims = mainView
@@ -24,9 +26,14 @@ export function Claims() {
     : allClaims.filter((c) => c.accountId === getCurrentAccountId());
 
   const visible = scopedClaims.filter((c) => {
+    const q = searchQuery.trim().toLowerCase();
+    const searchOk =
+      q.length < 2 ||
+      c.id.toLowerCase().includes(q) ||
+      c.trackingNumber.toLowerCase().includes(q);
     const statusOk = statusFilter === 'all' || c.status === statusFilter;
     const subOk    = !subaccountFilter || c.accountId === subaccountFilter;
-    return statusOk && subOk;
+    return searchOk && statusOk && subOk;
   });
 
   const openCount = scopedClaims.filter(
@@ -45,7 +52,13 @@ export function Claims() {
             )}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Input
+            placeholder="Search by claim ID or tracking number..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full sm:w-64"
+          />
           {mainView && (
             <Select
               value={subaccountFilter}
@@ -93,8 +106,14 @@ export function Claims() {
           {visible.length === 0 ? (
             <div className="py-10 text-center">
               <IconReceiptRefund className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-700">No claims</p>
-              <p className="text-xs text-gray-400 mt-1">Claims you file will appear here.</p>
+              <p className="text-sm font-medium text-gray-700">
+                {searchQuery.trim().length >= 2 ? 'No claims match your search.' : 'No claims'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {searchQuery.trim().length >= 2
+                  ? 'Try a different claim ID or tracking number.'
+                  : 'Claims you file will appear here.'}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">

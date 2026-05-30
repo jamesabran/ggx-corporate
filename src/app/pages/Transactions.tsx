@@ -37,7 +37,7 @@ export function Transactions() {
             <div className="flex-1">
               <Input placeholder="Search by tracking number, recipient, or destination..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               {isMainAccountView() && (
                 <Select value={subaccountFilter} onChange={(e) => setSubaccountFilter(e.target.value)}>
                   <option value="all">All Subaccounts</option>
@@ -63,6 +63,20 @@ export function Transactions() {
           </div>
         </CardHeader>
         <CardContent>
+          {(() => {
+            const q = searchQuery.trim().toLowerCase();
+            const filtered = deliveries.filter((d) => {
+              const searchOk =
+                q.length < 2 ||
+                d.tracking.toLowerCase().includes(q) ||
+                d.recipient.toLowerCase().includes(q) ||
+                d.destination.toLowerCase().includes(q);
+              const statusOk = statusFilter === 'all' || d.status === statusFilter;
+              const typeOk   = typeFilter === 'all'   || d.type.toLowerCase() === typeFilter;
+              const subOk    = subaccountFilter === 'all' || d.subaccount === subaccountFilter;
+              return searchOk && statusOk && typeOk && subOk;
+            });
+            return (
           <Table>
             <TableHeader>
               <TableRow>
@@ -77,7 +91,13 @@ export function Transactions() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {deliveries.map((delivery) => (
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={isMainAccountView() ? 8 : 7} className="text-center py-8 text-gray-400 text-sm">
+                    No transactions match your search or filters.
+                  </TableCell>
+                </TableRow>
+              ) : filtered.map((delivery) => (
                 <TableRow
                   key={delivery.tracking}
                   className="cursor-pointer hover:bg-gray-50 transition-colors"
@@ -110,12 +130,25 @@ export function Transactions() {
               ))}
             </TableBody>
           </Table>
+          ); })()}
 
           <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600">Showing 10 of 2,847 deliveries</p>
+            <p className="text-sm text-gray-600">
+              {(() => {
+                const q = searchQuery.trim().toLowerCase();
+                const count = deliveries.filter((d) => {
+                  const searchOk = q.length < 2 || d.tracking.toLowerCase().includes(q) || d.recipient.toLowerCase().includes(q) || d.destination.toLowerCase().includes(q);
+                  const statusOk = statusFilter === 'all' || d.status === statusFilter;
+                  const typeOk   = typeFilter === 'all'   || d.type.toLowerCase() === typeFilter;
+                  const subOk    = subaccountFilter === 'all' || d.subaccount === subaccountFilter;
+                  return searchOk && statusOk && typeOk && subOk;
+                }).length;
+                return `Showing ${count} of ${deliveries.length} transactions`;
+              })()}
+            </p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled>Previous</Button>
-              <Button variant="outline" size="sm">Next</Button>
+              <Button variant="outline" size="sm" disabled>Next</Button>
             </div>
           </div>
         </CardContent>

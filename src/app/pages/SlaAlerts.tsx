@@ -4,6 +4,7 @@ import { IconMessageDots, IconCircleCheck, IconChevronRight, IconBuildingWarehou
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import {
   getSlaAlerts, sendFollowUp, resolveAlert,
@@ -20,6 +21,7 @@ export function SlaAlerts() {
   const [allAlerts, setAllAlerts] = useState<SlaAlert[]>(() => [...getSlaAlerts()]);
   const [typeFilter, setTypeFilter] = useState<'all' | SlaAlertType>('all');
   const [subaccountFilter, setSubaccountFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const refresh = () => setAllAlerts([...getSlaAlerts()]);
   const handleFollowUp = (id: string) => { sendFollowUp(id); refresh(); };
@@ -30,14 +32,19 @@ export function SlaAlerts() {
     ? allAlerts
     : allAlerts.filter((a) => a.accountId === getCurrentAccountId());
 
-  const noMovement  = scopedAlerts.filter((a) => a.type === 'no_movement' && a.status !== 'resolved').length;
-  const breaches    = scopedAlerts.filter((a) => a.type === 'breach'      && a.status !== 'resolved').length;
+  const noMovement   = scopedAlerts.filter((a) => a.type === 'no_movement' && a.status !== 'resolved').length;
+  const breaches     = scopedAlerts.filter((a) => a.type === 'breach'      && a.status !== 'resolved').length;
   const actionNeeded = scopedAlerts.filter((a) => a.status === 'open').length;
 
   const visible = scopedAlerts.filter((a) => {
+    const q       = searchQuery.trim().toLowerCase();
+    const searchOk =
+      q.length < 2 ||
+      a.trackingNumber.toLowerCase().includes(q) ||
+      a.assignedTo.toLowerCase().includes(q);
     const typeOk = typeFilter === 'all' || a.type === typeFilter;
     const subOk  = !subaccountFilter || a.accountId === subaccountFilter;
-    return typeOk && subOk;
+    return searchOk && typeOk && subOk;
   });
 
   return (
@@ -47,7 +54,13 @@ export function SlaAlerts() {
           <h1 className="text-3xl font-bold text-gray-900">SLA Alerts</h1>
           <p className="text-gray-600 mt-1">Operations monitoring for delivery SLA risks and follow-ups.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Input
+            placeholder="Search by tracking number or hub..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full sm:w-60"
+          />
           {mainView && (
             <Select
               value={subaccountFilter}

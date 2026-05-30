@@ -80,9 +80,17 @@ export function SupportTickets() {
     navigate(`/dashboard/support-tickets/${created.id}`);
   };
 
-  const visibleTickets = tickets.filter(
-    (t) => statusFilter === 'all' || t.status === statusFilter
-  );
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const visibleTickets = tickets.filter((t) => {
+    const q = searchQuery.trim().toLowerCase();
+    const searchOk =
+      q.length < 2 ||
+      t.id.toLowerCase().includes(q) ||
+      t.trackingNumber.toLowerCase().includes(q);
+    const statusOk = statusFilter === 'all' || t.status === statusFilter;
+    return searchOk && statusOk;
+  });
 
   return (
     <div className="p-6 space-y-6">
@@ -217,7 +225,11 @@ export function SupportTickets() {
         <CardHeader>
           <div className="flex flex-col lg:flex-row lg:items-center gap-4">
             <div className="flex-1">
-              <Input placeholder="Search by ticket ID or tracking number..." />
+              <Input
+                placeholder="Search by ticket ID or tracking number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
             <div className="flex gap-3">
               <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
@@ -252,7 +264,15 @@ export function SupportTickets() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleTickets.map((ticket) => (
+              {visibleTickets.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-gray-400 text-sm">
+                    {searchQuery.trim().length >= 2
+                      ? 'No tickets match your search.'
+                      : 'No tickets match the current filter.'}
+                  </TableCell>
+                </TableRow>
+              ) : visibleTickets.map((ticket) => (
                 <TableRow
                   key={ticket.id}
                   className="cursor-pointer"
