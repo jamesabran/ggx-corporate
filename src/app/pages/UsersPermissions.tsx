@@ -1,162 +1,157 @@
 import { useState } from 'react';
 import { useSearchParams, Link } from 'react-router';
-import { IconPlus, IconUserCircle, IconShield, IconEdit, IconTrash, IconAlertTriangle, IconX } from '@tabler/icons-react';
+import {
+  IconPlus, IconUserCircle, IconShield, IconEdit, IconTrash,
+  IconAlertTriangle, IconX, IconCheck,
+} from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
-import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
-import { type AppUser, INITIAL_USERS, SUBACCOUNT_OPTIONS } from '../data/users';
+import {
+  type AppUser,
+  SUBACCOUNT_OPTIONS,
+  MAX_MANAGERS_PER_SUBACCOUNT,
+  getSubaccountName,
+  getSubaccountManagerCount,
+  getUsers,
+  setUsers,
+} from '../data/users';
 
-// Access model:
-// - Admin: one per account, full access to all subaccounts.
-// - Manager: can be assigned to up to 2 subaccounts; each subaccount supports up
-//   to 2 Managers. Subaccounts at capacity are disabled in the assignment select.
-
-const MAX_MANAGERS_PER_SUBACCOUNT = 2;
+// ---------------------------------------------------------------------------
+// Access model
+//   Admin  — one per account; full access to all subaccounts.
+//   Manager — can be assigned to multiple subaccounts (up to MAX per subaccount).
+// ---------------------------------------------------------------------------
 
 function initials(name: string) {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
 export function UsersPermissions() {
-  const [users, setUsers] = useState<AppUser[]>(INITIAL_USERS);
+  // Mirror module state into React so the component is reactive.
+  const [users, setLocalUsers] = useState<AppUser[]>(() => getUsers());
+
+  const syncUsers = (next: AppUser[]) => {
+    setLocalUsers(next);
+    setUsers(next);
+  };
+
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Subaccount filter from URL (?subaccount=<canonical-id>)
+  // URL filter: ?subaccount=<canonical-id>
   const subaccountFilterId = searchParams.get('subaccount');
   const subaccountFilterOption = subaccountFilterId
     ? SUBACCOUNT_OPTIONS.find((s) => s.id === subaccountFilterId)
     : null;
-  const subaccountFilterName = subaccountFilterOption?.name ?? null;
 
-  const clearFilter = () => {
-    setSearchParams((prev) => {
-      prev.delete('subaccount');
-      return prev;
-    });
-  };
+  const clearFilter = () =>
+    setSearchParams((prev) => { prev.delete('subaccount'); return prev; });
 
-  // Displayed rows — filtered when a subaccount filter is active.
-  const displayedUsers = subaccountFilterName
-    ? users.filter(
-        (u) => u.role === 'Admin' || u.subaccounts?.includes(subaccountFilterName)
-      )
+  // When a subaccount filter is active, show the Admin + managers assigned to that account.
+  const displayedUsers = subaccountFilterId
+    ? users.filter((u) => u.role === 'Admin' || u.subaccounts?.includes(subaccountFilterId))
     : users;
 
-  // Add/Edit modal state
+  // ---- Add/Edit modal state ----
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  // Single subaccount selected per Add/Edit action (name string).
-  const [account, setAccount] = useState('');
+  // Subaccount IDs the user is assigned to (multi-select via checkboxes).
+  const [selectedSubs, setSelectedSubs] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
-
-  // Remove confirmation
   const [removeTarget, setRemoveTarget] = useState<AppUser | null>(null);
 
   const editingUser = editingId ? users.find((u) => u.id === editingId) : null;
   const isAdminEdit = editingUser?.role === 'Admin';
 
-  /** How many managers (excluding editingId) are already assigned to `sub`. */
-  const managersOf = (sub: string, excludeId?: string) =>
-    users.filter(
-      (u) => u.role === 'Manager' && u.subaccounts?.includes(sub) && u.id !== excludeId
+  const toggleSub = (id: string) =>
+    setSelectedSubs((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
     );
 
-  const isSubaccountFull = (sub: string, excludeId?: string) =>
-    managersOf(sub, excludeId).length >= MAX_MANAGERS_PER_SUBACCOUNT;
-
   const openAdd = () => {
-    setEditingId(null);
-    setName('');
-    setEmail('');
-    setAccount('');
-    setFormError(null);
-    setModalOpen(true);
+    setEditingId(null); setName(''); setEmail('');
+    setSelectedSubs([]); setFormError(null); setModalOpen(true);
   };
 
   const openEdit = (u: AppUser) => {
-    setEditingId(u.id);
-    setName(u.name);
-    setEmail(u.email);
-    // Pre-fill with the first assigned subaccount (single-select edit).
-    setAccount(u.role === 'Admin' ? 'main' : (u.subaccounts?.[0] ?? ''));
-    setFormError(null);
-    setModalOpen(true);
+    setEditingId(u.id); setName(u.name); setEmail(u.email);
+    setSelectedSubs(u.subaccounts ?? []); setFormError(null); setModalOpen(true);
   };
 
   const closeModal = () => {
-    setModalOpen(false);
-    setEditingId(null);
-    setName('');
-    setEmail('');
-    setAccount('');
-    setFormError(null);
+    setModalOpen(false); setEditingId(null); setName('');
+    setEmail(''); setSelectedSubs([]); setFormError(null);
   };
 
   const commit = () => {
-    setUsers((prev) => {
-      if (editingId) {
-        return prev.map((u) => {
-          if (u.id !== editingId) return u;
-          if (isAdminEdit) return { ...u, name: name.trim(), email };
-          // For Manager edit: replace first subaccount assignment with the newly selected one,
-          // keeping any other subaccounts the user may already have.
-          const rest = (u.subaccounts ?? []).slice(1);
-          return { ...u, name: name.trim(), email, subaccounts: [account, ...rest] };
-        });
-      }
-      // Add: merge into an existing Manager row with the same email if present.
-      const existing = prev.find((u) => u.role === 'Manager' && u.email === email.trim());
-      if (existing) {
-        return prev.map((u) =>
-          u.id === existing.id
-            ? { ...u, name: name.trim(), subaccounts: [...(u.subaccounts ?? []), account] }
-            : u
-        );
-      }
-      return [
-        ...prev,
+    if (editingId) {
+      syncUsers(users.map((u) => {
+        if (u.id !== editingId) return u;
+        if (isAdminEdit) return { ...u, name: name.trim(), email: email.trim() };
+        return { ...u, name: name.trim(), email: email.trim(), subaccounts: selectedSubs };
+      }));
+    } else {
+      syncUsers([
+        ...users,
         {
           id: Date.now().toString(),
           name: name.trim(),
           email: email.trim(),
           role: 'Manager' as const,
-          subaccounts: [account],
+          subaccounts: selectedSubs,
         },
-      ];
-    });
+      ]);
+    }
     closeModal();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) { setFormError("Enter the user's name."); return; }
-    if (!email.trim() || !email.includes('@')) { setFormError('Enter a valid email address.'); return; }
-    if (isAdminEdit) { commit(); return; }
-    if (!account) { setFormError('Select a subaccount to assign this user as Manager.'); return; }
-
-    // Prevent assigning someone to a subaccount they already manage.
-    const existingManagerRow = users.find((u) => u.role === 'Manager' && u.email === email.trim() && u.id !== editingId);
-    if (existingManagerRow?.subaccounts?.includes(account)) {
-      setFormError(`${name.trim() || email} is already a manager for ${account}.`);
-      return;
+    if (!email.trim() || !email.includes('@')) {
+      setFormError('Enter a valid email address.'); return;
     }
-    // Prevent assigning to a full subaccount.
-    if (isSubaccountFull(account, editingId ?? undefined)) {
-      setFormError(`${account} already has ${MAX_MANAGERS_PER_SUBACCOUNT} managers. Remove one before adding another.`);
-      return;
+    if (isAdminEdit) { commit(); return; }
+
+    // Add: prevent duplicate email
+    if (!editingId) {
+      const duplicate = users.find(
+        (u) => u.email.trim().toLowerCase() === email.trim().toLowerCase()
+      );
+      if (duplicate) {
+        setFormError(
+          `${email.trim()} already exists. Use Edit to change their subaccount assignments.`
+        );
+        return;
+      }
+    }
+
+    if (selectedSubs.length === 0) {
+      setFormError('Select at least one subaccount to assign this Manager.'); return;
+    }
+
+    // Validate capacity for each selected subaccount.
+    for (const subId of selectedSubs) {
+      const count = getSubaccountManagerCount(subId, editingId ?? undefined);
+      if (count >= MAX_MANAGERS_PER_SUBACCOUNT) {
+        setFormError(
+          `${getSubaccountName(subId)} already has ${MAX_MANAGERS_PER_SUBACCOUNT} managers. ` +
+          `Remove one before assigning another.`
+        );
+        return;
+      }
     }
     commit();
   };
 
   const confirmRemove = () => {
     if (!removeTarget) return;
-    setUsers((prev) => prev.filter((u) => u.id !== removeTarget.id));
+    syncUsers(users.filter((u) => u.id !== removeTarget.id));
     setRemoveTarget(null);
   };
 
@@ -166,8 +161,10 @@ export function UsersPermissions() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Users & Permissions</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage who can access your account and subaccounts</p>
+          <h1 className="text-2xl font-bold text-gray-900">Users &amp; Permissions</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Manage who can access your account and subaccounts
+          </p>
         </div>
         <Button onClick={openAdd}>
           <IconPlus className="w-4 h-4 mr-2" />
@@ -176,10 +173,11 @@ export function UsersPermissions() {
       </div>
 
       {/* Subaccount filter banner */}
-      {subaccountFilterName && (
+      {subaccountFilterOption && (
         <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
           <p className="text-sm text-blue-800">
-            Showing users for <span className="font-semibold">{subaccountFilterName}</span>.
+            Showing users for{' '}
+            <span className="font-semibold">{subaccountFilterOption.name}</span>.
           </p>
           <button
             onClick={clearFilter}
@@ -205,7 +203,6 @@ export function UsersPermissions() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
@@ -228,7 +225,7 @@ export function UsersPermissions() {
             <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
-                <TableHead>Role / Assigned accounts</TableHead>
+                <TableHead>Role / Assigned subaccounts</TableHead>
                 <TableHead>Access</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -251,15 +248,16 @@ export function UsersPermissions() {
                     {user.role === 'Admin' ? (
                       <Badge variant="info">Admin</Badge>
                     ) : (
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="default">Manager</Badge>
-                        </div>
-                        {(user.subaccounts ?? []).map((sub) => (
-                          <span key={sub} className="text-sm text-gray-600 leading-snug">
-                            · {sub}
+                      <div className="flex flex-col gap-0.5">
+                        <Badge variant="default" className="w-fit">Manager</Badge>
+                        {(user.subaccounts ?? []).map((subId) => (
+                          <span key={subId} className="text-sm text-gray-600 leading-snug">
+                            · {getSubaccountName(subId)}
                           </span>
                         ))}
+                        {(user.subaccounts ?? []).length === 0 && (
+                          <span className="text-xs text-gray-400 italic">No subaccount assigned</span>
+                        )}
                       </div>
                     )}
                   </TableCell>
@@ -279,8 +277,7 @@ export function UsersPermissions() {
                         Edit
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="sm"
+                        variant="ghost" size="sm"
                         className="text-red-600 hover:bg-red-50 disabled:text-gray-300"
                         disabled={user.role === 'Admin'}
                         title={user.role === 'Admin' ? 'The account Admin cannot be removed' : 'Remove access'}
@@ -295,66 +292,122 @@ export function UsersPermissions() {
               ))}
             </TableBody>
           </Table>
+
+          {subaccountFilterOption && displayedUsers.filter((u) => u.role === 'Manager').length === 0 && (
+            <div className="text-center py-8 text-gray-500 text-sm">
+              No managers assigned to{' '}
+              <span className="font-medium text-gray-700">{subaccountFilterOption.name}</span> yet.{' '}
+              <Link to="/dashboard/users-permissions" className="text-blue-600 hover:underline" onClick={clearFilter}>
+                View all users
+              </Link>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Add / Edit user modal */}
+      {/* Add / Edit modal */}
       <Dialog open={modalOpen} onClose={closeModal} size="md">
         <h3 className="text-base font-semibold text-gray-900">
-          {editingId ? 'Edit user access' : 'Add user access'}
+          {editingId ? 'Edit user' : 'Add new user'}
         </h3>
         <p className="text-sm text-gray-500 mt-1 mb-5">
-          Assign a user to manage one or more subaccounts.
+          {editingId
+            ? 'Update name, email, or subaccount assignments.'
+            : 'Add a new user and assign them as Manager to one or more subaccounts.'}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Name</label>
-            <Input required placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input
+              required
+              placeholder="Full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
             <Input
-              type="email"
-              required
+              type="email" required
               placeholder="user@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={!!editingId} // email is the unique key; allow edit if you extend later
             />
           </div>
 
           {isAdminEdit ? (
             <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
               Role: <span className="font-medium text-gray-800">Admin</span> · Access: All accounts.
-              The Admin role cannot be reassigned here.
+              The Admin role and access cannot be changed here.
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                {editingId ? 'Primary subaccount' : 'Assign to subaccount'}
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Assigned subaccounts
+                <span className="ml-1 text-gray-400 font-normal">(select one or more)</span>
               </label>
-              <Select value={account} onChange={(e) => setAccount(e.target.value)}>
-                <option value="">Select subaccount</option>
-                <option value="main" disabled>Main account — Admin already assigned</option>
+              <div className="space-y-2 rounded-lg border border-gray-200 p-3 bg-gray-50">
                 {SUBACCOUNT_OPTIONS.map((s) => {
-                  const full = isSubaccountFull(s.name, editingId ?? undefined);
+                  const count = getSubaccountManagerCount(s.id, editingId ?? undefined);
+                  const alreadySelected = selectedSubs.includes(s.id);
+                  const full = count >= MAX_MANAGERS_PER_SUBACCOUNT && !alreadySelected;
+                  const capacityLabel =
+                    full ? 'Full' : `${count}/${MAX_MANAGERS_PER_SUBACCOUNT} managers`;
                   return (
-                    <option key={s.id} value={s.name} disabled={full}>
-                      {s.name}{full ? ' (Full)' : ''}
-                    </option>
+                    <label
+                      key={s.id}
+                      className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 border transition-colors cursor-pointer ${
+                        full
+                          ? 'opacity-50 cursor-not-allowed bg-white border-gray-200'
+                          : alreadySelected
+                          ? 'bg-blue-50 border-blue-300'
+                          : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                            alreadySelected
+                              ? 'bg-blue-600 border-blue-600'
+                              : 'border-gray-300 bg-white'
+                          }`}
+                          onClick={!full ? () => toggleSub(s.id) : undefined}
+                        >
+                          {alreadySelected && <IconCheck className="w-2.5 h-2.5 text-white" />}
+                        </div>
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={alreadySelected}
+                          disabled={full}
+                          onChange={() => !full && toggleSub(s.id)}
+                        />
+                        <span className="text-sm font-medium text-gray-800 leading-snug">
+                          {s.name}
+                        </span>
+                      </div>
+                      <span
+                        className={`text-xs font-medium flex-shrink-0 ${
+                          full ? 'text-red-500' : 'text-gray-400'
+                        }`}
+                      >
+                        {capacityLabel}
+                      </span>
+                    </label>
                   );
                 })}
-              </Select>
+              </div>
               <p className="text-xs text-gray-500 mt-1.5">
                 Each subaccount supports up to {MAX_MANAGERS_PER_SUBACCOUNT} Managers.
-                To assign an existing Manager to another subaccount, use <strong>Add User</strong> again with their email.
               </p>
             </div>
           )}
 
           {formError && (
-            <div className="flex items-center gap-2 text-sm text-red-600">
-              <IconAlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-start gap-2 text-sm text-red-600">
+              <IconAlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               {formError}
             </div>
           )}
@@ -375,31 +428,21 @@ export function UsersPermissions() {
           title="Remove user access?"
           description={
             <>
-              <span className="font-medium text-gray-700">{removeTarget.name}</span> ({removeTarget.email}) will
-              lose access
-              {(removeTarget.subaccounts?.length ?? 0) > 0 ? (
-                <> to <span className="font-medium text-gray-700">{removeTarget.subaccounts!.join(', ')}</span></>
-              ) : (
-                ''
-              )}
-              . This can be re-added later.
+              <span className="font-medium text-gray-700">{removeTarget.name}</span>{' '}
+              ({removeTarget.email}) will lose access
+              {(removeTarget.subaccounts?.length ?? 0) > 0 && (
+                <> to{' '}
+                  <span className="font-medium text-gray-700">
+                    {removeTarget.subaccounts!.map(getSubaccountName).join(', ')}
+                  </span>
+                </>
+              )}. This can be re-added later.
             </>
           }
           confirmLabel="Remove Access"
           variant="destructive"
           confirmIcon={<IconTrash className="w-3.5 h-3.5 mr-1.5" />}
         />
-      )}
-
-      {/* No users in filtered view */}
-      {subaccountFilterName && displayedUsers.filter((u) => u.role === 'Manager').length === 0 && (
-        <div className="text-center py-8 text-gray-500 text-sm">
-          No managers assigned to{' '}
-          <span className="font-medium text-gray-700">{subaccountFilterName}</span> yet.{' '}
-          <Link to="/dashboard/users-permissions" className="text-blue-600 hover:underline" onClick={clearFilter}>
-            View all users
-          </Link>
-        </div>
       )}
     </div>
   );

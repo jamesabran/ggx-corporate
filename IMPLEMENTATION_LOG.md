@@ -1639,3 +1639,60 @@ Five targeted fixes to align subaccount data, user terminology, navigation, and 
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts remains a separate ~431 kB chunk; main bundle ~584 kB (pre-existing warning).
+
+---
+
+### Housekeeping — Batch 1 Fix: Subaccount/user-management alignment corrections (2026-05-30)
+
+Follow-up corrections to Batch 1. Addresses the root cause of missing subaccounts, aligns manager assignment logic, improves all related pages, and makes Settings context-aware. Frontend/mock only.
+
+**Root cause fix — subaccounts missing from all switchers**
+- `SubAccountContext.tsx`: Added `DEMO_SUBACCOUNTS` constant (both Acme Corporation + Acme Luzon with canonical IDs and authoritative mock data).
+- Added `mergeWithDemoSubaccounts()`: on provider init, if `subAccountsEnabled === true`, any canonical demo subaccounts missing from persisted localStorage state are merged in. This is a migration fix for sessions where only one subaccount was previously saved.
+- `enableSubAccounts()` signature simplified: always seeds `DEMO_SUBACCOUNTS` regardless of `firstSubAccount` argument (arg kept for backwards compat but ignored). After enabling, `currentAccount` starts at `'main'` (Main Account view) rather than jumping directly into a subaccount.
+- All switchers (topbar modal, sidebar panel, account options array) derive from `subAccounts` in context — fixing the context fixes all of them at once.
+- `EnableSubAccountsSetup.tsx`: removed the now-redundant `addSubAccount` call; updated success screen copy to name both subaccounts.
+
+**`data/users.ts` — IDs, module state, helpers**
+- `AppUser.subaccounts?: string[]` now stores canonical **subaccount IDs** (not names). All matching uses IDs.
+- INITIAL_USERS seed updated: `['acme-corporation', 'acme-luzon']` instead of display names.
+- Module-level mutable state (`SESSION_USERS`) with `getUsers()`/`setUsers()` — same pattern as claims/SLA. Both `UsersPermissions` and `SubAccountSettings` share the same live state so manager changes are reflected cross-page within a session.
+- New helpers: `getManagersForSubaccount(id)`, `getSubaccountManagerCount(id, excludeUserId?)`, `getSubaccountName(id)`.
+
+**`UsersPermissions.tsx` — clean model, multi-checkbox**
+- Uses `getUsers()`/`setUsers()` (module state) instead of isolated local seed.
+- `subaccountFilterId` filter now matches on IDs directly (no name lookup needed).
+- **Add User**: prevents duplicate email (`User already exists. Use Edit…`). Does not merge into existing users.
+- **Edit User**: replaced single Select with a styled checkbox list. Each subaccount shows capacity `(1/2 managers)` or `Full`. Admin cannot select a full subaccount unless the user being edited is already assigned to it. Both Add and Edit support selecting multiple subaccounts.
+- Removed the confusing "Main account — Admin already assigned" Select option.
+- Table display resolves subaccount names from IDs via `getSubaccountName()`.
+
+**`SubAccounts.tsx` — Primary/Backup display, removed Manage Users**
+- Removed the "Manage Users" button (manager assignment is now handled in Subaccount Settings per the "move to Settings if complex" guidance; navigating away broke the page-level UX).
+- Added `ManagerSlot` component: shows Primary Manager and Backup Manager slots per subaccount card, using `getManagersForSubaccount(id)` from the module. Vacant slots show "Vacant" with a placeholder icon.
+- Subaccount card layout updated: 4-column grid (Primary Manager | Backup Manager | Pickup Address | Total Bookings).
+
+**`SubAccountSettings.tsx` — Admin-editable manager assignment**
+- Manager section uses `getUsers()`/`setUsers()` for live data; local React state mirrors the module.
+- Admin view: "Edit Assignments" button reveals two `Select` dropdowns (Primary Manager, Backup Manager). Options exclude the other slot's selection. Saving validates no duplicates and rewires the `AppUser.subaccounts` arrays in module state.
+- Manager view: read-only display (no Edit button). Note: "Manager self-service assignment deferred — requires activity logs and stricter permissions."
+- "Vacant" displayed for empty slots.
+
+**`Settings.tsx` — context-aware subaccount banner**
+- When viewing a specific subaccount (`subAccountsEnabled && !isMainAccountView()`): shows a blue info card at the top explaining the page is main-account settings, with a link to the subaccount's dedicated settings page.
+- Page subtitle updates to "Main account settings — you are viewing as [Subaccount Name]".
+- All existing sections (Account Info, Notifications, Security, Enable Subaccounts promo) are unchanged.
+
+**Files changed**
+- Modified: `src/app/data/users.ts`, `src/app/contexts/SubAccountContext.tsx`, `src/app/pages/EnableSubAccountsSetup.tsx`, `src/app/pages/UsersPermissions.tsx`, `src/app/pages/SubAccounts.tsx`, `src/app/pages/SubAccountSettings.tsx`, `src/app/pages/Settings.tsx`, `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- `SubAccount.assignedManager: string` field kept on the SubAccount type (display-only). The definitive manager list per subaccount is derived from `data/users.ts`. These two are intentionally separate — context field is a snapshot, users module is the source of truth.
+- `SESSION_USERS` is in-memory (module-level); refreshing the page resets to `INITIAL_USERS`. Persistence of user changes is deferred until backend integration.
+- Manager self-service assignment (a Manager assigning another Manager) is deferred — requires activity log infrastructure per product rules.
+- The 2-manager cap is enforced in UI only; no server-side validation.
+- Email editing is disabled in the Edit User modal (email is the unique key; enabling edits would require a proper user identity system).
+- Acme Visayas stays in `data/accounts.ts` canonical map for notification scoping; no subaccount seed needed.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~431 kB lazy chunk; main bundle ~591 kB (pre-existing warning).

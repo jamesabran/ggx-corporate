@@ -1,40 +1,150 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
-  IconBuilding,
-  IconArrowRight,
-  IconMapPin,
-  IconUsers,
-  IconInfoCircle,
+  IconBuilding, IconArrowRight, IconMapPin, IconUsers,
+  IconInfoCircle, IconDeviceFloppy,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Select } from '../components/ui/Select';
 import { useSubAccounts } from '../contexts/SubAccountContext';
-import { INITIAL_USERS, SUBACCOUNT_OPTIONS } from '../data/users';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  type AppUser,
+  SUBACCOUNT_OPTIONS,
+  MAX_MANAGERS_PER_SUBACCOUNT,
+  getSubaccountName,
+  getSubaccountManagerCount,
+  getUsers,
+  setUsers,
+} from '../data/users';
 
 function initials(name: string) {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
+function ManagerDisplay({ label, manager }: { label: string; manager: AppUser | null }) {
+  if (!manager) {
+    return (
+      <div className="flex items-center gap-3 py-2">
+        <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+          <IconUsers className="w-4 h-4 text-gray-400" />
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 font-medium leading-none mb-0.5">{label}</p>
+          <p className="text-sm text-gray-400 italic">Vacant</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0">
+        <span className="text-xs font-bold text-white">{initials(manager.name)}</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-gray-500 font-medium leading-none mb-0.5">{label}</p>
+        <p className="text-sm font-medium text-gray-900 leading-snug">{manager.name}</p>
+        <p className="text-xs text-gray-500 leading-snug">{manager.email}</p>
+      </div>
+      <Badge variant="default" className="text-[10px] flex-shrink-0">Manager</Badge>
+    </div>
+  );
+}
+
 export function SubAccountSettings() {
   const { id } = useParams<{ id: string }>();
   const { subAccounts } = useSubAccounts();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
-  // Look up in live context first; fall back to canonical options for deep-linking.
   const subAccount = subAccounts.find((sa) => sa.id === id);
   const subaccountName =
     subAccount?.name ?? SUBACCOUNT_OPTIONS.find((s) => s.id === id)?.name ?? null;
 
+  // Mirror module users into local state so this page is reactive.
+  const [allUsers, setLocalAllUsers] = useState<AppUser[]>(() => getUsers());
+
+  const syncUsers = (next: AppUser[]) => {
+    setLocalAllUsers(next);
+    setUsers(next);
+  };
+
+  const managers = id ? allUsers.filter(
+    (u) => u.role === 'Manager' && u.subaccounts?.includes(id)
+  ) : [];
+
+  const primary = managers[0] ?? null;
+  const backup  = managers[1] ?? null;
+
+  // Editable manager assignment (Admin only).
+  const [editingManagers, setEditingManagers] = useState(false);
+  const [primaryId,  setPrimaryId]  = useState<string>(primary?.id  ?? '');
+  const [backupId,   setBackupId]   = useState<string>(backup?.id   ?? '');
+  const [saveError,  setSaveError]  = useState<string | null>(null);
+
+  const startEditing = () => {
+    setPrimaryId(primary?.id  ?? '');
+    setBackupId(backup?.id   ?? '');
+    setSaveError(null);
+    setEditingManagers(true);
+  };
+
+  const cancelEditing = () => {
+    setEditingManagers(false);
+    setSaveError(null);
+  };
+
+  const saveManagers = () => {
+    if (!id) return;
+    if (primaryId === backupId && primaryId !== '') {
+      setSaveError('Primary and Backup Manager must be different people.');
+      return;
+    }
+
+    // Validate capacity for new assignments (ignoring current assignments to this subaccount).
+    const newAssignees = [primaryId, backupId].filter(Boolean);
+    if (newAssignees.length > MAX_MANAGERS_PER_SUBACCOUNT) {
+      setSaveError(`A subaccount can have at most ${MAX_MANAGERS_PER_SUBACCOUNT} managers.`);
+      return;
+    }
+
+    // Rebuild user list: remove this subaccount from anyone who's no longer assigned,
+    // then add it to the new assignees.
+    const updated = allUsers.map((u): AppUser => {
+      if (u.role !== 'Manager') return u;
+      const withoutThis = (u.subaccounts ?? []).filter((s) => s !== id);
+      if (newAssignees.includes(u.id)) {
+        return { ...u, subaccounts: [...withoutThis, id] };
+      }
+      return { ...u, subaccounts: withoutThis };
+    });
+
+    syncUsers(updated);
+    setEditingManagers(false);
+    setSaveError(null);
+  };
+
+  // All Manager users available to assign (for dropdowns).
+  const managerUsers = allUsers.filter((u) => u.role === 'Manager');
+
+  // Options for Primary select: all managers not already chosen as Backup.
+  const primaryOptions = managerUsers.filter((u) => u.id !== backupId);
+  // Options for Backup select: all managers not already chosen as Primary.
+  const backupOptions  = managerUsers.filter((u) => u.id !== primaryId);
+
+  // ---- Not found ----
   if (!subAccount) {
     return (
       <div className="p-6 space-y-4">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Link to="/dashboard/subaccounts" className="hover:text-blue-600 transition-colors">
+        <nav className="flex items-center gap-2 text-sm">
+          <Link to="/dashboard/subaccounts" className="text-gray-500 hover:text-blue-600 transition-colors">
             Subaccounts
           </Link>
-          <span>›</span>
+          <span className="text-gray-400">›</span>
           <span className="text-gray-900 font-semibold">Settings</span>
-        </div>
+        </nav>
         <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
           <IconInfoCircle className="w-4 h-4 flex-shrink-0" />
           Subaccount not found. It may not be enabled yet, or the ID is invalid.
@@ -46,19 +156,11 @@ export function SubAccountSettings() {
     );
   }
 
-  // Managers assigned to this subaccount (from the shared user seed).
-  const managers = INITIAL_USERS.filter(
-    (u) => u.role === 'Manager' && u.subaccounts?.includes(subaccountName ?? '')
-  );
-
   return (
     <div className="p-6 space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm">
-        <Link
-          to="/dashboard/subaccounts"
-          className="text-gray-500 hover:text-blue-600 transition-colors"
-        >
+        <Link to="/dashboard/subaccounts" className="text-gray-500 hover:text-blue-600 transition-colors">
           Subaccounts
         </Link>
         <span className="text-gray-400">›</span>
@@ -70,7 +172,7 @@ export function SubAccountSettings() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Subaccount Settings</h1>
         <p className="text-sm text-gray-600 mt-1">
-          View settings for <span className="font-medium">{subAccount.name}</span>
+          Settings for <span className="font-medium">{subAccount.name}</span>
         </p>
       </div>
 
@@ -96,14 +198,14 @@ export function SubAccountSettings() {
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Type</p>
-              <Badge variant="info" className="capitalize">
+              <Badge variant="info">
                 {subAccount.type === 'default' ? 'Default' : 'Additional'}
               </Badge>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Status</p>
-              <Badge variant={subAccount.status === 'active' ? 'success' : 'default'} className="capitalize">
-                {subAccount.status}
+              <Badge variant={subAccount.status === 'active' ? 'success' : 'default'}>
+                {subAccount.status === 'active' ? 'Active' : 'Inactive'}
               </Badge>
             </div>
             <div>
@@ -128,47 +230,88 @@ export function SubAccountSettings() {
               <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
                 <IconUsers className="w-5 h-5 text-emerald-600" />
               </div>
-              <CardTitle>Assigned Managers</CardTitle>
+              <div>
+                <CardTitle>Assigned Managers</CardTitle>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Up to {MAX_MANAGERS_PER_SUBACCOUNT} managers per subaccount
+                </p>
+              </div>
             </div>
-            <Link to={`/dashboard/users-permissions?subaccount=${id}`}>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                Manage in Users &amp; Permissions
-                <IconArrowRight className="w-3.5 h-3.5" />
+            {isAdmin && !editingManagers && (
+              <Button
+                variant="outline" size="sm"
+                onClick={startEditing}
+              >
+                Edit Assignments
               </Button>
-            </Link>
+            )}
           </div>
         </CardHeader>
         <CardContent>
-          {managers.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              No managers assigned to this subaccount yet.{' '}
-              <Link
-                to={`/dashboard/users-permissions?subaccount=${id}`}
-                className="text-blue-600 hover:underline"
-              >
-                Add one
-              </Link>
-              .
-            </p>
+          {editingManagers ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Primary Manager
+                </label>
+                <Select
+                  value={primaryId}
+                  onChange={(e) => setPrimaryId(e.target.value)}
+                >
+                  <option value="">— Vacant —</option>
+                  {primaryOptions.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Backup Manager
+                </label>
+                <Select
+                  value={backupId}
+                  onChange={(e) => setBackupId(e.target.value)}
+                >
+                  <option value="">— Vacant —</option>
+                  {backupOptions.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
+                  ))}
+                </Select>
+              </div>
+              {saveError && (
+                <p className="text-sm text-red-600 flex items-center gap-1.5">
+                  <IconInfoCircle className="w-4 h-4 flex-shrink-0" />
+                  {saveError}
+                </p>
+              )}
+              <div className="flex gap-2.5 pt-1">
+                <Button size="sm" onClick={saveManagers}>
+                  <IconDeviceFloppy className="w-3.5 h-3.5 mr-1.5" />
+                  Save
+                </Button>
+                <Button size="sm" variant="outline" onClick={cancelEditing}>Cancel</Button>
+              </div>
+              <p className="text-xs text-gray-400">
+                Only add users who exist in{' '}
+                <Link to="/dashboard/users-permissions" className="text-blue-600 hover:underline">
+                  Users &amp; Permissions
+                </Link>
+                . To add a new user, go there first.
+              </p>
+            </div>
           ) : (
-            <div className="space-y-3">
-              {managers.map((m) => (
-                <div key={m.id} className="flex items-center gap-3 py-2">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-white">{initials(m.name)}</span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 leading-snug">{m.name}</p>
-                    <p className="text-xs text-gray-500 leading-snug">{m.email}</p>
-                  </div>
-                  <Badge variant="default" className="text-[10px]">Manager</Badge>
-                </div>
-              ))}
+            <div className="divide-y divide-gray-100">
+              <ManagerDisplay label="Primary Manager" manager={primary} />
+              <ManagerDisplay label="Backup Manager"  manager={backup} />
             </div>
           )}
-          <p className="text-xs text-gray-400 mt-4">
-            Up to 2 Managers can be assigned per subaccount.
-          </p>
+
+          {!isAdmin && (
+            <p className="text-xs text-gray-400 mt-4">
+              Manager assignments are managed by the account Admin.
+              {/* Future: self-service assignment requires activity logs and stricter permissions. */}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -192,8 +335,8 @@ export function SubAccountSettings() {
         </CardHeader>
         <CardContent>
           <p className="text-xs text-gray-500 mb-3">
-            Primary pickup address used for bookings under this subaccount. Manage
-            pickup addresses in the Address Book.
+            Primary pickup address for bookings under this subaccount.
+            Manage pickup addresses in the Address Book.
           </p>
           {subAccount.pickupAddress ? (
             <div className="flex items-start gap-2 text-sm text-gray-700">

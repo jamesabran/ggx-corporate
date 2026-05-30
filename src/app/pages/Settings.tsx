@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router';
-import { IconBuilding, IconArrowRight, IconEdit } from '@tabler/icons-react';
+import { useNavigate, Link } from 'react-router';
+import { IconBuilding, IconArrowRight, IconEdit, IconSettings } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -24,16 +24,55 @@ const companyAddress: Address = {
 
 export function Settings() {
   const navigate = useNavigate();
-  const { subAccountsEnabled } = useSubAccounts();
+  const { subAccountsEnabled, isMainAccountView, getCurrentAccountName, getCurrentAccountId } = useSubAccounts();
+
+  // When the user is viewing a specific subaccount (not Main Account), surface a
+  // contextual banner pointing to that subaccount's dedicated settings page.
+  const inSubaccountView = subAccountsEnabled && !isMainAccountView();
+  const subaccountId   = inSubaccountView ? getCurrentAccountId()   : null;
+  const subaccountName = inSubaccountView ? getCurrentAccountName() : null;
 
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">Manage your account preferences and settings</p>
+        <p className="text-gray-600 mt-1">
+          {inSubaccountView
+            ? `Main account settings — you are viewing as ${subaccountName}`
+            : 'Manage your account preferences and settings'}
+        </p>
       </div>
 
       <div className="grid gap-6 max-w-3xl">
+        {/* Subaccount context banner — shown when drilling into a subaccount */}
+        {inSubaccountView && subaccountId && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <IconSettings className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-blue-900 mb-0.5">
+                    Subaccount-specific settings
+                  </p>
+                  <p className="text-sm text-blue-800 mb-3">
+                    You are currently viewing <strong>{subaccountName}</strong>. This page shows
+                    main-account settings. For pickup address, manager assignments, and
+                    subaccount-level configuration, visit the subaccount settings page.
+                  </p>
+                  <Link to={`/dashboard/subaccounts/${subaccountId}/settings`}>
+                    <Button size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100">
+                      Open Subaccount Settings
+                      <IconArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {!subAccountsEnabled && (
           <Card className="border-blue-200 bg-blue-50">
             <CardHeader>
