@@ -2477,3 +2477,29 @@ Created `services/earningsService.ts` and migrated `Earnings.tsx` and `EarningsS
 
 **Validation result**
 - `npm run build` passes — 0 TypeScript errors.
+
+---
+
+### Service Layer — ticketsService + Support Tickets migration (2026-05-31)
+
+Created `services/ticketsService.ts` and migrated the support-tickets domain consumers off direct `data/supportTickets` imports. No visible behavior changed.
+
+**New `services/ticketsService.ts`**
+- Async: `getTicketsList(filters?)`, `getTicketById(id)`, `getTicketThread(id)`, `createTicket(input)`, `replyToTicket(id, body, attachments?)`. Re-exports types.
+- Documented: tickets owned by the support system (Zendesk) via the BFF; status/assignee/priority backend-owned. Submit/reply side effects (notification push + Zendesk sync inside the data layer) are backend-event stand-ins (§1c).
+
+**Changes**
+- `pages/SupportTickets.tsx`: list loads via `getTicketsList()` (reloaded after submit); submit uses `createTicket()` (async).
+- `pages/SupportTicketDetail.tsx`: ticket + thread load via `getTicketById()`/`getTicketThread()` with loading/not-found tri-state (replacing synchronous `getTicket`/`getTicketMessages` init); reply uses `replyToTicket()` then reloads the thread.
+- `pages/TransactionDetails.tsx`: "Send a Report" now calls `ticketsService.createTicket()` (async) instead of `data/supportTickets.submitTicket`.
+
+**Deferred (documented)**
+- The RootLayout topbar search still reads `data/transactions`, `data/claims`, and `data/supportTickets` synchronously in render. It's a cross-domain app-shell search; migrating it (load each via its service into state + filter) is its own pass.
+
+**Files changed**
+- `src/app/services/ticketsService.ts` (new)
+- `src/app/pages/SupportTickets.tsx`, `src/app/pages/SupportTicketDetail.tsx`, `src/app/pages/TransactionDetails.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` passes — 0 TypeScript errors.

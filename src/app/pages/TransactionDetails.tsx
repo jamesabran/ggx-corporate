@@ -21,7 +21,7 @@ import {
   getClaimByTrackingNumber, fileClaim, cancelBooking, isBookingCancelled,
   claimEligible, cancelEligible, CLAIM_STATUS_META, CLAIM_REASONS, type Claim,
 } from '../services/claimsService';
-import { submitTicket } from '../data/supportTickets';
+import { createTicket } from '../services/ticketsService';
 
 export function TransactionDetails() {
   const navigate = useNavigate();
@@ -519,8 +519,8 @@ export function TransactionDetails() {
           <Button variant="outline" size="sm" onClick={() => setShowReportModal(false)}>Cancel</Button>
           <Button
             size="sm"
-            onClick={() => {
-              const created = submitTicket({
+            onClick={async () => {
+              const created = await createTicket({
                 trackingNumber: transaction.trackingNumber,
                 issueType: reportForm.issueType,
                 description: reportForm.description,

@@ -7,7 +7,9 @@ import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
-import { getTickets, submitTicket, type SupportTicket, type TicketAttachment } from '../data/supportTickets';
+// Tickets read/write via the ticketsService facade. Status/assignee/priority
+// are backend-owned; submit side effects are backend-event stand-ins (§1c).
+import { getTicketsList, createTicket, type SupportTicket, type TicketAttachment } from '../services/ticketsService';
 import { SearchInput } from '../components/SearchInput';
 
 const MAX_ATTACHMENTS = 5;
@@ -44,8 +46,10 @@ export function SupportTickets() {
   const [showNewTicketForm, setShowNewTicketForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Local copy of the ticket list so a submitted ticket appears immediately.
-  const [tickets, setTickets] = useState<SupportTicket[]>(() => [...getTickets()]);
+  // Ticket list loaded via the service; reloaded after a submit.
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const reloadTickets = () => { getTicketsList().then(setTickets).catch(() => {}); };
+  useEffect(() => { reloadTickets(); }, []);
 
   // New-ticket form state.
   const [form, setForm] = useState({ trackingNumber: '', issueType: '', description: '' });
@@ -71,10 +75,10 @@ export function SupportTickets() {
     if (searchParams.get('new') === '1') setShowNewTicketForm(true);
   }, [searchParams]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.issueType) return;
-    const created = submitTicket({ ...form, attachments: attachments.length ? attachments : undefined });
-    setTickets([...getTickets()]);
+    const created = await createTicket({ ...form, attachments: attachments.length ? attachments : undefined });
+    reloadTickets();
     setForm({ trackingNumber: '', issueType: '', description: '' });
     setAttachments([]);
     setShowNewTicketForm(false);

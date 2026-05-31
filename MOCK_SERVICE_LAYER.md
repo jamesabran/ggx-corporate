@@ -154,6 +154,7 @@ others. Illustrative chains:
 | `src/app/services/slaService.ts` | SLA alerts list, follow-up, resolve | `GET /sla-alerts`, `POST /sla-alerts/:id/follow-up`, `POST /sla-alerts/:id/resolve` |
 | `src/app/services/reportsService.ts` | Report list, filters, download | `GET /reports`, `POST /reports/generate`, `GET /reports/:id/download` |
 | `src/app/services/earningsService.ts` | Settlements list + detail (FTX-owned figures) | `GET /accounts/me/settlements`, `GET /settlements/:id` |
+| `src/app/services/ticketsService.ts` | Support tickets list/detail/thread, submit, reply | `GET /tickets`, `GET /tickets/:id`, `POST /tickets`, `POST /tickets/:id/messages` |
 
 ---
 
@@ -244,9 +245,12 @@ All UI pages currently import from `src/app/data/` directly. This is safe and un
 | ~~Reports page~~ | ~~`data/reports`~~ | ✅ **Migrated** → `reportsService.getReports()` + `downloadReport` |
 | ~~Earnings page~~ | ~~`data/earnings`~~ | ✅ **Migrated** → `earningsService.getSettlements()` |
 | ~~Earnings Settlement Detail~~ | ~~`data/earnings`~~ | ✅ **Migrated** → `earningsService.getSettlementById()` |
+| ~~Support Tickets page~~ | ~~`data/supportTickets`~~ | ✅ **Migrated** → `ticketsService.getTicketsList()` / `createTicket()` |
+| ~~Support Ticket Detail~~ | ~~`data/supportTickets`~~ | ✅ **Migrated** → `ticketsService.getTicketById()` / `getTicketThread()` / `replyToTicket()` |
+| ~~Transaction Details (submit ticket)~~ | ~~`data/supportTickets`~~ | ✅ **Migrated** → `ticketsService.createTicket()` |
 | ~~BulkUploader~~ | ~~`data/bulkUploads`~~ | ✅ **Migrated** → `bulkUploadService.getBulkUploads()` + re-exported write helpers |
 | Dashboard | ~~`data/transactions`~~ (recent tx ✅ migrated → `transactionService.getRecentTransactions()`); `data/slaAlerts` still direct | `transactionService` done; SLA service deferred |
-| RootLayout search | `data/transactions`, `data/claims`, `data/supportTickets` | `transactionService.getTransactions()` with search filter |
+| RootLayout topbar search | `data/transactions`, `data/claims`, `data/supportTickets` (all 3, synchronous in render) | **Deferred** — cross-domain shell search; best migrated as its own pass (load tx/claims/tickets via their services into state + filter). Touches the app shell. |
 | AuthContext | `contexts/AuthContext` | `authService.loginMockUser()`, `authService.getCurrentUser()` |
 
 ---
@@ -261,7 +265,7 @@ The following data modules have no service wrapper yet. They can be added when t
 | ~~SLA Alerts~~ | ~~`data/slaAlerts.ts`~~ | ✅ **Done** → `slaService` (SLA Alerts page + Dashboard SLA card) |
 | ~~Reports~~ | ~~`data/reports.ts`~~ | ✅ **Done** → `reportsService` (Reports page) |
 | ~~Earnings/Settlements~~ | ~~`data/earnings.ts`~~ | ✅ **Done** → `earningsService` (Earnings list + Settlement detail). Note: `transactionService.getTransactionsBySettlementId` still reads `data/earnings` directly (service→data, acceptable). |
-| Support Tickets | `data/supportTickets.ts` | Zendesk boundary already isolated |
+| ~~Support Tickets~~ | ~~`data/supportTickets.ts`~~ | ✅ **Done** → `ticketsService` (list, detail/thread, submit, reply; TransactionDetails submit). RootLayout search still reads it directly (see below). |
 | Service Advisories | `data/serviceAdvisories.ts` | Read-only, low priority |
 | Payment Accounts | `data/paymentAccounts.ts` | OTP-gated, finance Admin-only |
 | Financial Security | `data/financialSecurity.ts` | Admin-only, tied to OTP flow |

@@ -1,10 +1,14 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { IconArrowLeft, IconSend, IconUser, IconHeadset, IconPackage, IconCalendar, IconUserCheck, IconPaperclip, IconX } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { getTicket, getTicketMessages, addTicketReply, type TicketMessage, type TicketAttachment } from '../data/supportTickets';
+// Ticket detail + thread via the ticketsService facade.
+import {
+  getTicketById, getTicketThread, replyToTicket,
+  type SupportTicket, type TicketMessage, type TicketAttachment,
+} from '../services/ticketsService';
 
 const MAX_ATTACHMENTS = 5;
 
@@ -30,12 +34,20 @@ const priorityConfig = {
 export function SupportTicketDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const ticket = id ? getTicket(id) : undefined;
-
-  const [messages, setMessages] = useState<TicketMessage[]>(() => (id ? [...getTicketMessages(id)] : []));
+  // undefined = loading, null = not found, SupportTicket = loaded.
+  const [ticket, setTicket] = useState<SupportTicket | null | undefined>(undefined);
+  const [messages, setMessages] = useState<TicketMessage[]>([]);
   const [reply, setReply] = useState('');
   const [replyAttachments, setReplyAttachments] = useState<TicketAttachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!id) { setTicket(null); setMessages([]); return; }
+    getTicketById(id).then((t) => { if (!cancelled) setTicket(t); }).catch(() => { if (!cancelled) setTicket(null); });
+    getTicketThread(id).then((m) => { if (!cancelled) setMessages(m); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [id]);
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
@@ -47,6 +59,22 @@ export function SupportTicketDetail() {
     setReplyAttachments((prev) => [...prev, ...added]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  if (ticket === undefined) {
+    return (
+      <div className="p-6 space-y-6">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/support-tickets')}>
+          <IconArrowLeft className="w-4 h-4 mr-2" />
+          Back to Support Tickets
+        </Button>
+        <Card>
+          <CardContent className="p-12 text-center text-sm text-gray-400">
+            Loading ticket…
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Not-found state for unknown ticket ids.
   if (!ticket) {
@@ -69,10 +97,10 @@ export function SupportTicketDetail() {
   const status = statusConfig[ticket.status];
   const priority = priorityConfig[ticket.priority];
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!id || !reply.trim()) return;
-    addTicketReply(id, reply, replyAttachments.length ? replyAttachments : undefined);
-    setMessages([...getTicketMessages(id)]);
+    await replyToTicket(id, reply, replyAttachments.length ? replyAttachments : undefined);
+    setMessages(await getTicketThread(id));
     setReply('');
     setReplyAttachments([]);
   };
