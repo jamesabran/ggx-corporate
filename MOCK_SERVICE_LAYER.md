@@ -19,6 +19,64 @@ The service layer adds one abstraction level: **pages → services → mock data
 
 ---
 
+## 1b. Architecture intent — facades, not direct source-system clients
+
+GGX Corporate will **not** own all source data directly, and the frontend should
+**not** orchestrate many backend systems. The service layer is a **frontend-facing
+facade** shaped around UI domain needs. Service names (`transactionService`,
+`accountService`, `userService`, `notificationService`, `settlementService`,
+`paymentService`) represent **frontend domain needs**, not one backend system each.
+
+**Recommended future integration pattern:**
+
+```
+GGX Corporate UI → frontend service layer → GGX Corporate API / BFF / API gateway → source systems
+```
+
+The BFF/API gateway aggregates and shapes data; the frontend never calls source
+systems (OMS, FTX, Cashinator, AMS, NS, Firebase, Contract Manager, FarEye-linked
+systems) directly, and no backend URLs are hardcoded in the frontend.
+
+**Future source-system ownership (indicative, behind the BFF):**
+
+| Domain | Source system |
+|---|---|
+| Order / transaction records, official transaction status | OMS |
+| Rider/courier assignment, fulfillment status updates | Fulfillment / FarEye-linked systems |
+| Finance: fees, earnings, settlements, ledgers, official finance values | FTX |
+| Payment processing + payment status | Cashinator |
+| Accounts, subaccounts, contracts, billing eligibility | Contract Manager |
+| Location data | AMS |
+| Notification events | NS |
+| Users / auth / identity | Firebase or identity provider |
+| Related tickets and claims | Support / Claims systems |
+
+A single frontend service (e.g. `transactionService`) may later aggregate shaped
+data from **multiple** systems (OMS + fulfillment + FTX + claims). It does **not**
+map 1:1 to OMS.
+
+### No-frontend-business-computation rule
+
+The GGX Corporate frontend **must not** be the source of truth for business math
+or operational decisions.
+
+**Allowed (presentation-only):** filtering, sorting, grouping, formatting, UI
+counts, permission-based show/hide using flags already returned by services, form
+completeness checks, and frontend-only validation hints.
+
+**Not allowed (must come from source systems / BFF):** shipping/COD/protection
+fees, fuel surcharge, earnings, settlements, ledger totals, payout amounts,
+payment status, SLA hit/miss, delivery efficiency, RTS rate, claim approval
+amounts, fulfillment status, official transaction status, billing balances,
+penalty amounts, remittance amounts.
+
+**Mock-service values are sample backend-provided/precomputed fields.** Where the
+mock currently derives a value (e.g. batch counts, fee totals), it is treated as
+if the backend supplied it — a stand-in for a real BFF response, not a frontend
+source-of-truth calculation. These are clearly annotated in the service code.
+
+---
+
 ## 2. Service files created
 
 | File | Purpose | Future API equivalent |
@@ -60,9 +118,18 @@ The single canonical source is now `src/app/data/mock/accounts.mock.ts`.
 
 ## 5. UI modules now consuming services
 
-None at this stage. The service layer was built in parallel with the existing UI. No pages were migrated in this pass to avoid breaking working functionality.
+| UI module | Service used | Migrated |
+|---|---|---|
+| `pages/Transactions.tsx` | `transactionService.getTransactions()`, `getTransactionBatches()`, `statusConfig` | ✅ 2026-05-31 |
+| `pages/TransactionDetails.tsx` | `transactionService.getTransactionById()`, `getTransactionTotals()`, `statusConfig` | ✅ 2026-05-31 |
 
-This is intentional — the service layer documents the future API contract and centralizes business logic without risking regressions.
+All other pages still import from `src/app/data/` directly (see §6).
+
+### Transactions migration notes (2026-05-31)
+- Both pages now load via the async service facade with safe loading/error handling. No visible behavior changed (list, filters, search, All / By Batch views, detail, upload source, batch→detail links all preserved).
+- **Presentation-only logic stays in the UI:** filtering, search, and the "Showing X of Y" count run locally over the service-provided list. These are allowed UI operations.
+- **Batch roll-ups are service-provided sample fields:** `getTransactionBatches()` returns each batch with precomputed `counts` (total/delivered/inProgress/failed), a roll-up `status` label, and `uploadedDate`. The UI renders these as-is — it does not compute them. In production these come from the BFF (OMS membership + fulfillment status), not the frontend.
+- **Detail totals are service-provided sample fields:** `getTransactionTotals()` returns `itemsTotal` and `feesTotal`. These are documented as backend/FTX-owned official values; the mock derives them only because the static seed has no precomputed totals.
 
 ---
 
@@ -72,8 +139,8 @@ All UI pages currently import from `src/app/data/` directly. This is safe and un
 
 | Module | Current import | Future service |
 |---|---|---|
-| Transactions page | `data/transactions` | `transactionService.getTransactions()` |
-| Transaction Details | `data/transactions` | `transactionService.getTransactionById()` |
+| ~~Transactions page~~ | ~~`data/transactions`~~ | ✅ **Migrated** → `transactionService.getTransactions()` / `getTransactionBatches()` |
+| ~~Transaction Details~~ | ~~`data/transactions`~~ | ✅ **Migrated** → `transactionService.getTransactionById()` / `getTransactionTotals()` |
 | Claims page | `data/claims` | (claims service — deferred) |
 | SLA Alerts page | `data/slaAlerts` | (sla service — deferred) |
 | Users & Permissions | `data/users` | `userService.getUsers_()`, `userService.updateUser()` |
@@ -163,10 +230,10 @@ Before real API integration can begin, the following contracts must be confirmed
 
 ## 10. Migration sequence (recommended)
 
-1. ✅ **Service layer created** (this PR)
-2. **Next:** Migrate `SubAccountSettings.tsx` → `userService.getManagersBySubaccountId()` (lowest risk)
-3. **Next:** Migrate `SubAccounts.tsx` → `accountService.getSubaccounts()` (replaces SubAccountContext dependency)
-4. **Then:** Migrate `Users & Permissions` → full `userService` (add/edit/remove)
-5. **Then:** Migrate notifications bell → `notificationService`
-6. **Later:** Migrate transaction pages once search + filter tests pass
+1. ✅ **Service layer created**
+2. ✅ **Transactions pages migrated** → `transactionService` (Transactions.tsx + TransactionDetails.tsx, 2026-05-31). Validated the seam: async facade, presentation-only filtering, service-provided sample roll-ups/totals.
+3. **Next:** Migrate `SubAccountSettings.tsx` → `userService.getManagersBySubaccountId()` (lowest risk)
+4. **Then:** Migrate `SubAccounts.tsx` → `accountService.getSubaccounts()` (replaces SubAccountContext dependency)
+5. **Then:** Migrate `Users & Permissions` → full `userService` (add/edit/remove)
+6. **Then:** Migrate notifications bell → `notificationService`
 7. **Last:** Auth migration — requires real backend endpoint

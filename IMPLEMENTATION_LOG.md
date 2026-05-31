@@ -2150,3 +2150,42 @@ Fixed 6 remaining issues: 2 toolbar layouts that weren't actually fixed, 2 Users
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB; main bundle ~631 kB (pre-existing warning, +2 kB from grid/card changes).
+
+---
+
+### Service Layer — Transactions migration (2026-05-31)
+
+Migrated the first UI consumers from direct mock-data imports to the `transactionService` facade, validating the API-readiness seam. No visible behavior changed.
+
+**UI consumers migrated**
+- `pages/Transactions.tsx` — list, filters, search, All Transactions / By Batch views.
+- `pages/TransactionDetails.tsx` — detail, fee/items totals, upload-source card, batch→detail links.
+
+Both now import only from `services/transactionService` (plus claims/tickets data modules, which are out of scope). Neither imports `data/transactions` directly anymore.
+
+**transactionService additions**
+- Re-exports `statusConfig` (presentation status→label/variant mapping) and the `TransactionBatch` type so UI no longer touches the data module.
+- `getTransactionBatches(subaccountId?)` → returns `TransactionBatchGroup[]`: each batch with member `transactions` (summaries), precomputed `counts` (total/delivered/inProgress/failed), roll-up `status` label, and `uploadedDate`. These roll-ups are **service-provided sample fields** (backend/BFF-owned in production), not UI-computed.
+- `getTransactionTotals(transaction)` → `{ itemsTotal, feesTotal }`, documented as **backend/FTX-owned official values**; derived in the mock only because the static seed has no precomputed totals.
+- Extensive header documentation: the service is a **frontend facade** (not a direct OMS client), the recommended `UI → service → GGX Corporate API/BFF → source systems` pattern, source-system ownership map (OMS, fulfillment/FarEye, FTX, Cashinator, Contract Manager, AMS, NS, identity, support/claims), and the no-frontend-business-computation rule.
+
+**Service-layer seam validated**
+- Async service functions (`getTransactions`, `getTransactionById`, `getTransactionBatches`) consumed via `useEffect` + state with safe loading/error handling.
+- TransactionDetails uses a tri-state (`undefined` = loading, `null` = not found, `Transaction` = loaded) preserving the existing not-found screen and adding a brief loading state.
+- Transactions list loads once; filtering/search/grouping remain **presentation-only** local operations over the service-provided list.
+
+**Source-system ownership documented** — in `MOCK_SERVICE_LAYER.md` §1b (new): facade intent, integration pattern, source-system map, and the allowed/not-allowed computation lists.
+
+**No-frontend-business-computation rule documented** — frontend may only do presentation logic (filter/sort/group/format/UI counts/permission show-hide/form checks). Official values (fees, earnings, settlements, payment/fulfillment/SLA status, balances, etc.) must come from source systems via the BFF. Mock-derived values are treated as backend-provided samples and annotated as such in code.
+
+**Deferred modules (still on direct mock/local data)**
+- Claims, SLA Alerts, Reports, Earnings/Settlements, Support Tickets, Service Advisories, Payment Accounts, Financial Security, Notifications, Bulk Upload, Dashboard, RootLayout search, Auth. No service wrappers consumed yet (some exist unused). See `MOCK_SERVICE_LAYER.md` §6–7.
+
+**Files changed**
+- `src/app/services/transactionService.ts` (facade docs + `getTransactionBatches`, `getTransactionTotals`, `statusConfig`/`TransactionBatch` re-exports)
+- `src/app/pages/Transactions.tsx`
+- `src/app/pages/TransactionDetails.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~633 kB (pre-existing size warning; ~+2 kB).

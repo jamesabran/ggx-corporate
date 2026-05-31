@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   IconDownload, IconEye, IconPackages, IconList,
@@ -11,57 +11,16 @@ import { Select } from '../components/ui/Select';
 import { SearchInput } from '../components/SearchInput';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { useSubAccounts } from '../contexts/SubAccountContext';
-import { transactions, deliveries, statusConfig } from '../data/transactions';
-import type { Transaction, TransactionBatch } from '../data/transactions';
-
-// ─── batch derivation ───────────────────────────────────────────────────────
-
-interface BatchGroup {
-  batch: TransactionBatch;
-  items: Transaction[];
-}
-
-function deriveBatchGroups(
-  txs: Transaction[],
-  mainView: boolean,
-  currentSubaccountId: string | null,
-): BatchGroup[] {
-  const map = new Map<string, BatchGroup>();
-
-  for (const tx of txs) {
-    if (!tx.batch) continue;
-    // In subaccount view, only include batches belonging to the active subaccount.
-    if (!mainView && currentSubaccountId && tx.batch.accountId !== currentSubaccountId) continue;
-    const { batchId } = tx.batch;
-    if (!map.has(batchId)) {
-      map.set(batchId, { batch: tx.batch, items: [] });
-    }
-    map.get(batchId)!.items.push(tx);
-  }
-
-  // Sort newest first (batchId includes date string: UPLOAD-YYYY-MM-DD-NNN).
-  return Array.from(map.values()).sort((a, b) =>
-    b.batch.batchId.localeCompare(a.batch.batchId)
-  );
-}
-
-function parseBatchDate(batchId: string): string {
-  // Format: UPLOAD-YYYY-MM-DD-NNN
-  const m = batchId.match(/UPLOAD-(\d{4}-\d{2}-\d{2})/);
-  return m ? m[1] : '—';
-}
-
-function batchStatusLabel(items: Transaction[]): { label: string; variant: 'success' | 'info' | 'warning' | 'danger' | 'pending' | 'default' } {
-  const total = items.length;
-  const delivered  = items.filter((t) => t.status === 'delivered').length;
-  const failed     = items.filter((t) => t.status === 'failed' || t.status === 'returned').length;
-  const inProgress = total - delivered - failed;
-
-  if (delivered === total) return { label: 'Complete', variant: 'success' };
-  if (inProgress > 0)       return { label: 'In Progress', variant: 'info' };
-  if (failed === total)     return { label: 'Failed', variant: 'danger' };
-  return { label: 'Partial', variant: 'warning' };
-}
+// Data access goes through the transactionService facade (not the data module
+// directly). The service shapes data the UI needs; in production it is fronted
+// by the GGX Corporate BFF over OMS/fulfillment/FTX. See transactionService.ts.
+import {
+  getTransactions,
+  getTransactionBatches,
+  statusConfig,
+  type TransactionSummary,
+  type TransactionBatchGroup,
+} from '../services/transactionService';
 
 // ─── component ──────────────────────────────────────────────────────────────
 
@@ -82,9 +41,35 @@ export function Transactions() {
   // "By Batch" state
   const [expandedBatch, setExpandedBatch] = useState<string | null>(null);
 
-  // ── All Transactions view ─────────────────────────────────────────────────
+  // Service-backed data
+  const [allDeliveries, setAllDeliveries] = useState<TransactionSummary[]>([]);
+  const [batchGroups, setBatchGroups] = useState<TransactionBatchGroup[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Load the full transaction list once (presentation-only filtering happens
+  // locally below — filtering/search/grouping are allowed UI operations).
+  useEffect(() => {
+    let cancelled = false;
+    getTransactions()
+      .then((list) => { if (!cancelled) setAllDeliveries(list); })
+      .catch(() => { if (!cancelled) setLoadError('Unable to load transactions.'); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Load batch groups, scoped to the active subaccount when not in main view.
+  // Counts/status come precomputed from the service (treated as backend-provided).
+  useEffect(() => {
+    let cancelled = false;
+    const scopeId = mainView ? undefined : (getCurrentAccountId() ?? undefined);
+    getTransactionBatches(scopeId)
+      .then((groups) => { if (!cancelled) setBatchGroups(groups); })
+      .catch(() => { if (!cancelled) setLoadError('Unable to load batches.'); });
+    return () => { cancelled = true; };
+  }, [mainView, getCurrentAccountId]);
+
+  // ── All Transactions view (presentation-only filtering) ────────────────────
   const q = searchQuery.trim().toLowerCase();
-  const filtered = deliveries.filter((d) => {
+  const filtered = allDeliveries.filter((d) => {
     const searchOk =
       q.length < 2 ||
       d.tracking.toLowerCase().includes(q) ||
@@ -95,13 +80,6 @@ export function Transactions() {
     const subOk    = subaccountFilter === 'all' || d.subaccount === subaccountFilter;
     return searchOk && statusOk && typeOk && subOk;
   });
-
-  // ── By Batch view ─────────────────────────────────────────────────────────
-  const batchGroups = deriveBatchGroups(
-    transactions,
-    mainView,
-    mainView ? null : (getCurrentAccountId() ?? null),
-  );
 
   return (
     <div className="p-6 space-y-6">
@@ -143,6 +121,12 @@ export function Transactions() {
           </Button>
         </div>
       </div>
+
+      {loadError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {loadError}
+        </div>
+      )}
 
       {/* ── All Transactions view ──────────────────────────────────────────── */}
       {viewMode === 'all' && (
@@ -243,7 +227,7 @@ export function Transactions() {
 
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
               <p className="text-sm text-gray-600">
-                Showing {filtered.length} of {deliveries.length} transactions
+                Showing {filtered.length} of {allDeliveries.length} transactions
               </p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" disabled>Previous</Button>
@@ -267,12 +251,9 @@ export function Transactions() {
                 </p>
               </CardContent>
             </Card>
-          ) : batchGroups.map(({ batch, items }) => {
+          ) : batchGroups.map(({ batch, transactions: items, counts, status: st, uploadedDate }) => {
             const isExpanded = expandedBatch === batch.batchId;
-            const st = batchStatusLabel(items);
-            const delivered  = items.filter((t) => t.status === 'delivered').length;
-            const inProgress = items.filter((t) => t.status === 'in-transit' || t.status === 'picked-up' || t.status === 'pending').length;
-            const failed     = items.filter((t) => t.status === 'failed' || t.status === 'returned').length;
+            const { total, delivered, inProgress, failed } = counts;
 
             return (
               <Card key={batch.batchId}>
@@ -308,14 +289,14 @@ export function Transactions() {
                           )}
                         </div>
                         <p className="text-sm text-gray-500 mt-0.5 truncate">
-                          {batch.fileName} · Uploaded {parseBatchDate(batch.batchId)}
+                          {batch.fileName} · Uploaded {uploadedDate}
                         </p>
                       </div>
 
                       {/* Counts */}
                       <div className="hidden sm:flex items-center gap-5 flex-shrink-0 text-sm text-gray-600">
                         <div className="text-center">
-                          <p className="font-semibold text-gray-900">{items.length}</p>
+                          <p className="font-semibold text-gray-900">{total}</p>
                           <p className="text-xs text-gray-400">Total</p>
                         </div>
                         <div className="text-center">
@@ -339,7 +320,7 @@ export function Transactions() {
 
                     {/* Mobile counts */}
                     <div className="sm:hidden flex items-center gap-4 mt-3 ml-14 text-sm">
-                      <span className="text-gray-600">{items.length} total</span>
+                      <span className="text-gray-600">{total} total</span>
                       <span className="text-green-700">{delivered} delivered</span>
                       {inProgress > 0 && <span className="text-blue-600">{inProgress} in progress</span>}
                       {failed > 0 && <span className="text-red-600">{failed} failed</span>}
@@ -365,12 +346,12 @@ export function Transactions() {
                       <TableBody>
                         {items.map((tx) => (
                           <TableRow
-                            key={tx.trackingNumber}
+                            key={tx.tracking}
                             className="cursor-pointer hover:bg-gray-50 transition-colors"
-                            onClick={() => navigate(`/dashboard/transactions/${tx.trackingNumber}`)}
+                            onClick={() => navigate(`/dashboard/transactions/${tx.tracking}`)}
                           >
-                            <TableCell className="font-medium">{tx.trackingNumber}</TableCell>
-                            <TableCell>{tx.recipient.name}</TableCell>
+                            <TableCell className="font-medium">{tx.tracking}</TableCell>
+                            <TableCell>{tx.recipient}</TableCell>
                             <TableCell>{tx.destination}</TableCell>
                             <TableCell>
                               <span className="text-sm text-gray-600">{tx.type}</span>

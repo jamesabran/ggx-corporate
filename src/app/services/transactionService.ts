@@ -1,5 +1,40 @@
 /**
- * transactionService — centralized transaction list and detail access.
+ * transactionService — frontend-facing transaction domain facade.
+ *
+ * ── Architecture intent ────────────────────────────────────────────────────
+ * This service is a FRONTEND FACADE shaped around what the Transactions UI
+ * needs. It is NOT a direct OMS client and does NOT map 1:1 to any single
+ * backend system. In production, the GGX Corporate frontend should call a
+ * GGX Corporate API / BFF / API gateway, which in turn aggregates and shapes
+ * data from the appropriate source systems:
+ *
+ *   UI → frontend service layer → GGX Corporate API/BFF → source systems
+ *
+ * Likely source-system ownership behind this facade:
+ *   • OMS                       — order/transaction records, official tx status
+ *   • fulfillment / FarEye-linked systems — rider/courier assignment, fulfillment status
+ *   • FTX                       — fees, earnings, settlements, ledgers, official finance values
+ *   • Cashinator                — payment processing + payment status
+ *   • Contract Manager          — account/subaccount/contract context
+ *   • AMS                       — location data
+ *   • NS                        — notification events
+ *   • Support/Claims systems    — related tickets and claims
+ *
+ * ── Business-computation rule ──────────────────────────────────────────────
+ * The GGX Corporate frontend must NOT be the source of truth for business
+ * math or operational decisions. It may only do PRESENTATION logic: filtering,
+ * sorting, grouping, formatting, UI counts, permission-based show/hide, and
+ * form-completeness checks.
+ *
+ * Official values — shipping/COD/protection fees, fuel surcharge, earnings,
+ * settlements, ledger totals, payout amounts, payment status, SLA hit/miss,
+ * delivery efficiency, RTS rate, claim approval amounts, fulfillment status,
+ * official transaction status, billing balances, penalties, remittances — must
+ * come from source systems (FTX, OMS, Cashinator, …) via the BFF.
+ *
+ * The mock values returned here are SAMPLE precomputed fields that stand in for
+ * backend-provided data. They are intentionally treated as if the backend
+ * supplied them, NOT computed as frontend source-of-truth.
  *
  * All functions are async to match a real API contract.
  * Currently backed by `data/transactions.ts` (static mock seed).
@@ -9,25 +44,37 @@
  * transaction row stores the name, not the canonical id. Use the `accountId`
  * field on `TransactionBatch` (batch-origin transactions) for ID-based lookups.
  *
- * Future API endpoints:
+ * Future API endpoints (shaped by the BFF, not direct source systems):
  *   GET /transactions              → getTransactions
  *   GET /transactions/:id          → getTransactionById
  *   GET /transactions?subaccount=X → getTransactionsBySubaccountId
+ *   GET /transactions/batches      → getTransactionBatches
  *   GET /settlements/:id/transactions → getTransactionsBySettlementId
  */
 
 import {
   transactions,
   deliveries,
+  statusConfig,
   getTransactionByTracking,
   type Transaction,
   type TransactionSummary,
   type TransactionStatus,
+  type TransactionBatch,
 } from '../data/transactions';
 import { getSettlement } from '../data/earnings';
 import type { SettlementTransaction } from '../data/earnings';
 
-export type { Transaction, TransactionSummary, TransactionStatus };
+export type { Transaction, TransactionSummary, TransactionStatus, TransactionBatch };
+
+/**
+ * Presentation status mapping (status → label + badge variant). Re-exported so
+ * UI consumers can style status without importing the data module directly.
+ * This is display config, not a business value.
+ */
+export { statusConfig };
+
+type StatusVariant = 'success' | 'info' | 'warning' | 'danger' | 'pending' | 'default';
 
 export interface TransactionFilters {
   status?: TransactionStatus | 'all';
@@ -131,4 +178,114 @@ export async function getRecentTransactions(
     subaccountId ? { subaccountId } : undefined
   );
   return all.slice(0, limit);
+}
+
+// ─── Batch grouping ──────────────────────────────────────────────────────────
+//
+// The "By Batch" view groups bulk-upload-origin transactions. In production the
+// batch grouping, counts, and roll-up status would be provided by the BFF
+// (sourced from OMS for membership and fulfillment systems for status). The
+// counts/status below are SAMPLE precomputed fields, not frontend source-of-truth.
+
+/** Sample roll-up counts for a batch (backend-provided in production). */
+export interface BatchCounts {
+  total: number;
+  delivered: number;
+  inProgress: number;
+  failed: number;
+}
+
+export interface TransactionBatchGroup {
+  batch: TransactionBatch;
+  /** Member transactions as lightweight summaries (link to detail by tracking). */
+  transactions: TransactionSummary[];
+  /** Precomputed sample roll-up — treat as backend-provided, not UI-computed. */
+  counts: BatchCounts;
+  /** Precomputed sample status label — treat as backend-provided. */
+  status: { label: string; variant: StatusVariant };
+  /** Display date for the batch (backend would provide an uploadedAt field). */
+  uploadedDate: string;
+}
+
+/** Derive the display date from the batch id format `UPLOAD-YYYY-MM-DD-NNN`. */
+function batchUploadedDate(batchId: string): string {
+  const m = batchId.match(/UPLOAD-(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : '—';
+}
+
+/** Sample roll-up status derived from member statuses (stands in for backend value). */
+function batchRollupStatus(items: Transaction[]): { label: string; variant: StatusVariant } {
+  const total = items.length;
+  const delivered = items.filter((t) => t.status === 'delivered').length;
+  const failed = items.filter((t) => t.status === 'failed' || t.status === 'returned').length;
+  const inProgress = total - delivered - failed;
+
+  if (delivered === total) return { label: 'Complete', variant: 'success' };
+  if (inProgress > 0) return { label: 'In Progress', variant: 'info' };
+  if (failed === total) return { label: 'Failed', variant: 'danger' };
+  return { label: 'Partial', variant: 'warning' };
+}
+
+/**
+ * Return bulk-upload batches with member transactions and sample roll-up fields.
+ * Optionally scoped to a single subaccount by canonical id (batch.accountId).
+ * Sorted newest-first by batch id (date-encoded).
+ */
+export async function getTransactionBatches(
+  subaccountId?: string
+): Promise<TransactionBatchGroup[]> {
+  const map = new Map<string, { batch: TransactionBatch; items: Transaction[] }>();
+
+  for (const tx of transactions) {
+    if (!tx.batch) continue;
+    if (subaccountId && subaccountId !== 'main' && tx.batch.accountId !== subaccountId) continue;
+    const key = tx.batch.batchId;
+    if (!map.has(key)) map.set(key, { batch: tx.batch, items: [] });
+    map.get(key)!.items.push(tx);
+  }
+
+  const groups: TransactionBatchGroup[] = Array.from(map.values()).map(({ batch, items }) => {
+    const summaries = items
+      .map((t) => deliveries.find((d) => d.tracking === t.trackingNumber))
+      .filter((d): d is TransactionSummary => !!d);
+    return {
+      batch,
+      transactions: summaries,
+      counts: {
+        total: items.length,
+        delivered: items.filter((t) => t.status === 'delivered').length,
+        inProgress: items.filter(
+          (t) => t.status === 'in-transit' || t.status === 'picked-up' || t.status === 'pending'
+        ).length,
+        failed: items.filter((t) => t.status === 'failed' || t.status === 'returned').length,
+      },
+      status: batchRollupStatus(items),
+      uploadedDate: batchUploadedDate(batch.batchId),
+    };
+  });
+
+  return groups.sort((a, b) => b.batch.batchId.localeCompare(a.batch.batchId));
+}
+
+// ─── Detail totals ───────────────────────────────────────────────────────────
+
+/** Sample precomputed detail totals (backend/FTX-provided in production). */
+export interface TransactionTotals {
+  itemsTotal: number;
+  feesTotal: number;
+}
+
+/**
+ * Return display totals for a transaction detail view.
+ *
+ * IMPORTANT: In production these are OFFICIAL financial values owned by FTX and
+ * delivered by the BFF as fields on the transaction payload — the frontend must
+ * not be their source of truth. They are derived here only because the static
+ * mock seed has no precomputed totals; treat the result as backend-provided.
+ */
+export function getTransactionTotals(transaction: Transaction): TransactionTotals {
+  return {
+    itemsTotal: transaction.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    feesTotal: Object.values(transaction.fees).reduce((sum, fee) => sum + fee, 0),
+  };
 }

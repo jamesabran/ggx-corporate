@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff, IconUpload, IconArrowRight, IconReceiptRefund, IconX, IconCircleCheck } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
@@ -7,7 +7,16 @@ import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
-import { getTransactionByTracking, statusConfig } from '../data/transactions';
+// Transaction detail + totals come through the transactionService facade. The
+// totals are treated as backend-provided (FTX/BFF in production), not computed
+// as frontend source-of-truth. Claims/tickets remain on their data modules —
+// migrating those services is out of scope for this pass.
+import {
+  getTransactionById,
+  getTransactionTotals,
+  statusConfig,
+  type Transaction,
+} from '../services/transactionService';
 import {
   getClaimByTracking, submitClaim, requestCancellation, isCancelled,
   isClaimEligible, isCancelEligible, CLAIM_STATUS_META, CLAIM_REASONS, type Claim,
@@ -19,19 +28,47 @@ export function TransactionDetails() {
   const { id } = useParams();
   const [rating, setRating] = useState(0);
 
-  const transaction = getTransactionByTracking(id);
+  // undefined = loading, null = not found, Transaction = loaded.
+  const [transaction, setTransaction] = useState<Transaction | null | undefined>(undefined);
 
   // Report ticket modal state.
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportForm, setReportForm] = useState({ issueType: 'failed', description: '' });
   const [reportSubmittedId, setReportSubmittedId] = useState<string | null>(null);
 
-  // Claims & cancellation (frontend/mock) — local view state.
+  // Claims & cancellation (frontend/mock) — local view state. Keyed off the id
+  // route param (claims service migration is out of scope for this pass).
   const [claim, setClaim] = useState<Claim | undefined>(() => (id ? getClaimByTracking(id) : undefined));
   const [showClaimForm, setShowClaimForm] = useState(false);
   const [claimForm, setClaimForm] = useState({ reason: '', details: '' });
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelled, setCancelled] = useState(() => (id ? isCancelled(id) : false));
+
+  useEffect(() => {
+    let cancelledLoad = false;
+    setTransaction(undefined);
+    getTransactionById(id ?? '')
+      .then((tx) => { if (!cancelledLoad) setTransaction(tx); })
+      .catch(() => { if (!cancelledLoad) setTransaction(null); });
+    return () => { cancelledLoad = true; };
+  }, [id]);
+
+  // Loading state — brief async fetch from the service facade.
+  if (transaction === undefined) {
+    return (
+      <div className="p-6">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/transactions')}>
+          <IconArrowLeft className="w-4 h-4 mr-2" />
+          Back to Transactions
+        </Button>
+        <Card className="mt-6">
+          <CardContent className="p-12 text-center text-sm text-gray-400">
+            Loading transaction…
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!transaction) {
     return (
@@ -58,8 +95,8 @@ export function TransactionDetails() {
   }
 
   const status = statusConfig[transaction.status];
-  const totalFees = Object.values(transaction.fees).reduce((sum, fee) => sum + fee, 0);
-  const itemsTotal = transaction.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Sample backend-provided totals (FTX/BFF own these in production).
+  const { itemsTotal, feesTotal: totalFees } = getTransactionTotals(transaction);
 
   const claimEligible = isClaimEligible(transaction.status) && !claim;
   const cancelEligible = isCancelEligible(transaction.status) && !cancelled;
