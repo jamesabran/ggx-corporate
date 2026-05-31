@@ -24,15 +24,8 @@ import { Badge } from '../components/ui/Badge';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 // Recent transactions come through the transactionService facade. SLA alerts
 // remain on their data module (service migration out of scope for this pass).
-import { getRecentTransactions, statusConfig, type TransactionSummary } from '../services/transactionService';
+import { getRecentTransactions, getDashboardStats, statusConfig, type TransactionSummary, type DashboardStats } from '../services/transactionService';
 import { getSlaAlertsList, SLA_TYPE_META, SLA_STATUS_META, type SlaAlert } from '../services/slaService';
-
-const stats = [
-  { title: 'Active Deliveries', value: '2,847', change: '+12.5%', trend: 'up', icon: IconPackage, iconBg: 'bg-blue-600', cardBg: 'bg-blue-50', changeColor: 'text-blue-700' },
-  { title: 'Pending Pickups', value: '184', change: '-8.2%', trend: 'down', icon: IconClock, iconBg: 'bg-orange-500', cardBg: 'bg-orange-50', changeColor: 'text-orange-700' },
-  { title: 'Failed / Delayed', value: '23', change: '+3.1%', trend: 'up', icon: IconAlertTriangle, iconBg: 'bg-red-500', cardBg: 'bg-red-50', changeColor: 'text-red-700' },
-  { title: 'Monthly Spend', value: '₱2,418,000', change: '+18.7%', trend: 'up', icon: IconCurrencyDollar, iconBg: 'bg-emerald-600', cardBg: 'bg-emerald-50', changeColor: 'text-emerald-700' },
-];
 
 const quickActions = [
   { title: 'Upload Bulk Bookings', description: 'Import CSV to create multiple shipments at once', icon: IconUpload, href: '/dashboard/bulk-uploader', iconColor: 'text-blue-600', iconBg: 'bg-blue-50' },
@@ -50,13 +43,6 @@ const earningsRows = [
   { label: 'For Processing', amount: '₱23,100', meta: 'Pending clearance', icon: IconHourglass, iconColor: 'text-orange-400' },
 ];
 
-const performanceRows = [
-  { label: 'Delivered', value: 2674, dot: 'bg-emerald-500', pct: 69 },
-  { label: 'In Transit', value: 849, dot: 'bg-blue-500', pct: 22 },
-  { label: 'Failed / Returned', value: 164, dot: 'bg-red-400', pct: 4 },
-  { label: 'Pending', value: 184, dot: 'bg-orange-400', pct: 5 },
-];
-
 export function Dashboard() {
   const navigate = useNavigate();
   const { subAccountsEnabled, currentAccount, getCurrentAccountName } = useSubAccounts();
@@ -71,6 +57,16 @@ export function Dashboard() {
     return () => { cancelled = true; };
   }, []);
 
+  // Delivery stats from the transaction seed — drives KPI cards + performance card.
+  const [dashStats, setDashStats] = useState<DashboardStats | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getDashboardStats(currentAccount !== 'main' ? currentAccount : undefined)
+      .then((s) => { if (!cancelled) setDashStats(s); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [currentAccount]);
+
   // Open SLA alerts for the subaccount-view card (loaded via the service facade).
   const [openSlaAlerts, setOpenSlaAlerts] = useState<SlaAlert[]>([]);
   useEffect(() => {
@@ -80,6 +76,31 @@ export function Dashboard() {
       .catch(() => { if (!cancelled) setOpenSlaAlerts([]); });
     return () => { cancelled = true; };
   }, []);
+
+  // Derived KPI values from real seed data.
+  const active     = dashStats ? (dashStats.byStatus['in-transit'] + dashStats.byStatus['picked-up']) : 0;
+  const pending    = dashStats ? dashStats.byStatus.pending : 0;
+  const failed     = dashStats ? (dashStats.byStatus.failed + dashStats.byStatus.returned) : 0;
+  const totalCod   = dashStats ? dashStats.totalCod : 0;
+
+  const stats = dashStats ? [
+    { title: 'Active Deliveries', value: active.toString(), change: '+12.5%', trend: 'up' as const, icon: IconPackage, iconBg: 'bg-blue-600', cardBg: 'bg-blue-50', changeColor: 'text-blue-700' },
+    { title: 'Pending Pickups',   value: pending.toString(), change: '-8.2%', trend: 'down' as const, icon: IconClock, iconBg: 'bg-orange-500', cardBg: 'bg-orange-50', changeColor: 'text-orange-700' },
+    { title: 'Failed / Delayed',  value: failed.toString(), change: '+3.1%', trend: 'up' as const, icon: IconAlertTriangle, iconBg: 'bg-red-500', cardBg: 'bg-red-50', changeColor: 'text-red-700' },
+    { title: 'COD Collected',     value: `₱${totalCod.toLocaleString()}`, change: '+18.7%', trend: 'up' as const, icon: IconCurrencyDollar, iconBg: 'bg-emerald-600', cardBg: 'bg-emerald-50', changeColor: 'text-emerald-700' },
+  ] : [
+    { title: 'Active Deliveries', value: '—', change: '', trend: 'up' as const, icon: IconPackage, iconBg: 'bg-blue-600', cardBg: 'bg-blue-50', changeColor: 'text-blue-700' },
+    { title: 'Pending Pickups',   value: '—', change: '', trend: 'down' as const, icon: IconClock, iconBg: 'bg-orange-500', cardBg: 'bg-orange-50', changeColor: 'text-orange-700' },
+    { title: 'Failed / Delayed',  value: '—', change: '', trend: 'up' as const, icon: IconAlertTriangle, iconBg: 'bg-red-500', cardBg: 'bg-red-50', changeColor: 'text-red-700' },
+    { title: 'COD Collected',     value: '—', change: '', trend: 'up' as const, icon: IconCurrencyDollar, iconBg: 'bg-emerald-600', cardBg: 'bg-emerald-50', changeColor: 'text-emerald-700' },
+  ];
+
+  const performanceRows = dashStats ? [
+    { label: 'Delivered',         value: dashStats.byStatus.delivered,   dot: 'bg-emerald-500', pct: Math.round((dashStats.byStatus.delivered / dashStats.total) * 100) },
+    { label: 'In Transit',        value: dashStats.byStatus['in-transit'] + dashStats.byStatus['picked-up'], dot: 'bg-blue-500', pct: Math.round(((dashStats.byStatus['in-transit'] + dashStats.byStatus['picked-up']) / dashStats.total) * 100) },
+    { label: 'Failed / Returned', value: dashStats.byStatus.failed + dashStats.byStatus.returned, dot: 'bg-red-400', pct: Math.round(((dashStats.byStatus.failed + dashStats.byStatus.returned) / dashStats.total) * 100) },
+    { label: 'Pending',           value: dashStats.byStatus.pending,      dot: 'bg-orange-400', pct: Math.round((dashStats.byStatus.pending / dashStats.total) * 100) },
+  ] : [];
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
@@ -303,10 +324,10 @@ export function Dashboard() {
             <div className="mb-5">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-gray-500">Overall success rate</p>
-                <p className="text-base font-bold text-gray-900">94.2%</p>
+                <p className="text-base font-bold text-gray-900">{dashStats ? `${dashStats.successRate}%` : '—'}</p>
               </div>
               <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 rounded-full" style={{ width: '94.2%' }} />
+                <div className="h-full bg-emerald-500 rounded-full" style={{ width: dashStats ? `${dashStats.successRate}%` : '0%' }} />
               </div>
             </div>
             <div className="flex-1 divide-y divide-gray-100">
@@ -325,7 +346,7 @@ export function Dashboard() {
             </div>
             <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
               <p className="text-sm text-gray-400">Total shipments this period</p>
-              <p className="text-base font-bold text-gray-900 tabular-nums">3,871</p>
+              <p className="text-base font-bold text-gray-900 tabular-nums">{dashStats?.total ?? '—'}</p>
             </div>
           </CardContent>
         </Card>

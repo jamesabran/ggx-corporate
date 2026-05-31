@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { IconBuilding, IconArrowRight, IconEdit, IconSettings } from '@tabler/icons-react';
+import { IconBuilding, IconArrowRight, IconEdit, IconSettings, IconCheck, IconLoader2 } from '@tabler/icons-react';
+import { Dialog } from '../components/ui/Dialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -25,6 +27,36 @@ const companyAddress: Address = {
 export function Settings() {
   const navigate = useNavigate();
   const { subAccountsEnabled, isMainAccountView, getCurrentAccountName, getCurrentAccountId } = useSubAccounts();
+  const [savingAccount, setSavingAccount] = useState(false);
+  const [savedAccount, setSavedAccount] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [savedPrefs, setSavedPrefs] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ current: '', next: '', confirm: '' });
+  const [passwordSaved, setPasswordSaved] = useState(false);
+
+  const handleSaveAccount = async () => {
+    setSavingAccount(true);
+    await new Promise((r) => setTimeout(r, 700));
+    setSavingAccount(false);
+    setSavedAccount(true);
+    setTimeout(() => setSavedAccount(false), 3000);
+  };
+
+  const handleSavePrefs = async () => {
+    setSavingPrefs(true);
+    await new Promise((r) => setTimeout(r, 600));
+    setSavingPrefs(false);
+    setSavedPrefs(true);
+    setTimeout(() => setSavedPrefs(false), 3000);
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordSaved(true);
+    await new Promise((r) => setTimeout(r, 800));
+    setPasswordForm({ current: '', next: '', confirm: '' });
+    setTimeout(() => { setShowChangePassword(false); setPasswordSaved(false); }, 1200);
+  };
 
   // When the user is viewing a specific subaccount (not Main Account), surface a
   // contextual banner pointing to that subaccount's dedicated settings page.
@@ -138,8 +170,14 @@ export function Settings() {
               </p>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button>Save Changes</Button>
-              <Button variant="outline">Cancel</Button>
+              <Button onClick={handleSaveAccount} disabled={savingAccount}>
+                {savingAccount ? (
+                  <><IconLoader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
+                ) : savedAccount ? (
+                  <><IconCheck className="w-4 h-4 mr-2" />Saved</>
+                ) : 'Save Changes'}
+              </Button>
+              <Button variant="outline" onClick={() => setSavedAccount(false)}>Cancel</Button>
             </div>
           </CardContent>
         </Card>
@@ -162,7 +200,13 @@ export function Settings() {
               </label>
             ))}
             <div className="pt-4">
-              <Button>Update Preferences</Button>
+              <Button onClick={handleSavePrefs} disabled={savingPrefs}>
+                {savingPrefs ? (
+                  <><IconLoader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
+                ) : savedPrefs ? (
+                  <><IconCheck className="w-4 h-4 mr-2" />Saved</>
+                ) : 'Update Preferences'}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -174,7 +218,7 @@ export function Settings() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Button variant="outline">Change Password</Button>
+              <Button variant="outline" onClick={() => setShowChangePassword(true)}>Change Password</Button>
             </div>
             <div className="pt-4 border-t border-gray-200">
               <label className="flex items-center gap-3 cursor-pointer">
@@ -185,6 +229,42 @@ export function Settings() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={showChangePassword} onClose={() => setShowChangePassword(false)} size="sm" title="Change Password">
+        {passwordSaved ? (
+          <div className="flex items-center gap-2 text-emerald-700 py-4">
+            <IconCheck className="w-5 h-5" />
+            <span className="text-sm font-medium">Password updated successfully.</span>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label>
+                <Input type="password" value={passwordForm.current} onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
+                <Input type="password" value={passwordForm.next} onChange={(e) => setPasswordForm({ ...passwordForm, next: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm New Password</label>
+                <Input type="password" value={passwordForm.confirm} onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })} />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setShowChangePassword(false)}>Cancel</Button>
+              <Button
+                size="sm"
+                disabled={!passwordForm.current || !passwordForm.next || passwordForm.next !== passwordForm.confirm}
+                onClick={handleChangePassword}
+              >
+                Update Password
+              </Button>
+            </div>
+          </>
+        )}
+      </Dialog>
     </div>
   );
 }

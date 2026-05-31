@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { IconCopy, IconEye, IconEyeOff, IconRefresh, IconExternalLink, IconAlertTriangle, IconCircleCheck, IconBook } from '@tabler/icons-react';
+import { IconCopy, IconEye, IconEyeOff, IconRefresh, IconExternalLink, IconAlertTriangle, IconCircleCheck, IconBook, IconLoader2, IconCheck } from '@tabler/icons-react';
+import { Dialog } from '../components/ui/Dialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -9,11 +10,49 @@ export function APIAccess() {
   const [sandboxMode, setSandboxMode] = useState(true);
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('https://api.yourcompany.com/webhooks/gogo');
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [keyCopied, setKeyCopied] = useState(false);
+  const [savedConfig, setSavedConfig] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState(false);
+  const [webhookTestResult, setWebhookTestResult] = useState<'success' | null>(null);
+  const [generatedKey, setGeneratedKey] = useState<string | null>(null);
 
-  const apiKey = sandboxMode ? 'ggx_test_demo_xxxxxxxxxxxxxxxxxxxx' : 'ggx_live_demo_xxxxxxxxxxxxxxxxxxxx';
+  const apiKey = generatedKey ?? (sandboxMode ? 'ggx_test_demo_xxxxxxxxxxxxxxxxxxxx' : 'ggx_live_demo_xxxxxxxxxxxxxxxxxxxx');
 
-  const handleCopyKey = () => navigator.clipboard.writeText(apiKey);
+  const handleCopyKey = () => {
+    navigator.clipboard.writeText(apiKey);
+    setKeyCopied(true);
+    setTimeout(() => setKeyCopied(false), 2000);
+  };
   const handleCopyWebhook = () => navigator.clipboard.writeText(webhookUrl);
+
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    setShowRegenerateConfirm(false);
+    await new Promise((r) => setTimeout(r, 1000));
+    const prefix = sandboxMode ? 'sk_test_' : 'sk_live_';
+    const rand = Math.random().toString(36).slice(2, 18).toUpperCase();
+    setGeneratedKey(`${prefix}${rand}`);
+    setRegenerating(false);
+    setApiKeyVisible(true);
+  };
+
+  const handleSaveConfig = async () => {
+    setSavedConfig(false);
+    await new Promise((r) => setTimeout(r, 600));
+    setSavedConfig(true);
+    setTimeout(() => setSavedConfig(false), 3000);
+  };
+
+  const handleTestWebhook = async () => {
+    setTestingWebhook(true);
+    setWebhookTestResult(null);
+    await new Promise((r) => setTimeout(r, 1400));
+    setTestingWebhook(false);
+    setWebhookTestResult('success');
+    setTimeout(() => setWebhookTestResult(null), 4000);
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -83,16 +122,19 @@ export function APIAccess() {
                   </button>
                 </div>
                 <Button variant="outline" onClick={handleCopyKey}>
-                  <IconCopy className="w-4 h-4" />
+                  {keyCopied ? <IconCheck className="w-4 h-4 text-green-500" /> : <IconCopy className="w-4 h-4" />}
                 </Button>
               </div>
               <p className="text-xs text-gray-500 mt-1">Keep your API key secure and never share it publicly</p>
             </div>
 
             <div className="pt-4 border-t border-gray-200">
-              <Button variant="outline">
-                <IconRefresh className="w-4 h-4 mr-2" />
-                Generate New Key
+              <Button variant="outline" onClick={() => setShowRegenerateConfirm(true)} disabled={regenerating}>
+                {regenerating ? (
+                  <><IconLoader2 className="w-4 h-4 mr-2 animate-spin" />Generating…</>
+                ) : (
+                  <><IconRefresh className="w-4 h-4 mr-2" />Generate New Key</>
+                )}
               </Button>
               <p className="text-xs text-gray-500 mt-2">Generating a new key will invalidate the current one</p>
             </div>
@@ -157,9 +199,23 @@ export function APIAccess() {
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button>Save Configuration</Button>
-            <Button variant="outline">Test Webhook</Button>
+          {webhookTestResult === 'success' && (
+            <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              <IconCircleCheck className="w-4 h-4 flex-shrink-0" />
+              Webhook test successful — your endpoint responded with 200 OK.
+            </div>
+          )}
+          <div className="flex gap-3 pt-2">
+            <Button onClick={handleSaveConfig}>
+              {savedConfig ? (
+                <><IconCheck className="w-4 h-4 mr-2 text-white" />Saved</>
+              ) : 'Save Configuration'}
+            </Button>
+            <Button variant="outline" onClick={handleTestWebhook} disabled={testingWebhook}>
+              {testingWebhook ? (
+                <><IconLoader2 className="w-4 h-4 mr-2 animate-spin" />Testing…</>
+              ) : 'Test Webhook'}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -187,6 +243,15 @@ export function APIAccess() {
           </div>
         </CardContent>
       </Card>
+      <Dialog open={showRegenerateConfirm} onClose={() => setShowRegenerateConfirm(false)} size="sm" title="Regenerate API Key">
+        <p className="text-sm text-gray-600 mb-4">
+          This will invalidate your current {sandboxMode ? 'test' : 'live'} API key immediately. Any integrations using the old key will stop working until updated.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" size="sm" onClick={() => setShowRegenerateConfirm(false)}>Cancel</Button>
+          <Button size="sm" onClick={handleRegenerate}>Regenerate Key</Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

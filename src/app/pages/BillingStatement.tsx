@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { IconDownload, IconCreditCard } from '@tabler/icons-react';
+import { IconDownload, IconCreditCard, IconCircleCheck, IconLoader2 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
+import { Dialog } from '../components/ui/Dialog';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 
 const summaryStats = [
@@ -34,6 +35,27 @@ const statusConfig = {
 export function BillingStatement() {
   const { isMainAccountView } = useSubAccounts();
   const [subaccountFilter, setSubaccountFilter] = useState('all');
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [paidIds, setPaidIds] = useState<Set<string>>(new Set());
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
+  const [confirmPayId, setConfirmPayId] = useState<string | null>(null);
+
+  const handlePay = async (id: string) => {
+    setPayingId(id);
+    setConfirmPayId(null);
+    await new Promise((r) => setTimeout(r, 1200));
+    setPaidIds((prev) => new Set(prev).add(id));
+    setPayingId(null);
+  };
+
+  const handleDownload = async (id: string) => {
+    setDownloadingId(id);
+    await new Promise((r) => setTimeout(r, 900));
+    setDownloadedIds((prev) => new Set(prev).add(id));
+    setDownloadingId(null);
+    setTimeout(() => setDownloadedIds((prev) => { const s = new Set(prev); s.delete(id); return s; }), 3000);
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -132,10 +154,31 @@ export function BillingStatement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      {invoice.status === 'pending' && <Button size="sm">Pay Now</Button>}
-                      <Button variant="ghost" size="sm">
-                        <IconDownload className="w-4 h-4 mr-1" />
-                        Download
+                      {(invoice.status === 'pending' && !paidIds.has(invoice.id)) && (
+                        <Button size="sm" onClick={() => setConfirmPayId(invoice.id)} disabled={payingId === invoice.id}>
+                          {payingId === invoice.id ? (
+                            <><IconLoader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Processing…</>
+                          ) : 'Pay Now'}
+                        </Button>
+                      )}
+                      {paidIds.has(invoice.id) && (
+                        <span className="inline-flex items-center gap-1 text-sm text-emerald-600 font-medium">
+                          <IconCircleCheck className="w-4 h-4" />Paid
+                        </span>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownload(invoice.id)}
+                        disabled={downloadingId === invoice.id}
+                      >
+                        {downloadingId === invoice.id ? (
+                          <IconLoader2 className="w-4 h-4 animate-spin" />
+                        ) : downloadedIds.has(invoice.id) ? (
+                          <><IconCircleCheck className="w-4 h-4 mr-1 text-green-500" />Saved</>
+                        ) : (
+                          <><IconDownload className="w-4 h-4 mr-1" />Download</>
+                        )}
                       </Button>
                     </div>
                   </TableCell>
@@ -162,7 +205,9 @@ export function BillingStatement() {
               </div>
               <Badge variant="success">Primary</Badge>
             </div>
+            <Link to="/dashboard/payment-settings">
             <Button variant="outline" className="w-full">Update Payment Method</Button>
+          </Link>
           </CardContent>
         </Card>
 
@@ -178,10 +223,36 @@ export function BillingStatement() {
                 <p className="text-gray-900">Makati City, Metro Manila 1226</p>
               </div>
             </div>
-            <Button variant="outline" className="w-full">Update Billing Info</Button>
+            <Link to="/dashboard/settings">
+              <Button variant="outline" className="w-full">Update Billing Info</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
+
+      {/* Pay Now confirmation */}
+      <Dialog
+        open={!!confirmPayId}
+        onClose={() => setConfirmPayId(null)}
+        size="sm"
+        title="Confirm Payment"
+      >
+        {confirmPayId && (() => {
+          const inv = invoices.find((i) => i.id === confirmPayId);
+          return inv ? (
+            <>
+              <p className="text-sm text-gray-600 mb-4">
+                You are about to pay <span className="font-semibold text-gray-900">{inv.amount}</span> for invoice{' '}
+                <span className="font-semibold text-gray-900">{inv.id}</span> ({inv.period}) using the Visa card on file.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setConfirmPayId(null)}>Cancel</Button>
+                <Button size="sm" onClick={() => handlePay(inv.id)}>Confirm Payment</Button>
+              </div>
+            </>
+          ) : null;
+        })()}
+      </Dialog>
     </div>
   );
 }

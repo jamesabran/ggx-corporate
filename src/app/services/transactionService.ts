@@ -180,6 +180,42 @@ export async function getRecentTransactions(
   return all.slice(0, limit);
 }
 
+// ─── Dashboard stats ─────────────────────────────────────────────────────────
+
+export interface DashboardStats {
+  /** Counts by status from the active seed (standalone sample — not the full business volume). */
+  byStatus: Record<TransactionStatus, number>;
+  total: number;
+  /** Percentage of delivered out of total, rounded to one decimal. */
+  successRate: number;
+  /** Total COD collected across all transactions in the seed. */
+  totalCod: number;
+}
+
+/**
+ * Return delivery breakdown stats computed from the transaction seed.
+ * These are used to drive the Delivery Performance card on the Dashboard.
+ * In production, the BFF would supply pre-aggregated counts for the
+ * selected period; the frontend must not own these aggregations.
+ */
+export async function getDashboardStats(subaccountId?: string): Promise<DashboardStats> {
+  const subset = subaccountId && subaccountId !== 'main'
+    ? transactions.filter(
+        (t) => t.batch?.accountId === subaccountId || t.subaccount === subaccountId
+      )
+    : transactions;
+
+  const byStatus = { delivered: 0, 'in-transit': 0, 'picked-up': 0, pending: 0, failed: 0, returned: 0 } as Record<TransactionStatus, number>;
+  let totalCod = 0;
+  for (const t of subset) {
+    byStatus[t.status] = (byStatus[t.status] ?? 0) + 1;
+    totalCod += t.payment.codAmount;
+  }
+  const total = subset.length;
+  const successRate = total > 0 ? Math.round((byStatus.delivered / total) * 1000) / 10 : 0;
+  return { byStatus, total, successRate, totalCod };
+}
+
 // ─── Batch grouping ──────────────────────────────────────────────────────────
 //
 // The "By Batch" view groups bulk-upload-origin transactions. In production the
