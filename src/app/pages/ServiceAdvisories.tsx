@@ -1,13 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IconCalendar, IconMapPin } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
-import { getAdvisories, SEVERITY_META, STATUS_META, type AdvisoryStatus } from '../data/serviceAdvisories';
+import { getAdvisories, SEVERITY_META, STATUS_META, type AdvisoryStatus, type ServiceAdvisory } from '../services/serviceAdvisoriesService';
 
 export function ServiceAdvisories() {
   const [statusFilter, setStatusFilter] = useState<'all' | AdvisoryStatus>('all');
-  const advisories = getAdvisories();
+  const [advisories, setAdvisories] = useState<ServiceAdvisory[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    getAdvisories()
+      .then((list) => { if (active) setAdvisories(list); })
+      .catch(() => { if (active) setAdvisories([]); });
+    return () => { active = false; };
+  }, []);
 
   const visible = advisories.filter((a) => statusFilter === 'all' || a.status === statusFilter);
   const activeCount = advisories.filter((a) => a.status === 'active').length;

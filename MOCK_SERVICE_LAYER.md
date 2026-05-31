@@ -155,6 +155,8 @@ others. Illustrative chains:
 | `src/app/services/reportsService.ts` | Report list, filters, download | `GET /reports`, `POST /reports/generate`, `GET /reports/:id/download` |
 | `src/app/services/earningsService.ts` | Settlements list + detail (FTX-owned figures) | `GET /accounts/me/settlements`, `GET /settlements/:id` |
 | `src/app/services/ticketsService.ts` | Support tickets list/detail/thread, submit, reply | `GET /tickets`, `GET /tickets/:id`, `POST /tickets`, `POST /tickets/:id/messages` |
+| `src/app/services/serviceAdvisoriesService.ts` | Service advisories list (ops/status feed) | `GET /service-advisories` |
+| `src/app/services/financialSecurityService.ts` | Record OTP-verified financial change; attention-email + audit log getters | `POST /security/financial-changes`, `GET /security/log` |
 
 ---
 
@@ -203,6 +205,8 @@ The single canonical source is now `src/app/data/mock/accounts.mock.ts`.
 | `pages/BulkUploadSummary.tsx` (batch date) | `bulkUploadService.getBulkUploadById()` | ✅ 2026-05-31 |
 | `layouts/RootLayout.tsx` (topbar search) | `transactionService.getTransactions()`, `claimsService.getClaimsList()`, `ticketsService.getTicketsList()` | ✅ 2026-05-31 |
 | `pages/Login.tsx` + `contexts/AuthContext.tsx` | `authService.loginMockUser()` (validate), `authService.logoutMockUser()` (clear). Sync init read kept; `getCurrentUser()` deferred to backend stage. | ✅ 2026-05-31 |
+| `pages/ServiceAdvisories.tsx` | `serviceAdvisoriesService.getAdvisories()` (loaded into state; status filter + active count stay local) | ✅ 2026-05-31 |
+| `pages/PaymentSettings.tsx` (financial change record) | `financialSecurityService.recordFinancialChange()` (fire-and-forget after OTP verify) | ✅ 2026-05-31 |
 
 > **Note on notifications:** `useNotificationViewer()` (a React hook) and `CATEGORY_META` (presentation config) intentionally stay in `data/notifications` — they are not data access. The bell's unread badge is now state refreshed on viewer + route change (matches the prior per-render freshness) and reset to 0 after marking read on open.
 
@@ -274,9 +278,9 @@ The following data modules have no service wrapper yet. They can be added when t
 | ~~Reports~~ | ~~`data/reports.ts`~~ | ✅ **Done** → `reportsService` (Reports page) |
 | ~~Earnings/Settlements~~ | ~~`data/earnings.ts`~~ | ✅ **Done** → `earningsService` (Earnings list + Settlement detail). Note: `transactionService.getTransactionsBySettlementId` still reads `data/earnings` directly (service→data, acceptable). |
 | ~~Support Tickets~~ | ~~`data/supportTickets.ts`~~ | ✅ **Done** → `ticketsService` (list, detail/thread, submit, reply; TransactionDetails submit). RootLayout search still reads it directly (see below). |
-| Service Advisories | `data/serviceAdvisories.ts` | Read-only, low priority |
-| Payment Accounts | `data/paymentAccounts.ts` | OTP-gated, finance Admin-only |
-| Financial Security | `data/financialSecurity.ts` | Admin-only, tied to OTP flow |
+| ~~Service Advisories~~ | ~~`data/serviceAdvisories.ts`~~ | ✅ **Done** → `serviceAdvisoriesService` (ServiceAdvisories page) |
+| ~~Financial Security~~ | ~~`data/financialSecurity.ts`~~ | ✅ **Done** → `financialSecurityService` (PaymentSettings records OTP-verified changes) |
+| Payment Accounts | `data/paymentAccounts.ts` | **Still deferred.** `isBillingAccount()` is a synchronous billing-eligibility helper used in render by BulkUploader/BulkUploadSummary/PaymentMethodTabs; would need an async `paymentService` + state refactor across those consumers. Contract Manager-owned in the end state. |
 
 ---
 

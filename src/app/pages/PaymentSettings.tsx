@@ -7,7 +7,7 @@ import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 import { OtpDialog } from '../components/ui/OtpDialog';
-import { recordFinancialChange } from '../data/financialSecurity';
+import { recordFinancialChange } from '../services/financialSecurityService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -80,7 +80,9 @@ export function PaymentSettings() {
   const onOtpVerified = () => {
     if (!otp) return;
     otp.run();
-    recordFinancialChange(otp.action);
+    // Backend-emitted side effect (audit + attention email + notification);
+    // fire-and-forget — the UI does not depend on its completion.
+    void recordFinancialChange(otp.action);
     setOtp(null);
   };
 
