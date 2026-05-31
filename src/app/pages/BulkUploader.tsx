@@ -17,20 +17,16 @@ import { BulkColumnMapper } from '../components/BulkColumnMapper';
 import { downloadBulkTemplate, BULK_TEMPLATE_COLUMNS } from '../data/bulkTemplate';
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
 import { isBillingAccount } from '../data/paymentAccounts';
+// Bulk upload reads/writes go through the bulkUploadService facade (not the
+// data module directly). The recent-uploads list (session records merged with
+// the seed) is owned by the service. In production this is fronted by the GGX
+// Corporate BFF; batch creation would POST /bulk-uploads.
 import {
-  addUpload, updateUploadStatus, getSessionUploads,
-  generateUploadId, createUploadRecord,
-} from '../data/bulkUploads';
+  addUpload, updateUploadStatus, generateUploadId, createUploadRecord,
+  getBulkUploads, type UploadRecord,
+} from '../services/bulkUploadService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
-
-// Static recent uploads seed — session uploads are merged at render time.
-const SEED_UPLOADS = [
-  { id: 'UPLOAD-2026-05-19-001', fileName: 'bulk_shipments_may19.xlsx', uploadedAt: '2026-05-19 10:30 AM', totalRows: 5, validRows: 3, errorRows: 2, status: 'needs-review' as const },
-  { id: 'UPLOAD-2026-05-18-003', fileName: 'daily_orders_batch3.xlsx',  uploadedAt: '2026-05-18 04:15 PM', totalRows: 25, validRows: 25, errorRows: 0, status: 'completed' as const },
-  { id: 'UPLOAD-2026-05-18-002', fileName: 'weekend_deliveries.xlsx',   uploadedAt: '2026-05-18 02:45 PM', totalRows: 12, validRows: 10, errorRows: 2, status: 'completed' as const },
-  { id: 'UPLOAD-2026-05-18-001', fileName: 'morning_batch.xlsx',        uploadedAt: '2026-05-18 09:20 AM', totalRows: 8,  validRows: 8,  errorRows: 0, status: 'completed' as const },
-];
 
 const STATUS_CONFIG = {
   processing:       { variant: 'info'    as const, label: 'Processing'      },
@@ -189,13 +185,16 @@ export function BulkUploader() {
     setShowAddressBook(false);
   };
 
-  // Merge session uploads (newest first) with the static seed list, deduping by id.
-  const sessionUploads = getSessionUploads();
-  const sessionIds = new Set(sessionUploads.map((u) => u.id));
-  const allUploads = [
-    ...sessionUploads,
-    ...SEED_UPLOADS.filter((u) => !sessionIds.has(u.id)),
-  ];
+  // Recent uploads — loaded via the service (session records merged with seed).
+  // Reloads on sessionTick (background completion / new upload) and step changes.
+  const [allUploads, setAllUploads] = useState<UploadRecord[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getBulkUploads()
+      .then((list) => { if (!cancelled) setAllUploads(list); })
+      .catch(() => { if (!cancelled) setAllUploads([]); });
+    return () => { cancelled = true; };
+  }, [sessionTick, step]);
 
   // --- Mapping step renders instead of the main form ---
   if (step === 'mapping') {

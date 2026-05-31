@@ -126,6 +126,7 @@ The single canonical source is now `src/app/data/mock/accounts.mock.ts`.
 | `pages/SubAccountSettings.tsx` | `userService.getUsers_()`, `setSubaccountManagers()`, `MAX_MANAGERS_PER_SUBACCOUNT` | ✅ 2026-05-31 |
 | `pages/SubAccounts.tsx` (manager lookups) | `userService.getManagersBySubaccountId()` | ✅ 2026-05-31 |
 | `pages/UsersPermissions.tsx` | `userService` full surface: `getUsers_()`, `createUser()`, `updateUser()`, `updateUserSubaccountAssignments()`, `removeUser()`, `getSubaccountOptions()` | ✅ 2026-05-31 |
+| `pages/BulkUploader.tsx` | `bulkUploadService.getBulkUploads()` + re-exported write helpers (`addUpload`, `updateUploadStatus`, `generateUploadId`, `createUploadRecord`) | ✅ 2026-05-31 |
 
 > **Note on `SubAccounts.tsx`:** only the **manager lookups** were migrated to `userService`. The subaccount **list** still comes from `SubAccountContext` — see §6 for why.
 
@@ -154,7 +155,7 @@ All UI pages currently import from `src/app/data/` directly. This is safe and un
 | SubAccounts page | `contexts/SubAccountContext` (list) — manager lookups ✅ migrated to `userService` | `accountService.getSubaccounts()` **deferred** (see below) |
 | Notifications page | `data/notifications` | `notificationService.getNotifications()` |
 | Bell popover | `data/notifications` | `notificationService.getUnreadCount()` |
-| BulkUploader | `data/bulkUploads` | `bulkUploadService.getBulkUploads()` |
+| ~~BulkUploader~~ | ~~`data/bulkUploads`~~ | ✅ **Migrated** → `bulkUploadService.getBulkUploads()` + re-exported write helpers |
 | Dashboard | ~~`data/transactions`~~ (recent tx ✅ migrated → `transactionService.getRecentTransactions()`); `data/slaAlerts` still direct | `transactionService` done; SLA service deferred |
 | RootLayout search | `data/transactions`, `data/claims`, `data/supportTickets` | `transactionService.getTransactions()` with search filter |
 | AuthContext | `contexts/AuthContext` | `authService.loginMockUser()`, `authService.getCurrentUser()` |
@@ -241,6 +242,7 @@ Before real API integration can begin, the following contracts must be confirmed
 3. ✅ **SubAccountSettings.tsx migrated** → `userService` (read via `getUsers_()`, write via new `setSubaccountManagers()`, 2026-05-31). Exercised the `userService` seam incl. an async write path.
 4. ◑ **SubAccounts.tsx partially migrated** → manager lookups now use `userService.getManagersBySubaccountId()` (2026-05-31). The subaccount **list** stays on `SubAccountContext` because the context is the runtime store (Request-flow adds + localStorage), whereas `accountService.getSubaccounts()` currently returns only the static mock. **Blocker for full migration:** `accountService` must first own runtime subaccount state (enable/add/persist) so the list can move off the context without losing runtime-added subaccounts. Deferred until then.
 5. ✅ **Users & Permissions migrated** → full `userService` (create/update/assign/remove + subaccount options, 2026-05-31). `userService` is now fully consumed; business rules (duplicate email, manager cap, sole-Admin protection) are enforced in the service.
-6. **Next:** Migrate notifications bell → `notificationService`
-7. **Then:** Promote `accountService` to own runtime subaccount state, then finish `SubAccounts.tsx` list migration (unblocks step 4).
-8. **Last:** Auth migration — requires real backend endpoint
+6. ✅ **BulkUploader migrated** → `bulkUploadService` (recent-uploads read + write helpers, 2026-05-31).
+7. **Next:** Migrate notifications bell + Notifications page → `notificationService`. Note: the bell uses the `useNotificationViewer()` hook (stays in `data/notifications`) and a synchronous in-render unread count; migrating needs effect-based count refresh keyed to navigation to avoid a stale badge. Moderate risk (touches the app shell `RootLayout`).
+8. **Then:** Promote `accountService` to own runtime subaccount state (enable/add/persist) — large refactor of `SubAccountContext` internals + many consumers — then finish `SubAccounts.tsx` list migration (unblocks step 4). Treat as a dedicated effort.
+9. **Last:** Auth migration — requires real backend endpoint.

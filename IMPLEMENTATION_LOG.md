@@ -2285,3 +2285,28 @@ Migrated `pages/UsersPermissions.tsx` off direct `data/users` imports onto the f
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~635 kB (pre-existing size warning).
+
+---
+
+### Service Layer — BulkUploader migration + accountService-ownership assessment (2026-05-31)
+
+**Task 1 (requested) was Users & Permissions (logged above). For the follow-up "task 2", assessed `accountService` runtime-ownership and chose a better item per the instruction's escape clause.**
+
+**Why not the accountService-ownership refactor now:** Making `accountService` own runtime subaccount state (enable/add/persist) requires rewriting `SubAccountContext` internals and touching its many app-wide consumers (RootLayout, Dashboard, Transactions, Claims, SLA, Reports, Settings). It is a large, high-risk refactor with no visible-behavior payoff right now. Deferred as a dedicated effort (MOCK_SERVICE_LAYER.md §10 step 8). The notifications-bell migration was also weighed but defers cleanly too (it relies on the `useNotificationViewer` hook + a synchronous in-render unread count, so async migration risks a stale badge in the app shell — §10 step 7).
+
+**Chosen better item — BulkUploader → bulkUploadService (clean, low-risk, exercises an unconsumed service).**
+
+**Changes (`pages/BulkUploader.tsx`)**
+- Removed direct `data/bulkUploads` imports and the local `SEED_UPLOADS` constant.
+- Write helpers (`addUpload`, `updateUploadStatus`, `generateUploadId`, `createUploadRecord`) now imported from `bulkUploadService` (it re-exports them verbatim — zero behavior change).
+- Recent-uploads list now loads via `getBulkUploads()` into state, reloaded on `sessionTick` (background completion / new upload) and on `step` changes. The service's `mergeWithSeed()` uses the same session-first + seed order and the same 4 seed records the page previously defined, so the rendered list is equivalent.
+
+**Behavior preserved**
+- Recent Uploads shows the same records in the same order; background-completion refresh still works via `sessionTick`. `UploadRecord` is a superset of the previously-rendered fields (extra account/mode fields are harmless).
+
+**Files changed**
+- `src/app/pages/BulkUploader.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~635 kB (pre-existing size warning).
