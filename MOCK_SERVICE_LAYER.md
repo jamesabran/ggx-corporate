@@ -157,6 +157,7 @@ others. Illustrative chains:
 | `src/app/services/ticketsService.ts` | Support tickets list/detail/thread, submit, reply | `GET /tickets`, `GET /tickets/:id`, `POST /tickets`, `POST /tickets/:id/messages` |
 | `src/app/services/serviceAdvisoriesService.ts` | Service advisories list (ops/status feed) | `GET /service-advisories` |
 | `src/app/services/financialSecurityService.ts` | Record OTP-verified financial change; attention-email + audit log getters | `POST /security/financial-changes`, `GET /security/log` |
+| `src/app/services/paymentService.ts` | Account billing-contract / payment eligibility (Contract Manager-owned) | `GET /accounts/:id/billing-eligibility` |
 
 ---
 
@@ -207,6 +208,7 @@ The single canonical source is now `src/app/data/mock/accounts.mock.ts`.
 | `pages/Login.tsx` + `contexts/AuthContext.tsx` | `authService.loginMockUser()` (validate), `authService.logoutMockUser()` (clear). Sync init read kept; `getCurrentUser()` deferred to backend stage. | ✅ 2026-05-31 |
 | `pages/ServiceAdvisories.tsx` | `serviceAdvisoriesService.getAdvisories()` (loaded into state; status filter + active count stay local) | ✅ 2026-05-31 |
 | `pages/PaymentSettings.tsx` (financial change record) | `financialSecurityService.recordFinancialChange()` (fire-and-forget after OTP verify) | ✅ 2026-05-31 |
+| `pages/BulkUploader.tsx` + `pages/BulkUploadSummary.tsx` (billing eligibility) | `paymentService.isBillingAccount()` (loaded into state, keyed on active account; default `true` until resolved) | ✅ 2026-05-31 |
 
 > **Note on notifications:** `useNotificationViewer()` (a React hook) and `CATEGORY_META` (presentation config) intentionally stay in `data/notifications` — they are not data access. The bell's unread badge is now state refreshed on viewer + route change (matches the prior per-render freshness) and reset to 0 after marking read on open.
 
@@ -280,7 +282,7 @@ The following data modules have no service wrapper yet. They can be added when t
 | ~~Support Tickets~~ | ~~`data/supportTickets.ts`~~ | ✅ **Done** → `ticketsService` (list, detail/thread, submit, reply; TransactionDetails submit). RootLayout search still reads it directly (see below). |
 | ~~Service Advisories~~ | ~~`data/serviceAdvisories.ts`~~ | ✅ **Done** → `serviceAdvisoriesService` (ServiceAdvisories page) |
 | ~~Financial Security~~ | ~~`data/financialSecurity.ts`~~ | ✅ **Done** → `financialSecurityService` (PaymentSettings records OTP-verified changes) |
-| Payment Accounts | `data/paymentAccounts.ts` | **Still deferred.** `isBillingAccount()` is a synchronous billing-eligibility helper used in render by BulkUploader/BulkUploadSummary/PaymentMethodTabs; would need an async `paymentService` + state refactor across those consumers. Contract Manager-owned in the end state. |
+| ~~Payment Accounts~~ | ~~`data/paymentAccounts.ts`~~ | ✅ **Done** → `paymentService` (BulkUploader + BulkUploadSummary load billing eligibility into state). Contract Manager-owned in the end state. |
 
 ---
 

@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog } from '../components/ui/Dialog';
 import { PaymentMethodTabs, type SelectedPaymentMethod } from '../components/PaymentMethodTabs';
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
-import { isBillingAccount } from '../data/paymentAccounts';
+import { isBillingAccount } from '../services/paymentService';
 import { getBulkUploadById } from '../services/bulkUploadService';
 import { RECEPTACLE_SIZES } from '../data/bulkTemplate';
 import { getAllProvinces, getAllCities, getAllDistricts, type LocationOption } from '../lib/locationApi';
@@ -428,7 +428,17 @@ export function BulkUploadSummary() {
   const { getCurrentAccountName } = useSubAccounts();
 
   const activeAccountName = getCurrentAccountName();
-  const billingAvailable  = isBillingAccount(activeAccountName);
+
+  // Billing eligibility resolved via the service (Contract Manager-owned in the
+  // end state). Defaults to true (the helper's billing fallback) until resolved.
+  const [billingAvailable, setBillingAvailable] = useState(true);
+  useEffect(() => {
+    let active = true;
+    isBillingAccount(activeAccountName)
+      .then((b) => { if (active) setBillingAvailable(b); })
+      .catch(() => { if (active) setBillingAvailable(true); });
+    return () => { active = false; };
+  }, [activeAccountName]);
 
   // Batch date looked up via the service facade; falls back to the mock default
   // when the batch is unknown (preserves the prior synchronous fallback).

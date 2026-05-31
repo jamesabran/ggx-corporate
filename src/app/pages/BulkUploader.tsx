@@ -16,7 +16,7 @@ import { PaymentMethodTabs } from '../components/PaymentMethodTabs';
 import { BulkColumnMapper } from '../components/BulkColumnMapper';
 import { downloadBulkTemplate, BULK_TEMPLATE_COLUMNS } from '../data/bulkTemplate';
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
-import { isBillingAccount } from '../data/paymentAccounts';
+import { isBillingAccount } from '../services/paymentService';
 // Bulk upload reads/writes go through the bulkUploadService facade (not the
 // data module directly). The recent-uploads list (session records merged with
 // the seed) is owned by the service. In production this is fronted by the GGX
@@ -66,7 +66,17 @@ export function BulkUploader() {
   // A Manager always uploads under their assigned subaccount; an Admin uploads
   // under the active account/subaccount context.
   const activeAccountName = isManager ? user!.accountName : getCurrentAccountName();
-  const billingAvailable = isBillingAccount(activeAccountName);
+
+  // Billing eligibility resolved via the service (Contract Manager-owned in the
+  // end state). Defaults to true (the helper's billing fallback) until resolved.
+  const [billingAvailable, setBillingAvailable] = useState(true);
+  useEffect(() => {
+    let active = true;
+    isBillingAccount(activeAccountName)
+      .then((b) => { if (active) setBillingAvailable(b); })
+      .catch(() => { if (active) setBillingAvailable(true); });
+    return () => { active = false; };
+  }, [activeAccountName]);
 
   // Account scope captured on the upload record/notification (parent vs subaccount).
   // accountId is the canonical stable id; accountName is display only.
