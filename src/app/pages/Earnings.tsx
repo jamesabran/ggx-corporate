@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { IconDownload, IconBuilding, IconCircleCheck, IconAlertCircle } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
@@ -8,12 +8,20 @@ import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { useSubAccounts } from '../contexts/SubAccountContext';
-import { SETTLEMENTS, SETTLEMENT_STATUS_CONFIG } from '../data/earnings';
-
-const settlements = SETTLEMENTS;
+// Settlement figures are FTX-owned official finance values delivered via the
+// BFF; the page only renders what earningsService returns.
+import { getSettlements, SETTLEMENT_STATUS_CONFIG, type Settlement } from '../services/earningsService';
 
 export function Earnings() {
   const { isMainAccountView } = useSubAccounts();
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getSettlements()
+      .then((list) => { if (!cancelled) setSettlements(list); })
+      .catch(() => { if (!cancelled) setSettlements([]); });
+    return () => { cancelled = true; };
+  }, []);
   const [statusFilter, setStatusFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [subaccountFilter, setSubaccountFilter] = useState('all');

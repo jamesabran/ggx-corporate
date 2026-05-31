@@ -2457,3 +2457,23 @@ Created `services/reportsService.ts` and migrated `Reports.tsx` off direct `data
 
 **Validation result**
 - `npm run build` passes — 0 TypeScript errors.
+
+---
+
+### Service Layer — earningsService + Earnings/Settlement migration (2026-05-31)
+
+Created `services/earningsService.ts` and migrated `Earnings.tsx` and `EarningsSettlementDetail.tsx` off direct `data/earnings` imports. No visible behavior changed.
+
+**New `services/earningsService.ts`**
+- Async `getSettlements(filters?)` (status/source/subaccount) + `getSettlementById(id)`. Re-exports `SETTLEMENT_STATUS_CONFIG` (presentation) + types.
+- Documented: settlement gross/fees/net, payout amounts, COD totals, and status are FTX-owned official finance values via the BFF — frontend renders, never computes/reconciles them (§1b/§1c).
+
+**Changes**
+- `pages/Earnings.tsx`: settlements list now loads via `getSettlements()` into state (was a module-level `const settlements = SETTLEMENTS`). Filters remain UI-only (pre-existing).
+- `pages/EarningsSettlementDetail.tsx`: settlement now loads via `getSettlementById()` with a loading/not-found tri-state (was synchronous `getSettlement()`); existing per-line display totals (totalCod/Fees/Net reductions) left unchanged — presentation aggregation of backend line items, not new business math.
+
+**Deferred / acceptable**
+- `transactionService.getTransactionsBySettlementId()` still imports `getSettlement` from `data/earnings` directly. That's a service reading a data module (acceptable layering); not rerouted to avoid service→service indirection churn.
+
+**Validation result**
+- `npm run build` passes — 0 TypeScript errors.

@@ -153,6 +153,7 @@ others. Illustrative chains:
 | `src/app/services/claimsService.ts` | Claims list/detail, file claim, cancel booking, eligibility | `GET /claims`, `POST /claims`, `POST /transactions/:id/cancel` |
 | `src/app/services/slaService.ts` | SLA alerts list, follow-up, resolve | `GET /sla-alerts`, `POST /sla-alerts/:id/follow-up`, `POST /sla-alerts/:id/resolve` |
 | `src/app/services/reportsService.ts` | Report list, filters, download | `GET /reports`, `POST /reports/generate`, `GET /reports/:id/download` |
+| `src/app/services/earningsService.ts` | Settlements list + detail (FTX-owned figures) | `GET /accounts/me/settlements`, `GET /settlements/:id` |
 
 ---
 
@@ -241,6 +242,8 @@ All UI pages currently import from `src/app/data/` directly. This is safe and un
 | ~~SLA Alerts page~~ | ~~`data/slaAlerts`~~ | ✅ **Migrated** → `slaService.getSlaAlertsList()` / `sendAlertFollowUp()` / `resolveSlaAlert()` |
 | ~~Dashboard (SLA card)~~ | ~~`data/slaAlerts`~~ | ✅ **Migrated** → `slaService.getSlaAlertsList({ openOnly })` |
 | ~~Reports page~~ | ~~`data/reports`~~ | ✅ **Migrated** → `reportsService.getReports()` + `downloadReport` |
+| ~~Earnings page~~ | ~~`data/earnings`~~ | ✅ **Migrated** → `earningsService.getSettlements()` |
+| ~~Earnings Settlement Detail~~ | ~~`data/earnings`~~ | ✅ **Migrated** → `earningsService.getSettlementById()` |
 | ~~BulkUploader~~ | ~~`data/bulkUploads`~~ | ✅ **Migrated** → `bulkUploadService.getBulkUploads()` + re-exported write helpers |
 | Dashboard | ~~`data/transactions`~~ (recent tx ✅ migrated → `transactionService.getRecentTransactions()`); `data/slaAlerts` still direct | `transactionService` done; SLA service deferred |
 | RootLayout search | `data/transactions`, `data/claims`, `data/supportTickets` | `transactionService.getTransactions()` with search filter |
@@ -257,7 +260,7 @@ The following data modules have no service wrapper yet. They can be added when t
 | ~~Claims~~ | ~~`data/claims.ts`~~ | ✅ **Done** → `claimsService` (Claims page + TransactionDetails claims) |
 | ~~SLA Alerts~~ | ~~`data/slaAlerts.ts`~~ | ✅ **Done** → `slaService` (SLA Alerts page + Dashboard SLA card) |
 | ~~Reports~~ | ~~`data/reports.ts`~~ | ✅ **Done** → `reportsService` (Reports page) |
-| Earnings/Settlements | `data/earnings.ts` | Finance is Admin-only; low migration urgency |
+| ~~Earnings/Settlements~~ | ~~`data/earnings.ts`~~ | ✅ **Done** → `earningsService` (Earnings list + Settlement detail). Note: `transactionService.getTransactionsBySettlementId` still reads `data/earnings` directly (service→data, acceptable). |
 | Support Tickets | `data/supportTickets.ts` | Zendesk boundary already isolated |
 | Service Advisories | `data/serviceAdvisories.ts` | Read-only, low priority |
 | Payment Accounts | `data/paymentAccounts.ts` | OTP-gated, finance Admin-only |

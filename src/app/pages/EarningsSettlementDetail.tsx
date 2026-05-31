@@ -1,10 +1,12 @@
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { IconArrowLeft, IconArrowRight, IconWallet } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
-import { getSettlement, SETTLEMENT_STATUS_CONFIG } from '../data/earnings';
+// Settlement detail comes from earningsService (FTX-owned figures via the BFF).
+import { getSettlementById, SETTLEMENT_STATUS_CONFIG, type Settlement } from '../services/earningsService';
 
 const txStatusConfig = {
   delivered: { variant: 'success' as const, label: 'Delivered' },
@@ -14,7 +16,34 @@ const txStatusConfig = {
 
 export function EarningsSettlementDetail() {
   const { settlementId } = useParams<{ settlementId: string }>();
-  const settlement = settlementId ? getSettlement(settlementId) : undefined;
+  // undefined = loading, null = not found, Settlement = loaded.
+  const [settlement, setSettlement] = useState<Settlement | null | undefined>(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    if (!settlementId) { setSettlement(null); return; }
+    getSettlementById(settlementId)
+      .then((s) => { if (!cancelled) setSettlement(s); })
+      .catch(() => { if (!cancelled) setSettlement(null); });
+    return () => { cancelled = true; };
+  }, [settlementId]);
+
+  if (settlement === undefined) {
+    return (
+      <div className="p-6 space-y-4">
+        <Link to="/dashboard/earnings">
+          <Button variant="ghost" size="sm">
+            <IconArrowLeft className="w-4 h-4 mr-2" />
+            Back to Earnings
+          </Button>
+        </Link>
+        <Card>
+          <CardContent className="p-12 text-center text-sm text-gray-400">
+            Loading settlement…
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!settlement) {
     return (
