@@ -2189,3 +2189,22 @@ Both now import only from `services/transactionService` (plus claims/tickets dat
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~633 kB (pre-existing size warning; ~+2 kB).
+
+---
+
+### Service Layer — Dashboard recent transactions migration (2026-05-31)
+
+Migrated the Dashboard "Recent Transactions" panel from a module-level `deliveries.slice(0, 5)` derivation to `transactionService.getRecentTransactions(5)`. No visible behavior changed.
+
+**Changes (`pages/Dashboard.tsx`)**
+- Removed direct `deliveries`/`statusConfig` import from `data/transactions`; now imports `getRecentTransactions`, `statusConfig`, and `TransactionSummary` from `services/transactionService`.
+- Recent transactions now load into component state via `useEffect` with safe error fallback (empty list).
+- The Dashboard-only `updated` relative-time labels (`recentUpdatedLabels`) are kept as presentation-only UI strings, applied by row index.
+- SLA Alerts card still reads `data/slaAlerts` directly — SLA service migration remains out of scope/deferred.
+
+**Files changed**
+- `src/app/pages/Dashboard.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~633 kB (pre-existing size warning).

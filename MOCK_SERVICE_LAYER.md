@@ -122,6 +122,7 @@ The single canonical source is now `src/app/data/mock/accounts.mock.ts`.
 |---|---|---|
 | `pages/Transactions.tsx` | `transactionService.getTransactions()`, `getTransactionBatches()`, `statusConfig` | ✅ 2026-05-31 |
 | `pages/TransactionDetails.tsx` | `transactionService.getTransactionById()`, `getTransactionTotals()`, `statusConfig` | ✅ 2026-05-31 |
+| `pages/Dashboard.tsx` (recent transactions panel) | `transactionService.getRecentTransactions()`, `statusConfig` | ✅ 2026-05-31 |
 
 All other pages still import from `src/app/data/` directly (see §6).
 
@@ -149,7 +150,7 @@ All UI pages currently import from `src/app/data/` directly. This is safe and un
 | Notifications page | `data/notifications` | `notificationService.getNotifications()` |
 | Bell popover | `data/notifications` | `notificationService.getUnreadCount()` |
 | BulkUploader | `data/bulkUploads` | `bulkUploadService.getBulkUploads()` |
-| Dashboard | `data/transactions`, `data/slaAlerts` | `transactionService.getRecentTransactions()` |
+| Dashboard | ~~`data/transactions`~~ (recent tx ✅ migrated → `transactionService.getRecentTransactions()`); `data/slaAlerts` still direct | `transactionService` done; SLA service deferred |
 | RootLayout search | `data/transactions`, `data/claims`, `data/supportTickets` | `transactionService.getTransactions()` with search filter |
 | AuthContext | `contexts/AuthContext` | `authService.loginMockUser()`, `authService.getCurrentUser()` |
 

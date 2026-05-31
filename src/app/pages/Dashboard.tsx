@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
   IconPackage,
@@ -21,7 +22,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { useSubAccounts } from '../contexts/SubAccountContext';
-import { deliveries, statusConfig } from '../data/transactions';
+// Recent transactions come through the transactionService facade. SLA alerts
+// remain on their data module (service migration out of scope for this pass).
+import { getRecentTransactions, statusConfig, type TransactionSummary } from '../services/transactionService';
 import { getSlaAlerts, SLA_TYPE_META, SLA_STATUS_META } from '../data/slaAlerts';
 
 const stats = [
@@ -38,17 +41,8 @@ const quickActions = [
   { title: 'Submit a Ticket', description: 'Report issues or follow up on tickets', icon: IconMessage, href: '/dashboard/support-tickets', iconColor: 'text-orange-600', iconBg: 'bg-orange-50' },
 ];
 
-// Derived from the shared transaction dataset so every row links to a real
-// record. `updated` is a Dashboard-only relative-time label.
+// `updated` is a Dashboard-only relative-time label (presentation-only).
 const recentUpdatedLabels = ['2 hrs ago', '4 hrs ago', '6 hrs ago', '8 hrs ago', '12 hrs ago'];
-
-const recentTransactions = deliveries.slice(0, 5).map((d, i) => ({
-  tracking: d.tracking,
-  recipient: d.recipient,
-  destination: d.destination,
-  status: d.status,
-  updated: recentUpdatedLabels[i],
-}));
 
 const earningsRows = [
   { label: 'Earnings Disbursed', amount: '₱184,320', meta: 'Transferred to your account', icon: IconCircleCheck, iconColor: 'text-emerald-500' },
@@ -66,6 +60,16 @@ const performanceRows = [
 export function Dashboard() {
   const navigate = useNavigate();
   const { subAccountsEnabled, currentAccount, getCurrentAccountName } = useSubAccounts();
+
+  // Recent transactions for the preview panel, loaded via the service facade.
+  const [recentTransactions, setRecentTransactions] = useState<TransactionSummary[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getRecentTransactions(5)
+      .then((list) => { if (!cancelled) setRecentTransactions(list); })
+      .catch(() => { if (!cancelled) setRecentTransactions([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
@@ -151,8 +155,8 @@ export function Dashboard() {
           </CardHeader>
           <CardContent className="px-4 pt-3 pb-4 flex-1">
             <div className="space-y-1">
-              {recentTransactions.map((tx) => {
-                const sc = statusConfig[tx.status as keyof typeof statusConfig];
+              {recentTransactions.map((tx, i) => {
+                const sc = statusConfig[tx.status];
                 return (
                   <div
                     key={tx.tracking}
@@ -165,7 +169,7 @@ export function Dashboard() {
                     </div>
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                       <Badge variant={sc.variant} className="text-xs font-medium px-2 py-0.5 leading-none">{sc.label}</Badge>
-                      <span className="text-xs text-gray-400 leading-none tabular-nums">{tx.updated}</span>
+                      <span className="text-xs text-gray-400 leading-none tabular-nums">{recentUpdatedLabels[i]}</span>
                     </div>
                   </div>
                 );
