@@ -32,7 +32,7 @@ function BrandLogo({ name, className = 'w-6 h-6' }: { name: string; className?: 
     return <img src={logo.src} alt={name} className={`${className} rounded object-contain`} />;
   }
   return (
-    <span className={`${className} ${logo?.bg ?? 'bg-gray-400'} rounded flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0`}>
+    <span className={`${className} ${logo?.bg ?? 'bg-gray-400'} rounded flex items-center justify-center text-xs font-bold text-white flex-shrink-0`}>
       {logo?.short ?? name.charAt(0)}
     </span>
   );
@@ -297,7 +297,7 @@ export function PaymentMethodTabs({ billingAvailable = false, onPaymentMethodCha
         <span className="flex-1">
           <span className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-900">Pay via billing</span>
-            <Badge variant="info" className="text-[10px]">Default</Badge>
+            <Badge variant="info" className="text-xs">Default</Badge>
           </span>
           <span className="block text-xs text-gray-500 mt-0.5">You&apos;ll receive an invoice after the service.</span>
         </span>

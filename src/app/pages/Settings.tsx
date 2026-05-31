@@ -43,7 +43,7 @@ export function Settings() {
         </p>
       </div>
 
-      <div className="grid gap-6 max-w-3xl">
+      <div className="grid gap-6">
         {/* Subaccount context banner — shown when drilling into a subaccount */}
         {inSubaccountView && subaccountId && (
           <Card className="border-blue-200 bg-blue-50">

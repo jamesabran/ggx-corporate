@@ -57,7 +57,7 @@ export function Claims() {
             placeholder="Search by claim ID or tracking number..."
             value={searchQuery}
             onChange={setSearchQuery}
-            className="w-full sm:w-64"
+            className="w-full sm:w-80"
           />
           {mainView && (
             <Select

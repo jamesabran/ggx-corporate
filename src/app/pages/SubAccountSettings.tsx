@@ -48,7 +48,7 @@ function ManagerDisplay({ label, manager }: { label: string; manager: AppUser | 
         <p className="text-sm font-medium text-gray-900 leading-snug">{manager.name}</p>
         <p className="text-xs text-gray-500 leading-snug">{manager.email}</p>
       </div>
-      <Badge variant="default" className="text-[10px] flex-shrink-0">Manager</Badge>
+      <Badge variant="default" className="text-xs flex-shrink-0">Manager</Badge>
     </div>
   );
 }

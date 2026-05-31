@@ -26,7 +26,7 @@ export function AddressDisplayCard({ address }: AddressDisplayCardProps) {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <Badge variant={labelColors[address.label] || 'default'} className="text-[10px] px-2 py-0.5 mb-2 capitalize">
+        <Badge variant={labelColors[address.label] || 'default'} className="text-xs px-2 py-0.5 mb-2 capitalize">
           {getDisplayLabel(address)}
         </Badge>
         <p className="font-semibold text-gray-900 text-sm leading-snug">{address.name}</p>

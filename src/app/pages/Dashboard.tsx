@@ -223,7 +223,7 @@ export function Dashboard() {
                             <p className="text-sm text-gray-900 truncate leading-snug">{a.title}</p>
                             <p className="text-xs text-gray-500 leading-snug">{a.trackingNumber}</p>
                           </div>
-                          <Badge variant={st.variant} className="text-[10px] px-1.5 flex-shrink-0">{st.label}</Badge>
+                          <Badge variant={st.variant} className="text-xs px-1.5 flex-shrink-0">{st.label}</Badge>
                         </div>
                       );
                     })}

@@ -51,6 +51,9 @@ export function UsersPermissions() {
   const clearFilter = () =>
     setSearchParams((prev) => { prev.delete('subaccount'); return prev; });
 
+  // Must be declared before displayedUsers so it is initialised before it is read.
+  const [searchQuery, setSearchQuery] = useState('');
+
   // When a subaccount filter is active, show the Admin + managers assigned to that account.
   // Then apply search on top (name or email, min 2 chars).
   const displayedUsers = users
@@ -166,7 +169,6 @@ export function UsersPermissions() {
     setRemoveTarget(null);
   };
 
-  const [searchQuery, setSearchQuery] = useState('');
   const managerCount = users.filter((u) => u.role === 'Manager').length;
 
   return (

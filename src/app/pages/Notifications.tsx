@@ -38,12 +38,12 @@ function NotificationRow({ n, onClick }: { n: AppNotification; onClick: (n: AppN
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{meta.label}</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{meta.label}</span>
           {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />}
         </div>
         <p className={`text-sm leading-snug ${n.read ? 'text-gray-800' : 'text-gray-900 font-medium'}`}>{n.title}</p>
         {n.scope === 'subaccount' && n.accountName && (
-          <span className="inline-flex items-center text-[10px] font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 mt-0.5 mb-0.5">
+          <span className="inline-flex items-center text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 mt-0.5 mb-0.5">
             {n.accountName}
           </span>
         )}
@@ -98,7 +98,7 @@ export function Notifications() {
               >
                 {tab.label}
                 {unread > 0 && (
-                  <span className={`min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full ${
+                  <span className={`min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-bold rounded-full ${
                     active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
                   }`}>
                     {unread > 9 ? '9+' : unread}

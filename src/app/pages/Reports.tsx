@@ -142,11 +142,13 @@ export function Reports() {
         </CardHeader>
         <CardContent>
           {isSubaccountView && (
-            <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-blue-50 border border-blue-200 mb-4">
-              <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-blue-800">
-                Showing operational reports for this subaccount. Billing and settlement reports are available to the Main Account admin only.
-              </p>
+            <div className="mb-4">
+              <div className="inline-flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-blue-50 border border-blue-200 max-w-prose">
+                <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-blue-800">
+                  Showing operational reports for this subaccount. Billing and settlement reports are available to the Main Account admin only.
+                </p>
+              </div>
             </div>
           )}
 

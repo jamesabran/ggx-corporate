@@ -2031,3 +2031,72 @@ Documentation:
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Bundle size unchanged (~622 kB main + ~432 kB recharts). Service and mock files are not imported by any page, so they add 0 kB to the production bundle.
+
+---
+
+### UX Fix Pass — Remaining items (2026-05-31)
+
+Completed the remaining 7 UX fixes deferred from the prior pass. All changes are frontend/mock only.
+
+**1. Users & Permissions runtime error (UsersPermissions.tsx)**
+- Root cause: `const [searchQuery, setSearchQuery] = useState('')` was declared at line ~169 (after `commit`, `handleSubmit`, `confirmRemove`), but `displayedUsers` (line ~56) referenced `searchQuery` at line ~61 inside a `.filter()` call.
+- JavaScript `let`/`const` variables in temporal dead zone before their declaration cause `ReferenceError: Cannot access 'searchQuery' before initialization` at the first render.
+- Fix: moved `const [searchQuery, setSearchQuery] = useState('')` immediately after the `clearFilter` helper, before `displayedUsers` is derived. Removed the duplicate declaration lower in the file. `managerCount` was also moved up (it was adjacent). No logic changes.
+- Page now loads without runtime error. All existing rules preserved: Admin add/edit, Manager multi-subaccount assignments, 2-manager cap, Admin-only assignment.
+
+**2. Transactions filter toolbar layout (Transactions.tsx)**
+- Replaced `flex-col md:flex-row` on the CardHeader filter container with `flex flex-wrap items-center gap-2` so the toolbar is a flex row by default and wraps gracefully on narrow viewports.
+- Search input gets `flex-1 min-w-[200px]` ensuring it never collapses below a usable width.
+- Selects stay at natural width beside the search field on desktop.
+
+**3. Transactions — By Batch view (Transactions.tsx, data/transactions.ts)**
+- Added `viewMode: 'all' | 'batches'` state and a segmented toggle in the page header alongside "Export CSV".
+- "All Transactions" is unchanged; "By Batch" groups transactions from the full `transactions` array by `batch.batchId`.
+- `deriveBatchGroups()` helper: collects all transactions with a `batch` field, scopes to the active subaccount in subaccount view, sorts newest batchId first.
+- `parseBatchDate()`: extracts YYYY-MM-DD from the `UPLOAD-YYYY-MM-DD-NNN` format.
+- `batchStatusLabel()`: derives Complete/In Progress/Partial/Failed from transaction statuses within the batch.
+- Batch cards show: batch ID + status badge + subaccount tag (main view only), fileName + uploaded date, per-batch count breakdown (total/delivered/in-progress/failed). Clicking a card expands an inline transaction table; each row links to Transaction Details. Mobile-friendly count summary shown below the card header.
+- Footer note: "Transactions booked individually do not appear in batch view" (intentional — they have no `batch` field).
+- Added mock `batch` references to 3 more transactions in `data/transactions.ts` (GGX-2024-89238 and GGX-2024-89237 → `UPLOAD-2026-05-17-001` Acme Corporation; GGX-2024-89236 → `UPLOAD-2026-05-17-002` Acme Luzon). Total: 5 distinct batches with 6 batch-linked transactions across both subaccounts.
+- Transaction Details still shows upload source (batch field) per spec — not removed.
+- Future option noted in docs: a dedicated Transactions › Batches submenu can be considered if batch workflows become primary.
+
+**4. Minimum font size / accessibility — global `text-[10px]` audit**
+- All `text-[10px]` occurrences in `src/app/**` replaced with `text-xs` (12 px minimum).
+- Files fixed (previously deferred by prior pass):
+  - `components/AddressDisplayCard.tsx` — label badge (Address Book address cards, Settings pickup address)
+  - `components/PaymentMethodTabs.tsx` — BrandLogo fallback text, "Default" billing badge
+  - `layouts/RootLayout.tsx` — notification counter badge in sidebar, topbar search group headers ("Transactions" / "Claims" / "Support Tickets"), notification bell category label and subaccount tag, sidebar account-type label, account-menu section header
+  - `pages/Dashboard.tsx` — SLA alerts card status badge
+  - `pages/ParentDashboard.tsx` — activity feed type badge
+  - `pages/SubAccounts.tsx` — subaccount type and status badges
+  - `pages/SubAccountSettings.tsx` — manager role badge
+  - `pages/Notifications.tsx` — category label, subaccount tag, tab unread counter
+  - `pages/BulkUploadSummary.tsx` — inline field errors (Name/Contact/Address/Size/COD/Insurance), formula helper, "API offline" note, "Free ₱500 coverage" note
+- 0 `text-[10px]` instances remain in `src/app/`. Badge DS component already uses `text-xs`; the overrides were the source of the 10px violations.
+
+**5. Card-contained banner width (Reports.tsx)**
+- The subaccount info banner inside "Generate a Report" `CardContent` was a block `div` stretching to full card width.
+- Wrapped in a block `<div className="mb-4">` (for spacing), with the banner itself changed to `inline-flex ... max-w-prose`. Now sizes to content/text width and does not awkwardly span the full card.
+- Page-level banners (Claims page-level card, Dashboard/subaccount banners) remain full-width — not changed.
+
+**6. Settings page max-width (Settings.tsx)**
+- Removed `max-w-3xl` from the content grid `<div className="grid gap-6">`.
+- Settings now expands to full page width, consistent with all other main pages. Individual card inputs retain their own sizing.
+
+**7. Claims and SLA Alerts search field width (Claims.tsx, SlaAlerts.tsx)**
+- `SearchInput` `className` widened from `sm:w-64` / `sm:w-60` (240–256 px) to `sm:w-80` (320 px) on both pages.
+- Placeholder text is now fully readable on desktop without truncation.
+- Responsive behavior (full-width on mobile) unchanged.
+
+**Files changed**
+- Modified: `src/app/pages/UsersPermissions.tsx`, `src/app/pages/Transactions.tsx`, `src/app/data/transactions.ts`, `src/app/components/AddressDisplayCard.tsx`, `src/app/components/PaymentMethodTabs.tsx`, `src/app/layouts/RootLayout.tsx`, `src/app/pages/Dashboard.tsx`, `src/app/pages/ParentDashboard.tsx`, `src/app/pages/SubAccounts.tsx`, `src/app/pages/SubAccountSettings.tsx`, `src/app/pages/Notifications.tsx`, `src/app/pages/BulkUploadSummary.tsx`, `src/app/pages/Reports.tsx`, `src/app/pages/Settings.tsx`, `src/app/pages/Claims.tsx`, `src/app/pages/SlaAlerts.tsx`, `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- Transactions "By Batch" view does not support search or filters (not requested). A future search-within-batch or batch-level filter pass is deferred.
+- The 5-batch mock data set is sufficient for a demo. Real batch data will come from the bulk upload service layer.
+- `text-[9px]` in RootLayout (account switcher micro-initials bubble) was left unchanged — it is a 5×5-pixel decorative bubble (not readable text) and changing it would visually break the layout.
+- Global topbar/sidebar section label sizes are now `text-xs` (12 px); visual review may want to adjust tracking/weight if the labels look less compact.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~629 kB (+7 kB from batch view logic; pre-existing size warning).

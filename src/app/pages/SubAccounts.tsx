@@ -130,12 +130,12 @@ export function SubAccounts() {
                           {subAccount.name}
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="info" className="text-[10px] px-2 py-0.5">
+                          <Badge variant="info" className="text-xs px-2 py-0.5">
                             {subAccount.type === 'default' ? 'Default' : 'Additional'}
                           </Badge>
                           <Badge
                             variant={subAccount.status === 'active' ? 'success' : 'default'}
-                            className="text-[10px] px-2 py-0.5"
+                            className="text-xs px-2 py-0.5"
                           >
                             {subAccount.status === 'active' ? 'Active' : 'Inactive'}
                           </Badge>

@@ -333,7 +333,7 @@ export function RootLayout() {
                 <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
                 <span>{item.name}</span>
                 {isNotifications && unreadCount > 0 && (
-                  <span className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full">
+                  <span className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-bold text-white bg-red-500 rounded-full">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -499,7 +499,7 @@ export function RootLayout() {
                       <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
                         {txResults.length > 0 && (
                           <div>
-                            <p className="px-4 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Transactions</p>
+                            <p className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Transactions</p>
                             {txResults.map((d) => (
                               <button key={d.tracking} type="button"
                                 onClick={() => { navigate(`/dashboard/transactions/${d.tracking}`); setTopbarOpen(false); setTopbarQuery(''); }}
@@ -516,7 +516,7 @@ export function RootLayout() {
                         )}
                         {claimResults.length > 0 && (
                           <div>
-                            <p className="px-4 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Claims</p>
+                            <p className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Claims</p>
                             {claimResults.map((c) => (
                               <button key={c.id} type="button"
                                 onClick={() => { navigate(`/dashboard/transactions/${c.trackingNumber}`); setTopbarOpen(false); setTopbarQuery(''); }}
@@ -533,7 +533,7 @@ export function RootLayout() {
                         )}
                         {ticketResults.length > 0 && (
                           <div>
-                            <p className="px-4 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Support Tickets</p>
+                            <p className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Support Tickets</p>
                             {ticketResults.map((t) => (
                               <button key={t.id} type="button"
                                 onClick={() => { navigate(`/dashboard/support-tickets/${t.id}`); setTopbarOpen(false); setTopbarQuery(''); }}
@@ -617,12 +617,12 @@ export function RootLayout() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{meta.label}</span>
+                                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">{meta.label}</span>
                                     {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />}
                                   </div>
                                   <p className={cn('text-sm leading-snug', n.read ? 'text-gray-700' : 'text-gray-900 font-medium')}>{n.title}</p>
                                   {n.scope === 'subaccount' && n.accountName && (
-                                    <span className="inline-flex items-center text-[10px] font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 mt-0.5 mb-0.5">
+                                    <span className="inline-flex items-center text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 mt-0.5 mb-0.5">
                                       {n.accountName}
                                     </span>
                                   )}
@@ -697,7 +697,7 @@ export function RootLayout() {
                             </div>
                             <div className="min-w-0">
                               <p className="text-xs font-semibold text-gray-800 truncate leading-snug">{currentAccountName}</p>
-                              <p className="text-[10px] text-gray-400 leading-snug">{currentAccountType}</p>
+                              <p className="text-xs text-gray-400 leading-snug">{currentAccountType}</p>
                             </div>
                           </div>
                           <button
@@ -712,7 +712,7 @@ export function RootLayout() {
                     </div>
 
                     <div className="py-1">
-                      <p className="px-4 pt-1.5 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Account</p>
+                      <p className="px-4 pt-1.5 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Account</p>
                       <button onClick={goToSettings} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
                         <IconUserCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         My Profile

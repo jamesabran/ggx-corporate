@@ -170,7 +170,7 @@ function LocationCascadeCells({ province, city, barangay, onChange }: LocationCa
       <>
         <td className="px-3 py-2.5 align-top">
           <input value={province} onChange={(e) => onChange(e.target.value, '', '')} placeholder="Province" className={`${TABLE_INPUT_BASE} border-gray-300 focus:ring-primary`} />
-          <p className="text-[10px] text-amber-700 mt-0.5">API offline — type manually</p>
+          <p className="text-xs text-amber-700 mt-0.5">API offline — type manually</p>
         </td>
         <td className="px-3 py-2.5 align-top">
           <input value={city} onChange={(e) => onChange(province, e.target.value, '')} placeholder="City / Municipality" className={`${TABLE_INPUT_BASE} border-gray-300 focus:ring-primary`} />
@@ -631,7 +631,7 @@ export function BulkUploadSummary() {
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">Insure full item value? <span className="text-red-500">*</span></th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[145px]">
                       Item Protection Fee
-                      <span className="font-normal text-gray-400 block text-[10px] leading-tight">(COD − ₱500) × 1%</span>
+                      <span className="font-normal text-gray-400 block text-xs leading-tight">(COD − ₱500) × 1%</span>
                     </th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">Recipient Pays Fees</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[140px]">Reference ID</th>
@@ -666,19 +666,19 @@ export function BulkUploadSummary() {
                         {/* Recipient Name */}
                         <td className="px-3 py-2.5">
                           <ErrInput value={edits.recipientName} onChange={(v) => updateEdit(row.row, 'recipientName', v)} error={fe('recipientName')} />
-                          {fe('recipientName') && <p className="text-[10px] text-red-600 mt-0.5">Name is required</p>}
+                          {fe('recipientName') && <p className="text-xs text-red-600 mt-0.5">Name is required</p>}
                         </td>
 
                         {/* Mobile Number */}
                         <td className="px-3 py-2.5">
                           <ErrInput value={edits.mobileNumber} onChange={(v) => updateEdit(row.row, 'mobileNumber', v)} error={fe('mobileNumber')} placeholder="e.g. +639170000000" />
-                          {fe('mobileNumber') && <p className="text-[10px] text-red-600 mt-0.5">Contact number is required</p>}
+                          {fe('mobileNumber') && <p className="text-xs text-red-600 mt-0.5">Contact number is required</p>}
                         </td>
 
                         {/* Street Address */}
                         <td className="px-3 py-2.5">
                           <ErrInput value={edits.streetAddress} onChange={(v) => updateEdit(row.row, 'streetAddress', v)} error={fe('streetAddress')} />
-                          {fe('streetAddress') && <p className="text-[10px] text-red-600 mt-0.5">Address is required</p>}
+                          {fe('streetAddress') && <p className="text-xs text-red-600 mt-0.5">Address is required</p>}
                         </td>
 
                         {/* Province / City/Municipality / Barangay — 3 cascade cells */}
@@ -709,7 +709,7 @@ export function BulkUploadSummary() {
                             <option value="">Select size</option>
                             {RECEPTACLE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
                           </select>
-                          {fe('pouchSize') && <p className="text-[10px] text-red-600 mt-0.5">Select a valid size</p>}
+                          {fe('pouchSize') && <p className="text-xs text-red-600 mt-0.5">Select a valid size</p>}
                         </td>
 
                         {/* COD? — editable Yes/No */}
@@ -720,13 +720,13 @@ export function BulkUploadSummary() {
                         {/* COD Amount */}
                         <td className="px-3 py-2.5">
                           <ErrInput value={edits.codAmount} onChange={(v) => updateEdit(row.row, 'codAmount', v)} error={fe('codAmount')} placeholder="0.00" />
-                          {fe('codAmount') && <p className="text-[10px] text-red-600 mt-0.5">Exceeds ₱50,000 limit</p>}
+                          {fe('codAmount') && <p className="text-xs text-red-600 mt-0.5">Exceeds ₱50,000 limit</p>}
                         </td>
 
                         {/* Insure full item value? — editable Yes/No (required) */}
                         <td className="px-3 py-2.5">
                           <YesNoToggle value={edits.insureFull} onChange={(v) => updateEdit(row.row, 'insureFull', v)} error={fe('insureFull')} />
-                          {fe('insureFull') && <p className="text-[10px] text-red-600 mt-0.5">Select Yes or No</p>}
+                          {fe('insureFull') && <p className="text-xs text-red-600 mt-0.5">Select Yes or No</p>}
                         </td>
 
                         {/* Item Protection Fee — calculated display */}
@@ -735,7 +735,7 @@ export function BulkUploadSummary() {
                             ₱{protectionFee.toFixed(2)}
                           </span>
                           {edits.insureFull !== 'Yes' && (
-                            <p className="text-[10px] text-gray-400 mt-0.5">Free ₱500 coverage</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Free ₱500 coverage</p>
                           )}
                         </td>
 

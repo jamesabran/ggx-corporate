@@ -59,7 +59,7 @@ export function SlaAlerts() {
             placeholder="Search by tracking number or hub..."
             value={searchQuery}
             onChange={setSearchQuery}
-            className="w-full sm:w-60"
+            className="w-full sm:w-80"
           />
           {mainView && (
             <Select

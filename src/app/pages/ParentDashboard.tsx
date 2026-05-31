@@ -216,7 +216,7 @@ export function ParentDashboard() {
                               )}
                             </div>
                           </div>
-                          <Badge variant={meta.badge} className="text-[10px] px-1.5 py-0.5 flex-shrink-0 mt-0.5">
+                          <Badge variant={meta.badge} className="text-xs px-1.5 py-0.5 flex-shrink-0 mt-0.5">
                             {meta.label}
                           </Badge>
                         </div>
