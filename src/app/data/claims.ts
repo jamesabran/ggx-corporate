@@ -43,8 +43,14 @@ export interface Claim {
 
 // Seed claims linked to existing undelivered transactions.
 const SEED_CLAIMS: Claim[] = [
-  { id: 'CLM-1002', trackingNumber: 'GGX-2024-89236', reason: 'Delivery failed', details: 'Rider marked undelivered but recipient was available.', amount: 12300, status: 'open', createdAt: 'May 18, 2026', accountId: 'acme-luzon', accountName: 'Acme Luzon' },
-  { id: 'CLM-1001', trackingNumber: 'GGX-2024-89231', reason: 'Undelivered — returned to sender', details: 'Returned after failed delivery attempts; requesting refund of fees.', amount: 4300, status: 'in-review', createdAt: 'May 16, 2026', accountId: 'acme-corporation', accountName: 'Acme Corporation' },
+  { id: 'CLM-1008', trackingNumber: 'GGX-2026-90006', reason: 'Delivery failed', details: 'Rider attempted delivery but building was closed. High-value COD shipment.', amount: 43200, status: 'open',      createdAt: 'May 30, 2026', accountId: 'acme-luzon',        accountName: 'Acme Luzon' },
+  { id: 'CLM-1007', trackingNumber: 'GGX-2026-90008', reason: 'Delivery failed', details: 'Package marked undelivered without delivery attempt logged.', amount: 9400,  status: 'open',      createdAt: 'May 31, 2026', accountId: 'acme-corporation', accountName: 'Acme Corporation' },
+  { id: 'CLM-1006', trackingNumber: 'GGX-2026-90003', reason: 'Lost in transit', details: 'Package departed origin hub but never arrived at destination hub.', amount: 55000, status: 'in-review', createdAt: 'May 29, 2026', accountId: 'acme-luzon',        accountName: 'Acme Luzon' },
+  { id: 'CLM-1005', trackingNumber: 'GGX-2024-89230', reason: 'Delivery failed', details: 'Third failed attempt. Recipient confirmed availability; requesting investigation.', amount: 19500, status: 'in-review', createdAt: 'May 15, 2026', accountId: 'acme-corporation', accountName: 'Acme Corporation' },
+  { id: 'CLM-1004', trackingNumber: 'GGX-2024-89229', reason: 'Undelivered — returned to sender', details: 'Package returned without proper delivery attempts. Requesting full COD refund.', amount: 72000, status: 'approved',   createdAt: 'May 14, 2026', accountId: 'acme-luzon',        accountName: 'Acme Luzon' },
+  { id: 'CLM-1003', trackingNumber: 'GGX-2024-89227', reason: 'Delivery failed', details: 'Repeated failed delivery; no notification sent to recipient.', amount: 15600, status: 'settled',    createdAt: 'May 13, 2026', accountId: 'acme-corporation', accountName: 'Acme Corporation' },
+  { id: 'CLM-1002', trackingNumber: 'GGX-2024-89236', reason: 'Delivery failed', details: 'Rider marked undelivered but recipient was available.', amount: 12300, status: 'denied',     createdAt: 'May 18, 2026', accountId: 'acme-luzon',        accountName: 'Acme Luzon' },
+  { id: 'CLM-1001', trackingNumber: 'GGX-2024-89231', reason: 'Undelivered — returned to sender', details: 'Returned after failed delivery attempts; requesting refund of fees.', amount: 4300, status: 'settled',    createdAt: 'May 16, 2026', accountId: 'acme-corporation', accountName: 'Acme Corporation' },
 ];
 
 // Hydrate from localStorage (persisted across reloads); fall back to seed.

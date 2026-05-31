@@ -286,15 +286,21 @@ export function TransactionDetails() {
                 )}
 
                 {claim && (
-                  <div className="flex items-start justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2.5">
+                  <div
+                    className="flex items-start justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2.5 cursor-pointer hover:bg-gray-50"
+                    onClick={() => navigate(`/dashboard/claims/${claim.id}`)}
+                  >
                     <div className="flex items-start gap-2.5">
                       <IconReceiptRefund className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Claim {claim.id}</p>
+                        <p className="text-sm font-medium text-blue-600 hover:text-blue-700">Claim {claim.id}</p>
                         <p className="text-xs text-gray-500">{claim.reason}</p>
                       </div>
                     </div>
-                    <Badge variant={CLAIM_STATUS_META[claim.status].variant}>{CLAIM_STATUS_META[claim.status].label}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={CLAIM_STATUS_META[claim.status].variant}>{CLAIM_STATUS_META[claim.status].label}</Badge>
+                      <IconArrowRight className="w-3.5 h-3.5 text-gray-400" />
+                    </div>
                   </div>
                 )}
 

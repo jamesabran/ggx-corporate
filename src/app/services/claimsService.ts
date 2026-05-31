@@ -26,6 +26,7 @@
 
 import {
   getClaims,
+  getClaim,
   getClaimByTracking,
   submitClaim,
   requestCancellation,
@@ -47,6 +48,11 @@ export { CLAIM_STATUS_META, CLAIM_REASONS };
 export interface ClaimFilters {
   status?: ClaimStatus | 'all';
   subaccountId?: string;
+}
+
+/** Return a single claim by ID, or null. */
+export async function getClaimById(id: string): Promise<Claim | null> {
+  return getClaim(id) ?? null;
 }
 
 /** Return all claims, with optional status/subaccount filters. */

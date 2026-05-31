@@ -158,7 +158,7 @@ export function Claims() {
                       <TableRow
                         key={c.id}
                         className="cursor-pointer"
-                        onClick={() => navigate(`/dashboard/transactions/${c.trackingNumber}`)}
+                        onClick={() => navigate(`/dashboard/claims/${c.id}`)}
                       >
                         <TableCell className="font-medium">{c.id}</TableCell>
                         <TableCell className="text-blue-600">{c.trackingNumber}</TableCell>
