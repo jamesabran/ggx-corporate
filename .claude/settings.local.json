@@ -22,7 +22,9 @@
       "Bash(python -m pip install --quiet openpyxl)",
       "WebFetch(domain:help-center.gogoxpress.com)",
       "Bash(git commit *)",
-      "Bash(claude doctor *)"
+      "Bash(claude doctor *)",
+      "Bash(grep -rln 'from '\\\\''\\\\.\\\\./data/__TRACKED_VAR__'\\\\''' src/app)",
+      "Bash(git check-ignore *)"
     ]
   }
 }
