@@ -32,9 +32,6 @@ import {
   IconActivityHeartbeat,
 } from '@tabler/icons-react';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
-import { deliveries } from '../data/transactions';
-import { getClaims } from '../data/claims';
-import { getTickets } from '../data/supportTickets';
 import { cn } from '../lib/utils';
 import { Button } from '../components/ui/Button';
 import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
@@ -49,6 +46,10 @@ import {
   getNotifications, getUnreadCount, markVisibleRead, formatNotificationTime,
   type AppNotification,
 } from '../services/notificationService';
+// Topbar cross-domain search sources its lists via the service facades.
+import { getTransactions, type TransactionSummary } from '../services/transactionService';
+import { getClaimsList, type Claim } from '../services/claimsService';
+import { getTicketsList, type SupportTicket } from '../services/ticketsService';
 
 interface NavChild {
   name: string;
@@ -168,6 +169,26 @@ export function RootLayout() {
   const [topbarQuery, setTopbarQuery] = useState('');
   const [topbarOpen, setTopbarOpen] = useState(false);
   const topbarRef = useRef<HTMLDivElement>(null);
+
+  // Cross-domain search source lists, loaded from the service facades.
+  // Refreshed on navigation (matches the bell's freshness) so newly created
+  // claims/tickets surface in search. Filtering stays local (presentation-only).
+  const [searchTx, setSearchTx] = useState<TransactionSummary[]>([]);
+  const [searchClaims, setSearchClaims] = useState<Claim[]>([]);
+  const [searchTickets, setSearchTickets] = useState<SupportTicket[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([getTransactions(), getClaimsList(), getTicketsList()])
+      .then(([tx, claims, tickets]) => {
+        if (!active) return;
+        setSearchTx(tx);
+        setSearchClaims(claims);
+        setSearchTickets(tickets);
+      })
+      .catch(() => { /* keep last-known lists */ });
+    return () => { active = false; };
+  }, [location.pathname]);
 
   // Close all transient popovers/dropdowns when the route changes.
   useEffect(() => {
@@ -494,13 +515,13 @@ export function RootLayout() {
 
             {topbarOpen && (() => {
               const q = topbarQuery.trim().toLowerCase();
-              const txResults = deliveries
+              const txResults = searchTx
                 .filter((d) => d.tracking.toLowerCase().includes(q) || d.recipient.toLowerCase().includes(q))
                 .slice(0, 4);
-              const claimResults = getClaims()
+              const claimResults = searchClaims
                 .filter((c) => c.id.toLowerCase().includes(q) || c.trackingNumber.toLowerCase().includes(q))
                 .slice(0, 3);
-              const ticketResults = getTickets()
+              const ticketResults = searchTickets
                 .filter((t) => t.id.toLowerCase().includes(q) || t.trackingNumber.toLowerCase().includes(q))
                 .slice(0, 3);
               const hasResults = txResults.length > 0 || claimResults.length > 0 || ticketResults.length > 0;
