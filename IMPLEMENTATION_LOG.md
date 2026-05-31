@@ -2367,3 +2367,33 @@ Made `accountService.getSubaccounts()` return the live runtime subaccount list a
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~637 kB (pre-existing size warning).
+
+---
+
+### Service Layer — claimsService + Claims/TransactionDetails migration (2026-05-31)
+
+Created `services/claimsService.ts` and migrated the Claims page and TransactionDetails' claims usage off direct `data/claims` imports. No visible behavior changed.
+
+**Note on the prior "next reco":** the suggested "route notification *producers* through `notificationService.pushNotification()`" was reconsidered and **not done** — those producers (`data/claims`, `data/slaAlerts`, `data/financialSecurity`, `data/supportTickets`) are data-layer modules calling a peer data-layer function; routing them through the service would invert the layer dependency (data → service) for no benefit. The better cadence item — a new `claimsService` + page migration — was done instead.
+
+**New `services/claimsService.ts`**
+- Async data fns: `getClaimsList(filters?)`, `getClaimByTrackingNumber()`, `fileClaim()`, `cancelBooking()`, `isBookingCancelled()`.
+- Sync presentation-hint helpers: `claimEligible(status)`, `cancelEligible(status)` (which actions to OFFER — not authoritative).
+- Re-exports `CLAIM_STATUS_META` (presentation) + `CLAIM_REASONS` (options) + types.
+- Documented: frontend facade; claim approval amounts / refund values / official status are backend-owned (support/claims system + OMS via BFF), not frontend-computed.
+
+**Changes**
+- `pages/Claims.tsx`: list now loads via `getClaimsList()` into state (`useEffect`); scoping/search/status filtering stays local (presentation-only). `CLAIM_STATUS_META` from the service.
+- `pages/TransactionDetails.tsx`: claims imports now from `claimsService`. `claim`/`cancelled` load via a `useEffect` keyed on `id` (replacing synchronous `useState` initializers). `submitClaim`→`fileClaim` and `requestCancellation`→`cancelBooking` are now async handlers. Eligibility via `claimEligible`/`cancelEligible`; local derived booleans renamed `canFileClaim`/`canCancel` to avoid name collision with the imported helpers. Support tickets (`submitTicket`) intentionally stay on `data/supportTickets` (no ticketsService yet).
+
+**Behavior preserved**
+- Claims list, scoping, search, status filter, empty states unchanged. TransactionDetails claim badge / file-claim / cancel flows unchanged (now async under the hood).
+
+**Files changed**
+- `src/app/services/claimsService.ts` (new)
+- `src/app/pages/Claims.tsx`
+- `src/app/pages/TransactionDetails.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~637 kB (pre-existing size warning).

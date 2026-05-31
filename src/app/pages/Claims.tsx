@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { IconInfoCircle, IconReceiptRefund } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
@@ -6,7 +6,9 @@ import { Badge } from '../components/ui/Badge';
 import { SearchInput } from '../components/SearchInput';
 import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
-import { getClaims, CLAIM_STATUS_META, type Claim, type ClaimStatus } from '../data/claims';
+// Claims read goes through the claimsService facade. Scoping/search/status
+// filtering below is presentation-only over the service-provided list.
+import { getClaimsList, CLAIM_STATUS_META, type Claim, type ClaimStatus } from '../services/claimsService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { SUBACCOUNT_OPTIONS } from '../data/users';
 
@@ -15,7 +17,14 @@ export function Claims() {
   const { isMainAccountView, getCurrentAccountId } = useSubAccounts();
   const mainView = isMainAccountView();
 
-  const [allClaims] = useState<Claim[]>(() => [...getClaims()]);
+  const [allClaims, setAllClaims] = useState<Claim[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getClaimsList()
+      .then((list) => { if (!cancelled) setAllClaims(list); })
+      .catch(() => { if (!cancelled) setAllClaims([]); });
+    return () => { cancelled = true; };
+  }, []);
   const [statusFilter, setStatusFilter] = useState<'all' | ClaimStatus>('all');
   const [subaccountFilter, setSubaccountFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');

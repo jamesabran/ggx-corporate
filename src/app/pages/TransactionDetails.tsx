@@ -9,8 +9,8 @@ import { Select } from '../components/ui/Select';
 import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 // Transaction detail + totals come through the transactionService facade. The
 // totals are treated as backend-provided (FTX/BFF in production), not computed
-// as frontend source-of-truth. Claims/tickets remain on their data modules —
-// migrating those services is out of scope for this pass.
+// as frontend source-of-truth. Claims go through claimsService; support tickets
+// remain on their data module (no ticketsService yet).
 import {
   getTransactionById,
   getTransactionTotals,
@@ -18,9 +18,9 @@ import {
   type Transaction,
 } from '../services/transactionService';
 import {
-  getClaimByTracking, submitClaim, requestCancellation, isCancelled,
-  isClaimEligible, isCancelEligible, CLAIM_STATUS_META, CLAIM_REASONS, type Claim,
-} from '../data/claims';
+  getClaimByTrackingNumber, fileClaim, cancelBooking, isBookingCancelled,
+  claimEligible, cancelEligible, CLAIM_STATUS_META, CLAIM_REASONS, type Claim,
+} from '../services/claimsService';
 import { submitTicket } from '../data/supportTickets';
 
 export function TransactionDetails() {
@@ -36,13 +36,13 @@ export function TransactionDetails() {
   const [reportForm, setReportForm] = useState({ issueType: 'failed', description: '' });
   const [reportSubmittedId, setReportSubmittedId] = useState<string | null>(null);
 
-  // Claims & cancellation (frontend/mock) — local view state. Keyed off the id
-  // route param (claims service migration is out of scope for this pass).
-  const [claim, setClaim] = useState<Claim | undefined>(() => (id ? getClaimByTracking(id) : undefined));
+  // Claims & cancellation (frontend/mock) — local view state, loaded via the
+  // claimsService facade keyed off the id route param.
+  const [claim, setClaim] = useState<Claim | undefined>(undefined);
   const [showClaimForm, setShowClaimForm] = useState(false);
   const [claimForm, setClaimForm] = useState({ reason: '', details: '' });
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [cancelled, setCancelled] = useState(() => (id ? isCancelled(id) : false));
+  const [cancelled, setCancelled] = useState(false);
 
   useEffect(() => {
     let cancelledLoad = false;
@@ -50,6 +50,14 @@ export function TransactionDetails() {
     getTransactionById(id ?? '')
       .then((tx) => { if (!cancelledLoad) setTransaction(tx); })
       .catch(() => { if (!cancelledLoad) setTransaction(null); });
+    return () => { cancelledLoad = true; };
+  }, [id]);
+
+  useEffect(() => {
+    let cancelledLoad = false;
+    if (!id) { setClaim(undefined); setCancelled(false); return; }
+    getClaimByTrackingNumber(id).then((c) => { if (!cancelledLoad) setClaim(c ?? undefined); }).catch(() => {});
+    isBookingCancelled(id).then((c) => { if (!cancelledLoad) setCancelled(c); }).catch(() => {});
     return () => { cancelledLoad = true; };
   }, [id]);
 
@@ -98,12 +106,12 @@ export function TransactionDetails() {
   // Sample backend-provided totals (FTX/BFF own these in production).
   const { itemsTotal, feesTotal: totalFees } = getTransactionTotals(transaction);
 
-  const claimEligible = isClaimEligible(transaction.status) && !claim;
-  const cancelEligible = isCancelEligible(transaction.status) && !cancelled;
+  const canFileClaim = claimEligible(transaction.status) && !claim;
+  const canCancel = cancelEligible(transaction.status) && !cancelled;
 
-  const handleSubmitClaim = () => {
+  const handleSubmitClaim = async () => {
     if (!claimForm.reason) return;
-    const created = submitClaim({
+    const created = await fileClaim({
       trackingNumber: transaction.trackingNumber,
       reason: claimForm.reason,
       details: claimForm.details,
@@ -115,8 +123,8 @@ export function TransactionDetails() {
     setClaimForm({ reason: '', details: '' });
   };
 
-  const handleCancel = () => {
-    requestCancellation(transaction.trackingNumber, transaction.subaccount);
+  const handleCancel = async () => {
+    await cancelBooking(transaction.trackingNumber, transaction.subaccount);
     setCancelled(true);
     setShowCancelConfirm(false);
   };
@@ -263,7 +271,7 @@ export function TransactionDetails() {
           </Card>
 
           {/* Claims & Cancellation */}
-          {(claim || cancelled || claimEligible || cancelEligible) && (
+          {(claim || cancelled || canFileClaim || canCancel) && (
             <Card>
               <CardHeader><CardTitle>Claims &amp; Cancellation</CardTitle></CardHeader>
               <CardContent className="space-y-3">
@@ -287,7 +295,7 @@ export function TransactionDetails() {
                   </div>
                 )}
 
-                {claimEligible && (
+                {canFileClaim && (
                   <div>
                     <p className="text-sm text-gray-600 mb-2">This delivery is undelivered. You can file a refund claim linked to this tracking number.</p>
                     <Button variant="outline" size="sm" onClick={() => setShowClaimForm(true)}>
@@ -297,7 +305,7 @@ export function TransactionDetails() {
                   </div>
                 )}
 
-                {cancelEligible && (
+                {canCancel && (
                   <div>
                     <p className="text-sm text-gray-600 mb-2">This booking is newly created and can still be cancelled.</p>
                     <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setShowCancelConfirm(true)}>
