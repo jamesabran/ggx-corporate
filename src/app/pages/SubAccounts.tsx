@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   IconBuilding, IconLock, IconPlus, IconChartBar, IconSettings,
@@ -7,7 +8,12 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { useSubAccounts } from '../contexts/SubAccountContext';
-import { getManagersForSubaccount } from '../data/users';
+// Manager lookups go through the userService facade. The subaccount LIST stays
+// on SubAccountContext for now because it is the runtime store (Request flow
+// adds + localStorage persistence); accountService.getSubaccounts() currently
+// returns only the static mock, so migrating the list source is deferred until
+// accountService owns runtime subaccount state. See MOCK_SERVICE_LAYER.md.
+import { getManagersBySubaccountId, type AppUser } from '../services/userService';
 
 function ManagerSlot({
   label,
@@ -46,6 +52,18 @@ function ManagerSlot({
 export function SubAccounts() {
   const navigate = useNavigate();
   const { subAccountsEnabled, subAccounts, setCurrentAccount } = useSubAccounts();
+
+  // Managers per subaccount, loaded via the userService facade.
+  const [managersByAccount, setManagersByAccount] = useState<Record<string, AppUser[]>>({});
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(
+      subAccounts.map(async (sa) => [sa.id, await getManagersBySubaccountId(sa.id)] as const)
+    )
+      .then((entries) => { if (!cancelled) setManagersByAccount(Object.fromEntries(entries)); })
+      .catch(() => { if (!cancelled) setManagersByAccount({}); });
+    return () => { cancelled = true; };
+  }, [subAccounts]);
 
   if (!subAccountsEnabled) {
     return (
@@ -111,7 +129,7 @@ export function SubAccounts() {
 
       <div className="grid gap-4">
         {subAccounts.map((subAccount) => {
-          const managers = getManagersForSubaccount(subAccount.id);
+          const managers = managersByAccount[subAccount.id] ?? [];
           const primary = managers[0] ?? null;
           const backup  = managers[1] ?? null;
 

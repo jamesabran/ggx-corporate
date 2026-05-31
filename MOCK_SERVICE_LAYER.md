@@ -124,6 +124,9 @@ The single canonical source is now `src/app/data/mock/accounts.mock.ts`.
 | `pages/TransactionDetails.tsx` | `transactionService.getTransactionById()`, `getTransactionTotals()`, `statusConfig` | ✅ 2026-05-31 |
 | `pages/Dashboard.tsx` (recent transactions panel) | `transactionService.getRecentTransactions()`, `statusConfig` | ✅ 2026-05-31 |
 | `pages/SubAccountSettings.tsx` | `userService.getUsers_()`, `setSubaccountManagers()`, `MAX_MANAGERS_PER_SUBACCOUNT` | ✅ 2026-05-31 |
+| `pages/SubAccounts.tsx` (manager lookups) | `userService.getManagersBySubaccountId()` | ✅ 2026-05-31 |
+
+> **Note on `SubAccounts.tsx`:** only the **manager lookups** were migrated to `userService`. The subaccount **list** still comes from `SubAccountContext` — see §6 for why.
 
 All other pages still import from `src/app/data/` directly (see §6).
 
@@ -147,7 +150,7 @@ All UI pages currently import from `src/app/data/` directly. This is safe and un
 | SLA Alerts page | `data/slaAlerts` | (sla service — deferred) |
 | Users & Permissions | `data/users` | `userService.getUsers_()`, `userService.updateUser()` |
 | ~~SubAccountSettings~~ | ~~`data/users`~~ | ✅ **Migrated** → `userService.getUsers_()` + `setSubaccountManagers()` |
-| SubAccounts page | `contexts/SubAccountContext` | `accountService.getSubaccounts()` |
+| SubAccounts page | `contexts/SubAccountContext` (list) — manager lookups ✅ migrated to `userService` | `accountService.getSubaccounts()` **deferred** (see below) |
 | Notifications page | `data/notifications` | `notificationService.getNotifications()` |
 | Bell popover | `data/notifications` | `notificationService.getUnreadCount()` |
 | BulkUploader | `data/bulkUploads` | `bulkUploadService.getBulkUploads()` |
@@ -235,7 +238,7 @@ Before real API integration can begin, the following contracts must be confirmed
 1. ✅ **Service layer created**
 2. ✅ **Transactions pages migrated** → `transactionService` (Transactions.tsx + TransactionDetails.tsx, 2026-05-31). Validated the seam: async facade, presentation-only filtering, service-provided sample roll-ups/totals.
 3. ✅ **SubAccountSettings.tsx migrated** → `userService` (read via `getUsers_()`, write via new `setSubaccountManagers()`, 2026-05-31). Exercised the `userService` seam incl. an async write path.
-4. **Next:** Migrate `SubAccounts.tsx` → `accountService.getSubaccounts()` (replaces SubAccountContext dependency)
-5. **Then:** Migrate `Users & Permissions` → full `userService` (add/edit/remove)
+4. ◑ **SubAccounts.tsx partially migrated** → manager lookups now use `userService.getManagersBySubaccountId()` (2026-05-31). The subaccount **list** stays on `SubAccountContext` because the context is the runtime store (Request-flow adds + localStorage), whereas `accountService.getSubaccounts()` currently returns only the static mock. **Blocker for full migration:** `accountService` must first own runtime subaccount state (enable/add/persist) so the list can move off the context without losing runtime-added subaccounts. Deferred until then.
+5. **Next:** Migrate `Users & Permissions` → full `userService` (add/edit/remove)
 6. **Then:** Migrate notifications bell → `notificationService`
 7. **Last:** Auth migration — requires real backend endpoint

@@ -2234,3 +2234,24 @@ Migrated `pages/SubAccountSettings.tsx` off direct `data/users` imports onto the
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~633 kB (pre-existing size warning).
+
+---
+
+### Service Layer — SubAccounts manager lookups migration (2026-05-31)
+
+Migrated `pages/SubAccounts.tsx` manager lookups off the direct `data/users` import onto `userService.getManagersBySubaccountId()`. No visible behavior changed.
+
+**Changes (`pages/SubAccounts.tsx`)**
+- Removed `import { getManagersForSubaccount } from '../data/users'`; now imports `getManagersBySubaccountId` + `AppUser` from `services/userService`.
+- Managers per subaccount load via `useEffect` (`Promise.all` over the current subaccount list) into a `managersByAccount` record keyed by subaccount id, with a safe empty fallback. The card render reads from this map instead of calling the data helper synchronously.
+
+**Scope decision — list source NOT migrated (deferred)**
+- The subaccount **list** still comes from `SubAccountContext`, intentionally. The context is the runtime source of truth: it holds runtime-added subaccounts from the Request flow and persists them to localStorage. `accountService.getSubaccounts()` currently returns only the static `MOCK_SUBACCOUNTS`, so swapping the list source would hide runtime-added subaccounts — a visible behavior change.
+- Full migration is blocked until `accountService` owns runtime subaccount state (enable/add/persist). Documented in `MOCK_SERVICE_LAYER.md` §6 and §10.
+
+**Files changed**
+- `src/app/pages/SubAccounts.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~633 kB (pre-existing size warning).
