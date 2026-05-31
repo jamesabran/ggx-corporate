@@ -209,6 +209,7 @@ The single canonical source is now `src/app/data/mock/accounts.mock.ts`.
 | `pages/ServiceAdvisories.tsx` | `serviceAdvisoriesService.getAdvisories()` (loaded into state; status filter + active count stay local) | ✅ 2026-05-31 |
 | `pages/PaymentSettings.tsx` (financial change record) | `financialSecurityService.recordFinancialChange()` (fire-and-forget after OTP verify) | ✅ 2026-05-31 |
 | `pages/BulkUploader.tsx` + `pages/BulkUploadSummary.tsx` (billing eligibility) | `paymentService.isBillingAccount()` (loaded into state, keyed on active account; default `true` until resolved) | ✅ 2026-05-31 |
+| `pages/Claims.tsx`, `pages/Reports.tsx`, `pages/SlaAlerts.tsx` (subaccount filter options) | `userService.getSubaccountOptions()` (loaded into state; dropdown rendered from state) | ✅ 2026-05-31 |
 
 > **Note on notifications:** `useNotificationViewer()` (a React hook) and `CATEGORY_META` (presentation config) intentionally stay in `data/notifications` — they are not data access. The bell's unread badge is now state refreshed on viewer + route change (matches the prior per-render freshness) and reset to 0 after marking read on open.
 

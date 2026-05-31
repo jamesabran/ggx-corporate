@@ -13,7 +13,7 @@ import {
   type ReportItem, type ReportType,
 } from '../services/reportsService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
-import { SUBACCOUNT_OPTIONS } from '../data/users';
+import { getSubaccountOptions } from '../services/userService';
 
 type DateRange = 'today' | 'last7' | 'last30' | 'custom';
 
@@ -71,6 +71,14 @@ export function Reports() {
   const [customFrom, setCustomFrom] = useState('');
   const [customTo,   setCustomTo]   = useState('');
   const [subaccountFilter, setSubaccountFilter] = useState('');
+  const [subaccountOptions, setSubaccountOptions] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getSubaccountOptions()
+      .then((opts) => { if (!cancelled) setSubaccountOptions(opts); })
+      .catch(() => { if (!cancelled) setSubaccountOptions([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   const customRangeValid = dateRange !== 'custom' || (customFrom !== '' && customTo !== '');
   const canGenerate = customRangeValid;
@@ -237,7 +245,7 @@ export function Reports() {
                   onChange={(e) => setSubaccountFilter(e.target.value)}
                 >
                   <option value="">All subaccounts</option>
-                  {SUBACCOUNT_OPTIONS.map((s) => (
+                  {subaccountOptions.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </Select>

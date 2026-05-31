@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 // filtering below is presentation-only over the service-provided list.
 import { getClaimsList, CLAIM_STATUS_META, type Claim, type ClaimStatus } from '../services/claimsService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
-import { SUBACCOUNT_OPTIONS } from '../data/users';
+import { getSubaccountOptions } from '../services/userService';
 
 export function Claims() {
   const navigate = useNavigate();
@@ -28,6 +28,14 @@ export function Claims() {
   const [statusFilter, setStatusFilter] = useState<'all' | ClaimStatus>('all');
   const [subaccountFilter, setSubaccountFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [subaccountOptions, setSubaccountOptions] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getSubaccountOptions()
+      .then((opts) => { if (!cancelled) setSubaccountOptions(opts); })
+      .catch(() => { if (!cancelled) setSubaccountOptions([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   // In subaccount view, scope to current account only.
   const scopedClaims = mainView
@@ -76,7 +84,7 @@ export function Claims() {
                 onChange={(e) => setSubaccountFilter(e.target.value)}
               >
                 <option value="">All subaccounts</option>
-                {SUBACCOUNT_OPTIONS.map((s) => (
+                {subaccountOptions.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </Select>

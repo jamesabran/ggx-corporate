@@ -13,7 +13,7 @@ import {
   SLA_TYPE_META, SLA_STATUS_META, type SlaAlert, type SlaAlertType,
 } from '../services/slaService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
-import { SUBACCOUNT_OPTIONS } from '../data/users';
+import { getSubaccountOptions } from '../services/userService';
 
 export function SlaAlerts() {
   const navigate = useNavigate();
@@ -24,9 +24,17 @@ export function SlaAlerts() {
   const [typeFilter, setTypeFilter] = useState<'all' | SlaAlertType>('all');
   const [subaccountFilter, setSubaccountFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [subaccountOptions, setSubaccountOptions] = useState<{ id: string; name: string }[]>([]);
 
   const refresh = () => { getSlaAlertsList().then(setAllAlerts).catch(() => {}); };
   useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    getSubaccountOptions()
+      .then((opts) => { if (!cancelled) setSubaccountOptions(opts); })
+      .catch(() => { if (!cancelled) setSubaccountOptions([]); });
+    return () => { cancelled = true; };
+  }, []);
   const handleFollowUp = async (id: string) => { await sendAlertFollowUp(id); refresh(); };
   const handleResolve  = async (id: string) => { await resolveSlaAlert(id); refresh(); };
 
@@ -72,7 +80,7 @@ export function SlaAlerts() {
                 onChange={(e) => setSubaccountFilter(e.target.value)}
               >
                 <option value="">All subaccounts</option>
-                {SUBACCOUNT_OPTIONS.map((s) => (
+                {subaccountOptions.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </Select>
