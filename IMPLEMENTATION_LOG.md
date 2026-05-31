@@ -2255,3 +2255,33 @@ Migrated `pages/SubAccounts.tsx` manager lookups off the direct `data/users` imp
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~633 kB (pre-existing size warning).
+
+---
+
+### Service Layer — Users & Permissions full migration (2026-05-31)
+
+Migrated `pages/UsersPermissions.tsx` off direct `data/users` imports onto the full `userService` surface (reads + all writes). This fully consumes `userService`. No visible behavior changed (minor error-copy difference noted below).
+
+**Changes (`pages/UsersPermissions.tsx`)**
+- Removed all `data/users` imports (`getUsers`, `setUsers`, `SUBACCOUNT_OPTIONS`, `getSubaccountName`, `getSubaccountManagerCount`). Now imports `getUsers_`, `createUser`, `updateUser`, `updateUserSubaccountAssignments`, `removeUser`, `getSubaccountOptions`, `MAX_MANAGERS_PER_SUBACCOUNT`, `AppUser` from `services/userService`.
+- Users + subaccount options load via `useEffect`; `reloadUsers()` refreshes after each write.
+- **Add** → `createUser({ name, email, subaccounts })` (service enforces duplicate-email + manager-cap validation).
+- **Edit (Manager)** → `updateUserSubaccountAssignments()` (cap validation) + `updateUser({ name })`.
+- **Edit (Admin)** → `updateUser({ name })` only (email/role/access locked; email field stays disabled).
+- **Remove** → `removeUser()` (service enforces sole-Admin protection).
+- Presentation-only helpers added: `subName(id)` (resolve name from loaded options) and `managerCountFor(subId, excludeId)` (UI capacity count from loaded users). These replace the former data-module helpers and remain allowed UI logic (counts/formatting).
+- Form-completeness checks (name required, email format, ≥1 subaccount) stay in the UI as validation hints; business-rule validation is delegated to the service and surfaced via `result.error`.
+
+**Business rules now enforced in the service**
+- Duplicate email rejection, max 2 managers per subaccount, sole-Admin cannot be removed, Manager assignment Admin-only (route guard unchanged).
+
+**Assumptions / minor differences**
+- Duplicate-email error copy now comes from the service ("User with email X already exists.") instead of the previous page-specific string. Functionally equivalent (error still surfaces inline).
+- New-user id now `user-${Date.now()}` (service) vs. previous `Date.now().toString()` — not user-visible.
+
+**Files changed**
+- `src/app/pages/UsersPermissions.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~635 kB (pre-existing size warning).

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import {
   IconPlus, IconUserCircle, IconShield, IconEdit, IconTrash,
@@ -10,16 +10,22 @@ import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
+// All user reads/writes + business rules (duplicate email, manager cap, sole-Admin
+// protection) go through the userService facade. In production this is fronted by
+// the GGX Corporate BFF over the identity provider (Firebase) + Contract Manager.
 import {
-  type AppUser,
-  SUBACCOUNT_OPTIONS,
+  getUsers_,
+  createUser,
+  updateUser,
+  updateUserSubaccountAssignments,
+  removeUser,
+  getSubaccountOptions,
   MAX_MANAGERS_PER_SUBACCOUNT,
-  getSubaccountName,
-  getSubaccountManagerCount,
-  getUsers,
-  setUsers,
-} from '../data/users';
+  type AppUser,
+} from '../services/userService';
 import { SearchInput } from '../components/SearchInput';
+
+interface SubaccountOption { id: string; name: string }
 
 // ---------------------------------------------------------------------------
 // Access model
@@ -32,20 +38,33 @@ function initials(name: string) {
 }
 
 export function UsersPermissions() {
-  // Mirror module state into React so the component is reactive.
-  const [users, setLocalUsers] = useState<AppUser[]>(() => getUsers());
+  // Users + subaccount options loaded via the service facade. Reloaded after writes.
+  const [users, setUsersState] = useState<AppUser[]>([]);
+  const [subaccountOptions, setSubaccountOptions] = useState<SubaccountOption[]>([]);
 
-  const syncUsers = (next: AppUser[]) => {
-    setLocalUsers(next);
-    setUsers(next);
-  };
+  const reloadUsers = async () => setUsersState(await getUsers_());
+
+  useEffect(() => {
+    let cancelled = false;
+    getUsers_().then((list) => { if (!cancelled) setUsersState(list); }).catch(() => {});
+    getSubaccountOptions().then((opts) => { if (!cancelled) setSubaccountOptions([...opts]); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  // Presentation-only helpers derived from the service-loaded data.
+  const subName = (id: string) => subaccountOptions.find((s) => s.id === id)?.name ?? id;
+  // UI capacity count: managers assigned to a subaccount, optionally excluding one user.
+  const managerCountFor = (subId: string, excludeUserId?: string) =>
+    users.filter(
+      (u) => u.role === 'Manager' && u.subaccounts?.includes(subId) && u.id !== excludeUserId
+    ).length;
 
   const [searchParams, setSearchParams] = useSearchParams();
 
   // URL filter: ?subaccount=<canonical-id>
   const subaccountFilterId = searchParams.get('subaccount');
   const subaccountFilterOption = subaccountFilterId
-    ? SUBACCOUNT_OPTIONS.find((s) => s.id === subaccountFilterId)
+    ? subaccountOptions.find((s) => s.id === subaccountFilterId)
     : null;
 
   const clearFilter = () =>
@@ -102,70 +121,45 @@ export function UsersPermissions() {
     setEmail(''); setSelectedSubs([]); setFormError(null);
   };
 
-  const commit = () => {
-    if (editingId) {
-      syncUsers(users.map((u) => {
-        if (u.id !== editingId) return u;
-        if (isAdminEdit) return { ...u, name: name.trim(), email: email.trim() };
-        return { ...u, name: name.trim(), email: email.trim(), subaccounts: selectedSubs };
-      }));
-    } else {
-      syncUsers([
-        ...users,
-        {
-          id: Date.now().toString(),
-          name: name.trim(),
-          email: email.trim(),
-          role: 'Manager' as const,
-          subaccounts: selectedSubs,
-        },
-      ]);
-    }
-    closeModal();
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Presentation-level form-completeness checks (allowed in the UI).
     if (!name.trim()) { setFormError("Enter the user's name."); return; }
     if (!email.trim() || !email.includes('@')) {
       setFormError('Enter a valid email address.'); return;
     }
-    if (isAdminEdit) { commit(); return; }
 
-    // Add: prevent duplicate email
-    if (!editingId) {
-      const duplicate = users.find(
-        (u) => u.email.trim().toLowerCase() === email.trim().toLowerCase()
-      );
-      if (duplicate) {
-        setFormError(
-          `${email.trim()} already exists. Use Edit to change their subaccount assignments.`
-        );
-        return;
-      }
+    // Admin edit: name only (email/role/access locked).
+    if (isAdminEdit && editingId) {
+      await updateUser(editingId, { name });
+      await reloadUsers();
+      closeModal();
+      return;
     }
 
     if (selectedSubs.length === 0) {
       setFormError('Select at least one subaccount to assign this Manager.'); return;
     }
 
-    // Validate capacity for each selected subaccount.
-    for (const subId of selectedSubs) {
-      const count = getSubaccountManagerCount(subId, editingId ?? undefined);
-      if (count >= MAX_MANAGERS_PER_SUBACCOUNT) {
-        setFormError(
-          `${getSubaccountName(subId)} already has ${MAX_MANAGERS_PER_SUBACCOUNT} managers. ` +
-          `Remove one before assigning another.`
-        );
-        return;
-      }
+    if (editingId) {
+      // Manager edit — capacity validation enforced by the service.
+      const result = await updateUserSubaccountAssignments(editingId, selectedSubs);
+      if (!result.success) { setFormError(result.error ?? 'Unable to save changes.'); return; }
+      await updateUser(editingId, { name });
+    } else {
+      // Add — duplicate-email + capacity validation enforced by the service.
+      const result = await createUser({ name, email, subaccounts: selectedSubs });
+      if (!result.success) { setFormError(result.error ?? 'Unable to add user.'); return; }
     }
-    commit();
+
+    await reloadUsers();
+    closeModal();
   };
 
-  const confirmRemove = () => {
+  const confirmRemove = async () => {
     if (!removeTarget) return;
-    syncUsers(users.filter((u) => u.id !== removeTarget.id));
+    await removeUser(removeTarget.id);
+    await reloadUsers();
     setRemoveTarget(null);
   };
 
@@ -285,7 +279,7 @@ export function UsersPermissions() {
                         <Badge variant="default" className="w-fit">Manager</Badge>
                         {(user.subaccounts ?? []).map((subId) => (
                           <span key={subId} className="text-sm text-gray-600 leading-snug">
-                            · {getSubaccountName(subId)}
+                            · {subName(subId)}
                           </span>
                         ))}
                         {(user.subaccounts ?? []).length === 0 && (
@@ -388,9 +382,9 @@ export function UsersPermissions() {
                 <span className="ml-1 text-gray-400 font-normal">(select one or more)</span>
               </label>
               <div className="space-y-2 rounded-lg border border-gray-200 p-3 bg-gray-50">
-                {SUBACCOUNT_OPTIONS.map((s) => {
+                {subaccountOptions.map((s) => {
                   // savedCount = managers already saved excluding the user being edited.
-                  const savedCount = getSubaccountManagerCount(s.id, editingId ?? undefined);
+                  const savedCount = managerCountFor(s.id, editingId ?? undefined);
                   const alreadySelected = selectedSubs.includes(s.id);
                   // full: the slot is taken by others AND this user is not already in it.
                   const full = savedCount >= MAX_MANAGERS_PER_SUBACCOUNT && !alreadySelected;
@@ -477,7 +471,7 @@ export function UsersPermissions() {
               {(removeTarget.subaccounts?.length ?? 0) > 0 && (
                 <> to{' '}
                   <span className="font-medium text-gray-700">
-                    {removeTarget.subaccounts!.map(getSubaccountName).join(', ')}
+                    {removeTarget.subaccounts!.map(subName).join(', ')}
                   </span>
                 </>
               )}. This can be re-added later.
