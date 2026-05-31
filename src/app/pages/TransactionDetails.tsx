@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
-import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff, IconUpload, IconArrowRight, IconReceiptRefund, IconX, IconCircleCheck } from '@tabler/icons-react';
+import { useNavigate, useParams, Link } from 'react-router';
+import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff, IconUpload, IconArrowRight, IconReceiptRefund, IconX, IconCircleCheck, IconCheck, IconPhoto, IconExternalLink } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -27,6 +27,9 @@ export function TransactionDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [rating, setRating] = useState(0);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [proofModal, setProofModal] = useState<string | null>(null);
 
   // undefined = loading, null = not found, Transaction = loaded.
   const [transaction, setTransaction] = useState<Transaction | null | undefined>(undefined);
@@ -395,26 +398,75 @@ export function TransactionDetails() {
         <div className="space-y-6">
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardContent className="p-6">
-              <h3 className="font-semibold text-green-900 mb-2">Rate Your Delivery Experience</h3>
-              <p className="text-sm text-green-800 mb-4">Your feedback helps us improve our service and recognize excellent delivery riders.</p>
-              <div className="flex gap-1 mb-4">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button key={star} onClick={() => setRating(star)} className="transition-colors">
-                    <IconStar className={`w-8 h-8 ${star <= rating ? 'fill-yellow-500 text-yellow-500' : 'text-gray-300'}`} />
-                  </button>
-                ))}
-              </div>
-              <Button variant="outline" className="w-full bg-white">Submit Rating</Button>
+              {ratingSubmitted ? (
+                <div className="flex items-center gap-2 text-green-800">
+                  <IconCircleCheck className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-green-900">Thanks for your feedback!</p>
+                    <p className="text-sm text-green-700">You rated this delivery {rating} out of 5 stars.</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h3 className="font-semibold text-green-900 mb-2">Rate Your Delivery Experience</h3>
+                  <p className="text-sm text-green-800 mb-4">Your feedback helps us improve our service and recognize excellent delivery riders.</p>
+                  <div className="flex gap-1 mb-4">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button key={star} onClick={() => setRating(star)} className="transition-colors">
+                        <IconStar className={`w-8 h-8 ${star <= rating ? 'fill-yellow-500 text-yellow-500' : 'text-gray-300'}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-white"
+                    disabled={rating === 0}
+                    onClick={() => { if (rating > 0) setRatingSubmitted(true); }}
+                  >
+                    Submit Rating
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Tracking Timeline</CardTitle>
-                <Button variant="ghost" size="sm">
-                  <IconShare className="w-4 h-4 mr-1" />
-                  Share
+                <div>
+                  <CardTitle>Tracking Timeline</CardTitle>
+                  <Link
+                    to={`/track/${transaction.trackingNumber}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 mt-0.5"
+                  >
+                    <IconExternalLink className="w-3 h-3" />
+                    Public tracking page
+                  </Link>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const url = `${window.location.origin}/track/${transaction.trackingNumber}`;
+                    navigator.clipboard.writeText(url).then(() => {
+                      setShareCopied(true);
+                      setTimeout(() => setShareCopied(false), 2000);
+                    });
+                  }}
+                >
+                  {shareCopied ? (
+                    <>
+                      <IconCheck className="w-4 h-4 mr-1 text-green-500" />
+                      <span className="text-green-600">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <IconShare className="w-4 h-4 mr-1" />
+                      Share
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>
@@ -432,7 +484,11 @@ export function TransactionDetails() {
                         <p className="text-sm text-gray-600">{event.date}</p>
                         {event.note && <p className="text-sm text-gray-500 mt-1">{event.note}</p>}
                         {event.hasProof && (
-                          <button className="text-sm text-blue-600 hover:text-blue-700 mt-1">
+                          <button
+                            className="text-sm text-blue-600 hover:text-blue-700 mt-1 flex items-center gap-1"
+                            onClick={() => setProofModal(event.status)}
+                          >
+                            <IconPhoto className="w-3.5 h-3.5" />
                             View proof of {event.status.toLowerCase()}
                           </button>
                         )}
@@ -533,6 +589,27 @@ export function TransactionDetails() {
             <IconFileText className="w-3.5 h-3.5 mr-1.5" />
             Submit Ticket
           </Button>
+        </div>
+      </Dialog>
+
+      {/* Proof of delivery / pickup mock */}
+      <Dialog open={!!proofModal} onClose={() => setProofModal(null)} size="md" title={`Proof of ${proofModal ?? ''}`}>
+        <div className="space-y-4">
+          <div className="rounded-lg bg-gray-100 aspect-video flex flex-col items-center justify-center text-center gap-2">
+            <IconPhoto className="w-10 h-10 text-gray-300" />
+            <p className="text-sm text-gray-400 max-w-xs">
+              A photo captured by the rider at the time of {(proofModal ?? '').toLowerCase()} would appear here.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div><p className="text-xs font-medium text-gray-500 mb-0.5">Tracking Number</p><p className="text-gray-900">{transaction?.trackingNumber}</p></div>
+            <div><p className="text-xs font-medium text-gray-500 mb-0.5">Event</p><p className="text-gray-900">{proofModal}</p></div>
+            <div><p className="text-xs font-medium text-gray-500 mb-0.5">Recipient</p><p className="text-gray-900">{transaction?.recipient.name}</p></div>
+            <div><p className="text-xs font-medium text-gray-500 mb-0.5">Location</p><p className="text-gray-900">{transaction?.destination}</p></div>
+          </div>
+        </div>
+        <div className="flex justify-end pt-4">
+          <Button size="sm" variant="outline" onClick={() => setProofModal(null)}>Close</Button>
         </div>
       </Dialog>
 

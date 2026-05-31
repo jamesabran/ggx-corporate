@@ -31,11 +31,20 @@ import { ServiceAdvisories } from './pages/ServiceAdvisories';
 import { Claims } from './pages/Claims';
 import { SlaAlerts } from './pages/SlaAlerts';
 import { ProtectedRoute, AdminRoute } from './components/RouteGuards';
+import { TrackingPage } from './pages/TrackingPage';
 
 export const router = createBrowserRouter([
   {
     path: '/',
     Component: Login,
+  },
+  {
+    path: '/track',
+    Component: TrackingPage,
+  },
+  {
+    path: '/track/:trackingNumber',
+    Component: TrackingPage,
   },
   {
     path: '/dashboard',
