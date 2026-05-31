@@ -2208,3 +2208,29 @@ Migrated the Dashboard "Recent Transactions" panel from a module-level `deliveri
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~633 kB (pre-existing size warning).
+
+---
+
+### Service Layer — SubAccountSettings migration (2026-05-31)
+
+Migrated `pages/SubAccountSettings.tsx` off direct `data/users` imports onto the `userService` facade — the first `userService` consumer and the first migration exercising an async write path. No visible behavior changed.
+
+**Changes (`pages/SubAccountSettings.tsx`)**
+- Removed direct `data/users` imports (`getUsers`, `setUsers`, `SUBACCOUNT_OPTIONS`, `getSubaccountName`, `getSubaccountManagerCount`). Now imports `getUsers_`, `setSubaccountManagers`, `MAX_MANAGERS_PER_SUBACCOUNT`, and `AppUser` from `services/userService`.
+- Users now load via `getUsers_()` in `useEffect` with a safe empty-list fallback (was a synchronous `useState(getUsers())` mirror).
+- `saveManagers` is now async: validates primary≠backup locally (presentation-level form check), delegates the assignment rebuild + capacity validation to `setSubaccountManagers(id, [primaryId, backupId])`, then refreshes from `getUsers_()`.
+- Removed dead `subaccountName`/`syncUsers` locals.
+
+**userService addition**
+- `setSubaccountManagers(subaccountId, managerUserIds)` → encapsulates the exact assignment-rebuild logic previously inline in the page (remove subaccount from non-assignees, add to assignees, preserve other assignments) plus the per-subaccount cap validation. Returns `ServiceResult<void>`.
+
+**Business rules preserved (now enforced in the service)**
+- Max 2 managers per subaccount; primary≠backup; assignment is Admin-only (UI guard unchanged).
+
+**Files changed**
+- `src/app/pages/SubAccountSettings.tsx`
+- `src/app/services/userService.ts`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~633 kB (pre-existing size warning).

@@ -174,6 +174,37 @@ export async function updateUserSubaccountAssignments(
   return updateUser(userId, { subaccounts: subaccountIds });
 }
 
+/**
+ * Replace the full manager set for a single subaccount (Admin-only operation).
+ *
+ * Rebuilds assignments so that exactly `managerUserIds` are assigned to this
+ * subaccount: the subaccount is removed from any Manager no longer listed and
+ * added to each listed Manager (preserving their other subaccount assignments).
+ * Validates the per-subaccount manager cap before committing.
+ */
+export async function setSubaccountManagers(
+  subaccountId: string,
+  managerUserIds: string[]
+): Promise<ServiceResult<void>> {
+  const assignees = managerUserIds.filter(Boolean);
+  if (assignees.length > MAX_MANAGERS_PER_SUBACCOUNT) {
+    return {
+      success: false,
+      error: `A subaccount can have at most ${MAX_MANAGERS_PER_SUBACCOUNT} managers.`,
+    };
+  }
+  const updated = getUsers().map((u): AppUser => {
+    if (u.role !== 'Manager') return u;
+    const withoutThis = (u.subaccounts ?? []).filter((s) => s !== subaccountId);
+    if (assignees.includes(u.id)) {
+      return { ...u, subaccounts: [...withoutThis, subaccountId] };
+    }
+    return { ...u, subaccounts: withoutThis };
+  });
+  setUsers(updated);
+  return { success: true };
+}
+
 /** Remove a user. The sole Admin cannot be removed. */
 export async function removeUser(userId: string): Promise<ServiceResult<void>> {
   const user = getUsers().find((u) => u.id === userId);

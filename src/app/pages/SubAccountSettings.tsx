@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
   IconBuilding, IconArrowRight, IconMapPin, IconUsers,
@@ -10,15 +10,15 @@ import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
+// User reads/writes go through the userService facade (not data/users directly).
+// In production this is fronted by the GGX Corporate BFF over the identity
+// provider (Firebase) + Contract Manager for subaccount context.
 import {
-  type AppUser,
-  SUBACCOUNT_OPTIONS,
+  getUsers_,
+  setSubaccountManagers,
   MAX_MANAGERS_PER_SUBACCOUNT,
-  getSubaccountName,
-  getSubaccountManagerCount,
-  getUsers,
-  setUsers,
-} from '../data/users';
+  type AppUser,
+} from '../services/userService';
 
 function initials(name: string) {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -60,16 +60,17 @@ export function SubAccountSettings() {
   const isAdmin = user?.role === 'admin';
 
   const subAccount = subAccounts.find((sa) => sa.id === id);
-  const subaccountName =
-    subAccount?.name ?? SUBACCOUNT_OPTIONS.find((s) => s.id === id)?.name ?? null;
 
-  // Mirror module users into local state so this page is reactive.
-  const [allUsers, setLocalAllUsers] = useState<AppUser[]>(() => getUsers());
+  // Users loaded via the service facade. Reloaded after a save so the page stays reactive.
+  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
 
-  const syncUsers = (next: AppUser[]) => {
-    setLocalAllUsers(next);
-    setUsers(next);
-  };
+  useEffect(() => {
+    let cancelled = false;
+    getUsers_()
+      .then((list) => { if (!cancelled) setAllUsers(list); })
+      .catch(() => { if (!cancelled) setAllUsers([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   const managers = id ? allUsers.filter(
     (u) => u.role === 'Manager' && u.subaccounts?.includes(id)
@@ -96,32 +97,23 @@ export function SubAccountSettings() {
     setSaveError(null);
   };
 
-  const saveManagers = () => {
+  const saveManagers = async () => {
     if (!id) return;
     if (primaryId === backupId && primaryId !== '') {
       setSaveError('Primary and Backup Manager must be different people.');
       return;
     }
 
-    // Validate capacity for new assignments (ignoring current assignments to this subaccount).
+    // The service rebuilds assignments and validates the per-subaccount cap.
     const newAssignees = [primaryId, backupId].filter(Boolean);
-    if (newAssignees.length > MAX_MANAGERS_PER_SUBACCOUNT) {
-      setSaveError(`A subaccount can have at most ${MAX_MANAGERS_PER_SUBACCOUNT} managers.`);
+    const result = await setSubaccountManagers(id, newAssignees);
+    if (!result.success) {
+      setSaveError(result.error ?? 'Unable to save manager assignments.');
       return;
     }
 
-    // Rebuild user list: remove this subaccount from anyone who's no longer assigned,
-    // then add it to the new assignees.
-    const updated = allUsers.map((u): AppUser => {
-      if (u.role !== 'Manager') return u;
-      const withoutThis = (u.subaccounts ?? []).filter((s) => s !== id);
-      if (newAssignees.includes(u.id)) {
-        return { ...u, subaccounts: [...withoutThis, id] };
-      }
-      return { ...u, subaccounts: withoutThis };
-    });
-
-    syncUsers(updated);
+    // Refresh from the service so the page reflects the committed state.
+    setAllUsers(await getUsers_());
     setEditingManagers(false);
     setSaveError(null);
   };
