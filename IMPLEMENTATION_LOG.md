@@ -2397,3 +2397,20 @@ Created `services/claimsService.ts` and migrated the Claims page and Transaction
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~637 kB (pre-existing size warning).
+
+---
+
+### Docs — Cross-system orchestration boundary clarified (2026-05-31)
+
+Documentation-only change (no code; Transactions and all migration scope unchanged).
+
+Added `MOCK_SERVICE_LAYER.md` §1c "Cross-system orchestration — owned by the BFF, never the frontend" to make explicit that source systems are interconnected/event-driven and that:
+- The GGX Corporate frontend must **not** orchestrate cross-system workflows directly.
+- The frontend must **not** infer official state by combining multiple systems on its own.
+- The frontend service layer is **only** a UI-facing facade (not an orchestrator/event bus/reconciler).
+- A future GGX Corporate **API/BFF/API gateway** owns aggregation, orchestration, event interpretation, and source-system reconciliation.
+- Mock services may simulate final shaped outcomes but must not imply the frontend owns orchestration; mock side effects (e.g. filing a claim also pushing a notification) are **stand-ins for backend-emitted events**.
+
+Includes illustrative event chains (OMS→NS, Fulfillment/FarEye→OMS/SLA/NS, Cashinator→payment/COD/FTX, FTX→earnings/reports, Contract Manager→permissions/payment options/access, Support/Claims→NS/transaction status) and a caveat flagging the existing `data/*` modules that push notifications synchronously as demo stand-ins for backend events.
+
+**Files changed:** `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`. **Validation:** docs-only; `npm run build` unaffected.

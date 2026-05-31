@@ -77,6 +77,69 @@ source-of-truth calculation. These are clearly annotated in the service code.
 
 ---
 
+## 1c. Cross-system orchestration — owned by the BFF, never the frontend
+
+The source systems behind GGX Corporate are **not isolated**. They are
+interconnected and **event-driven**: an update in one system may trigger
+updates, notifications, alerts, derived statuses, or downstream records in
+others. Illustrative chains:
+
+- **OMS** transaction updates may trigger **NS** notifications.
+- **Fulfillment / FarEye-linked** status changes may update transaction status
+  (OMS), SLA alerts, and customer notifications (NS).
+- **Cashinator** payment updates may affect payment status, COD status, and
+  finance visibility (FTX).
+- **FTX** settlement/ledger updates may affect earnings, reports, and finance
+  dashboards.
+- **Contract Manager** account/billing changes may affect permissions, available
+  payment options, and account/subaccount access.
+- **Support / Claims** activity may create notifications (NS) and
+  transaction-linked status indicators (OMS).
+
+**Rules (the frontend must honor all of these):**
+
+1. **No direct cross-system orchestration.** The GGX Corporate frontend must not
+   coordinate multi-system workflows (e.g. "mark delivered → recompute SLA →
+   push a notification → update earnings"). It triggers a single intent against
+   its facade and renders what comes back.
+2. **No frontend-inferred official state from combining systems.** The frontend
+   must not derive an authoritative value/status by stitching together data from
+   multiple systems on its own (e.g. inferring settlement status from payments +
+   fulfillment, or SLA hit/miss from timestamps + fulfillment events). Official
+   reconciled state is delivered by the backend.
+3. **The service layer is only a UI-facing facade.** A service (e.g.
+   `transactionService`) shapes data for one UI domain. It is **not** an
+   orchestrator, an event bus, or a place where cross-system reconciliation
+   logic lives.
+4. **The BFF/API gateway owns aggregation, orchestration, event interpretation,
+   and source-system reconciliation.** Event fan-out, derived-status
+   computation, and consistency across OMS / fulfillment / FTX / Cashinator /
+   Contract Manager / NS / AMS / identity all happen server-side, behind the
+   facade.
+5. **Mock services may simulate final shaped outcomes, but must not imply the
+   frontend owns orchestration.** When a mock action appears to cause a
+   side effect (e.g. filing a claim today also pushes a notification), treat it
+   as a **stand-in for a backend-emitted event**, not as frontend orchestration.
+   In production the BFF/source systems emit those downstream effects; the mock
+   only fakes the end result for the demo. Such places are annotated in code.
+
+```
+            ┌─────────────────────────── GGX Corporate BFF / API gateway ───────────────────────────┐
+ UI → service facade →  │ aggregation · orchestration · event interpretation · reconciliation │  → OMS · Fulfillment/FarEye
+            └───────────────────────────────────────────────────────────────────────────────────────┘     · FTX · Cashinator
+                                                                                                            · Contract Manager
+            (frontend renders shaped results; it never fans out events or reconciles systems)              · NS · AMS · identity
+```
+
+> **Current mock caveat:** some `data/*` modules today both mutate local state
+> *and* push a notification synchronously (claims, SLA, bulk uploads, financial
+> security, support tickets). This is a **demo stand-in for a backend-emitted
+> event**, not an endorsement of frontend orchestration. When these domains move
+> behind the BFF, the downstream notification/derived-status effects become
+> server-side events; the frontend keeps only the single triggering intent.
+
+---
+
 ## 2. Service files created
 
 | File | Purpose | Future API equivalent |
