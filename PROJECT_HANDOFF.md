@@ -2,10 +2,18 @@
 
 Compact checkpoint for continuing in a fresh Claude session. For detail, see `IMPLEMENTATION_LOG.md`, `GGX_CORPORATE_APP_STRUCTURE.md`, `DS_USAGE_GUIDE.md`, `GGX_CORPORATE_DS_CONTEXT.md`.
 
-## 1. Current state (checkpoint 2026-05-31)
-Working React SPA, demo/mock-only (no backend). `npm run build` passes — 0 TS errors. recharts is code-split into its own ~432 kB lazy chunk; main bundle ~622 kB (above Vite's 500 kB warning; +8 kB from topbar search). All routes render and are **auth-guarded**.
+## 1. Current state (checkpoint 2026-05-31, service-migration pass)
+Working React SPA, demo/mock-only (no backend). `npm run build` passes — 0 TS errors. recharts is code-split into its own ~432 kB lazy chunk; main bundle ~639 kB (above Vite's 500 kB warning). All routes render and are **auth-guarded**.
 
-**Foundations complete:** mock authentication, route guards (ProtectedRoute + AdminRoute), localStorage persistence, account-scoped notifications, Admin/Manager role behavior, and a mock service layer (infrastructure only — no UI consumers yet). All five Business Development roadmap items shipped (see §13). UX fix pass complete (see §13). Next production-track step: **migrate UI consumers to use the service layer**, then **backend/API integration**.
+**Foundations complete:** mock authentication, route guards (ProtectedRoute + AdminRoute), localStorage persistence, account-scoped notifications, Admin/Manager role behavior, and a mock service layer. **The service-layer UI migration is now well advanced** (not just infrastructure): most domain pages read through `services/*` facades. All five Business Development roadmap items shipped (see §13). UX fix pass complete (see §13).
+
+**Service migration — current status (see MOCK_SERVICE_LAYER.md §5–§7 for the authoritative table):**
+- **Migrated to services:** Transactions + Transaction Details (`transactionService`), Dashboard recent-tx + SLA card (`transactionService`/`slaService`), SubAccounts list + managers (`accountService`/`userService`), SubAccountSettings + Users & Permissions (`userService`), BulkUploader recent-uploads (`bulkUploadService`), Notifications page + bell (`notificationService`), Claims + TransactionDetails claims (`claimsService`), SLA Alerts (`slaService`), Reports (`reportsService`), Earnings + Settlement Detail (`earningsService`), Support Tickets + detail + TransactionDetails ticket submit (`ticketsService`).
+- **Not yet migrated (services exist):** DataAnalytics (reads `data/claims` + `data/slaAlerts` directly — `claimsService`/`slaService` exist), ParentDashboard (reads `data/slaAlerts` directly), BulkUploadSummary (`getSessionUploads` from `data/bulkUploads`), RootLayout topbar search (cross-domain shell search over `data/transactions`/`data/claims`/`data/supportTickets`).
+- **No service yet (deferred):** ServiceAdvisories (`data/serviceAdvisories`), PaymentSettings (`data/financialSecurity`), Bulk template/drop-off/billing helpers (`data/bulkTemplate`/`dropoffLocations`/`paymentAccounts`).
+- **AuthContext** still uses inline `DEMO_USERS`; `authService` exists but is unconsumed — intentionally migrated **last** (session-critical, needs real backend).
+
+Next production-track steps: **finish the remaining service migrations** (start with DataAnalytics + ParentDashboard — services already exist), then **backend/API integration**.
 
 **Mock logins** (password `!1234qwer`): `max@email.com` (Admin / parent) · `manager@email.com` (Manager / Acme Luzon). Demo quick-login buttons on the Login page.
 
@@ -73,13 +81,15 @@ Other shipped systems: categorized **Notifications** (account-scope visibility, 
 11. All popovers (account menu, notifications, topbar search, mobile nav) auto-close on route change.
 12. Users & Permissions checkbox double-toggle fixed (`pointer-events-none` on visual div).
 
-**Mock service layer (2026-05-31, commit d89eb7a):** Infrastructure only — no UI consumers migrated.
+**Mock service layer (2026-05-31, commit d89eb7a + migration passes):** Infrastructure **plus** an advanced UI migration.
 - `src/app/data/mock/`: `accounts.mock.ts` (canonical `MOCK_MAIN_ACCOUNT` + `MOCK_SUBACCOUNTS`), `auth.mock.ts` (MockPermissions), and thin re-exports for users/transactions/notifications/bulkUploads.
-- `src/app/services/`: `authService`, `accountService`, `userService`, `transactionService`, `notificationService`, `bulkUploadService` — async facades over mock data.
-- `MOCK_SERVICE_LAYER.md`: full architecture doc + backend API contracts.
+- `src/app/services/` (11 services): `authService`, `accountService`, `userService`, `transactionService`, `notificationService`, `bulkUploadService`, `claimsService`, `slaService`, `reportsService`, `earningsService`, `ticketsService` — async facades over mock data.
+- `data/runtimeAccounts.ts`: synchronous runtime subaccount store bridging `SubAccountContext` (React state) → `accountService.getSubaccounts()` (non-React module), so the service returns live Request-flow adds.
+- `MOCK_SERVICE_LAYER.md`: full architecture doc + facade/BFF intent (§1b), cross-system orchestration boundary (§1c), no-frontend-business-computation rule, migration table (§5–§7), backend API contracts (§8).
 - **Canonical account IDs:** `main` (parent), `acme-corporation`, `acme-luzon`, `acme-visayas`.
-- Deferred services: claims, SLA alerts, reports, earnings/settlements, support tickets, service advisories, payment accounts, financial security.
-- All existing UI pages still read from `src/app/data/*` directly (no regression).
+- **Services created + their pages migrated:** claims, SLA alerts, reports, earnings/settlements, support tickets (all done 2026-05-31).
+- **No service yet (deferred):** service advisories, payment accounts, financial security.
+- **Status of migration:** see §1 and `MOCK_SERVICE_LAYER.md` §5–§7. Remaining direct `data/*` readers: DataAnalytics, ParentDashboard, BulkUploadSummary, RootLayout topbar search, AuthContext (`DEMO_USERS`), plus the no-service-yet modules above. All migrations preserved behavior; build stays green.
 
 **Foundation/stability layer (2026-05-30):**
 - **Mock auth** (`contexts/AuthContext.tsx`): `AuthUser { name, email, role, accountId, accountName }`; demo Admin + Manager; session persisted to `localStorage`. `useAuth()` is the single source of truth for role + scoped account id.
@@ -96,7 +106,7 @@ Other shipped systems: categorized **Notifications** (account-scope visibility, 
 
 **Next planning horizon — Backend / API integration** (last production-track foundation): **start with real authentication + session handling**, then replace mock data modules (transactions, claims, SLA, notifications, analytics) behind async services. Keep persistence/local mock state **only as a demo fallback** until backend exists.
 
-**Next recommended task:** Migrate UI consumers to use the service layer — replace direct `data/*` imports with `services/*` calls in pages, starting with `transactionService` (Transactions page) and `authService` (AuthContext). No new features; no new services. This makes the seam concrete and reveals any impedance mismatches before a real backend exists. See `MOCK_SERVICE_LAYER.md` §7 for recommended migration sequence.
+**Next recommended task:** Finish the remaining service migrations where the service already exists — **start with DataAnalytics** (`data/claims` → `claimsService`, `data/slaAlerts` → `slaService`) and **ParentDashboard** (`data/slaAlerts` → `slaService`). These are low-risk reads with services already in place. Then BulkUploadSummary (`getSessionUploads` → `bulkUploadService`) and the RootLayout topbar search (its own cross-domain pass). Leave `authService`/AuthContext for last (session-critical; needs real backend). No new features. See `MOCK_SERVICE_LAYER.md` §6–§7 for the remaining-consumers table.
 
 **Read first (future sessions):** `PROJECT_HANDOFF.md` (this file) → `ROADMAP.md` (status + horizon) → `IMPLEMENTATION_LOG.md` (per-task detail). Key code: `contexts/AuthContext.tsx`, `components/RouteGuards.tsx`, `lib/storage.ts`, `contexts/SubAccountContext.tsx`, `data/accounts.ts`, `data/notifications.ts`, `routes.tsx`, `layouts/RootLayout.tsx`.
 

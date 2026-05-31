@@ -2503,3 +2503,22 @@ Created `services/ticketsService.ts` and migrated the support-tickets domain con
 
 **Validation result**
 - `npm run build` passes — 0 TypeScript errors.
+
+---
+
+## Checkpoint — Service-migration pass (docs refresh, 2026-05-31)
+
+Documentation-only checkpoint reconciling the handoff/roadmap with the actual code state after the service-layer migration passes. No code changed.
+
+**State verified against the codebase:**
+- **Build:** `npm run build` passes — 0 TS errors. Main bundle ~639 kB; DataAnalytics chunk ~432 kB (recharts, lazy). Pre-existing >500 kB warning only.
+- **Services present (11):** `authService`, `accountService`, `userService`, `transactionService`, `notificationService`, `bulkUploadService`, `claimsService`, `slaService`, `reportsService`, `earningsService`, `ticketsService`.
+- **Pages migrated to services (Completed):** Transactions, TransactionDetails, Dashboard (recent-tx + SLA card), SubAccounts (list + managers), SubAccountSettings, UsersPermissions, BulkUploader (recent uploads), Notifications page + RootLayout bell, Claims, SLA Alerts, Reports, Earnings, EarningsSettlementDetail, SupportTickets, SupportTicketDetail.
+- **Partially completed / Not started (services exist, pages still on `data/*`):** DataAnalytics (`data/claims`, `data/slaAlerts`), ParentDashboard (`data/slaAlerts`), BulkUploadSummary (`getSessionUploads` from `data/bulkUploads`), RootLayout topbar search (cross-domain: `data/transactions` + `data/claims` + `data/supportTickets`).
+- **Deferred (no service yet):** ServiceAdvisories (`data/serviceAdvisories`), PaymentSettings (`data/financialSecurity`), Bulk template/drop-off/billing helpers (`data/bulkTemplate`, `data/dropoffLocations`, `data/paymentAccounts`).
+- **AuthContext:** still inline `DEMO_USERS`; `authService` exists but unconsumed — intentionally migrated last (session-critical, pairs with real backend).
+- **Account/subaccount + role rules unchanged:** one Admin (parent, all accounts) + one Manager per subaccount; canonical IDs `main`/`acme-corporation`/`acme-luzon`/`acme-visayas`; Manager scoped to own subaccount (no Finance/Payment/Earnings/Billing/Reports-finance/Subaccounts/Users), Admin financial actions OTP-gated. No-frontend-business-computation rule and BFF-owned orchestration documented in `MOCK_SERVICE_LAYER.md` §1b/§1c.
+
+**Recommended next single task:** Migrate DataAnalytics off `data/claims`/`data/slaAlerts` onto `claimsService`/`slaService` (services already exist; presentation-only aggregation stays in the page).
+
+**Files changed (docs only):** `PROJECT_HANDOFF.md`, `ROADMAP.md`, `IMPLEMENTATION_LOG.md`, `PROJECT_CHECKPOINT.md`.

@@ -1,5 +1,14 @@
 # GGX Corporate — Project Checkpoint
 
+> ⚠️ **SUPERSEDED (2026-05-31).** This is the original 2026-05-29 checkpoint and is
+> kept for history only. It is **out of date** — since then the project added git,
+> mock auth + route guards, localStorage persistence, the BD roadmap features, a UX
+> fix pass, an 11-service mock service layer, and an advanced service-migration pass.
+> Several statements below (no git history, no route guards, 871 kB bundle, static
+> per-page mock data, no persistence) no longer reflect reality. **For the current
+> state read `PROJECT_HANDOFF.md` → `ROADMAP.md` → `IMPLEMENTATION_LOG.md` →
+> `MOCK_SERVICE_LAYER.md`.**
+
 **Date:** 2026-05-29
 **Prepared by:** Claude (automated checkpoint)
 **Project path:** `C:/Users/james/Projects/GGX Corporate/`

@@ -1,7 +1,7 @@
 # GGX Corporate — Roadmap & Backlog
 
-**Last updated:** 2026-05-31
-**Status:** All five planned roadmap items are complete. UX fix pass complete (12 items). Mock service layer infrastructure committed (no UI consumers yet). This document records what shipped and defines the next planning horizon. Items under "Next planning horizon" are backlog — do not implement until promoted to the active task.
+**Last updated:** 2026-05-31 (service-migration pass)
+**Status:** All five planned roadmap items are complete. UX fix pass complete (12 items). Mock service layer committed **and UI migration well advanced** — 11 services exist and most domain pages now read through them (Transactions, Dashboard, SubAccounts, Users, BulkUploader, Notifications, Claims, SLA, Reports, Earnings, Support Tickets). A handful of consumers remain on direct `data/*` reads (DataAnalytics, ParentDashboard, BulkUploadSummary, RootLayout search, AuthContext). This document records what shipped and defines the next planning horizon. Items under "Next planning horizon" are backlog — do not implement until promoted to the active task.
 
 The GGX Corporate app remains frontend/mock-only (no backend). All shipped items are local/mock implementations; remaining foundations are scoped below.
 
@@ -60,20 +60,22 @@ These are infrastructure foundations, not features. Recommended sequence:
 |-------|-----------|-------------|
 | ~~1~~ | ~~Mock authentication + route guards~~ | ✅ **Done (2026-05-30)** — `AuthContext` (Admin/Manager demo users), `ProtectedRoute`/`AdminRoute`, role-aware nav + notification scoping, access-denied state. |
 | ~~2~~ | ~~Persistence / localStorage~~ | ✅ **Done (2026-05-30)** — auth session, subaccount selection, notification read-state, claims, SLA, recent uploads persisted via `lib/storage`. |
-| ~~2.5~~ | ~~Mock service layer (infrastructure)~~ | ✅ **Done (2026-05-31)** — async service facades (`services/*`) over existing mock data modules. Canonical account IDs locked. No UI consumers migrated yet. See `MOCK_SERVICE_LAYER.md`. |
-| **3 (next)** | Migrate UI consumers to service layer | Wire pages to use `services/*` instead of `data/*` directly. Reveals API contract mismatches before real backend exists. Start with transactions + auth. |
+| ~~2.5~~ | ~~Mock service layer (infrastructure)~~ | ✅ **Done (2026-05-31)** — async service facades (`services/*`) over existing mock data modules. Canonical account IDs locked. See `MOCK_SERVICE_LAYER.md`. |
+| **3 (in progress)** | Migrate UI consumers to service layer | **Well advanced (2026-05-31).** 11 services exist; most domain pages migrated (transactions, dashboard, subaccounts, users, bulk upload, notifications, claims, SLA, reports, earnings, support tickets). **Remaining:** DataAnalytics, ParentDashboard, BulkUploadSummary, RootLayout search (services exist for these), then AuthContext last. No-service-yet: service advisories, payment accounts, financial security. See `MOCK_SERVICE_LAYER.md` §5–§7. |
 | **4** | Backend / API integration | Replace mock service adapters with real endpoints (auth, transactions, claims, SLA, notifications, analytics). Largest effort; depends on defined API contracts. |
 | — | Secondary | Real notification/Zendesk APIs; real OTP delivery; roles/permissions beyond Admin/Manager; dark mode; further bundle code-splitting. |
 
-### Recommended next implementation task: Migrate UI consumers to the service layer
-- Replace direct `data/*` imports in pages with calls to `services/*`.
-- Start with `transactionService` (Transactions page) and `authService` (AuthContext).
-- See `MOCK_SERVICE_LAYER.md` §7 for the full recommended migration sequence and deferred service modules.
-- No new features. No new services. This is a refactor-only task to validate the seam.
+### Recommended next implementation task: Finish the remaining service migrations (services already exist)
+- **Start with DataAnalytics** — replace `data/claims` → `claimsService` and `data/slaAlerts` → `slaService` (presentation-only aggregation stays in the page).
+- Then **ParentDashboard** (`data/slaAlerts` → `slaService`) and **BulkUploadSummary** (`getSessionUploads` → `bulkUploadService`).
+- The RootLayout topbar search is its own cross-domain pass (load tx/claims/tickets via their services into state + filter).
+- Leave `authService`/AuthContext for **last** (session-critical; pairs with real backend).
+- See `MOCK_SERVICE_LAYER.md` §6–§7 for the remaining-consumers table.
+- No new features. No new services for the above (they already exist). Refactor-only; preserve behavior.
 
 ### Risks / assumptions
 - **No backend yet:** service adapters return mock data; the swap to real endpoints happens at the adapter layer without touching pages.
-- **Deferred services:** claims, SLA alerts, reports, earnings/settlements, support tickets, service advisories, payment accounts, and financial security services are not yet written — migrate those pages after services exist.
+- **Services now written + pages migrated:** claims, SLA alerts, reports, earnings/settlements, support tickets (all 2026-05-31). **Still no service (deferred):** service advisories, payment accounts, financial security — migrate those pages only after services exist.
 - **Auth migration:** `AuthContext` currently uses `DEMO_USERS` inline; migrating it to `authService` is low-risk but should be done last (it's session-critical).
 
 ---
