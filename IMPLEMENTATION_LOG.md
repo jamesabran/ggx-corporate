@@ -2310,3 +2310,31 @@ Migrated `pages/UsersPermissions.tsx` off direct `data/users` imports onto the f
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~635 kB (pre-existing size warning).
+
+---
+
+### Service Layer — Notifications (bell + page) migration (2026-05-31)
+
+Migrated the notification data reads/writes in `layouts/RootLayout.tsx` (bell popover) and `pages/Notifications.tsx` onto the `notificationService` facade. No visible behavior changed.
+
+**Changes**
+- `Notifications.tsx`: `getVisibleNotifications`/`markVisibleNotificationsRead`/`relativeTime` → `notificationService.getNotifications()`/`markVisibleRead()`/`formatNotificationTime()`. The page now loads the snapshot in a `useEffect` (snapshot read-state at open, *then* mark read for the bell), preserving the prior synchronous snapshot-then-mark semantics.
+- `RootLayout.tsx` (bell): `getVisibleUnreadCount` (sync, in-render) → `unreadCount` state refreshed via `getUnreadCount()` in an effect keyed on `[notificationViewer, location.pathname]` (matches the prior per-render/per-navigation freshness so newly pushed notifications surface). `openNotifications` is now async: `getNotifications()` → snapshot → `markVisibleRead()` → set badge to 0. `relativeTime` → `formatNotificationTime()`.
+
+**Kept in `data/notifications` (intentional, not data access)**
+- `useNotificationViewer()` — a React hook deriving viewer scope from auth/subaccount context.
+- `CATEGORY_META` — presentation config (icon/label/colors per category).
+
+**Behavior preserved**
+- Bell badge shows the visible unread count, resets to 0 when opened; popover snapshot keeps unread emphasis while open. Notifications page tab counts + unread emphasis reflect state at open. Fresh on navigation.
+
+**Deferred**
+- Other modules (claims, SLA, bulk uploads, financial security, support tickets) still call the `data/notifications` push helpers directly. Routing those writes through `notificationService.pushNotification()` is a future cleanup (they are write-only producers, not display consumers).
+
+**Files changed**
+- `src/app/pages/Notifications.tsx`
+- `src/app/layouts/RootLayout.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~636 kB (pre-existing size warning).

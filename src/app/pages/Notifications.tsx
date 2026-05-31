@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { IconBell } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
+// Notification data reads/writes go through the notificationService facade.
+// `useNotificationViewer` (a React hook) and `CATEGORY_META` (presentation
+// config) legitimately stay in data/notifications — they are not data access.
 import {
-  getVisibleNotifications, markVisibleNotificationsRead, useNotificationViewer,
-  CATEGORY_META, relativeTime,
+  getNotifications, markVisibleRead, formatNotificationTime,
   type AppNotification, type NotificationCategory,
-} from '../data/notifications';
+} from '../services/notificationService';
+import { useNotificationViewer, CATEGORY_META } from '../data/notifications';
 
 type TabKey = 'all' | NotificationCategory;
 
@@ -48,7 +51,7 @@ function NotificationRow({ n, onClick }: { n: AppNotification; onClick: (n: AppN
           </span>
         )}
         <p className="text-sm text-gray-500 leading-snug mt-0.5">{n.body}</p>
-        <p className="text-xs text-gray-400 mt-1">{relativeTime(n.timestamp)}</p>
+        <p className="text-xs text-gray-400 mt-1">{formatNotificationTime(n.timestamp)}</p>
       </div>
     </button>
   );
@@ -60,10 +63,18 @@ export function Notifications() {
 
   // Snapshot the visible notifications (with read state) BEFORE marking read so
   // unread emphasis + tab counts reflect state at open; then clear for the bell.
-  const [items] = useState<AppNotification[]>(() => getVisibleNotifications(viewer).map((n) => ({ ...n })));
+  const [items, setItems] = useState<AppNotification[]>([]);
   const [activeTab, setActiveTab] = useState<TabKey>('all');
 
-  useEffect(() => { markVisibleNotificationsRead(viewer); }, [viewer]);
+  useEffect(() => {
+    let cancelled = false;
+    getNotifications({ viewer }).then((list) => {
+      if (cancelled) return;
+      setItems(list.map((n) => ({ ...n }))); // snapshot read-state at open
+      markVisibleRead({ viewer });           // then mark read for the bell
+    });
+    return () => { cancelled = true; };
+  }, [viewer]);
 
   const unreadFor = (key: TabKey) =>
     (key === 'all' ? items : items.filter((n) => n.category === key)).filter((n) => !n.read).length;

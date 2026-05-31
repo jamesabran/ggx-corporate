@@ -41,9 +41,14 @@ import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  getVisibleNotifications, getVisibleUnreadCount, markVisibleNotificationsRead,
-  useNotificationViewer, CATEGORY_META, relativeTime, type AppNotification,
+  useNotificationViewer, CATEGORY_META,
 } from '../data/notifications';
+// Notification data reads/writes go through the notificationService facade.
+// `useNotificationViewer` (hook) + `CATEGORY_META` (presentation) stay in data.
+import {
+  getNotifications, getUnreadCount, markVisibleRead, formatNotificationTime,
+  type AppNotification,
+} from '../services/notificationService';
 
 interface NavChild {
   name: string;
@@ -194,13 +199,25 @@ export function RootLayout() {
   // scope. Live unread count drives the badge. Opening the popover snapshots the
   // visible list (so unread emphasis persists while open) then marks them read.
   const notificationViewer = useNotificationViewer();
-  const unreadCount = getVisibleUnreadCount(notificationViewer);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [notifSnapshot, setNotifSnapshot] = useState<AppNotification[]>([]);
 
-  const openNotifications = () => {
-    setNotifSnapshot(getVisibleNotifications(notificationViewer).map((n) => ({ ...n })));
+  // Keep the badge count fresh: on mount, viewer change, and route change
+  // (route change matches the prior per-render freshness so new pushes show).
+  useEffect(() => {
+    let cancelled = false;
+    getUnreadCount({ viewer: notificationViewer })
+      .then((c) => { if (!cancelled) setUnreadCount(c); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [notificationViewer, location.pathname]);
+
+  const openNotifications = async () => {
+    const list = await getNotifications({ viewer: notificationViewer });
+    setNotifSnapshot(list.map((n) => ({ ...n })));
     setNotificationsOpen(true);
-    markVisibleNotificationsRead(notificationViewer);
+    await markVisibleRead({ viewer: notificationViewer });
+    setUnreadCount(0);
   };
 
   const handleNotificationClick = (n: AppNotification) => {
@@ -627,7 +644,7 @@ export function RootLayout() {
                                     </span>
                                   )}
                                   <p className="text-xs text-gray-500 leading-snug mt-0.5">{n.body}</p>
-                                  <p className="text-[11px] text-gray-400 mt-1">{relativeTime(n.timestamp)}</p>
+                                  <p className="text-[11px] text-gray-400 mt-1">{formatNotificationTime(n.timestamp)}</p>
                                 </div>
                               </button>
                             );
