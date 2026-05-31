@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IconDownload, IconRefresh, IconClock, IconPlus, IconFileText, IconCalendar, IconInfoCircle } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -6,10 +6,12 @@ import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
+// Reports read/download via the reportsService facade. Report figures are
+// backend-owned; the generating→ready transition is a backend-job stand-in.
 import {
-  SEED_REPORTS, REPORT_TYPE_META, REPORT_STATUS_META, downloadReport,
+  getReports, REPORT_TYPE_META, REPORT_STATUS_META, downloadReport,
   type ReportItem, type ReportType,
-} from '../data/reports';
+} from '../services/reportsService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { SUBACCOUNT_OPTIONS } from '../data/users';
 
@@ -56,7 +58,14 @@ export function Reports() {
     ? REPORT_TYPE_OPTIONS.filter((o) => !o.financeOnly)
     : REPORT_TYPE_OPTIONS;
 
-  const [allReports, setAllReports] = useState<ReportItem[]>(SEED_REPORTS);
+  const [allReports, setAllReports] = useState<ReportItem[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getReports()
+      .then((list) => { if (!cancelled) setAllReports(list); })
+      .catch(() => { if (!cancelled) setAllReports([]); });
+    return () => { cancelled = true; };
+  }, []);
   const [genType,    setGenType]    = useState<ReportType>(isSubaccountView ? 'delivery' : 'billing');
   const [dateRange,  setDateRange]  = useState<DateRange>('last30');
   const [customFrom, setCustomFrom] = useState('');

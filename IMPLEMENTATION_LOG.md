@@ -2441,3 +2441,19 @@ Created `services/slaService.ts` and migrated `SlaAlerts.tsx` and the Dashboard 
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~638 kB (pre-existing size warning).
+
+---
+
+### Service Layer — reportsService + Reports migration (2026-05-31)
+
+Created `services/reportsService.ts` and migrated `Reports.tsx` off direct `data/reports` imports. No visible behavior changed.
+
+**New `services/reportsService.ts`**
+- Async `getReports(filters?)` (type/subaccount). Re-exports `REPORT_TYPE_META`/`REPORT_STATUS_META` (presentation), `downloadReport` (client-side CSV action — no backend export endpoint yet), and types.
+- Documented: report figures (billing/settlement/delivery/analytics) are backend-owned (FTX/analytics via BFF); the UI's optimistic generating→ready transition is a backend-job stand-in (§1c), not frontend orchestration.
+
+**Changes (`pages/Reports.tsx`)**
+- List now loads via `getReports()` into state (`useEffect`), replacing the synchronous `useState(SEED_REPORTS)` init. Meta/download/types from the service. The local generate flow (optimistic add + setTimeout to 'ready') is unchanged — annotated as a demo stand-in for a backend generation job.
+
+**Validation result**
+- `npm run build` passes — 0 TypeScript errors.
