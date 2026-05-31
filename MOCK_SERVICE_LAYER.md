@@ -199,6 +199,7 @@ The single canonical source is now `src/app/data/mock/accounts.mock.ts`.
 | `pages/Notifications.tsx` | `notificationService.getNotifications()`, `markVisibleRead()`, `formatNotificationTime()` | ✅ 2026-05-31 |
 | `layouts/RootLayout.tsx` (bell) | `notificationService.getNotifications()`, `getUnreadCount()`, `markVisibleRead()`, `formatNotificationTime()` | ✅ 2026-05-31 |
 | `pages/DataAnalytics.tsx` | `claimsService.getClaimsList()`, `slaService.getSlaAlertsList()`, `CLAIM_STATUS_META` | ✅ 2026-05-31 |
+| `pages/ParentDashboard.tsx` (SLA card) | `slaService.getSlaAlertsList({ openOnly: true })`, `SLA_TYPE_META` | ✅ 2026-05-31 |
 
 > **Note on notifications:** `useNotificationViewer()` (a React hook) and `CATEGORY_META` (presentation config) intentionally stay in `data/notifications` — they are not data access. The bell's unread badge is now state refreshed on viewer + route change (matches the prior per-render freshness) and reset to 0 after marking read on open.
 
@@ -251,7 +252,7 @@ All UI pages currently import from `src/app/data/` directly. This is safe and un
 | ~~Transaction Details (submit ticket)~~ | ~~`data/supportTickets`~~ | ✅ **Migrated** → `ticketsService.createTicket()` |
 | ~~BulkUploader~~ | ~~`data/bulkUploads`~~ | ✅ **Migrated** → `bulkUploadService.getBulkUploads()` + re-exported write helpers |
 | ~~Data Analytics~~ | ~~`data/claims`, `data/slaAlerts`~~ | ✅ **Migrated** → `claimsService.getClaimsList()` + `slaService.getSlaAlertsList()` (both loaded in one effect; KPI/summary aggregation stays in the page as presentation-only) |
-| ParentDashboard | `data/slaAlerts` (`getSlaAlerts`, `SLA_TYPE_META`) | **Pending** — migrate to `slaService.getSlaAlertsList()` (service exists) |
+| ~~ParentDashboard~~ | ~~`data/slaAlerts`~~ | ✅ **Migrated** → `slaService.getSlaAlertsList({ openOnly: true })` (open-alerts card loaded into state; `SLA_TYPE_META` from the service). `data/slaAlerts` now has no direct page importers — only `slaService` reads it. |
 | Dashboard | ~~`data/transactions`~~ (recent tx ✅ migrated → `transactionService.getRecentTransactions()`); ~~`data/slaAlerts`~~ (SLA card ✅ migrated → `slaService`) | ✅ Both migrated |
 | RootLayout topbar search | `data/transactions`, `data/claims`, `data/supportTickets` (all 3, synchronous in render) | **Deferred** — cross-domain shell search; best migrated as its own pass (load tx/claims/tickets via their services into state + filter). Touches the app shell. |
 | AuthContext | `contexts/AuthContext` | `authService.loginMockUser()`, `authService.getCurrentUser()` |

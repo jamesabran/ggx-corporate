@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import {
   IconPackage,
@@ -16,7 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { getSlaAlerts, SLA_TYPE_META } from '../data/slaAlerts';
+import { getSlaAlertsList, SLA_TYPE_META, type SlaAlert } from '../services/slaService';
 
 const stats = [
   { title: 'Total Shipments', value: '8,942', change: '+15.3%', trend: 'up', icon: IconPackage, iconBg: 'bg-blue-600', cardBg: 'bg-blue-50', changeColor: 'text-blue-700' },
@@ -45,6 +46,17 @@ const quickActions = [
 ];
 
 export function ParentDashboard() {
+  // Open SLA alerts loaded from the service facade; safe empty fallback.
+  const [openAlerts, setOpenAlerts] = useState<SlaAlert[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    getSlaAlertsList({ openOnly: true })
+      .then((alerts) => { if (active) setOpenAlerts(alerts); })
+      .catch(() => { if (active) setOpenAlerts([]); });
+    return () => { active = false; };
+  }, []);
+
   return (
     <div className="p-6 lg:p-8 space-y-8">
       <div>
@@ -170,7 +182,6 @@ export function ParentDashboard() {
 
         {/* Active SLA Alerts card */}
         {(() => {
-          const openAlerts = getSlaAlerts().filter((a) => a.status !== 'resolved');
           return (
             <Card className="flex flex-col">
               <CardHeader className="px-6 pt-5 pb-0">

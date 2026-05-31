@@ -2545,3 +2545,26 @@ Migrated `pages/DataAnalytics.tsx` off direct `data/claims` / `data/slaAlerts` i
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~639 kB; DataAnalytics chunk ~432 kB (pre-existing size warning only).
+
+---
+
+### Service Layer — ParentDashboard SLA card migration (2026-05-31)
+
+Migrated `pages/ParentDashboard.tsx`'s Active SLA Alerts card off the direct `data/slaAlerts` import onto `slaService`. No visible behavior changed.
+
+**Changes (`pages/ParentDashboard.tsx`)**
+- Removed `import { getSlaAlerts, SLA_TYPE_META } from '../data/slaAlerts'`; now imports `getSlaAlertsList`, `SLA_TYPE_META`, `type SlaAlert` from `services/slaService`.
+- Open alerts now load into `openAlerts` state via `useEffect` (`getSlaAlertsList({ openOnly: true })`) with a safe empty fallback, replacing the synchronous `getSlaAlerts().filter((a) => a.status !== 'resolved')` previously computed inside the card's render IIFE. `openOnly` filters `status !== 'resolved'`, matching the prior logic exactly.
+- `SLA_TYPE_META` (presentation config) now comes from the service re-export; card rendering (icon/label/badge, top-3 + "+N more") unchanged.
+
+**Behavior preserved**
+- Same open-alert list, ordering, top-3 slice, "+N more" line, and empty state. Now async under the hood (brief empty state on first paint before the load resolves).
+
+**Note:** `data/slaAlerts` now has **no direct page importers** — only `slaService` reads it.
+
+**Files changed**
+- `src/app/pages/ParentDashboard.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~639 kB (pre-existing size warning only).

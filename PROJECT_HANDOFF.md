@@ -9,11 +9,11 @@ Working React SPA, demo/mock-only (no backend). `npm run build` passes — 0 TS 
 
 **Service migration — current status (see MOCK_SERVICE_LAYER.md §5–§7 for the authoritative table):**
 - **Migrated to services:** Transactions + Transaction Details (`transactionService`), Dashboard recent-tx + SLA card (`transactionService`/`slaService`), SubAccounts list + managers (`accountService`/`userService`), SubAccountSettings + Users & Permissions (`userService`), BulkUploader recent-uploads (`bulkUploadService`), Notifications page + bell (`notificationService`), Claims + TransactionDetails claims (`claimsService`), SLA Alerts (`slaService`), Reports (`reportsService`), Earnings + Settlement Detail (`earningsService`), Support Tickets + detail + TransactionDetails ticket submit (`ticketsService`).
-- **Not yet migrated (services exist):** ParentDashboard (reads `data/slaAlerts` directly), BulkUploadSummary (`getSessionUploads` from `data/bulkUploads`), RootLayout topbar search (cross-domain shell search over `data/transactions`/`data/claims`/`data/supportTickets`). (DataAnalytics migrated 2026-05-31 → `claimsService`/`slaService`.)
+- **Not yet migrated (services exist):** BulkUploadSummary (`getSessionUploads` from `data/bulkUploads`), RootLayout topbar search (cross-domain shell search over `data/transactions`/`data/claims`/`data/supportTickets`). (DataAnalytics + ParentDashboard migrated 2026-05-31 → `claimsService`/`slaService`; `data/slaAlerts` now has no direct page importers.)
 - **No service yet (deferred):** ServiceAdvisories (`data/serviceAdvisories`), PaymentSettings (`data/financialSecurity`), Bulk template/drop-off/billing helpers (`data/bulkTemplate`/`dropoffLocations`/`paymentAccounts`).
 - **AuthContext** still uses inline `DEMO_USERS`; `authService` exists but is unconsumed — intentionally migrated **last** (session-critical, needs real backend).
 
-Next production-track steps: **finish the remaining service migrations** (next: ParentDashboard → `slaService`, then BulkUploadSummary → `bulkUploadService` — services already exist), then **backend/API integration**.
+Next production-track steps: **finish the remaining service migrations** (next: BulkUploadSummary → `bulkUploadService`, then the RootLayout topbar search as its own cross-domain pass — services already exist), then **backend/API integration**.
 
 **Mock logins** (password `!1234qwer`): `max@email.com` (Admin / parent) · `manager@email.com` (Manager / Acme Luzon). Demo quick-login buttons on the Login page.
 
@@ -89,7 +89,7 @@ Other shipped systems: categorized **Notifications** (account-scope visibility, 
 - **Canonical account IDs:** `main` (parent), `acme-corporation`, `acme-luzon`, `acme-visayas`.
 - **Services created + their pages migrated:** claims, SLA alerts, reports, earnings/settlements, support tickets (all done 2026-05-31).
 - **No service yet (deferred):** service advisories, payment accounts, financial security.
-- **Status of migration:** see §1 and `MOCK_SERVICE_LAYER.md` §5–§7. Remaining direct `data/*` readers: ParentDashboard, BulkUploadSummary, RootLayout topbar search, AuthContext (`DEMO_USERS`), plus the no-service-yet modules above. (DataAnalytics migrated 2026-05-31.) All migrations preserved behavior; build stays green.
+- **Status of migration:** see §1 and `MOCK_SERVICE_LAYER.md` §5–§7. Remaining direct `data/*` readers: BulkUploadSummary, RootLayout topbar search, AuthContext (`DEMO_USERS`), plus the no-service-yet modules above. (DataAnalytics + ParentDashboard migrated 2026-05-31.) All migrations preserved behavior; build stays green.
 
 **Foundation/stability layer (2026-05-30):**
 - **Mock auth** (`contexts/AuthContext.tsx`): `AuthUser { name, email, role, accountId, accountName }`; demo Admin + Manager; session persisted to `localStorage`. `useAuth()` is the single source of truth for role + scoped account id.
@@ -106,7 +106,7 @@ Other shipped systems: categorized **Notifications** (account-scope visibility, 
 
 **Next planning horizon — Backend / API integration** (last production-track foundation): **start with real authentication + session handling**, then replace mock data modules (transactions, claims, SLA, notifications, analytics) behind async services. Keep persistence/local mock state **only as a demo fallback** until backend exists.
 
-**Next recommended task:** Finish the remaining service migrations where the service already exists — **next: ParentDashboard** (`data/slaAlerts` → `slaService.getSlaAlertsList()`; note it also uses `SLA_TYPE_META`, re-exported by the service). Then BulkUploadSummary (`getSessionUploads` → `bulkUploadService`) and the RootLayout topbar search (its own cross-domain pass). Leave `authService`/AuthContext for last (session-critical; needs real backend). No new features. See `MOCK_SERVICE_LAYER.md` §6–§7 for the remaining-consumers table. (DataAnalytics done 2026-05-31.)
+**Next recommended task:** Finish the remaining service migrations where the service already exists — **next: BulkUploadSummary** (`getSessionUploads` from `data/bulkUploads` → `bulkUploadService`). Then the RootLayout topbar search (its own cross-domain pass: load tx/claims/tickets via their services into state + filter). Leave `authService`/AuthContext for last (session-critical; needs real backend). No new features. See `MOCK_SERVICE_LAYER.md` §6–§7 for the remaining-consumers table. (DataAnalytics + ParentDashboard done 2026-05-31.)
 
 **Read first (future sessions):** `PROJECT_HANDOFF.md` (this file) → `ROADMAP.md` (status + horizon) → `IMPLEMENTATION_LOG.md` (per-task detail). Key code: `contexts/AuthContext.tsx`, `components/RouteGuards.tsx`, `lib/storage.ts`, `contexts/SubAccountContext.tsx`, `data/accounts.ts`, `data/notifications.ts`, `routes.tsx`, `layouts/RootLayout.tsx`.
 
