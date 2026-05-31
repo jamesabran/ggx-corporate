@@ -8,11 +8,11 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { useSubAccounts } from '../contexts/SubAccountContext';
-// Manager lookups go through the userService facade. The subaccount LIST stays
-// on SubAccountContext for now because it is the runtime store (Request flow
-// adds + localStorage persistence); accountService.getSubaccounts() currently
-// returns only the static mock, so migrating the list source is deferred until
-// accountService owns runtime subaccount state. See MOCK_SERVICE_LAYER.md.
+// Subaccount LIST now comes from accountService (which reads the runtime store
+// mirrored by SubAccountContext, so Request-flow adds are included). The context
+// is still used for enabled state, account switching, and as a reload trigger.
+// Manager lookups go through userService.
+import { getSubaccounts, type MockSubaccount } from '../services/accountService';
 import { getManagersBySubaccountId, type AppUser } from '../services/userService';
 
 function ManagerSlot({
@@ -51,17 +51,25 @@ function ManagerSlot({
 
 export function SubAccounts() {
   const navigate = useNavigate();
+  // `subAccounts` from context is the reactivity trigger (Request-flow adds);
+  // the rendered list is read from accountService (the runtime-aware facade).
   const { subAccountsEnabled, subAccounts, setCurrentAccount } = useSubAccounts();
 
-  // Managers per subaccount, loaded via the userService facade.
+  const [accounts, setAccounts] = useState<MockSubaccount[]>([]);
   const [managersByAccount, setManagersByAccount] = useState<Record<string, AppUser[]>>({});
+
   useEffect(() => {
     let cancelled = false;
-    Promise.all(
-      subAccounts.map(async (sa) => [sa.id, await getManagersBySubaccountId(sa.id)] as const)
-    )
-      .then((entries) => { if (!cancelled) setManagersByAccount(Object.fromEntries(entries)); })
-      .catch(() => { if (!cancelled) setManagersByAccount({}); });
+    getSubaccounts()
+      .then(async (list) => {
+        if (cancelled) return;
+        setAccounts(list);
+        const entries = await Promise.all(
+          list.map(async (sa) => [sa.id, await getManagersBySubaccountId(sa.id)] as const)
+        );
+        if (!cancelled) setManagersByAccount(Object.fromEntries(entries));
+      })
+      .catch(() => { if (!cancelled) { setAccounts([]); setManagersByAccount({}); } });
     return () => { cancelled = true; };
   }, [subAccounts]);
 
@@ -128,7 +136,7 @@ export function SubAccounts() {
       </div>
 
       <div className="grid gap-4">
-        {subAccounts.map((subAccount) => {
+        {accounts.map((subAccount) => {
           const managers = managersByAccount[subAccount.id] ?? [];
           const primary = managers[0] ?? null;
           const backup  = managers[1] ?? null;
@@ -206,7 +214,7 @@ export function SubAccounts() {
         })}
       </div>
 
-      {subAccounts.length === 0 && (
+      {accounts.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">

@@ -24,6 +24,10 @@ import {
   type MockMainAccount,
   type MockSubaccount,
 } from '../data/mock/accounts.mock';
+// Runtime subaccount list (reflects enabled state + Request-flow adds), mirrored
+// here by SubAccountContext. getSubaccounts() reads this so the service returns
+// the live list rather than the static seed.
+import { getRuntimeSubaccounts } from '../data/runtimeAccounts';
 
 export type { MockMainAccount, MockSubaccount };
 
@@ -47,12 +51,12 @@ export async function getMainAccount(): Promise<MockMainAccount> {
 export async function getSubaccounts(
   activeAccountId?: string
 ): Promise<MockSubaccount[]> {
+  const all = getRuntimeSubaccounts();
   if (activeAccountId && activeAccountId !== 'main') {
     // Manager: can only see their own subaccount.
-    const own = SUBACCOUNT_BY_ID.get(activeAccountId);
-    return own ? [own] : [];
+    return all.filter((s) => s.id === activeAccountId);
   }
-  return MOCK_SUBACCOUNTS;
+  return all;
 }
 
 /** Return a single subaccount by its canonical id, or null if not found. */

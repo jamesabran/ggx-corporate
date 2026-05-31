@@ -2338,3 +2338,32 @@ Migrated the notification data reads/writes in `layouts/RootLayout.tsx` (bell po
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~636 kB (pre-existing size warning).
+
+---
+
+### Service Layer — accountService runtime-aware + SubAccounts list migration (2026-05-31)
+
+Made `accountService.getSubaccounts()` return the live runtime subaccount list and migrated `SubAccounts.tsx`'s list source off `SubAccountContext` onto the service. This resolves the blocker noted in the prior SubAccounts pass. No visible behavior changed.
+
+**The blocker & the fix**
+- `accountService` is a non-React module and cannot read `SubAccountContext` state, but the subaccount list is mutable at runtime (Request-flow adds, persisted). Swapping the list source naïvely would hide runtime-added subaccounts.
+- New `data/runtimeAccounts.ts` holds the current list in a module variable (synchronous source of truth). `SubAccountContext` mirrors its list into the store **synchronously** on init (useState initializer) and on every mutation (`enableSubAccounts`, `addSubAccount`) — not in an effect — so a consumer's effect that runs after a state change always sees the current list (avoids child-before-parent effect-ordering staleness). `accountService.getSubaccounts()` reads the store.
+
+**Changes**
+- `data/runtimeAccounts.ts` (new): `getRuntimeSubaccounts()` / `setRuntimeSubaccounts()`.
+- `services/accountService.ts`: `getSubaccounts()` reads `getRuntimeSubaccounts()` (manager scoping filters the runtime list). Other functions still use static maps (unused by pages).
+- `contexts/SubAccountContext.tsx`: added `mirrorToRuntimeStore()` (maps `SubAccount` → `MockSubaccount`), called in the `subAccounts` useState initializer, `enableSubAccounts`, and `addSubAccount`. **Public API unchanged** — no other consumer touched.
+- `pages/SubAccounts.tsx`: list now loaded via `accountService.getSubaccounts()` into state; effect keyed on context `subAccounts` (reactivity trigger for adds). Context still used for `subAccountsEnabled`, `setCurrentAccount`. Render maps `accounts` (service) instead of `subAccounts` (context); empty-state checks `accounts.length`.
+
+**Scope decision**
+- Context retains React-facing ownership (state, persistence under the `subaccount` key, `currentAccount`, helpers). Full transfer of ownership into `accountService` (context as a thin wrapper) is a larger optional cleanup, not required to unblock the migration.
+
+**Files changed**
+- `src/app/data/runtimeAccounts.ts` (new)
+- `src/app/services/accountService.ts`
+- `src/app/contexts/SubAccountContext.tsx`
+- `src/app/pages/SubAccounts.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~637 kB (pre-existing size warning).

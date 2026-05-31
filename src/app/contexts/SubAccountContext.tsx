@@ -1,6 +1,27 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { getAccountIdByName } from '../data/accounts';
 import { loadState, saveState } from '../lib/storage';
+import { setRuntimeSubaccounts } from '../data/runtimeAccounts';
+import type { MockSubaccount } from '../data/mock/accounts.mock';
+
+/**
+ * Mirror the context's subaccount list into the synchronous runtime store so
+ * `accountService` (a non-React module) can read the live list. Called
+ * synchronously on init + every mutation to avoid effect-ordering staleness.
+ */
+function mirrorToRuntimeStore(list: SubAccount[]): void {
+  const mapped: MockSubaccount[] = list.map((s) => ({
+    id: s.id,
+    name: s.name,
+    type: s.type,
+    primaryManager: s.assignedManager,
+    status: s.status,
+    bookingCount: s.bookingCount,
+    pickupAddress: s.pickupAddress,
+    contactNumber: s.contactNumber,
+  }));
+  setRuntimeSubaccounts(mapped);
+}
 
 interface PersistedSubAccountState {
   subAccountsEnabled: boolean;
@@ -121,7 +142,11 @@ export function SubAccountProvider({ children }: { children: ReactNode }) {
   // subaccounts so all switchers and pages always see both.
   const [subAccounts, setSubAccounts] = useState<SubAccount[]>(() => {
     const raw = persisted?.subAccounts ?? [];
-    return persisted?.subAccountsEnabled ? mergeWithDemoSubaccounts(raw) : raw;
+    const initial = persisted?.subAccountsEnabled ? mergeWithDemoSubaccounts(raw) : raw;
+    // Seed the runtime store synchronously during provider render (before any
+    // child consumer mounts) so accountService reads the correct initial list.
+    mirrorToRuntimeStore(initial);
+    return initial;
   });
   const [currentAccount, setCurrentAccount] = useState<string>(
     persisted?.currentAccount ?? 'main'
@@ -139,12 +164,17 @@ export function SubAccountProvider({ children }: { children: ReactNode }) {
   const enableSubAccounts = (mainAccountData: MainAccount) => {
     setMainAccount(mainAccountData);
     setSubAccounts(DEMO_SUBACCOUNTS);
+    mirrorToRuntimeStore(DEMO_SUBACCOUNTS);
     setSubAccountsEnabled(true);
     setCurrentAccount('main');
   };
 
   const addSubAccount = (subAccount: SubAccount) => {
-    setSubAccounts((prev) => [...prev, subAccount]);
+    setSubAccounts((prev) => {
+      const next = [...prev, subAccount];
+      mirrorToRuntimeStore(next);
+      return next;
+    });
   };
 
   const getCurrentAccountName = () => {
