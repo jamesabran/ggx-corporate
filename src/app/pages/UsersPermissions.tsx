@@ -366,8 +366,14 @@ export function UsersPermissions() {
               placeholder="user@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={!!editingId} // email is the unique key; allow edit if you extend later
+              disabled={!!editingId}
             />
+            {!!editingId && (
+              <p className="text-xs text-gray-500 mt-1.5">
+                Email addresses are used for login and cannot be edited here. To change a
+                user&apos;s email, remove this user and add them again with the new email address.
+              </p>
+            )}
           </div>
 
           {isAdminEdit ? (
@@ -383,11 +389,15 @@ export function UsersPermissions() {
               </label>
               <div className="space-y-2 rounded-lg border border-gray-200 p-3 bg-gray-50">
                 {SUBACCOUNT_OPTIONS.map((s) => {
-                  const count = getSubaccountManagerCount(s.id, editingId ?? undefined);
+                  // savedCount = managers already saved excluding the user being edited.
+                  const savedCount = getSubaccountManagerCount(s.id, editingId ?? undefined);
                   const alreadySelected = selectedSubs.includes(s.id);
-                  const full = count >= MAX_MANAGERS_PER_SUBACCOUNT && !alreadySelected;
+                  // full: the slot is taken by others AND this user is not already in it.
+                  const full = savedCount >= MAX_MANAGERS_PER_SUBACCOUNT && !alreadySelected;
+                  // displayCount reflects the live in-form state so users see accurate capacity.
+                  const displayCount = savedCount + (alreadySelected ? 1 : 0);
                   const capacityLabel =
-                    full ? 'Full' : `${count}/${MAX_MANAGERS_PER_SUBACCOUNT} managers`;
+                    full ? 'Full' : `${displayCount}/${MAX_MANAGERS_PER_SUBACCOUNT} managers`;
                   return (
                     <label
                       key={s.id}

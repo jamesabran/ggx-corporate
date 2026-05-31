@@ -181,51 +181,70 @@ export function PaymentSettings() {
       )}
 
       <div className="space-y-8">
+        {/* ── Payment Methods ─────────────────────────────────────────────── */}
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Methods</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-1">Payment Methods</h2>
           <p className="text-sm text-gray-600 mb-4">For paying billing statements to GoGo Xpress</p>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {methods.map((m) => (
-              <Card key={m.id} className={m.isDefault ? 'border-blue-300 bg-blue-50/50' : ''}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${m.isDefault ? 'bg-gradient-to-r from-blue-600 to-blue-800' : 'bg-gray-100'}`}>
-                        <IconCreditCard className={`w-6 h-6 ${m.isDefault ? 'text-white' : 'text-gray-600'}`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <p className="font-semibold text-gray-900">{m.brand} •••• {m.last4}</p>
-                          {m.isDefault && <Badge variant="info">Default</Badge>}
-                          {m.verified ? <Badge variant="success">Verified</Badge> : <Badge variant="warning">Pending Verification</Badge>}
-                        </div>
-                        <p className="text-sm text-gray-600">Expires {m.expiry}</p>
-                        <p className="text-sm text-gray-600">{m.holder}</p>
-                      </div>
+              <Card key={m.id} className={`flex flex-col ${m.isDefault ? 'border-blue-300 bg-blue-50/50' : ''}`}>
+                <CardContent className="p-5 flex flex-col gap-3 flex-1">
+                  {/* Icon + card info */}
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${m.isDefault ? 'bg-gradient-to-r from-blue-600 to-blue-800' : 'bg-gray-100'}`}>
+                      <IconCreditCard className={`w-5 h-5 ${m.isDefault ? 'text-white' : 'text-gray-600'}`} />
                     </div>
-                    {financialAccessAllowed && (
-                      <div className="flex gap-2">
-                        {!m.isDefault && <Button variant="outline" size="sm" onClick={() => setDefaultMethod(m.id)}>Set as Default</Button>}
-                        <Button variant="ghost" size="sm" onClick={() => setEdit({ type: 'method', id: m.id, holder: m.holder, expiry: m.expiry })}>Edit</Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setRemove({ type: 'method', id: m.id, label: `${m.brand} •••• ${m.last4}` })}>Remove</Button>
-                      </div>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 text-sm leading-snug">{m.brand} •••• {m.last4}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Expires {m.expiry}</p>
+                      <p className="text-xs text-gray-500 truncate">{m.holder}</p>
+                    </div>
                   </div>
+                  {/* Badges */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {m.isDefault && <Badge variant="info">Default</Badge>}
+                    {m.verified ? <Badge variant="success">Verified</Badge> : <Badge variant="warning">Pending</Badge>}
+                  </div>
+                  {/* Actions */}
+                  {financialAccessAllowed && (
+                    <div className="flex flex-wrap gap-1.5 mt-auto pt-1">
+                      {!m.isDefault && (
+                        <Button variant="outline" size="sm" className="text-xs h-7 px-2" onClick={() => setDefaultMethod(m.id)}>
+                          Set Default
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => setEdit({ type: 'method', id: m.id, holder: m.holder, expiry: m.expiry })}>
+                        Edit
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-xs h-7 px-2 text-red-600 hover:bg-red-50" onClick={() => setRemove({ type: 'method', id: m.id, label: `${m.brand} •••• ${m.last4}` })}>
+                        Remove
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
 
+            {/* Add Payment Method — card-style, always last */}
             {financialAccessAllowed && (
-              <Button variant="outline" className="w-full" onClick={() => setAddMethod({ brand: 'Visa', last4: '', holder: 'Acme Corporation', expiry: '' })}>
-                <IconPlus className="w-4 h-4 mr-2" />
-                Add Payment Method
-              </Button>
+              <button
+                onClick={() => setAddMethod({ brand: 'Visa', last4: '', holder: 'Acme Corporation', expiry: '' })}
+                className="rounded-xl border-2 border-dashed border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-2 p-5 min-h-[160px] cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                  <IconPlus className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                </div>
+                <span className="text-sm font-medium text-gray-600 group-hover:text-blue-700 transition-colors">
+                  Add Payment Method
+                </span>
+              </button>
             )}
           </div>
 
-          <Card className="mt-6 bg-gray-50 border-gray-200">
-            <CardContent className="p-6">
+          {/* Auto-Pay — contained width, not full-page */}
+          <Card className="mt-6 bg-gray-50 border-gray-200 max-w-xl">
+            <CardContent className="p-5">
               <div className="flex items-start gap-3">
                 <IconShield className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
                 <div>
@@ -239,58 +258,77 @@ export function PaymentSettings() {
           </Card>
         </div>
 
+        {/* ── Payout Bank Accounts ─────────────────────────────────────────── */}
         <div className="pt-6 border-t border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Payout Bank Accounts</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-1">Payout Bank Accounts</h2>
           <p className="text-sm text-gray-600 mb-4">For receiving COD earnings and online payment settlements</p>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {banks.map((b) => (
-              <Card key={b.id} className={b.isPrimary ? 'border-green-300 bg-green-50/50' : ''}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${b.isPrimary ? 'bg-green-600' : 'bg-gray-100'}`}>
-                        <IconBuilding className={`w-6 h-6 ${b.isPrimary ? 'text-white' : 'text-gray-600'}`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <p className="font-semibold text-gray-900">{b.bank}</p>
-                          {b.isPrimary && <Badge variant="info">Primary</Badge>}
-                          {b.status === 'verified' ? <Badge variant="success">Verified</Badge> : <Badge variant="warning">Pending Verification</Badge>}
-                        </div>
-                        <p className="text-sm text-gray-600">Account Number: {b.accountMasked}</p>
-                        <p className="text-sm text-gray-600">Account Name: {b.accountName}</p>
-                      </div>
+              <Card key={b.id} className={`flex flex-col ${b.isPrimary ? 'border-green-300 bg-green-50/50' : ''}`}>
+                <CardContent className="p-5 flex flex-col gap-3 flex-1">
+                  {/* Icon + bank info */}
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${b.isPrimary ? 'bg-green-600' : 'bg-gray-100'}`}>
+                      <IconBuilding className={`w-5 h-5 ${b.isPrimary ? 'text-white' : 'text-gray-600'}`} />
                     </div>
-                    {financialAccessAllowed && (
-                      <div className="flex gap-2">
-                        {!b.isPrimary && <Button variant="outline" size="sm" onClick={() => setPrimaryBank(b.id)}>Set as Primary</Button>}
-                        <Button variant="ghost" size="sm" onClick={() => setEdit({ type: 'bank', id: b.id, accountName: b.accountName })}>Edit</Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setRemove({ type: 'bank', id: b.id, label: b.bank })}>Remove</Button>
-                      </div>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 text-sm leading-snug">{b.bank}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 font-mono">{b.accountMasked}</p>
+                      <p className="text-xs text-gray-500 truncate">{b.accountName}</p>
+                    </div>
                   </div>
+                  {/* Badges */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {b.isPrimary && <Badge variant="info">Primary</Badge>}
+                    {b.status === 'verified' ? <Badge variant="success">Verified</Badge> : <Badge variant="warning">Pending</Badge>}
+                  </div>
+                  {/* Actions */}
+                  {financialAccessAllowed && (
+                    <div className="flex flex-wrap gap-1.5 mt-auto pt-1">
+                      {!b.isPrimary && (
+                        <Button variant="outline" size="sm" className="text-xs h-7 px-2" onClick={() => setPrimaryBank(b.id)}>
+                          Set Primary
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => setEdit({ type: 'bank', id: b.id, accountName: b.accountName })}>
+                        Edit
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-xs h-7 px-2 text-red-600 hover:bg-red-50" onClick={() => setRemove({ type: 'bank', id: b.id, label: b.bank })}>
+                        Remove
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
 
+            {/* Add Bank Account — card-style, always last */}
             {financialAccessAllowed && (
-              <Button variant="outline" className="w-full" onClick={() => setAddBank({ bank: '', accountName: 'Acme Corporation', accountNumber: '' })}>
-                <IconPlus className="w-4 h-4 mr-2" />
-                Add Bank Account
-              </Button>
+              <button
+                onClick={() => setAddBank({ bank: '', accountName: 'Acme Corporation', accountNumber: '' })}
+                className="rounded-xl border-2 border-dashed border-gray-300 bg-white hover:border-green-400 hover:bg-green-50 transition-colors flex flex-col items-center justify-center gap-2 p-5 min-h-[160px] cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-green-100 flex items-center justify-center transition-colors">
+                  <IconPlus className="w-5 h-5 text-gray-400 group-hover:text-green-600 transition-colors" />
+                </div>
+                <span className="text-sm font-medium text-gray-600 group-hover:text-green-700 transition-colors">
+                  Add Bank Account
+                </span>
+              </button>
             )}
           </div>
 
-          <Card className="mt-6 bg-blue-50 border-blue-200">
-            <CardContent className="p-6">
+          {/* Payout info — contained width, not full-page */}
+          <Card className="mt-6 bg-blue-50 border-blue-200 max-w-xl">
+            <CardContent className="p-5">
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <IconCheck className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <h4 className="font-medium text-blue-900 mb-1">Payout Schedule</h4>
                     <p className="text-sm text-blue-800">
-                      Payouts are processed weekly and deposited to your nominated bank account within 1-2 business days after verification.
+                      Payouts are processed weekly and deposited to your nominated bank account within 1–2 business days after verification.
                     </p>
                   </div>
                 </div>
@@ -299,7 +337,7 @@ export function PaymentSettings() {
                   <div>
                     <h4 className="font-medium text-blue-900 mb-1">Bank Account Verification</h4>
                     <p className="text-sm text-blue-800">
-                      New bank accounts must be verified before they can receive payouts. Verification typically takes 1-3 business days.
+                      New bank accounts must be verified before they can receive payouts. Verification typically takes 1–3 business days.
                     </p>
                   </div>
                 </div>

@@ -2100,3 +2100,53 @@ Completed the remaining 7 UX fixes deferred from the prior pass. All changes are
 
 **Validation result**
 - `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB lazy chunk; main bundle ~629 kB (+7 kB from batch view logic; pre-existing size warning).
+
+---
+
+### UX Fix Pass — Round 2 follow-up (2026-05-31)
+
+Fixed 6 remaining issues: 2 toolbar layouts that weren't actually fixed, 2 UsersPermissions improvements, and PaymentSettings layout redesign.
+
+**1. Transactions filter toolbar (Transactions.tsx)**
+- Root cause: `Select` DS component has a hardcoded `<div className="relative w-full">` wrapper. Inside a `flex` container, each Select expands to available width, pushing items to wrap. Previous fix used `flex-wrap` which still caused wrapping.
+- Fix: changed outer container to `flex-col sm:flex-row sm:items-center gap-2`. Wrapped each `<Select>` in `<div className="w-full sm:w-[160px] flex-shrink-0">`. Search keeps `flex-1 min-w-[260px]`. On `sm+`, all three controls (search + status + type) sit on one row. Stacks on mobile.
+- Subaccount select (main account view only) also wrapped in same pattern.
+
+**2. Claims search toolbar (Claims.tsx)**
+- Previous fix set `className="w-full sm:w-80"` on SearchInput, which gave it a fixed 320px and left Selects to grow unbounded (Select w-full wrapper filled remaining space, making Selects wide).
+- Fix: SearchInput wrapped in `<div className="flex-1 min-w-[280px]">` so it grows and is useful. Each Select wrapped in `<div className="w-full sm:w-[160px] flex-shrink-0">`. Container: `flex-col sm:flex-row sm:items-center gap-2`.
+
+**3. SLA Alerts search toolbar (SlaAlerts.tsx)**
+- Same root cause and same fix as Claims. Search now `flex-1 min-w-[280px]`, Selects `sm:w-[160px]`.
+
+**4. UsersPermissions — manager counter shows live state (UsersPermissions.tsx)**
+- Bug: When editing a user, `getSubaccountManagerCount(subId, editingId)` excludes the editing user from the count. If the editing user was assigned to a subaccount, the display showed count-1 (e.g., "0/2 managers" when the actual total including the user is 1).
+- Fix: Added `displayCount = savedCount + (alreadySelected ? 1 : 0)` — includes the editing user's current checkbox state in the displayed number. `capacityLabel` now uses `displayCount`. The `full`/disabled logic still uses `savedCount` (excluding the editing user) which remains correct for enabling/disabling the checkbox.
+
+**5. UsersPermissions — email edit disclaimer (UsersPermissions.tsx)**
+- Added helper text under the disabled email field, shown only in edit mode (`!!editingId`):
+  "Email addresses are used for login and cannot be edited here. To change a user's email, remove this user and add them again with the new email address."
+- Styled `text-xs text-gray-500 mt-1.5` (12 px minimum, muted).
+
+**6. Payment Settings — card grid + constrained info cards (PaymentSettings.tsx)**
+- Payment Methods and Payout Bank Accounts sections converted from `space-y-4` vertical list to `grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4`.
+- Cards redesigned for compact grid layout: icon + text at top, badges in middle, action buttons at bottom (`mt-auto`).
+- "Add Payment Method" and "Add Bank Account" full-width `<Button variant="outline" className="w-full">` replaced with dashed-border card-style `<button>` (rounded-xl, dashed border, centered icon + label, hover state). Always renders as the last item in each grid. When no existing cards, the add card is the only card and acts as the empty-state action.
+- Auto-Pay card: added `max-w-xl` — no longer spans full page width.
+- Payout info card (blue): added `max-w-xl` — no longer spans full page width.
+- All existing OTP-gated actions, edit/remove/confirm dialogs, and financial access guards preserved unchanged.
+
+**Files changed**
+- `src/app/pages/Transactions.tsx`
+- `src/app/pages/Claims.tsx`
+- `src/app/pages/SlaAlerts.tsx`
+- `src/app/pages/UsersPermissions.tsx`
+- `src/app/pages/PaymentSettings.tsx`
+- `IMPLEMENTATION_LOG.md`
+
+**Assumptions / deferred**
+- Select DS component wrapper `w-full` is intentional for general use; site-specific width control is handled by the parent wrapper div pattern used here (preferred over modifying the DS component).
+- PaymentSettings cards use `flex flex-col` + `mt-auto` on actions for consistent bottom-aligned buttons; if future cards have very different content heights, consider a fixed card min-height.
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. recharts ~432 kB; main bundle ~631 kB (pre-existing warning, +2 kB from grid/card changes).

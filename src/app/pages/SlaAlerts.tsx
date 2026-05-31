@@ -54,32 +54,37 @@ export function SlaAlerts() {
           <h1 className="text-3xl font-bold text-gray-900">SLA Alerts</h1>
           <p className="text-gray-600 mt-1">Operations monitoring for delivery SLA risks and follow-ups.</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <SearchInput
-            placeholder="Search by tracking number or hub..."
-            value={searchQuery}
-            onChange={setSearchQuery}
-            className="w-full sm:w-80"
-          />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="flex-1 min-w-[280px]">
+            <SearchInput
+              placeholder="Search by tracking number or hub..."
+              value={searchQuery}
+              onChange={setSearchQuery}
+            />
+          </div>
           {mainView && (
-            <Select
-              value={subaccountFilter}
-              onChange={(e) => setSubaccountFilter(e.target.value)}
-            >
-              <option value="">All subaccounts</option>
-              {SUBACCOUNT_OPTIONS.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </Select>
+            <div className="w-full sm:w-[160px] flex-shrink-0">
+              <Select
+                value={subaccountFilter}
+                onChange={(e) => setSubaccountFilter(e.target.value)}
+              >
+                <option value="">All subaccounts</option>
+                {SUBACCOUNT_OPTIONS.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </Select>
+            </div>
           )}
-          <Select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as 'all' | SlaAlertType)}
-          >
-            <option value="all">All alert types</option>
-            <option value="no_movement">No Movement</option>
-            <option value="breach">Breach SLA</option>
-          </Select>
+          <div className="w-full sm:w-[160px] flex-shrink-0">
+            <Select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as 'all' | SlaAlertType)}
+            >
+              <option value="all">All alert types</option>
+              <option value="no_movement">No Movement</option>
+              <option value="breach">Breach SLA</option>
+            </Select>
+          </div>
         </div>
       </div>
 

@@ -52,35 +52,40 @@ export function Claims() {
             )}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <SearchInput
-            placeholder="Search by claim ID or tracking number..."
-            value={searchQuery}
-            onChange={setSearchQuery}
-            className="w-full sm:w-80"
-          />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="flex-1 min-w-[280px]">
+            <SearchInput
+              placeholder="Search by claim ID or tracking number..."
+              value={searchQuery}
+              onChange={setSearchQuery}
+            />
+          </div>
           {mainView && (
-            <Select
-              value={subaccountFilter}
-              onChange={(e) => setSubaccountFilter(e.target.value)}
-            >
-              <option value="">All subaccounts</option>
-              {SUBACCOUNT_OPTIONS.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </Select>
+            <div className="w-full sm:w-[160px] flex-shrink-0">
+              <Select
+                value={subaccountFilter}
+                onChange={(e) => setSubaccountFilter(e.target.value)}
+              >
+                <option value="">All subaccounts</option>
+                {SUBACCOUNT_OPTIONS.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </Select>
+            </div>
           )}
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as 'all' | ClaimStatus)}
-          >
-            <option value="all">All claims</option>
-            <option value="open">Open</option>
-            <option value="in-review">In Review</option>
-            <option value="approved">Approved</option>
-            <option value="denied">Denied</option>
-            <option value="settled">Settled</option>
-          </Select>
+          <div className="w-full sm:w-[160px] flex-shrink-0">
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | ClaimStatus)}
+            >
+              <option value="all">All claims</option>
+              <option value="open">Open</option>
+              <option value="in-review">In Review</option>
+              <option value="approved">Approved</option>
+              <option value="denied">Denied</option>
+              <option value="settled">Settled</option>
+            </Select>
+          </div>
         </div>
       </div>
 

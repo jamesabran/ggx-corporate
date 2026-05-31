@@ -148,9 +148,9 @@ export function Transactions() {
       {viewMode === 'all' && (
         <Card>
           <CardHeader>
-            {/* Responsive filter toolbar: wraps on mobile, stays on one row at sm+ */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex-1 min-w-[200px]">
+            {/* Filter toolbar — flex-col on mobile, single row on sm+ */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="flex-1 min-w-[260px]">
                 <SearchInput
                   placeholder="Search by tracking number, recipient, or destination..."
                   value={searchQuery}
@@ -158,26 +158,32 @@ export function Transactions() {
                 />
               </div>
               {isMainAccountView() && (
-                <Select value={subaccountFilter} onChange={(e) => setSubaccountFilter(e.target.value)}>
-                  <option value="all">All Subaccounts</option>
-                  <option value="Acme Corporation">Acme Corporation</option>
-                  <option value="Acme Luzon">Acme Luzon</option>
-                </Select>
+                <div className="w-full sm:w-[160px] flex-shrink-0">
+                  <Select value={subaccountFilter} onChange={(e) => setSubaccountFilter(e.target.value)}>
+                    <option value="all">All Subaccounts</option>
+                    <option value="Acme Corporation">Acme Corporation</option>
+                    <option value="Acme Luzon">Acme Luzon</option>
+                  </Select>
+                </div>
               )}
-              <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="picked-up">Picked Up</option>
-                <option value="in-transit">In Transit</option>
-                <option value="delivered">Delivered</option>
-                <option value="failed">Failed</option>
-                <option value="returned">Returned</option>
-              </Select>
-              <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-                <option value="all">All Types</option>
-                <option value="express">Express</option>
-                <option value="standard">Standard</option>
-              </Select>
+              <div className="w-full sm:w-[160px] flex-shrink-0">
+                <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="picked-up">Picked Up</option>
+                  <option value="in-transit">In Transit</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="failed">Failed</option>
+                  <option value="returned">Returned</option>
+                </Select>
+              </div>
+              <div className="w-full sm:w-[160px] flex-shrink-0">
+                <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                  <option value="all">All Types</option>
+                  <option value="express">Express</option>
+                  <option value="standard">Standard</option>
+                </Select>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
