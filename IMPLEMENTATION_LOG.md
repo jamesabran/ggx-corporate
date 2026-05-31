@@ -2522,3 +2522,26 @@ Documentation-only checkpoint reconciling the handoff/roadmap with the actual co
 **Recommended next single task:** Migrate DataAnalytics off `data/claims`/`data/slaAlerts` onto `claimsService`/`slaService` (services already exist; presentation-only aggregation stays in the page).
 
 **Files changed (docs only):** `PROJECT_HANDOFF.md`, `ROADMAP.md`, `IMPLEMENTATION_LOG.md`, `PROJECT_CHECKPOINT.md`.
+
+---
+
+### Service Layer — DataAnalytics migration (2026-05-31)
+
+Migrated `pages/DataAnalytics.tsx` off direct `data/claims` / `data/slaAlerts` imports onto the existing `claimsService` / `slaService` facades. No visible behavior changed.
+
+**Changes (`pages/DataAnalytics.tsx`)**
+- Removed `import { getClaims, CLAIM_STATUS_META } from '../data/claims'` and `import { getSlaAlerts } from '../data/slaAlerts'`. Now imports `getClaimsList`, `CLAIM_STATUS_META`, `type Claim` from `services/claimsService` and `getSlaAlertsList`, `type SlaAlert` from `services/slaService`.
+- Claims + SLA now load into component state via a single `useEffect` (`Promise.all([getClaimsList(), getSlaAlertsList()])`) with a safe empty-list fallback on error. Replaces the prior synchronous `getClaims()` / `getSlaAlerts()` calls in render.
+- All derived figures stay in the page as **presentation-only aggregation** (claims total/open/settled-amount, per-status Claims Summary counts, `activeSlaMisses`) — no business math added; these run locally over the service-provided lists.
+
+**Behavior preserved**
+- Same KPIs, Claims Summary breakdown, and SLA-breach count. Curated mock aggregates (volume/efficiency/region/returns) were never data-module-derived and are unchanged. On first paint the Claims Summary briefly shows its empty state until the async load resolves (acceptable for an analytics dashboard).
+
+**Remaining direct readers of these modules:** `data/claims` → RootLayout topbar search (deferred) + `claimsService` (the service itself); `data/slaAlerts` → ParentDashboard (next pending) + `slaService`.
+
+**Files changed**
+- `src/app/pages/DataAnalytics.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~639 kB; DataAnalytics chunk ~432 kB (pre-existing size warning only).

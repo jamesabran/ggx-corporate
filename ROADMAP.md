@@ -61,13 +61,14 @@ These are infrastructure foundations, not features. Recommended sequence:
 | ~~1~~ | ~~Mock authentication + route guards~~ | ✅ **Done (2026-05-30)** — `AuthContext` (Admin/Manager demo users), `ProtectedRoute`/`AdminRoute`, role-aware nav + notification scoping, access-denied state. |
 | ~~2~~ | ~~Persistence / localStorage~~ | ✅ **Done (2026-05-30)** — auth session, subaccount selection, notification read-state, claims, SLA, recent uploads persisted via `lib/storage`. |
 | ~~2.5~~ | ~~Mock service layer (infrastructure)~~ | ✅ **Done (2026-05-31)** — async service facades (`services/*`) over existing mock data modules. Canonical account IDs locked. See `MOCK_SERVICE_LAYER.md`. |
-| **3 (in progress)** | Migrate UI consumers to service layer | **Well advanced (2026-05-31).** 11 services exist; most domain pages migrated (transactions, dashboard, subaccounts, users, bulk upload, notifications, claims, SLA, reports, earnings, support tickets). **Remaining:** DataAnalytics, ParentDashboard, BulkUploadSummary, RootLayout search (services exist for these), then AuthContext last. No-service-yet: service advisories, payment accounts, financial security. See `MOCK_SERVICE_LAYER.md` §5–§7. |
+| **3 (in progress)** | Migrate UI consumers to service layer | **Well advanced (2026-05-31).** 11 services exist; most domain pages migrated (transactions, dashboard, subaccounts, users, bulk upload, notifications, claims, SLA, reports, earnings, support tickets, **data analytics**). **Remaining:** ParentDashboard, BulkUploadSummary, RootLayout search (services exist for these), then AuthContext last. No-service-yet: service advisories, payment accounts, financial security. See `MOCK_SERVICE_LAYER.md` §5–§7. |
 | **4** | Backend / API integration | Replace mock service adapters with real endpoints (auth, transactions, claims, SLA, notifications, analytics). Largest effort; depends on defined API contracts. |
 | — | Secondary | Real notification/Zendesk APIs; real OTP delivery; roles/permissions beyond Admin/Manager; dark mode; further bundle code-splitting. |
 
 ### Recommended next implementation task: Finish the remaining service migrations (services already exist)
-- **Start with DataAnalytics** — replace `data/claims` → `claimsService` and `data/slaAlerts` → `slaService` (presentation-only aggregation stays in the page).
-- Then **ParentDashboard** (`data/slaAlerts` → `slaService`) and **BulkUploadSummary** (`getSessionUploads` → `bulkUploadService`).
+- ✅ DataAnalytics migrated (2026-05-31) → `claimsService` + `slaService`.
+- **Next: ParentDashboard** (`data/slaAlerts` → `slaService.getSlaAlertsList()`; uses `SLA_TYPE_META`, re-exported by the service).
+- Then **BulkUploadSummary** (`getSessionUploads` → `bulkUploadService`).
 - The RootLayout topbar search is its own cross-domain pass (load tx/claims/tickets via their services into state + filter).
 - Leave `authService`/AuthContext for **last** (session-critical; pairs with real backend).
 - See `MOCK_SERVICE_LAYER.md` §6–§7 for the remaining-consumers table.

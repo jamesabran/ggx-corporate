@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -10,8 +11,8 @@ import { useSubAccounts } from '../contexts/SubAccountContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Select } from '../components/ui/Select';
 import { Badge } from '../components/ui/Badge';
-import { getClaims, CLAIM_STATUS_META } from '../data/claims';
-import { getSlaAlerts } from '../data/slaAlerts';
+import { getClaimsList, CLAIM_STATUS_META, type Claim } from '../services/claimsService';
+import { getSlaAlertsList, type SlaAlert } from '../services/slaService';
 
 // ---------------------------------------------------------------------------
 // Curated mock metrics modelled on the Business Review (Zenith PH) deck.
@@ -66,15 +67,33 @@ export function DataAnalytics() {
   const { subAccountsEnabled, isMainAccountView, getCurrentAccountName } = useSubAccounts();
   const inSubaccountView = subAccountsEnabled && !isMainAccountView();
 
-  // Derived figures from existing mock modules.
-  const claims = getClaims();
+  // Claims + SLA loaded from their service facades; safe empty fallback.
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [sla, setSla] = useState<SlaAlert[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([getClaimsList(), getSlaAlertsList()])
+      .then(([claimsList, slaList]) => {
+        if (!active) return;
+        setClaims(claimsList);
+        setSla(slaList);
+      })
+      .catch(() => {
+        if (!active) return;
+        setClaims([]);
+        setSla([]);
+      });
+    return () => { active = false; };
+  }, []);
+
+  // Derived figures (presentation-only aggregation over service data).
   const claimsTotal = claims.length;
   const claimsOpen = claims.filter((c) => c.status === 'open' || c.status === 'in-review').length;
   const claimsSettledAmount = claims
     .filter((c) => c.status === 'settled' || c.status === 'approved')
     .reduce((sum, c) => sum + (c.amount ?? 0), 0);
 
-  const sla = getSlaAlerts();
   const activeSlaMisses = sla.filter((a) => a.type === 'breach' && a.status !== 'resolved').length;
 
   const totalReturns = returnsByReason.reduce((sum, r) => sum + r.count, 0);
