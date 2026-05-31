@@ -1,9 +1,16 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { loadState, saveState, clearState } from '../lib/storage';
+import { loadState } from '../lib/storage';
+import { logoutMockUser } from '../services/authService';
 
 // Mock authentication (frontend/demo only). No real auth/session backend.
 // The auth user is the single source of truth for role + scoped account id,
 // consumed by route guards, nav, and notification visibility.
+//
+// Session persistence is owned by `authService` (loginMockUser persists on a
+// successful login; logoutMockUser clears it). This context keeps the React
+// state + a synchronous localStorage read on init (avoids an auth-hydration
+// flicker on refresh). The synchronous init read is a deliberate frontend-only
+// shortcut to revisit when real async backend auth lands.
 
 export type UserRole = 'admin' | 'manager';
 
@@ -35,14 +42,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => loadState<AuthUser | null>('auth', null));
 
+  // The session is persisted by authService.loginMockUser() before this is
+  // called (see Login.tsx), so here we only update React state.
   const login = (u: AuthUser) => {
     setUser(u);
-    saveState('auth', u);
   };
 
   const logout = () => {
     setUser(null);
-    clearState('auth');
+    void logoutMockUser();
   };
 
   return (

@@ -5,7 +5,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Card, CardContent } from '../components/ui/Card';
-import { useAuth, DEMO_USERS } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import { loginMockUser } from '../services/authService';
 
 const DEMO_PASSWORD = '!1234qwer';
 
@@ -30,11 +31,20 @@ export function Login() {
   // Already signed in → skip Login.
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = DEMO_USERS[email.trim().toLowerCase()];
-    if (user && password === DEMO_PASSWORD) {
-      login(user);
+    // Credential validation is owned by authService (mock today, real API later).
+    const result = await loginMockUser(email.trim().toLowerCase(), password);
+    if (result.success && result.user) {
+      const u = result.user;
+      // Map the richer service user to the context's AuthUser shape.
+      login({
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        accountId: u.accountId,
+        accountName: u.accountName,
+      });
       navigate('/dashboard');
     } else {
       alert('Invalid credentials. Use max@email.com (Admin) or manager@email.com (Manager), password !1234qwer');

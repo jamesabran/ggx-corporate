@@ -202,6 +202,7 @@ The single canonical source is now `src/app/data/mock/accounts.mock.ts`.
 | `pages/ParentDashboard.tsx` (SLA card) | `slaService.getSlaAlertsList({ openOnly: true })`, `SLA_TYPE_META` | ✅ 2026-05-31 |
 | `pages/BulkUploadSummary.tsx` (batch date) | `bulkUploadService.getBulkUploadById()` | ✅ 2026-05-31 |
 | `layouts/RootLayout.tsx` (topbar search) | `transactionService.getTransactions()`, `claimsService.getClaimsList()`, `ticketsService.getTicketsList()` | ✅ 2026-05-31 |
+| `pages/Login.tsx` + `contexts/AuthContext.tsx` | `authService.loginMockUser()` (validate), `authService.logoutMockUser()` (clear). Sync init read kept; `getCurrentUser()` deferred to backend stage. | ✅ 2026-05-31 |
 
 > **Note on notifications:** `useNotificationViewer()` (a React hook) and `CATEGORY_META` (presentation config) intentionally stay in `data/notifications` — they are not data access. The bell's unread badge is now state refreshed on viewer + route change (matches the prior per-render freshness) and reset to 0 after marking read on open.
 
@@ -258,7 +259,7 @@ All UI pages currently import from `src/app/data/` directly. This is safe and un
 | ~~ParentDashboard~~ | ~~`data/slaAlerts`~~ | ✅ **Migrated** → `slaService.getSlaAlertsList({ openOnly: true })` (open-alerts card loaded into state; `SLA_TYPE_META` from the service). `data/slaAlerts` now has no direct page importers — only `slaService` reads it. |
 | Dashboard | ~~`data/transactions`~~ (recent tx ✅ migrated → `transactionService.getRecentTransactions()`); ~~`data/slaAlerts`~~ (SLA card ✅ migrated → `slaService`) | ✅ Both migrated |
 | ~~RootLayout topbar search~~ | ~~`data/transactions`, `data/claims`, `data/supportTickets`~~ | ✅ **Migrated** → `transactionService.getTransactions()` + `claimsService.getClaimsList()` + `ticketsService.getTicketsList()` loaded into state (refreshed on navigation); filtering stays local (presentation-only). These three modules now have **no direct page/layout importers** — only their services read them. |
-| AuthContext | `contexts/AuthContext` | `authService.loginMockUser()`, `authService.getCurrentUser()` |
+| ~~AuthContext + Login~~ | ~~inline `DEMO_USERS` credential check~~ | ✅ **Migrated (frontend-only)** → `Login.tsx` validates via `authService.loginMockUser(email, password)` and maps the result to the context's `AuthUser`; `authService` owns session persistence (login) + clearing (`logoutMockUser`). **Deliberate shortcut:** the context keeps a *synchronous* localStorage read on init (no async hydration flicker) instead of `getCurrentUser()` — revisit when real async backend auth lands. `DEMO_USERS` is now unused by code (kept as the documented demo-identity source; safe to remove later). |
 
 ---
 
