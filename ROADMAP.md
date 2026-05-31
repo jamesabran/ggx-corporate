@@ -1,7 +1,7 @@
 # GGX Corporate — Roadmap & Backlog
 
-**Last updated:** 2026-05-30
-**Status:** All five planned roadmap items are complete. This document now records what shipped and defines the next planning horizon (foundations). Items under "Next planning horizon" are backlog — do not implement until promoted to the active task.
+**Last updated:** 2026-05-31
+**Status:** All five planned roadmap items are complete. UX fix pass complete (12 items). Mock service layer infrastructure committed (no UI consumers yet). This document records what shipped and defines the next planning horizon. Items under "Next planning horizon" are backlog — do not implement until promoted to the active task.
 
 The GGX Corporate app remains frontend/mock-only (no backend). All shipped items are local/mock implementations; remaining foundations are scoped below.
 
@@ -34,7 +34,7 @@ The GGX Corporate app remains frontend/mock-only (no backend). All shipped items
 - **Bulk Upload:** header check → optional column mapping → fast/background processing → review (editable error rows, location cascade, item-protection fee, duplicate removal) → booking → success; account-scoped batch records/events.
 - **Claims** and **SLA Alerts** operational pages.
 - **Finance (parent-level):** Earnings, Billing Statements, Payment Settings (OTP-gated).
-- **Notifications:** unified categorized model with account-scope visibility, tabbed Notifications page, bell popover, sidebar entry; Reports, Service Advisories, Support Tickets (+ detail, mock Zendesk boundary).
+- **Notifications:** unified categorized model with account-scope visibility, tabbed Notifications page, bell popover, sidebar entry; Reports (accessible to Managers; finance types hidden in subaccount view), Service Advisories, Support Tickets (+ detail, mock Zendesk boundary).
 - **Data Analytics:** Business Review metric set (lazy-loaded).
 - **Subaccounts:** enable/request flows, account switcher; Users & Permissions (Admin/Manager model).
 - **Address Book:** CRUD with live GGX pickup-location API cascade.
@@ -44,8 +44,8 @@ The GGX Corporate app remains frontend/mock-only (no backend). All shipped items
 
 ## Current mock / frontend-only limitations
 - No backend/API: all data is in-memory module state or static mock; **state resets on full page reload** (uploads, claims, SLA follow-ups, notifications read-state, subaccount context, payment changes).
-- Login is a hardcoded mock; **no real authentication and no route guards** — any `/dashboard/*` URL is reachable directly.
-- No real roles/permissions: the demo user is always the Admin. Manager-scoped notification visibility is implemented but not triggered (no Manager login).
+- Login is a hardcoded mock; **route guards exist** (ProtectedRoute/AdminRoute via AuthContext) but are frontend-only (no real session security). Two demo logins: Admin (`max@email.com`) and Manager (`manager@email.com`).
+- No real roles/permissions service: roles are mock-backed from AuthContext. Manager-scoped visibility, nav hiding, and route guards are fully wired.
 - OTP is mock (`123456`); attention-email events and the security/audit log have no browse UI yet.
 - Zendesk integration is stubbed (single boundary); reports/analytics figures are largely curated mock; period/region filters are UI-only.
 - Main JS bundle (~570 kB) is still marginally above Vite's 500 kB warning threshold after the recharts split.
@@ -60,29 +60,24 @@ These are infrastructure foundations, not features. Recommended sequence:
 |-------|-----------|-------------|
 | ~~1~~ | ~~Mock authentication + route guards~~ | ✅ **Done (2026-05-30)** — `AuthContext` (Admin/Manager demo users), `ProtectedRoute`/`AdminRoute`, role-aware nav + notification scoping, access-denied state. |
 | ~~2~~ | ~~Persistence / localStorage~~ | ✅ **Done (2026-05-30)** — auth session, subaccount selection, notification read-state, claims, SLA, recent uploads persisted via `lib/storage`. |
-| **3 (next)** | Backend / API integration | Replace mock data modules with real endpoints (auth, transactions, claims, SLA, notifications, analytics). Largest effort; depends on defined API contracts. |
+| ~~2.5~~ | ~~Mock service layer (infrastructure)~~ | ✅ **Done (2026-05-31)** — async service facades (`services/*`) over existing mock data modules. Canonical account IDs locked. No UI consumers migrated yet. See `MOCK_SERVICE_LAYER.md`. |
+| **3 (next)** | Migrate UI consumers to service layer | Wire pages to use `services/*` instead of `data/*` directly. Reveals API contract mismatches before real backend exists. Start with transactions + auth. |
+| **4** | Backend / API integration | Replace mock service adapters with real endpoints (auth, transactions, claims, SLA, notifications, analytics). Largest effort; depends on defined API contracts. |
 | — | Secondary | Real notification/Zendesk APIs; real OTP delivery; roles/permissions beyond Admin/Manager; dark mode; further bundle code-splitting. |
 
-### Recommended next implementation task: Authentication + Route Guards
-- Introduce an auth/session context (mock-backed initially) exposing `isAuthenticated`, current user/role, login/logout.
-- Wrap `/dashboard/*` in a `ProtectedRoute` (or loader/guard) that redirects unauthenticated users to `/`.
-- Wire the existing mock login to set the session; wire logout (topbar) to clear it.
-- Keep it frontend/mock (no backend yet) but structure the boundary so a real auth API drops in cleanly.
-
-### Why auth + route guards before persistence
-1. **Persistence scope depends on identity.** Persisted state should be keyed to the authenticated user/account; building persistence first would mean re-keying it once auth lands.
-2. **Security correctness.** Open routes are the bigger real-world gap; guards make the app behave like a real product and make role/account context authoritative.
-3. **Foundation for the session boundary.** Auth establishes the single source of truth (current user/role/account) that persistence, real APIs, and notification scoping all consume — avoiding rework.
-4. **Lower risk, self-contained.** A guard + auth context is a contained change; persistence touches many modules and is cleaner once the identity boundary exists.
+### Recommended next implementation task: Migrate UI consumers to the service layer
+- Replace direct `data/*` imports in pages with calls to `services/*`.
+- Start with `transactionService` (Transactions page) and `authService` (AuthContext).
+- See `MOCK_SERVICE_LAYER.md` §7 for the full recommended migration sequence and deferred service modules.
+- No new features. No new services. This is a refactor-only task to validate the seam.
 
 ### Risks / assumptions
-- **No backend yet:** auth will be mock-backed; treat the auth context as the seam for a future real provider. Avoid storing secrets; the mock credential check stays until a backend exists.
-- **Reload behavior:** until persistence lands, a mock session may itself reset on reload unless a lightweight `localStorage` session flag is added with auth (acceptable, but note it blurs the auth/persistence line — keep session storage minimal).
-- **Role model:** current Admin/Manager scoping is name/id-based mock; real auth should populate role + account id from the session so existing visibility logic keeps working unchanged.
-- **Route coverage:** ensure all `/dashboard/*` children (including lazy `analytics`) sit behind the guard; the login route stays public.
+- **No backend yet:** service adapters return mock data; the swap to real endpoints happens at the adapter layer without touching pages.
+- **Deferred services:** claims, SLA alerts, reports, earnings/settlements, support tickets, service advisories, payment accounts, and financial security services are not yet written — migrate those pages after services exist.
+- **Auth migration:** `AuthContext` currently uses `DEMO_USERS` inline; migrating it to `authService` is low-risk but should be done last (it's session-critical).
 
 ---
 
 ## Cross-cutting deferred items
 - ~~recharts `DataAnalytics` lazy-load / code-split~~ — **Done (2026-05-30)**. recharts ships as a separate ~431 kB chunk; main bundle ~570 kB (still slightly above the 500 kB warning — optional further splitting).
-- Real auth + route guards (next); persistence/localStorage; real notification/Zendesk APIs; backend/API integration; dark mode.
+- ~~Real auth + route guards~~ (done); ~~persistence/localStorage~~ (done); ~~mock service layer infrastructure~~ (done). Still deferred: real notification/Zendesk APIs; real OTP delivery; backend/API integration; dark mode.

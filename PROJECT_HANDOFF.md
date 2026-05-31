@@ -2,10 +2,10 @@
 
 Compact checkpoint for continuing in a fresh Claude session. For detail, see `IMPLEMENTATION_LOG.md`, `GGX_CORPORATE_APP_STRUCTURE.md`, `DS_USAGE_GUIDE.md`, `GGX_CORPORATE_DS_CONTEXT.md`.
 
-## 1. Current state (checkpoint 2026-05-30)
-Working React SPA, demo/mock-only (no backend). `npm run build` passes — 0 TS errors. recharts is code-split into its own ~431 kB lazy chunk; main bundle ~574 kB (still marginally over Vite's 500 kB warning). All routes render and are **auth-guarded**.
+## 1. Current state (checkpoint 2026-05-31)
+Working React SPA, demo/mock-only (no backend). `npm run build` passes — 0 TS errors. recharts is code-split into its own ~432 kB lazy chunk; main bundle ~622 kB (above Vite's 500 kB warning; +8 kB from topbar search). All routes render and are **auth-guarded**.
 
-**Foundations complete:** mock authentication, route guards (ProtectedRoute + AdminRoute), localStorage persistence, account-scoped notifications, and Admin/Manager role behavior. All five Business Development roadmap items shipped (see §13). Next production-track foundation: **backend/API integration** (start with real auth).
+**Foundations complete:** mock authentication, route guards (ProtectedRoute + AdminRoute), localStorage persistence, account-scoped notifications, Admin/Manager role behavior, and a mock service layer (infrastructure only — no UI consumers yet). All five Business Development roadmap items shipped (see §13). UX fix pass complete (see §13). Next production-track step: **migrate UI consumers to use the service layer**, then **backend/API integration**.
 
 **Mock logins** (password `!1234qwer`): `max@email.com` (Admin / parent) · `manager@email.com` (Manager / Acme Luzon). Demo quick-login buttons on the Login page.
 
@@ -44,20 +44,42 @@ Table: User / Role+account / Access / Actions. Add/Edit via Dialog ("Add user ac
 CRUD in local state. Cascading Province→City→Barangay from live GGX pickup API (`pickup=quad-x`) in `data/locationApi`; child selects disabled until parent chosen; save blocked unless full chain selected. Settings shows a display-only address card (`AddressDisplayCard`) routing edits here.
 
 ## 11. Mock / frontend-only limits
-No backend/auth/route guards. Static datasets; filters/search/pagination/export mostly non-wired. CSV template (not xlsx). Drop-off locations mock (help-center page 403). Payment selections not persisted. SubAccount state in-memory.
+No real backend/API; all data is in-memory or static mock. Auth/route guards **exist** (AuthContext + ProtectedRoute/AdminRoute) but are frontend-only (no real session security). Filters/pagination/export mostly non-wired. CSV template (not xlsx). Drop-off locations mock (help-center page 403). Payment selections not persisted. SubAccount state in-memory (localStorage persistence covers auth session, notifications read-state, claims, SLA, and recent uploads — see §13).
 
 ## 12. Known DS gaps
 Reusable Dialog/ConfirmDialog now exist (gap closed). Remaining: Textarea, Switch, Checkbox, Avatar, Skeleton, Dropdown Menu, Tooltip not yet componentized; real brand/payment logo assets pending.
 
 ## 13. Completed roadmap + shipped feature set
-**All five planned roadmap items are complete (2026-05-30):**
+**All five planned roadmap items are complete (2026-05-30). UX fix pass and mock service layer added (2026-05-31):**
 1. **Stable Subaccount IDs** — canonical `{ id, name }` map (`data/accounts.ts`) + `getCurrentAccountId()` in `SubAccountContext`; notification visibility keys off `accountId` (name = display only); bulk-upload records/events and transaction `batch.accountId` carry canonical ids.
 2. **Financial Security / OTP** — reusable `OtpDialog` (mock `123456`) gating all parent-level Payment Settings actions (add/edit/remove/set primary/default), required even for Admin; mock attention-email event + security log + parent-scoped notification per verified change; financial controls hidden outside parent context.
 3. **Claims & Cancellations** — `data/claims.ts` + Claims page; refund claims on undelivered transactions and cancellation of newly-booked ones, surfaced from Transaction Details; id-scoped notifications; Claims sidebar item.
 4. **SLA Alerts / Operations Monitoring** — `data/slaAlerts.ts` + SLA Alerts page; No Movement / Breach SLA alerts with hub/forwarder follow-ups; follow-up/resolve actions; SLA sidebar item.
 5. **Data Analytics redesign** — Business Review (Zenith PH) metric set; peak-hours removed; recharts lazy-loaded (main bundle ~997 kB → ~570 kB).
 
-Other shipped systems: categorized **Notifications** (account-scope visibility, tabbed page, bell, sidebar), **Reports & Downloads**, **Service Advisories**, **Support Tickets** (+ detail, mock Zendesk boundary), full **Bulk Upload** flow, Subaccounts + Users & Permissions, Address Book (live pickup API).
+Other shipped systems: categorized **Notifications** (account-scope visibility, tabbed page, bell, sidebar), **Reports & Downloads** (accessible to Managers; finance types hidden in subaccount view), **Service Advisories**, **Support Tickets** (+ detail, mock Zendesk boundary), full **Bulk Upload** flow, Subaccounts + Users & Permissions, Address Book (live pickup API).
+
+**UX fix pass (2026-05-31, commit 284e1b0):** 12 items, all committed and logged in IMPLEMENTATION_LOG.md:
+1. Topbar search wired — grouped dropdown (transactions/claims/tickets), ×-clear, closes on nav.
+2. Subaccount dashboard: "Earnings Report" card replaced with live "SLA Alerts" card in subaccount view.
+3. Reports accessible to Managers; billing/settlement types hidden in subaccount view with info banner.
+4. Transactions filter toolbar breakpoint `lg` → `md`.
+5. New `SearchInput` component with ×-clear; replaces plain `Input` on Transactions, Claims, SLA Alerts, Support Tickets, Users & Permissions.
+6. SLA Alerts card layout: badges left, CTAs side-by-side, compact follow-up note.
+7. AddressBookPage gains a proper `<h1>` header; BulkUploader breadcrumb removed (top-level page).
+8. Address Book delete now shows a ConfirmDialog before deleting.
+9. `text-[10px]` → `text-xs` (12 px) in AddressBook.
+10. Empty state consistency: Claims + SLA Alerts icon/title/container aligned.
+11. All popovers (account menu, notifications, topbar search, mobile nav) auto-close on route change.
+12. Users & Permissions checkbox double-toggle fixed (`pointer-events-none` on visual div).
+
+**Mock service layer (2026-05-31, commit d89eb7a):** Infrastructure only — no UI consumers migrated.
+- `src/app/data/mock/`: `accounts.mock.ts` (canonical `MOCK_MAIN_ACCOUNT` + `MOCK_SUBACCOUNTS`), `auth.mock.ts` (MockPermissions), and thin re-exports for users/transactions/notifications/bulkUploads.
+- `src/app/services/`: `authService`, `accountService`, `userService`, `transactionService`, `notificationService`, `bulkUploadService` — async facades over mock data.
+- `MOCK_SERVICE_LAYER.md`: full architecture doc + backend API contracts.
+- **Canonical account IDs:** `main` (parent), `acme-corporation`, `acme-luzon`, `acme-visayas`.
+- Deferred services: claims, SLA alerts, reports, earnings/settlements, support tickets, service advisories, payment accounts, financial security.
+- All existing UI pages still read from `src/app/data/*` directly (no regression).
 
 **Foundation/stability layer (2026-05-30):**
 - **Mock auth** (`contexts/AuthContext.tsx`): `AuthUser { name, email, role, accountId, accountName }`; demo Admin + Manager; session persisted to `localStorage`. `useAuth()` is the single source of truth for role + scoped account id.
@@ -74,7 +96,7 @@ Other shipped systems: categorized **Notifications** (account-scope visibility, 
 
 **Next planning horizon — Backend / API integration** (last production-track foundation): **start with real authentication + session handling**, then replace mock data modules (transactions, claims, SLA, notifications, analytics) behind async services. Keep persistence/local mock state **only as a demo fallback** until backend exists.
 
-**Next recommended task:** Introduce a data-access seam — convert mock data modules to async service functions behind a thin API client, starting with **auth** (replace `DEMO_USERS` with a real auth/session endpoint) and one read path (transactions), keeping the mock as a fallback adapter so the UI is unchanged while endpoints land. Define API contracts first. Scope as a multi-step task.
+**Next recommended task:** Migrate UI consumers to use the service layer — replace direct `data/*` imports with `services/*` calls in pages, starting with `transactionService` (Transactions page) and `authService` (AuthContext). No new features; no new services. This makes the seam concrete and reveals any impedance mismatches before a real backend exists. See `MOCK_SERVICE_LAYER.md` §7 for recommended migration sequence.
 
 **Read first (future sessions):** `PROJECT_HANDOFF.md` (this file) → `ROADMAP.md` (status + horizon) → `IMPLEMENTATION_LOG.md` (per-task detail). Key code: `contexts/AuthContext.tsx`, `components/RouteGuards.tsx`, `lib/storage.ts`, `contexts/SubAccountContext.tsx`, `data/accounts.ts`, `data/notifications.ts`, `routes.tsx`, `layouts/RootLayout.tsx`.
 
