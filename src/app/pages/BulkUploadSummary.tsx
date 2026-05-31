@@ -13,7 +13,7 @@ import { Dialog } from '../components/ui/Dialog';
 import { PaymentMethodTabs, type SelectedPaymentMethod } from '../components/PaymentMethodTabs';
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
 import { isBillingAccount } from '../data/paymentAccounts';
-import { getSessionUploads } from '../data/bulkUploads';
+import { getBulkUploadById } from '../services/bulkUploadService';
 import { RECEPTACLE_SIZES } from '../data/bulkTemplate';
 import { getAllProvinces, getAllCities, getAllDistricts, type LocationOption } from '../lib/locationApi';
 import { useSubAccounts } from '../contexts/SubAccountContext';
@@ -430,8 +430,16 @@ export function BulkUploadSummary() {
   const activeAccountName = getCurrentAccountName();
   const billingAvailable  = isBillingAccount(activeAccountName);
 
-  const sessionRecord = getSessionUploads().find((r) => r.id === id);
-  const batchDate     = sessionRecord?.uploadedAt ?? '2026-05-19 10:30 AM';
+  // Batch date looked up via the service facade; falls back to the mock default
+  // when the batch is unknown (preserves the prior synchronous fallback).
+  const [batchDate, setBatchDate] = useState('2026-05-19 10:30 AM');
+  useEffect(() => {
+    let active = true;
+    getBulkUploadById(id ?? '')
+      .then((record) => { if (active && record) setBatchDate(record.uploadedAt); })
+      .catch(() => { /* keep fallback date */ });
+    return () => { active = false; };
+  }, [id]);
 
   // ── Error rows state ──────────────────────────────────────────────────────
   const [errorRows, setErrorRows] = useState<ErrorRowData[]>(INITIAL_ERROR_ROWS);

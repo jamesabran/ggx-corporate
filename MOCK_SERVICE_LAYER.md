@@ -200,6 +200,7 @@ The single canonical source is now `src/app/data/mock/accounts.mock.ts`.
 | `layouts/RootLayout.tsx` (bell) | `notificationService.getNotifications()`, `getUnreadCount()`, `markVisibleRead()`, `formatNotificationTime()` | ✅ 2026-05-31 |
 | `pages/DataAnalytics.tsx` | `claimsService.getClaimsList()`, `slaService.getSlaAlertsList()`, `CLAIM_STATUS_META` | ✅ 2026-05-31 |
 | `pages/ParentDashboard.tsx` (SLA card) | `slaService.getSlaAlertsList({ openOnly: true })`, `SLA_TYPE_META` | ✅ 2026-05-31 |
+| `pages/BulkUploadSummary.tsx` (batch date) | `bulkUploadService.getBulkUploadById()` | ✅ 2026-05-31 |
 
 > **Note on notifications:** `useNotificationViewer()` (a React hook) and `CATEGORY_META` (presentation config) intentionally stay in `data/notifications` — they are not data access. The bell's unread badge is now state refreshed on viewer + route change (matches the prior per-render freshness) and reset to 0 after marking read on open.
 
@@ -251,6 +252,7 @@ All UI pages currently import from `src/app/data/` directly. This is safe and un
 | ~~Support Ticket Detail~~ | ~~`data/supportTickets`~~ | ✅ **Migrated** → `ticketsService.getTicketById()` / `getTicketThread()` / `replyToTicket()` |
 | ~~Transaction Details (submit ticket)~~ | ~~`data/supportTickets`~~ | ✅ **Migrated** → `ticketsService.createTicket()` |
 | ~~BulkUploader~~ | ~~`data/bulkUploads`~~ | ✅ **Migrated** → `bulkUploadService.getBulkUploads()` + re-exported write helpers |
+| ~~BulkUploadSummary~~ | ~~`data/bulkUploads`~~ | ✅ **Migrated** → `bulkUploadService.getBulkUploadById()` (batch-date lookup loaded into state; fallback date preserved). `data/bulkUploads` now has no direct page importers — only `bulkUploadService` reads it. |
 | ~~Data Analytics~~ | ~~`data/claims`, `data/slaAlerts`~~ | ✅ **Migrated** → `claimsService.getClaimsList()` + `slaService.getSlaAlertsList()` (both loaded in one effect; KPI/summary aggregation stays in the page as presentation-only) |
 | ~~ParentDashboard~~ | ~~`data/slaAlerts`~~ | ✅ **Migrated** → `slaService.getSlaAlertsList({ openOnly: true })` (open-alerts card loaded into state; `SLA_TYPE_META` from the service). `data/slaAlerts` now has no direct page importers — only `slaService` reads it. |
 | Dashboard | ~~`data/transactions`~~ (recent tx ✅ migrated → `transactionService.getRecentTransactions()`); ~~`data/slaAlerts`~~ (SLA card ✅ migrated → `slaService`) | ✅ Both migrated |
