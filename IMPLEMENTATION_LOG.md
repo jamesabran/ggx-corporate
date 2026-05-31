@@ -2414,3 +2414,30 @@ Added `MOCK_SERVICE_LAYER.md` §1c "Cross-system orchestration — owned by the 
 Includes illustrative event chains (OMS→NS, Fulfillment/FarEye→OMS/SLA/NS, Cashinator→payment/COD/FTX, FTX→earnings/reports, Contract Manager→permissions/payment options/access, Support/Claims→NS/transaction status) and a caveat flagging the existing `data/*` modules that push notifications synchronously as demo stand-ins for backend events.
 
 **Files changed:** `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`. **Validation:** docs-only; `npm run build` unaffected.
+
+---
+
+### Service Layer — slaService + SLA Alerts / Dashboard SLA card migration (2026-05-31)
+
+Created `services/slaService.ts` and migrated `SlaAlerts.tsx` and the Dashboard subaccount-view SLA card off direct `data/slaAlerts` imports. No visible behavior changed.
+
+**New `services/slaService.ts`**
+- Async: `getSlaAlertsList(filters?)` (type/subaccount/openOnly), `sendAlertFollowUp(id, note?)`, `resolveSlaAlert(id)`.
+- Re-exports `SLA_TYPE_META` / `SLA_STATUS_META` (presentation) + types.
+- Documented: SLA alerts + statuses (No Movement/Breach/monitoring/resolved) and breach/hit-miss are backend-owned (fulfillment/FarEye + OMS via BFF), not frontend-computed. Per MOCK_SERVICE_LAYER.md §1c, the follow-up's notification side effect is a demo stand-in for a backend-emitted event.
+
+**Changes**
+- `pages/SlaAlerts.tsx`: list loads via `getSlaAlertsList()` into state; `refresh()` reloads via the service; `handleFollowUp`/`handleResolve` are async (`sendAlertFollowUp`/`resolveSlaAlert` then reload). Scoping/search/type filtering stays local (presentation-only). `SLA_TYPE_META`/`SLA_STATUS_META` from the service.
+- `pages/Dashboard.tsx`: SLA card's open-alerts list now loaded via `getSlaAlertsList({ openOnly: true })` into `openSlaAlerts` state (top 4), replacing the synchronous `getSlaAlerts().filter(...)` in render.
+
+**Behavior preserved**
+- SLA Alerts list/filters/follow-up/resolve and the Dashboard SLA card (subaccount view) unchanged; now async under the hood.
+
+**Files changed**
+- `src/app/services/slaService.ts` (new)
+- `src/app/pages/SlaAlerts.tsx`
+- `src/app/pages/Dashboard.tsx`
+- `MOCK_SERVICE_LAYER.md`, `IMPLEMENTATION_LOG.md`
+
+**Validation result**
+- `npm run build` (tsc -b + vite build) passes — 0 TypeScript errors. Main bundle ~638 kB (pre-existing size warning).

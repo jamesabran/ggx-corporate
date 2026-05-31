@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { IconMessageDots, IconCircleCheck, IconChevronRight, IconBuildingWarehouse } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
@@ -6,10 +6,12 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { SearchInput } from '../components/SearchInput';
 import { Select } from '../components/ui/Select';
+// SLA reads/writes go through the slaService facade. Scoping/search/type
+// filtering below is presentation-only over the service-provided list.
 import {
-  getSlaAlerts, sendFollowUp, resolveAlert,
+  getSlaAlertsList, sendAlertFollowUp, resolveSlaAlert,
   SLA_TYPE_META, SLA_STATUS_META, type SlaAlert, type SlaAlertType,
-} from '../data/slaAlerts';
+} from '../services/slaService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { SUBACCOUNT_OPTIONS } from '../data/users';
 
@@ -18,14 +20,15 @@ export function SlaAlerts() {
   const { isMainAccountView, getCurrentAccountId } = useSubAccounts();
   const mainView = isMainAccountView();
 
-  const [allAlerts, setAllAlerts] = useState<SlaAlert[]>(() => [...getSlaAlerts()]);
+  const [allAlerts, setAllAlerts] = useState<SlaAlert[]>([]);
   const [typeFilter, setTypeFilter] = useState<'all' | SlaAlertType>('all');
   const [subaccountFilter, setSubaccountFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const refresh = () => setAllAlerts([...getSlaAlerts()]);
-  const handleFollowUp = (id: string) => { sendFollowUp(id); refresh(); };
-  const handleResolve  = (id: string) => { resolveAlert(id); refresh(); };
+  const refresh = () => { getSlaAlertsList().then(setAllAlerts).catch(() => {}); };
+  useEffect(() => { refresh(); }, []);
+  const handleFollowUp = async (id: string) => { await sendAlertFollowUp(id); refresh(); };
+  const handleResolve  = async (id: string) => { await resolveSlaAlert(id); refresh(); };
 
   // In subaccount view, scope stat counts and visible list to current account.
   const scopedAlerts = mainView

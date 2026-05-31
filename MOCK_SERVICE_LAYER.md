@@ -151,6 +151,7 @@ others. Illustrative chains:
 | `src/app/services/notificationService.ts` | Notifications, unread count, mark read | `GET /notifications`, `PATCH /notifications/read-all` |
 | `src/app/services/bulkUploadService.ts` | Upload history, batch summary, scoping | `GET /bulk-uploads`, `GET /bulk-uploads/:id` |
 | `src/app/services/claimsService.ts` | Claims list/detail, file claim, cancel booking, eligibility | `GET /claims`, `POST /claims`, `POST /transactions/:id/cancel` |
+| `src/app/services/slaService.ts` | SLA alerts list, follow-up, resolve | `GET /sla-alerts`, `POST /sla-alerts/:id/follow-up`, `POST /sla-alerts/:id/resolve` |
 
 ---
 
@@ -236,6 +237,8 @@ All UI pages currently import from `src/app/data/` directly. This is safe and un
 | ~~Bell popover~~ | ~~`data/notifications`~~ | ✅ **Migrated** → `notificationService` (unread count now effect-refreshed) |
 | ~~Claims page~~ | ~~`data/claims`~~ | ✅ **Migrated** → `claimsService.getClaimsList()` |
 | ~~Transaction Details (claims)~~ | ~~`data/claims`~~ | ✅ **Migrated** → `claimsService` (file/cancel/eligibility); support tickets still on `data/supportTickets` |
+| ~~SLA Alerts page~~ | ~~`data/slaAlerts`~~ | ✅ **Migrated** → `slaService.getSlaAlertsList()` / `sendAlertFollowUp()` / `resolveSlaAlert()` |
+| ~~Dashboard (SLA card)~~ | ~~`data/slaAlerts`~~ | ✅ **Migrated** → `slaService.getSlaAlertsList({ openOnly })` |
 | ~~BulkUploader~~ | ~~`data/bulkUploads`~~ | ✅ **Migrated** → `bulkUploadService.getBulkUploads()` + re-exported write helpers |
 | Dashboard | ~~`data/transactions`~~ (recent tx ✅ migrated → `transactionService.getRecentTransactions()`); `data/slaAlerts` still direct | `transactionService` done; SLA service deferred |
 | RootLayout search | `data/transactions`, `data/claims`, `data/supportTickets` | `transactionService.getTransactions()` with search filter |
@@ -250,7 +253,7 @@ The following data modules have no service wrapper yet. They can be added when t
 | Module | Data file | Reason deferred |
 |---|---|---|
 | ~~Claims~~ | ~~`data/claims.ts`~~ | ✅ **Done** → `claimsService` (Claims page + TransactionDetails claims) |
-| SLA Alerts | `data/slaAlerts.ts` | Similar to claims; both feed analytics |
+| ~~SLA Alerts~~ | ~~`data/slaAlerts.ts`~~ | ✅ **Done** → `slaService` (SLA Alerts page + Dashboard SLA card) |
 | Reports | `data/reports.ts` | Report generation UI doesn't need async yet |
 | Earnings/Settlements | `data/earnings.ts` | Finance is Admin-only; low migration urgency |
 | Support Tickets | `data/supportTickets.ts` | Zendesk boundary already isolated |

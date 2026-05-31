@@ -25,7 +25,7 @@ import { useSubAccounts } from '../contexts/SubAccountContext';
 // Recent transactions come through the transactionService facade. SLA alerts
 // remain on their data module (service migration out of scope for this pass).
 import { getRecentTransactions, statusConfig, type TransactionSummary } from '../services/transactionService';
-import { getSlaAlerts, SLA_TYPE_META, SLA_STATUS_META } from '../data/slaAlerts';
+import { getSlaAlertsList, SLA_TYPE_META, SLA_STATUS_META, type SlaAlert } from '../services/slaService';
 
 const stats = [
   { title: 'Active Deliveries', value: '2,847', change: '+12.5%', trend: 'up', icon: IconPackage, iconBg: 'bg-blue-600', cardBg: 'bg-blue-50', changeColor: 'text-blue-700' },
@@ -68,6 +68,16 @@ export function Dashboard() {
     getRecentTransactions(5)
       .then((list) => { if (!cancelled) setRecentTransactions(list); })
       .catch(() => { if (!cancelled) setRecentTransactions([]); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Open SLA alerts for the subaccount-view card (loaded via the service facade).
+  const [openSlaAlerts, setOpenSlaAlerts] = useState<SlaAlert[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getSlaAlertsList({ openOnly: true })
+      .then((list) => { if (!cancelled) setOpenSlaAlerts(list.slice(0, 4)); })
+      .catch(() => { if (!cancelled) setOpenSlaAlerts([]); });
     return () => { cancelled = true; };
   }, []);
 
@@ -200,7 +210,7 @@ export function Dashboard() {
             </CardHeader>
             <CardContent className="px-4 pt-3 pb-4 flex-1">
               {(() => {
-                const openAlerts = getSlaAlerts().filter((a) => a.status !== 'resolved').slice(0, 4);
+                const openAlerts = openSlaAlerts;
                 if (openAlerts.length === 0) {
                   return (
                     <div className="flex flex-col items-center justify-center py-6 gap-2">
