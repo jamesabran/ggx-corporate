@@ -32,6 +32,7 @@ import { Claims } from './pages/Claims';
 import { ClaimDetail } from './pages/ClaimDetail';
 import { SlaAlerts } from './pages/SlaAlerts';
 import { OperationsRequests } from './pages/OperationsRequests';
+import { OpsRequestDetail } from './pages/OpsRequestDetail';
 import { ProtectedRoute, AdminRoute } from './components/RouteGuards';
 import { TrackingPage } from './pages/TrackingPage';
 
@@ -64,6 +65,7 @@ export const router = createBrowserRouter([
       { path: 'claims/:id', Component: ClaimDetail },
       { path: 'sla-alerts', Component: SlaAlerts },
       { path: 'operations-requests', Component: OperationsRequests },
+      { path: 'operations-requests/:id', Component: OpsRequestDetail },
       { path: 'bulk-uploader', Component: BulkUploader },
       { path: 'bulk-uploader/summary/:id', Component: BulkUploadSummary },
       { path: 'bulk-upload-summary', Component: BulkUploadSummary },

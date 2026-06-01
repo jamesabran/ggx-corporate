@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 import {
   IconPlus, IconCircleCheck, IconBox, IconTruck, IconAdjustments, IconMapPin,
 } from '@tabler/icons-react';
@@ -112,6 +113,7 @@ function requestDetail(r: OperationsRequest): string {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export function OperationsRequests() {
+  const navigate = useNavigate();
   const {
     isMainAccountView, getCurrentAccountId, getCurrentAccountName,
     subAccountsEnabled, subAccounts, currentAccount,
@@ -444,7 +446,11 @@ export function OperationsRequests() {
             const CatIcon = cat.icon;
             const detail  = requestDetail(r);
             return (
-              <Card key={r.id} className={r.status === 'completed' || r.status === 'cancelled' || r.status === 'declined' ? 'opacity-70' : ''}>
+              <Card
+                key={r.id}
+                className={`cursor-pointer hover:shadow-md transition-shadow ${r.status === 'completed' || r.status === 'cancelled' || r.status === 'declined' ? 'opacity-70' : ''}`}
+                onClick={() => navigate(`/dashboard/operations-requests/${r.id}`)}
+              >
                 <CardContent className="p-5">
                   <div className="flex items-start gap-4">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${cat.bgClass}`}>
