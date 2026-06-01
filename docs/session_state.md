@@ -7,7 +7,7 @@
 
 ## Current goal
 
-Polish pass complete. All 4 priority items from the roadmap have been addressed.
+All roadmap items complete. Polish pass (items 1–4) and Operations Requests (item 5) shipped. Item 6 (backend integration) awaits a real BFF.
 
 ## Completed work
 
@@ -44,12 +44,18 @@ Polish pass complete. All 4 priority items from the roadmap have been addressed.
 - `src/app/pages/DataAnalytics.tsx` — account scoping
 - `src/app/data/transactions.ts` — reportedCounts field + 5 batch seed values
 - `src/app/services/transactionService.ts` — use reportedCounts in getTransactionBatches
+- `src/app/data/operationsRequests.ts` — mock seed + addOpsRequest()
+- `src/app/services/opsRequestsService.ts` — service facade (get/submit)
+- `src/app/pages/OperationsRequests.tsx` — list page + new request dialog
+- `src/app/routes.tsx` — /dashboard/operations-requests route
+- `src/app/layouts/RootLayout.tsx` — Operations Requests in sidebar Operations group
 
 ## Remaining tasks
 
-See `docs/roadmap.md`. Polish pass items 1–4 are now complete. Remaining:
-5. Operations Requests feature (future module — not yet started)
-6. Backend / API integration (auth first, then transactions + claims)
+See `docs/roadmap.md`. All current roadmap items are complete:
+- ✅ Items 1–4: Polish pass
+- ✅ Item 5: Operations Requests module
+- ⏳ Item 6: Backend integration — requires real BFF (auth first, then transactions + claims)
 
 ## Known risks
 
@@ -60,9 +66,9 @@ See `docs/roadmap.md`. Polish pass items 1–4 are now complete. Remaining:
 
 ## Suggested next prompt
 
-> "Plan the Operations Requests module."
-> OR
 > "Start backend integration — swap auth service for real async fetch."
+> OR
+> "Add an Operations Request detail page at /dashboard/operations-requests/:id."
 
 ---
 
