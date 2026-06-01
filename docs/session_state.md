@@ -7,7 +7,7 @@
 
 ## Current goal
 
-All roadmap items complete + Operations Requests enhanced. StatCard component added to shared library. Item 6 (backend integration) awaits a real BFF.
+All roadmap items complete. Operations Requests fully polished (scoping, address cards, form). Figma design system now includes all GGX custom components. Item 6 (backend integration) awaits a real BFF.
 
 ## Completed work
 
