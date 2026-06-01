@@ -100,13 +100,17 @@ Gap log / assumptions:
 - Fee row amounts occasionally concatenate to labels (FILL spacer inconsistency in AUTO-width rows) — acceptable mock fidelity
 - StatCard instances used wherever the StatCard component set was the right pattern (secondary pages); Dashboard KPI cards use custom vibrant frames (matching the code intentional treatment)
 
-Remaining Figma screens:
-- API Integration
-- Settings / Notifications
-- Empty states (no data, no results, first-time user)
-- Error states (load error, not found, permission denied)
-- Loading states (skeleton screens)
-- Permission / restricted states (access denied, upgrade prompt)
+Added in session 5 batch 2:
+| Page | Notes |
+|------|-------|
+| GGX / API Integration | 3 API keys w/ masked values, Copy/Revoke, Docs card (blue), Webhooks card, 4-col usage stats |
+| GGX / Settings | Profile form + avatar, 5 notification toggles (ON/OFF), Security fields, 2FA Enabled banner |
+| GGX / States | 3-col utility page: Empty States (3), Error States (2), Loading/Skeleton States (2), Permission States (3) |
+
+All 14 GGX screen pages are now built. Remaining polish:
+- Annotate pages with red-lines / spacing notes (optional, not required yet)
+- Code Connect mappings between Figma components and code components (separate task)
+- Backend integration (blocked on BFF)
 
 ---
 
