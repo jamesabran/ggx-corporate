@@ -75,6 +75,7 @@ New pages added in this session:
 ## Latest commits
 
 ```
+299b5cc feat: Operations Requests detail page
 ff42e2c feat: Data Analytics subaccount scoping via dataAnalyticsService
 29223d6 docs: checkpoint — Operations Requests complete, all polish-pass items done
 3035a42 chore: add gh pr and PowerShell PATH search to allowed tools
@@ -108,8 +109,7 @@ Per `docs/roadmap.md`. Suggested priority order:
    - Dependency order: auth → transactions + claims → everything else
    - No frontend work to do here until a backend/BFF is available
 
-2. **Operations Requests detail page** (natural follow-on, not on current roadmap)
-   - `/dashboard/operations-requests/:id` showing request status timeline
+2. ~~**Operations Requests detail page**~~ — done (`/dashboard/operations-requests/:id`)
 
 3. **Minor remaining responsive polish** (low priority)
    - SLA alert row badge wrapping in narrow widths (currently wraps via flex-wrap, may be acceptable)
@@ -134,4 +134,4 @@ Per `docs/roadmap.md`. Suggested priority order:
 
 ---
 
-_Last updated: 2026-06-01 (session 2)_
+_Last updated: 2026-06-01 (session 3)_
