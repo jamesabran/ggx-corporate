@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { SearchInput } from '../components/SearchInput';
+import { SegmentedControl } from '../components/SegmentedControl';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 // Data access goes through the transactionService facade (not the data module
@@ -91,30 +92,14 @@ export function Transactions() {
         </div>
         <div className="flex items-center gap-2">
           {/* View mode toggle */}
-          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 gap-0.5">
-            <button
-              onClick={() => setViewMode('all')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-                viewMode === 'all'
-                  ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <IconList className="w-3.5 h-3.5" />
-              All Transactions
-            </button>
-            <button
-              onClick={() => setViewMode('batches')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-                viewMode === 'batches'
-                  ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <IconPackages className="w-3.5 h-3.5" />
-              By Batch
-            </button>
-          </div>
+          <SegmentedControl
+            segments={[
+              { value: 'all',     label: 'All Transactions', icon: IconList },
+              { value: 'batches', label: 'By Batch',         icon: IconPackages },
+            ]}
+            value={viewMode}
+            onChange={(v) => setViewMode(v as 'all' | 'batches')}
+          />
           <Button variant="outline">
             <IconDownload className="w-4 h-4 mr-2" />
             Export CSV
