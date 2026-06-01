@@ -7,7 +7,7 @@
 
 ## Current goal
 
-All polish-pass roadmap items (1–4) and the Operations Requests feature (item 5) are complete. The next active priority per roadmap is service-layer / backend integration cleanup, followed by continued account/subaccount scoping work and any remaining polish.
+All polish-pass roadmap items (1–4), Operations Requests (item 5), and Data Analytics subaccount scoping are complete. The service-layer migration is also complete (all non-config UI consumers go through service facades; intentional exceptions documented). The next stage is service-layer / backend integration — swapping mock service bodies for real `fetch()` calls against the BFF. This requires an actual backend to exist before meaningful work can proceed.
 
 ## Completed work
 
@@ -25,7 +25,7 @@ All polish-pass roadmap items (1–4) and the Operations Requests feature (item 
 ### Polish pass (items 1–4) — all complete
 - **Responsive layout**: KPI card values scale `text-2xl xl:text-3xl`; trend row `flex-shrink-0`; "vs last month" `hidden xl:inline`; individual-booking copy removed from batch footer
 - **Sidebar IA**: grouped hierarchy (Operations / Analytics & Reports / Finance / Account Management / System); static uppercase group labels; separate `managerNavigation`; `financeExpanded` toggle removed
-- **Data Analytics scoping**: claims + SLA filtered by `subaccountId` in subaccount view; effect re-runs on scope change; KPI subtitle shows account name
+- **Data Analytics scoping**: claims + SLA filtered by `subaccountId` in subaccount view; effect re-runs on scope change; KPI subtitle shows account name; `dataAnalyticsService` created — all aggregate metrics (KPIs, charts, regional breakdown) now scope correctly to subaccount context
 - **Bulk Upload UX**: `reportedCounts` on `TransactionBatch`; 5 seed batches with 89–423 shipments; batch row redesigned (counters, progress bar, Export button)
 
 ### Operations Requests (item 5) — complete with fixes applied
@@ -75,15 +75,12 @@ New pages added in this session:
 ## Latest commits
 
 ```
+ff42e2c feat: Data Analytics subaccount scoping via dataAnalyticsService
+29223d6 docs: checkpoint — Operations Requests complete, all polish-pass items done
 3035a42 chore: add gh pr and PowerShell PATH search to allowed tools
 1358d39 fix: operations requests sidebar access and context E default address
 2a1d85c fix: operations request account context flow
 2c9d9a4 docs: update session state — Ops Requests fully polished, Figma design system complete
-f64dfb9 fix: operations request account scoping and address selection
-c4057d8 refactor: extract SegmentedControl to shared component library
-15156a1 feat: Operations Requests form improvements
-8d58d9b feat: StatCard shared component + align stat cards across secondary pages
-2bdcc37 feat: Operations Requests module — service, data, list page, new request form
 ```
 
 ---
@@ -105,21 +102,18 @@ c4057d8 refactor: extract SegmentedControl to shared component library
 
 Per `docs/roadmap.md`. Suggested priority order:
 
-1. **Service-layer / backend integration** (roadmap active priority)
+1. **Service-layer / backend integration** (roadmap active priority — blocked on BFF existing)
    - Swap each service's mock body for real `fetch()` calls against the BFF
    - Starting point: auth (async session hydration — sync localStorage is known tech debt)
    - Dependency order: auth → transactions + claims → everything else
+   - No frontend work to do here until a backend/BFF is available
 
-2. **Account/subaccount scoping cleanup**
-   - Data Analytics page: charts, tables, and KPI totals should scope correctly per the roadmap spec (claims + SLA scoping was fixed; verify chart data follows the same rules)
-   - Confirm `dataAnalyticsService` contract supports account/subaccount context params before further work
-
-3. **Remaining responsive/polish issues** (if not resolved by backend work)
-   - SLA alert row badge wrapping in narrow widths
-   - General badge overflow in constrained table cells
-
-4. **Operations Requests detail page** (not on current roadmap but natural follow-on)
+2. **Operations Requests detail page** (natural follow-on, not on current roadmap)
    - `/dashboard/operations-requests/:id` showing request status timeline
+
+3. **Minor remaining responsive polish** (low priority)
+   - SLA alert row badge wrapping in narrow widths (currently wraps via flex-wrap, may be acceptable)
+   - General badge overflow in constrained table cells
 
 ---
 
@@ -136,8 +130,8 @@ Per `docs/roadmap.md`. Suggested priority order:
 
 ## Suggested next prompt
 
-> "Resume from session state. Continue with the roadmap — start with service-layer / backend integration cleanup. Begin with async auth hydration in AuthContext to replace the synchronous localStorage shortcut, then move to swapping transaction and claims services for real fetch calls."
+> "Resume from session state. The frontend is feature-complete and all polish-pass items are done. Next: either implement the Operations Requests detail page (`/dashboard/operations-requests/:id`), or begin backend integration if a BFF is available."
 
 ---
 
-_Last updated: 2026-06-01_
+_Last updated: 2026-06-01 (session 2)_
