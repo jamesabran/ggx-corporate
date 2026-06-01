@@ -77,21 +77,36 @@ Added in session 4:
 - Icon Container: already existed (sm/md/lg/xl × 7 colors). No changes needed.
 
 Added in session 5 (Figma screen construction):
-- GGX Dashboard page: 3 screen variants built
-  - "Dashboard — Admin Main Account" (emerald consolidated banner, Finance nav, Earnings panel)
-  - "Dashboard — Admin Subaccount View" (blue scoped banner, no Finance nav, SLA Alerts panel)
-  - "Dashboard — Manager View" (violet manager banner, manager nav, Earnings panel, Rina Lopez identity)
-- GGX / Transactions page (new page):
-  - "Transactions — All Transactions" frame: filter toolbar, segmented control, full 8-row table with colored status badges, pagination
-  - "Transactions — By Batch" frame: 3 batch cards with counter badge chips, progress bars, first card expanded with inline mini-table
-- GGX / Transaction Detail page (new page):
-  - Full 2-column detail view: dates, sender/recipient, order summary, fees left; rating card, tracking timeline (5 events), help card right
+Pages built (all use real GGX nav, consistent topbar, StatCard instances where applicable):
+
+| Page | Frame(s) | Notes |
+|------|----------|-------|
+| GGX Dashboard | Admin Main Account · Admin Subaccount View · Manager View | 3 context banners (emerald/blue/violet), nav scoped per role |
+| GGX / Transactions | All Transactions · By Batch | Segmented control, status badge table, batch cards w/ counter badges + progress bars + inline expanded table |
+| GGX / Transaction Detail | Transaction Detail | 2-col: dates/sender/fees left; rating card/timeline/help right |
+| GGX / Data Analytics | Data Analytics | StatCard instances, bar chart, donut status dist, SLA progress bars, regional breakdown |
+| GGX / Earnings | Earnings | 4 vibrant summary cards, full settlement table w/ Disbursed badges |
+| GGX / Support Tickets | Support Tickets | StatCard instances, dual status+priority badge table |
+| GGX / Claims | Claims | StatCard instances, claims table: Open/InReview/Approved/Settled/Denied |
+| GGX / Bulk Uploader | Bulk Uploader | Drag-drop zone, subaccount selector banner, recent batches with progress |
+| GGX / SLA Alerts | SLA Alerts | StatCard instances, alert rows with time-remaining coloring (−2h red, warning orange) |
+| GGX / Operations Requests | Operations Requests | StatCard instances, dual category+status badges, request cards |
+| GGX / Address Book | Address Book | 3-col card grid, preferred address blue border, type badges, Edit/Delete/Set actions |
 
 Gap log / assumptions:
-- Fee rows and "Items Total" row spacers use SPACE_BETWEEN in Figma (FILL spacers work inconsistently in AUTO-width rows); values appear concatenated to labels in a few cells — acceptable fidelity for a screen mock
-- Sidebar icon placeholders are small gray rectangles (no Tabler icon instances); accurate layout, placeholder visual
-- KPI card trend arrows are text-only ("+12.5% vs last month") — no icon instances; matches intent
+- Sidebar icon dots are small gray rectangles (no Tabler icon instances) — accurate layout, placeholder visual
+- KPI card trend arrows are text-only ("+12.5% vs last month")
 - Rating stars are yellow/gray circles (no star SVG instances)
+- Fee row amounts occasionally concatenate to labels (FILL spacer inconsistency in AUTO-width rows) — acceptable mock fidelity
+- StatCard instances used wherever the StatCard component set was the right pattern (secondary pages); Dashboard KPI cards use custom vibrant frames (matching the code intentional treatment)
+
+Remaining Figma screens:
+- API Integration
+- Settings / Notifications
+- Empty states (no data, no results, first-time user)
+- Error states (load error, not found, permission denied)
+- Loading states (skeleton screens)
+- Permission / restricted states (access denied, upgrade prompt)
 
 ---
 
