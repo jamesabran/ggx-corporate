@@ -17,11 +17,13 @@ import {
   IconCalendar,
   IconBuilding,
   IconActivityHeartbeat,
+  IconUserCircle,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useAuth } from '../contexts/AuthContext';
 // Recent transactions come through the transactionService facade. SLA alerts
 // remain on their data module (service migration out of scope for this pass).
 import { getRecentTransactions, getDashboardStats, statusConfig, type TransactionSummary, type DashboardStats } from '../services/transactionService';
@@ -46,6 +48,8 @@ const earningsRows = [
 export function Dashboard() {
   const navigate = useNavigate();
   const { subAccountsEnabled, currentAccount, getCurrentAccountName } = useSubAccounts();
+  const { user } = useAuth();
+  const isManager = user?.role === 'manager';
 
   // Recent transactions for the preview panel, loaded via the service facade.
   const [recentTransactions, setRecentTransactions] = useState<TransactionSummary[]>([]);
@@ -109,7 +113,25 @@ export function Dashboard() {
         <p className="text-sm text-gray-500 mt-1">Welcome back — here&apos;s your logistics overview.</p>
       </div>
 
-      {subAccountsEnabled && currentAccount !== 'main' && (
+      {/* Manager view — scoped to their assigned subaccount */}
+      {isManager && (
+        <Card className="border-violet-200 bg-violet-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+                <IconUserCircle className="w-5 h-5 text-violet-600" />
+              </div>
+              <div className="flex-1">
+                <span className="text-sm font-semibold text-violet-900">Manager View — {user?.accountName}</span>
+                <p className="text-xs text-violet-700 mt-0.5">You are managing this subaccount. Data shown is scoped to {user?.accountName}.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Admin scoped to a specific subaccount */}
+      {!isManager && subAccountsEnabled && currentAccount !== 'main' && (
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -117,10 +139,25 @@ export function Dashboard() {
                 <IconBuilding className="w-5 h-5 text-blue-600" />
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-blue-900">Viewing: {getCurrentAccountName()}</span>
-                </div>
+                <span className="text-sm font-semibold text-blue-900">Viewing: {getCurrentAccountName()}</span>
                 <p className="text-xs text-blue-700 mt-0.5">Showing data for this subaccount only</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Admin main account with subaccounts enabled — consolidated view */}
+      {!isManager && subAccountsEnabled && currentAccount === 'main' && (
+        <Card className="border-emerald-200 bg-emerald-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <IconBuilding className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div className="flex-1">
+                <span className="text-sm font-semibold text-emerald-900">Main Account — Consolidated View</span>
+                <p className="text-xs text-emerald-700 mt-0.5">Data shown aggregates across all subaccounts. Use the account switcher to scope to a subaccount.</p>
               </div>
             </div>
           </CardContent>

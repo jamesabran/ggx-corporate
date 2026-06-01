@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import { Card, CardContent } from './ui/Card';
+import { IconContainer } from './IconContainer';
 import { cn } from '../lib/utils';
 
 /**
@@ -47,9 +48,7 @@ export function StatCard({
             <p className={cn('text-2xl font-bold mt-2 tabular-nums', valueColor)}>{value}</p>
             {sub && <p className="text-sm text-gray-500 mt-2">{sub}</p>}
           </div>
-          <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', iconBg)}>
-            <Icon className={cn('w-5 h-5', iconColor)} />
-          </div>
+          <IconContainer icon={Icon} bg={iconBg} color={iconColor} />
         </div>
       </CardContent>
     </Card>

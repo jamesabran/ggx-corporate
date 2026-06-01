@@ -100,9 +100,9 @@ export function Transactions() {
             value={viewMode}
             onChange={(v) => setViewMode(v as 'all' | 'batches')}
           />
-          <Button variant="outline">
-            <IconDownload className="w-4 h-4 mr-2" />
+          <Button variant="outline" iconEnd>
             Export CSV
+            <IconDownload className="w-4 h-4" />
           </Button>
         </div>
       </div>
@@ -201,7 +201,7 @@ export function Transactions() {
                     <TableCell className="text-gray-600">{delivery.date}</TableCell>
                     <TableCell>
                       <Button variant="ghost" size="sm">
-                        <IconEye className="w-4 h-4 mr-1" />
+                        <IconEye className="w-4 h-4" />
                         View
                       </Button>
                     </TableCell>
@@ -278,34 +278,34 @@ export function Transactions() {
                         </p>
                       </div>
 
-                      {/* Counts */}
-                      <div className="hidden sm:flex items-center gap-4 flex-shrink-0 border-l border-gray-100 pl-4 ml-1">
-                        <div className="text-center min-w-[40px]">
-                          <p className="text-base font-bold text-gray-900 tabular-nums">{total.toLocaleString()}</p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">Total</p>
-                        </div>
-                        <div className="text-center min-w-[40px]">
-                          <p className="text-base font-bold text-emerald-700 tabular-nums">{delivered.toLocaleString()}</p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">Delivered</p>
-                        </div>
-                        <div className="text-center min-w-[40px]">
-                          <p className="text-base font-bold text-blue-600 tabular-nums">{inProgress.toLocaleString()}</p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">Active</p>
-                        </div>
-                        <div className="text-center min-w-[40px]">
-                          <p className={`text-base font-bold tabular-nums ${failed > 0 ? 'text-red-600' : 'text-gray-300'}`}>{failed.toLocaleString()}</p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">Failed</p>
-                        </div>
+                      {/* Counter badges */}
+                      <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+                        <Badge variant="secondary" className="tabular-nums font-semibold px-2">
+                          {total.toLocaleString()} total
+                        </Badge>
+                        <Badge variant="success" className="tabular-nums font-semibold px-2">
+                          {delivered.toLocaleString()} delivered
+                        </Badge>
+                        {inProgress > 0 && (
+                          <Badge variant="info" className="tabular-nums font-semibold px-2">
+                            {inProgress.toLocaleString()} active
+                          </Badge>
+                        )}
+                        {failed > 0 && (
+                          <Badge variant="destructive" className="tabular-nums font-semibold px-2">
+                            {failed.toLocaleString()} failed
+                          </Badge>
+                        )}
                       </div>
 
                       {/* Download action — stopPropagation so it doesn't toggle expand */}
                       <Button
-                        variant="ghost" size="sm"
+                        variant="ghost" size="sm" iconEnd
                         className="hidden sm:flex flex-shrink-0 text-gray-500 hover:text-gray-700 text-xs"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <IconDownload className="w-3.5 h-3.5 mr-1" />
                         Export
+                        <IconDownload className="w-3.5 h-3.5" />
                       </Button>
                     </div>
 
@@ -323,11 +323,11 @@ export function Transactions() {
                     )}
 
                     {/* Mobile counts */}
-                    <div className="sm:hidden flex items-center gap-4 mt-3 ml-14 text-sm">
-                      <span className="text-gray-600">{total.toLocaleString()} total</span>
-                      <span className="text-emerald-700">{delivered.toLocaleString()} delivered</span>
-                      {inProgress > 0 && <span className="text-blue-600">{inProgress.toLocaleString()} active</span>}
-                      {failed > 0 && <span className="text-red-600">{failed.toLocaleString()} failed</span>}
+                    <div className="sm:hidden flex flex-wrap items-center gap-1.5 mt-3 ml-14">
+                      <Badge variant="secondary" className="tabular-nums">{total.toLocaleString()} total</Badge>
+                      <Badge variant="success" className="tabular-nums">{delivered.toLocaleString()} delivered</Badge>
+                      {inProgress > 0 && <Badge variant="info" className="tabular-nums">{inProgress.toLocaleString()} active</Badge>}
+                      {failed > 0 && <Badge variant="destructive" className="tabular-nums">{failed.toLocaleString()} failed</Badge>}
                     </div>
                   </CardContent>
                 </button>

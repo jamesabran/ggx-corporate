@@ -102,6 +102,7 @@ const mainAccountNavigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: IconLayoutDashboard },
   grp('Operations', [
     { name: 'Transactions',    href: '/dashboard/transactions',   icon: IconPackage },
+    { name: 'Bulk Upload',     href: '/dashboard/bulk-uploader',  icon: IconUpload },
     { name: 'Claims',               href: '/dashboard/claims',               icon: IconReceiptRefund },
     { name: 'SLA Alerts',           href: '/dashboard/sla-alerts',           icon: IconActivityHeartbeat },
     { name: 'Operations Requests',  href: '/dashboard/operations-requests',  icon: IconClipboardList },
