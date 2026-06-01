@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   IconPlus, IconCircleCheck, IconBox, IconTruck, IconAdjustments,
+  IconBuilding, IconMapPin, IconClipboardList,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -8,6 +9,7 @@ import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { SearchInput } from '../components/SearchInput';
 import { Dialog } from '../components/ui/Dialog';
+import { StatCard } from '../components/StatCard';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { getSubaccountOptions } from '../services/userService';
 import {
@@ -28,14 +30,12 @@ interface FormState {
   supplyType: SupplyType | '';
   quantity: string;
   deliveryAddress: string;
-  neededByDate: string;
   // pickup support
   pickupSupportType: PickupSupportType | '';
   relatedBatchId: string;
   pickupAddress: string;
   estimatedShipmentCount: string;
   estimatedWeight: string;
-  preferredPickupWindow: string;
   // operational assistance
   assistanceType: OperationalAssistanceType | '';
 }
@@ -47,13 +47,11 @@ const emptyForm = (): FormState => ({
   supplyType: '',
   quantity: '',
   deliveryAddress: '',
-  neededByDate: '',
   pickupSupportType: '',
   relatedBatchId: '',
   pickupAddress: '',
   estimatedShipmentCount: '',
   estimatedWeight: '',
-  preferredPickupWindow: '',
   assistanceType: '',
 });
 
@@ -74,13 +72,15 @@ function requestTitle(r: OperationsRequest): string {
 
 function requestDetail(r: OperationsRequest): string {
   if (r.category === 'supply') {
+    // neededByDate kept for display of existing records
     return [r.deliveryAddress, r.neededByDate ? `Needed by ${r.neededByDate}` : ''].filter(Boolean).join(' · ');
   }
   if (r.category === 'pickup_support') {
+    // preferredPickupWindow kept for display of existing records
     return [
       r.pickupAddress,
       r.estimatedShipmentCount ? `~${r.estimatedShipmentCount} shipments` : '',
-      r.preferredPickupWindow,
+      r.preferredPickupWindow ?? '',
     ].filter(Boolean).join(' · ');
   }
   if (r.category === 'operational_assistance') {
@@ -92,9 +92,15 @@ function requestDetail(r: OperationsRequest): string {
 // ─── component ───────────────────────────────────────────────────────────────
 
 export function OperationsRequests() {
-  const { isMainAccountView, getCurrentAccountId, getCurrentAccountName } = useSubAccounts();
+  const {
+    isMainAccountView, getCurrentAccountId, getCurrentAccountName,
+    subAccounts, currentAccount,
+  } = useSubAccounts();
   const mainView = isMainAccountView();
   const scopeId = mainView ? undefined : (getCurrentAccountId() ?? undefined);
+
+  // Current subaccount object — used to pre-fill the default pickup address.
+  const currentSubaccount = subAccounts.find((s) => s.id === currentAccount);
 
   const [requests, setRequests] = useState<OperationsRequest[]>([]);
   const [subaccountOptions, setSubaccountOptions] = useState<{ id: string; name: string }[]>([]);
@@ -135,13 +141,25 @@ export function OperationsRequests() {
   });
 
   // Summary counts.
-  const openCount     = requests.filter((r) => r.status === 'submitted' || r.status === 'in_review' || r.status === 'coordinating' || r.status === 'scheduled').length;
-  const supplyCount   = requests.filter((r) => r.category === 'supply').length;
-  const pickupCount   = requests.filter((r) => r.category === 'pickup_support').length;
+  const openCount   = requests.filter((r) => ['submitted', 'in_review', 'coordinating', 'scheduled'].includes(r.status)).length;
+  const supplyCount = requests.filter((r) => r.category === 'supply').length;
+  const pickupCount = requests.filter((r) => r.category === 'pickup_support').length;
 
   // Form helpers.
   const setField = <K extends keyof FormState>(key: K, val: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: val }));
+
+  // When admin selects a subaccount in main view, pre-fill address fields from
+  // that subaccount's default pickup address.
+  const handleSubaccountChange = (subId: string) => {
+    const sub = subAccounts.find((s) => s.id === subId);
+    setForm((f) => ({
+      ...f,
+      subaccountId: subId,
+      deliveryAddress: sub?.pickupAddress ?? f.deliveryAddress,
+      pickupAddress:   sub?.pickupAddress ?? f.pickupAddress,
+    }));
+  };
 
   const formValid = (): boolean => {
     if (!form.category) return false;
@@ -159,7 +177,7 @@ export function OperationsRequests() {
     try {
       const subId = scopeId ?? form.subaccountId;
       const subName = scopeId
-        ? (getCurrentAccountName())
+        ? getCurrentAccountName()
         : (subaccountOptions.find((s) => s.id === form.subaccountId)?.name ?? form.subaccountId);
       await submitOpsRequest({
         category: form.category as OpsRequestCategory,
@@ -170,13 +188,11 @@ export function OperationsRequests() {
         supplyType: form.supplyType as SupplyType || undefined,
         quantity: form.quantity ? parseInt(form.quantity, 10) : undefined,
         deliveryAddress: form.deliveryAddress || undefined,
-        neededByDate: form.neededByDate || undefined,
         pickupSupportType: form.pickupSupportType as PickupSupportType || undefined,
         relatedBatchId: form.relatedBatchId || undefined,
         pickupAddress: form.pickupAddress || undefined,
         estimatedShipmentCount: form.estimatedShipmentCount ? parseInt(form.estimatedShipmentCount, 10) : undefined,
         estimatedWeight: form.estimatedWeight || undefined,
-        preferredPickupWindow: form.preferredPickupWindow || undefined,
         assistanceType: form.assistanceType as OperationalAssistanceType || undefined,
       });
       setSubmitSuccess(true);
@@ -191,11 +207,21 @@ export function OperationsRequests() {
     }
   };
 
+  // Pre-fill address from the current subaccount's default pickup address when
+  // the form opens (for scoped views). In main view, address is filled when the
+  // admin picks a subaccount via handleSubaccountChange.
   const openForm = () => {
-    setForm(emptyForm());
+    const defaultAddr = !mainView && currentSubaccount ? currentSubaccount.pickupAddress : '';
+    setForm({ ...emptyForm(), deliveryAddress: defaultAddr, pickupAddress: defaultAddr });
     setSubmitSuccess(false);
     setFormOpen(true);
   };
+
+  // Address hint: shown below an address field when it matches the subaccount default.
+  const defaultAddr = currentSubaccount?.pickupAddress ?? '';
+  const selectedSubAddr = mainView
+    ? (subAccounts.find((s) => s.id === form.subaccountId)?.pickupAddress ?? '')
+    : defaultAddr;
 
   return (
     <div className="p-6 space-y-6">
@@ -215,33 +241,30 @@ export function OperationsRequests() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm font-medium text-gray-600 mb-1">Open Requests</p>
-            <p className="text-2xl font-bold text-gray-900">{openCount}</p>
-            <p className="text-xs text-gray-400 mt-1">Submitted, in review, or scheduled</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <IconBox className="w-4 h-4 text-violet-500" />
-              <p className="text-sm font-medium text-gray-600">Supply Requests</p>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{supplyCount}</p>
-            <p className="text-xs text-gray-400 mt-1">Total this period</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <IconTruck className="w-4 h-4 text-blue-500" />
-              <p className="text-sm font-medium text-gray-600">Pickup Support</p>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{pickupCount}</p>
-            <p className="text-xs text-gray-400 mt-1">Total this period</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          label="Open Requests"
+          value={openCount}
+          sub="Submitted, in review, or scheduled"
+          icon={IconClipboardList}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
+        />
+        <StatCard
+          label="Supply Requests"
+          value={supplyCount}
+          sub="Total this period"
+          icon={IconBox}
+          iconBg="bg-violet-50"
+          iconColor="text-violet-600"
+        />
+        <StatCard
+          label="Pickup Support"
+          value={pickupCount}
+          sub="Total this period"
+          icon={IconTruck}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
+        />
       </div>
 
       {/* Filters */}
@@ -301,10 +324,10 @@ export function OperationsRequests() {
       ) : (
         <div className="space-y-3">
           {visible.map((r) => {
-            const cat    = CATEGORY_META[r.category];
-            const st     = STATUS_META[r.status];
+            const cat     = CATEGORY_META[r.category];
+            const st      = STATUS_META[r.status];
             const CatIcon = cat.icon;
-            const detail = requestDetail(r);
+            const detail  = requestDetail(r);
             return (
               <Card key={r.id} className={r.status === 'completed' || r.status === 'cancelled' || r.status === 'declined' ? 'opacity-70' : ''}>
                 <CardContent className="p-5">
@@ -352,13 +375,26 @@ export function OperationsRequests() {
               <IconCircleCheck className="w-6 h-6 text-emerald-600" />
             </div>
             <p className="text-base font-semibold text-gray-900">Request submitted</p>
-            <p className="text-sm text-gray-500">The Operations team will review and follow up shortly.</p>
+            <p className="text-sm text-gray-500">The Operations team will be in touch shortly.</p>
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Task 1: Scoped context indicator — visible when not in main view */}
+            {!mainView && scopeId && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-blue-50 border border-blue-200">
+                <IconBuilding className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <span className="text-sm text-blue-800">
+                  Creating request for{' '}
+                  <span className="font-semibold">{getCurrentAccountName()}</span>
+                </span>
+              </div>
+            )}
+
             {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Request category <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Request category <span className="text-red-500">*</span>
+              </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {(['supply', 'pickup_support', 'operational_assistance'] as OpsRequestCategory[]).map((cat) => {
                   const m = CATEGORY_META[cat];
@@ -382,11 +418,13 @@ export function OperationsRequests() {
               </div>
             </div>
 
-            {/* Subaccount (Admin / main view only) */}
+            {/* Subaccount (Admin main view only) — picking it pre-fills address */}
             {mainView && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Subaccount <span className="text-red-500">*</span></label>
-                <Select value={form.subaccountId} onChange={(e) => setField('subaccountId', e.target.value)}>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Subaccount <span className="text-red-500">*</span>
+                </label>
+                <Select value={form.subaccountId} onChange={(e) => handleSubaccountChange(e.target.value)}>
                   <option value="">Select subaccount…</option>
                   {subaccountOptions.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
@@ -395,11 +433,13 @@ export function OperationsRequests() {
               </div>
             )}
 
-            {/* Supply fields */}
+            {/* Supply fields — Task 3: no "Needed by" field */}
             {form.category === 'supply' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Supply type <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Supply type <span className="text-red-500">*</span>
+                  </label>
                   <Select value={form.supplyType} onChange={(e) => setField('supplyType', e.target.value as SupplyType)}>
                     <option value="">Select supply type…</option>
                     <option value="pouches">Pouches</option>
@@ -407,29 +447,23 @@ export function OperationsRequests() {
                     <option value="other_packaging">Other Packaging Supplies</option>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Quantity <span className="text-red-500">*</span></label>
-                    <input
-                      type="number" min="1"
-                      value={form.quantity}
-                      onChange={(e) => setField('quantity', e.target.value)}
-                      placeholder="e.g. 500"
-                      className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Needed by</label>
-                    <input
-                      type="date"
-                      value={form.neededByDate}
-                      onChange={(e) => setField('neededByDate', e.target.value)}
-                      className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Delivery address <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Quantity <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number" min="1"
+                    value={form.quantity}
+                    onChange={(e) => setField('quantity', e.target.value)}
+                    placeholder="e.g. 500"
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                {/* Task 2: address pre-filled from subaccount default */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Delivery address <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={form.deliveryAddress}
@@ -437,15 +471,23 @@ export function OperationsRequests() {
                     placeholder="Full delivery address"
                     className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   />
+                  {selectedSubAddr && form.deliveryAddress === selectedSubAddr && (
+                    <p className="flex items-center gap-1 text-xs text-gray-400 mt-1.5">
+                      <IconMapPin className="w-3 h-3 flex-shrink-0" />
+                      Default pickup address from subaccount — edit to override
+                    </p>
+                  )}
                 </div>
               </>
             )}
 
-            {/* Pickup support fields */}
+            {/* Pickup support fields — Task 3: no "Preferred pickup window" */}
             {form.category === 'pickup_support' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Request type <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Request type <span className="text-red-500">*</span>
+                  </label>
                   <Select value={form.pickupSupportType} onChange={(e) => setField('pickupSupportType', e.target.value as PickupSupportType)}>
                     <option value="">Select request type…</option>
                     <option value="immediate_pickup">Immediate Pickup</option>
@@ -455,8 +497,11 @@ export function OperationsRequests() {
                     <option value="escalate_missed_pickup">Escalate Missed Pickup</option>
                   </Select>
                 </div>
+                {/* Task 2: address pre-filled from subaccount default */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Pickup address <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Pickup address <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={form.pickupAddress}
@@ -464,6 +509,12 @@ export function OperationsRequests() {
                     placeholder="Full pickup address"
                     className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   />
+                  {selectedSubAddr && form.pickupAddress === selectedSubAddr && (
+                    <p className="flex items-center gap-1 text-xs text-gray-400 mt-1.5">
+                      <IconMapPin className="w-3 h-3 flex-shrink-0" />
+                      Default pickup address from subaccount — edit to override
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -488,16 +539,6 @@ export function OperationsRequests() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Preferred pickup window</label>
-                  <input
-                    type="text"
-                    value={form.preferredPickupWindow}
-                    onChange={(e) => setField('preferredPickupWindow', e.target.value)}
-                    placeholder="e.g. Jun 3, 8:00 AM – 12:00 PM"
-                    className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Related batch ID (optional)</label>
                   <input
                     type="text"
@@ -513,7 +554,9 @@ export function OperationsRequests() {
             {/* Operational assistance fields */}
             {form.category === 'operational_assistance' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Assistance type <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Assistance type <span className="text-red-500">*</span>
+                </label>
                 <Select value={form.assistanceType} onChange={(e) => setField('assistanceType', e.target.value as OperationalAssistanceType)}>
                   <option value="">Select assistance type…</option>
                   <option value="special_handling">Special Handling</option>
@@ -541,10 +584,7 @@ export function OperationsRequests() {
               <Button variant="outline" onClick={() => { setFormOpen(false); setForm(emptyForm()); }}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={!formValid() || submitting}
-              >
+              <Button onClick={handleSubmit} disabled={!formValid() || submitting}>
                 {submitting ? 'Submitting…' : 'Submit Request'}
               </Button>
             </div>
