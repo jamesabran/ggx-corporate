@@ -76,11 +76,29 @@ Added in session 4:
 - Button: "trailing icon" variant added (Variant=trailing icon, Size=default, State=default + hover) — icon appears on the right of the label, contrasting the existing "with icon" (icon left) variant
 - Icon Container: already existed (sm/md/lg/xl × 7 colors). No changes needed.
 
+Added in session 5 (Figma screen construction):
+- GGX Dashboard page: 3 screen variants built
+  - "Dashboard — Admin Main Account" (emerald consolidated banner, Finance nav, Earnings panel)
+  - "Dashboard — Admin Subaccount View" (blue scoped banner, no Finance nav, SLA Alerts panel)
+  - "Dashboard — Manager View" (violet manager banner, manager nav, Earnings panel, Rina Lopez identity)
+- GGX / Transactions page (new page):
+  - "Transactions — All Transactions" frame: filter toolbar, segmented control, full 8-row table with colored status badges, pagination
+  - "Transactions — By Batch" frame: 3 batch cards with counter badge chips, progress bars, first card expanded with inline mini-table
+- GGX / Transaction Detail page (new page):
+  - Full 2-column detail view: dates, sender/recipient, order summary, fees left; rating card, tracking timeline (5 events), help card right
+
+Gap log / assumptions:
+- Fee rows and "Items Total" row spacers use SPACE_BETWEEN in Figma (FILL spacers work inconsistently in AUTO-width rows); values appear concatenated to labels in a few cells — acceptable fidelity for a screen mock
+- Sidebar icon placeholders are small gray rectangles (no Tabler icon instances); accurate layout, placeholder visual
+- KPI card trend arrows are text-only ("+12.5% vs last month") — no icon instances; matches intent
+- Rating stars are yellow/gray circles (no star SVG instances)
+
 ---
 
 ## Latest commits
 
 ```
+0648738 refactor: replace inline icon container divs with IconContainer component
 ace5da5 feat: IconContainer component, Button iconEnd prop, dashboard context banners, sidebar + Transactions polish
 299b5cc feat: Operations Requests detail page
 ff42e2c feat: Data Analytics subaccount scoping via dataAnalyticsService
