@@ -35,6 +35,8 @@
 
 **Analytics scoping rule:** Main Account viewing a specific subaccount must see subaccount-specific analytics, not consolidated totals. Manager users in a subaccount context must see only that subaccount's data — this applies to charts, tables, and KPI cards.
 
+**Operations Requests scoping rule:** Admin can create and view requests for all subaccounts and filter by subaccount, type, and status. Manager can create and view requests only for their assigned/current subaccount. Consolidated request views are Admin-only in Main Account context.
+
 ## Address management
 
 - Prefer centralized address creation and editing at the Main Account level.

@@ -39,6 +39,11 @@ The service layer is the **backend integration seam**. Every service function is
 4. Document the future BFF endpoint in JSDoc.
 5. Update any UI consumers to import from the service, not the data module.
 
+## Future service contracts (establish before UI work)
+
+- **Data Analytics scoping:** Before implementing per-subaccount analytics scoping in the UI, confirm whether `dataAnalyticsService` (or the current analytics service) accepts account/subaccount context parameters. Add context params to the service contract first if missing.
+- **Operations Requests:** Before any UI implementation of the Operations Requests module, create `operationsRequestService` (or `opsRequestsService`) as the service-layer contract. The frontend must not determine operational feasibility, handler assignment, fulfillment status, or routing — those belong to backend/BFF or operations source systems.
+
 ## Migration status
 
 All non-config UI consumers have been migrated to the service layer. Remaining direct `data/*` reads are intentional (see exceptions above). The next stage is replacing mock service bodies with real `fetch()` calls — starting with auth.

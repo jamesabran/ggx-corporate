@@ -34,13 +34,26 @@ GGX Corporate is a **corporate logistics dashboard**, not a consumer tracking or
 ## Feature distinctions
 
 **Support Tickets vs Operations Requests**
-- **Support Tickets** — issues with existing deliveries: failed delivery, damaged item, billing inquiry, tracking dispute. Reactive.
-- **Operations Requests** — proactive operational asks: pickup scheduling, address changes, route adjustments, priority handling. Belong under a "Shipping Operations" or similar section — not mixed into support.
 
-These two must remain separate in IA and UX. Do not merge them into a single "Help" section.
+These two features are categorically different and must never be merged into a single "Help" section.
+
+| | Support Tickets | Operations Requests |
+|---|---|---|
+| **Nature** | Reactive — resolving a problem | Proactive — requesting logistics execution |
+| **Examples** | Failed delivery, damaged item, billing dispute, tracking issue | Pickup scheduling, supply request, bulk pickup assistance, special handling |
+| **User intent** | "Something went wrong, help me fix it" | "I need operational support to move my shipments" |
+| **Sidebar group** | Operations (or Support sub-group) | Operations |
+
+Helper copy guidance:
+- "Need help moving shipments? Use Operations Requests."
+- "Need help resolving an issue? Use Support Tickets."
+
+Do not use Support Tickets as a catch-all for operational needs. Operations Requests is its own module with its own service contract, statuses, and form fields — see `docs/roadmap.md` for the full spec.
 
 ## Sidebar IA
 
 - Group navigation items by feature context, not by alphabetical order or arrival order.
-- Suggested groupings: **Operations** (Transactions, Claims, SLA Alerts, Bulk Upload), **Analytics & Finance** (Analytics, Earnings, Billing, Reports), **Account** (Subaccounts, Users & Permissions, Settings), **Support** (Support Tickets, Service Advisories, Notifications).
-- Review sidebar IA after any major feature addition.
+- Target grouping: **Operations** (Transactions, Bulk Upload, Operations Requests, Claims, SLA Alerts, Support Tickets), **Analytics & Reports** (Analytics, Reports), **Finance** (Earnings, Billing Statements, Payment Settings), **Account Management** (Subaccounts, Users & Permissions, Address Book, API Integration), **System** (Notifications, Settings).
+- Admin users see all groups. Managers see only Operations, scoped Analytics & Reports, and System.
+- Group labels should be compact and subdued (small uppercase) — not navigation links themselves.
+- Review sidebar IA after any major feature addition, especially when adding Operations Requests.
