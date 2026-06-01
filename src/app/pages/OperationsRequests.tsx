@@ -12,6 +12,7 @@ import { StatCard } from '../components/StatCard';
 import { CompactAddressCard } from '../components/CompactAddressCard';
 import { AddressBook, type Address } from '../components/AddressBook';
 import { useSubAccounts, type SubAccount } from '../contexts/SubAccountContext';
+import { useAuth } from '../contexts/AuthContext';
 import { getSubaccountOptions } from '../services/userService';
 import {
   getOpsRequests, submitOpsRequest,
@@ -115,6 +116,8 @@ export function OperationsRequests() {
     isMainAccountView, getCurrentAccountId, getCurrentAccountName,
     subAccountsEnabled, subAccounts, currentAccount,
   } = useSubAccounts();
+  const { user } = useAuth();
+  const isManager = user?.role === 'manager';
 
   const mainView = isMainAccountView();
   // When not in main view, scopeId is the current subaccount/account id.
@@ -122,10 +125,22 @@ export function OperationsRequests() {
   // The currently-viewed subaccount object (null when on main or no subaccounts).
   const currentSubaccount = subAccounts.find((s) => s.id === currentAccount) ?? null;
 
+  // For managers, find their assigned subaccount by name from user.accountName
+  // (managers may have currentAccount='main' if state was inherited from an admin session).
+  const managerSubaccount: SubAccount | null = isManager && user?.accountName
+    ? (subAccounts.find((s) => s.name === user.accountName) ?? currentSubaccount)
+    : null;
+
+  // The resolved "active" subaccount for scoped contexts (C, D — not A or E).
+  const activeScopedSub: SubAccount | null =
+    isManager ? managerSubaccount :
+    (!mainView && currentSubaccount) ? currentSubaccount :
+    null;
+
   // Subaccount selector display rules:
-  //   • Admin, main view, 2+ subaccounts → show selector
-  //   • All other contexts → no selector (scope is already determined)
-  const showSubaccountSelector = mainView && subAccounts.length > 1;
+  //   • Admin (not manager), main view, 2+ subaccounts → show selector (Context A)
+  //   • All other contexts → scope is already determined, no selector needed
+  const showSubaccountSelector = mainView && !isManager && subAccounts.length > 1;
 
   const [requests, setRequests]               = useState<OperationsRequest[]>([]);
   const [subaccountOptions, setSubaccountOptions] = useState<{ id: string; name: string }[]>([]);
@@ -175,10 +190,6 @@ export function OperationsRequests() {
   const setField = <K extends keyof FormState>(key: K, val: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: val }));
 
-  /** Derive the default address for a given subaccount (or current scope). */
-  const defaultAddressFor = (sub: SubAccount | null): Address | null =>
-    sub ? subToAddress(sub) : null;
-
   /**
    * When admin changes the subaccount selector, update both subaccountId and
    * the default address for that subaccount.
@@ -194,8 +205,8 @@ export function OperationsRequests() {
 
   const formValid = (): boolean => {
     if (!form.category) return false;
-    // Subaccount required when admin is in main view with subaccounts available.
-    if (mainView && subAccountsEnabled && subAccounts.length > 0 && !form.subaccountId) return false;
+    // Context A: selector is shown — user must make an explicit selection.
+    if (showSubaccountSelector && !form.subaccountId) return false;
     if (form.category === 'supply') {
       return !!(form.supplyType && form.quantity && form.selectedAddress);
     }
@@ -212,12 +223,23 @@ export function OperationsRequests() {
     if (!formValid() || submitting) return;
     setSubmitting(true);
     try {
-      // Determine scope: use explicit subaccountId selection (main view) or the
-      // current account scope (subaccount view / standard account).
-      const subId   = mainView ? form.subaccountId : (scopeId ?? 'main');
-      const subName = mainView
-        ? (subaccountOptions.find((s) => s.id === form.subaccountId)?.name ?? form.subaccountId)
-        : getCurrentAccountName();
+      // Determine scope:
+      //   A/B (main view, admin): use the form's explicit subaccountId selection.
+      //   C (scoped sub view): use scopeId from context.
+      //   D (manager): use manager's assigned subaccount.
+      //   E (no subs): 'main' / current account.
+      let subId: string;
+      let subName: string;
+      if (showSubaccountSelector || (mainView && !isManager && subAccounts.length === 1)) {
+        subId   = form.subaccountId;
+        subName = subAccounts.find((s) => s.id === form.subaccountId)?.name ?? form.subaccountId;
+      } else if (activeScopedSub) {
+        subId   = activeScopedSub.id;
+        subName = activeScopedSub.name;
+      } else {
+        subId   = scopeId ?? 'main';
+        subName = getCurrentAccountName();
+      }
 
       const addrStr = form.selectedAddress ? formatAddress(form.selectedAddress) : undefined;
 
@@ -250,28 +272,31 @@ export function OperationsRequests() {
   };
 
   /**
-   * Open the form with sensible defaults for the current account context.
+   * Open the form with correct defaults for the current account context.
    *
-   * Context A — Admin, main view, 2+ subaccounts: pre-select first subaccount.
-   * Context B — Admin, main view, 1 subaccount: auto-select that subaccount.
-   * Context C/D — Admin/manager viewing a specific subaccount: scope is set by
-   *               currentSubaccount; no explicit selection needed.
-   * Context E — Standard account (no subaccounts): no default sub; address
-   *             may be empty → show the "Select address" empty state.
+   * A — Admin, main view, 2+ subaccounts: show selector, no auto-selection,
+   *     no default address — user must explicitly choose a subaccount first.
+   * B — Admin, main view, 1 subaccount: auto-select it, derive default address.
+   * C — Admin viewing a specific subaccount: scope from viewed sub, derive address.
+   * D — Manager: scope from manager's assigned subaccount, derive address.
+   * E — Standard account (no subaccounts): no default address → "Select" empty state.
    */
   const openForm = () => {
     const init = emptyForm();
 
-    if (mainView && subAccounts.length > 0) {
-      // Pre-select the first subaccount and derive its default address.
-      const firstSub = subAccounts[0];
-      init.subaccountId    = firstSub.id;
-      init.selectedAddress = subToAddress(firstSub);
-    } else if (!mainView && currentSubaccount) {
-      // In a scoped view: derive default from the viewed subaccount.
-      init.selectedAddress = subToAddress(currentSubaccount);
+    if (mainView && !isManager && subAccounts.length === 1) {
+      // Context B: exactly one subaccount — auto-select, no manual choice needed.
+      const onlySub = subAccounts[0];
+      init.subaccountId    = onlySub.id;
+      init.selectedAddress = subToAddress(onlySub);
+    } else if (activeScopedSub) {
+      // Context C / D: scope is already determined by the viewed subaccount or
+      // manager assignment. Derive the default address from it.
+      init.selectedAddress = subToAddress(activeScopedSub);
     }
-    // else: standard account with no subaccounts — selectedAddress stays null.
+    // Context A (2+ subs): subaccountId = '' and selectedAddress = null.
+    //   User must choose from the selector; address populates on selection.
+    // Context E (no subs): selectedAddress = null → "Select address" empty state.
 
     setForm(init);
     setSubmitSuccess(false);
@@ -494,7 +519,9 @@ export function OperationsRequests() {
               </div>
             </div>
 
-            {/* Subaccount selector — only shown to admin in main view with 2+ subaccounts */}
+            {/* Subaccount selector — Context A only (admin, main view, 2+ subaccounts).
+                Blank placeholder forces an explicit choice; selecting a subaccount
+                also populates the default delivery/pickup address. */}
             {showSubaccountSelector && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -504,6 +531,7 @@ export function OperationsRequests() {
                   value={form.subaccountId}
                   onChange={(e) => handleSubaccountChange(e.target.value)}
                 >
+                  <option value="">Select subaccount…</option>
                   {subAccounts.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
