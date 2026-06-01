@@ -7,68 +7,136 @@
 
 ## Current goal
 
-All roadmap items complete. Operations Requests fully polished (scoping, address cards, form). Figma design system now includes all GGX custom components. Item 6 (backend integration) awaits a real BFF.
+All polish-pass roadmap items (1–4) and the Operations Requests feature (item 5) are complete. The next active priority per roadmap is service-layer / backend integration cleanup, followed by continued account/subaccount scoping work and any remaining polish.
 
 ## Completed work
 
-- Service layer migration complete (all non-config UI consumers go through service facades)
+### Core infrastructure
+- Service layer migration complete — all non-config UI consumers go through service facades
 - Public tracking page `/track/:trackingNumber` (no auth required)
 - Transaction seed expanded to 25 rows (May 12–31, diverse statuses, both subaccounts)
 - Dashboard KPI cards + Delivery Performance card wired to `getDashboardStats()` from live seed
 - Claim detail page `/dashboard/claims/:id` — full status timeline, linked transaction, refund card
 - Seed claims expanded to 8 (open / in-review / approved / denied / settled)
-- UX dead-end fixes: rating widget, proof-of-delivery modal, Share → copies `/track/:id` URL
-- BillingStatement: Pay Now dialog, Download feedback, Update links wired
-- APIAccess: Generate Key confirm + new key display, Save/Test Webhook feedback
-- Settings: Save Changes, Update Preferences, Change Password dialog
+- UX dead-end fixes: rating widget, proof-of-delivery modal, Share button, billing Pay Now, API key, Settings save states
 - Claims list navigates to `/dashboard/claims/:id`; TransactionDetails claim row links there too
-- Documentation restructure: CLAUDE.md + docs/ created
-- **[NEW] Responsive layout fixes**: KPI card value font scaling (text-2xl xl:text-3xl), "vs last month" hidden at xl, flex-shrink-0 on trend %, individual booking copy removed from batch footer
-- **[NEW] Sidebar IA cleanup**: grouped hierarchy (Operations / Analytics & Reports / Finance / Account Management / System), static uppercase group labels, separate managerNavigation with scoped access only, removed financeExpanded toggle
-- **[NEW] Data Analytics scoping**: claims + SLA filtered by subaccountId when in subaccount context, KPI subtitle shows account name, re-runs on scope change
-- **[NEW] Bulk Upload UX**: reportedCounts field on TransactionBatch (backend-override for realistic counts), 5 batches seeded with 89–423 shipments, batch row improved (counter columns, progress bar, Export button, stopPropagation on action)
+- Documentation restructure: CLAUDE.md + docs/
+
+### Polish pass (items 1–4) — all complete
+- **Responsive layout**: KPI card values scale `text-2xl xl:text-3xl`; trend row `flex-shrink-0`; "vs last month" `hidden xl:inline`; individual-booking copy removed from batch footer
+- **Sidebar IA**: grouped hierarchy (Operations / Analytics & Reports / Finance / Account Management / System); static uppercase group labels; separate `managerNavigation`; `financeExpanded` toggle removed
+- **Data Analytics scoping**: claims + SLA filtered by `subaccountId` in subaccount view; effect re-runs on scope change; KPI subtitle shows account name
+- **Bulk Upload UX**: `reportedCounts` on `TransactionBatch`; 5 seed batches with 89–423 shipments; batch row redesigned (counters, progress bar, Export button)
+
+### Operations Requests (item 5) — complete with fixes applied
+
+**Feature**:
+- `opsRequestsService`: `getOpsRequests()`, `getOpsRequestById()`, `submitOpsRequest()`
+- 8 seed requests across supply / pickup support / operational assistance
+- List page: summary StatCards, category/status/subaccount filters, request cards
+- New request dialog: category picker, type-specific fields, success state
+
+**Account/subaccount scoping — correct behavior per context**:
+- **A — Admin, main view, 2+ subaccounts**: blank subaccount selector shown; no auto-default; user must choose; address populates after selection via `handleSubaccountChange()`
+- **B — Admin, main view, 1 subaccount**: auto-selected; selector hidden; address pre-filled from that subaccount's `pickupAddress`
+- **C — Admin viewing specific subaccount**: no selector; address from viewed subaccount's `pickupAddress`
+- **D — Manager**: subaccount resolved via `user.accountName` lookup; no selector; address pre-filled; no redundant copy
+- **E — Standard account (no subaccounts)**: no selector; address defaults to preferred address from Address Book via `getPreferredAddress()`
+
+**Sidebar visibility**:
+- Operations Requests is present in **all four** nav arrays: `standardAccountNavigation`, `mainAccountNavigation`, `subaccountNavigation`, `managerNavigation`
+- It appears under the Operations group in all contexts
+- Previously it was only in `standardAccountNavigation` — fixed in commit `1358d39`
+
+**Address behavior**:
+- `CompactAddressCard` component shows saved address in form; "Change" button opens Address Book picker
+- `subToAddress()` synthesises an `Address` object from a `SubAccount`'s `pickupAddress`, `senderName`, `contactNumber`
+- `getPreferredAddress()` exported from `AddressBook.tsx` (seed extracted to module level) for context E
+
+### Shared component library additions
+- `StatCard` — white card, label/value/sub left, icon-right in soft `bg-*-50` container
+- `SegmentedControl` — generic pill toggle; extracted from inline Transactions code; used in Transactions page
+- `CompactAddressCard` — inline address display + Change action for form contexts
+- `Dialog` gains `lg` size (`max-w-2xl`)
+
+### Stat card alignment
+- Secondary pages use `StatCard`: SLA Alerts, Support Tickets, Reports, Billing Statements, Operations Requests
+- Dashboard and Earnings keep vibrant colored-background cards (intentional primary treatment)
+
+### Figma design system (GGX-SHADCN)
+New pages added in this session:
+- Segmented Control (Active=First / Active=Second)
+- Stat Card (7 color variants)
+- Search Input (Empty / Filled / Focused)
+- Address Display Card (4 label variants + Compact Address Card section)
+
+---
+
+## Latest commits
+
+```
+3035a42 chore: add gh pr and PowerShell PATH search to allowed tools
+1358d39 fix: operations requests sidebar access and context E default address
+2a1d85c fix: operations request account context flow
+2c9d9a4 docs: update session state — Ops Requests fully polished, Figma design system complete
+f64dfb9 fix: operations request account scoping and address selection
+c4057d8 refactor: extract SegmentedControl to shared component library
+15156a1 feat: Operations Requests form improvements
+8d58d9b feat: StatCard shared component + align stat cards across secondary pages
+2bdcc37 feat: Operations Requests module — service, data, list page, new request form
+```
+
+---
 
 ## Important decisions
 
-- Auth uses sync localStorage init (no async hydration) — intentional shortcut, revisit with real backend.
+- Auth uses sync localStorage init — intentional shortcut, revisit with real backend.
 - Dashboard KPI numbers reflect the 25-transaction seed, not business-scale projections.
-- `data/bulkTemplate`, `data/dropoffLocations` intentionally not wrapped in services (frontend config).
-- `DEMO_USERS` in AuthContext is dead code — safe to remove, left to keep diffs minimal.
-- `reportedCounts` on TransactionBatch is a stand-in for backend-provided batch aggregates.
+- `data/bulkTemplate`, `data/dropoffLocations` are intentionally not wrapped in services (frontend config).
+- `reportedCounts` on `TransactionBatch` is a stand-in for backend-provided batch aggregates.
+- Manager subaccount is resolved via `user.accountName` string match — needs canonical `subaccountId` on the user object when real auth lands.
+- `getPreferredAddress()` returns static seed data — replace with an API call when addresses are backend-served.
+- Dashboard and Earnings use vibrant full-card color backgrounds by design (primary summary pages). All other stat cards use the white `StatCard` pattern.
+- Operations Requests must be available for Admin (main view, scoped view) and Manager contexts. It should not be gated behind "subaccounts disabled."
 
-## Files changed (recent session)
-
-- `src/app/pages/Dashboard.tsx` — KPI responsive + trend label
-- `src/app/pages/Transactions.tsx` — batch copy + batch row UX
-- `src/app/layouts/RootLayout.tsx` — sidebar IA refactor
-- `src/app/pages/DataAnalytics.tsx` — account scoping
-- `src/app/data/transactions.ts` — reportedCounts field + 5 batch seed values
-- `src/app/services/transactionService.ts` — use reportedCounts in getTransactionBatches
-- `src/app/data/operationsRequests.ts` — mock seed + addOpsRequest()
-- `src/app/services/opsRequestsService.ts` — service facade (get/submit)
-- `src/app/pages/OperationsRequests.tsx` — list page + new request dialog
-- `src/app/routes.tsx` — /dashboard/operations-requests route
-- `src/app/layouts/RootLayout.tsx` — Operations Requests in sidebar Operations group
+---
 
 ## Remaining tasks
 
-See `docs/roadmap.md`. All current roadmap items are complete:
-- ✅ Items 1–4: Polish pass
-- ✅ Item 5: Operations Requests module
-- ⏳ Item 6: Backend integration — requires real BFF (auth first, then transactions + claims)
+Per `docs/roadmap.md`. Suggested priority order:
 
-## Known risks
+1. **Service-layer / backend integration** (roadmap active priority)
+   - Swap each service's mock body for real `fetch()` calls against the BFF
+   - Starting point: auth (async session hydration — sync localStorage is known tech debt)
+   - Dependency order: auth → transactions + claims → everything else
 
-- Auth hydration is synchronous (localStorage read) — will need async handling + loading state when real auth lands.
-- Bundle size warning (main chunk ~678 kB) — pre-existing, not blocking.
-- SLA alert seed data references tracking numbers from the original 10-transaction set; some may not match the expanded 25-transaction seed.
-- reportedCounts in batch seed: the delivered+inProgress+failed fields do not match the few visible mock transactions in the expanded view (expected — mock limitation, not a bug).
+2. **Account/subaccount scoping cleanup**
+   - Data Analytics page: charts, tables, and KPI totals should scope correctly per the roadmap spec (claims + SLA scoping was fixed; verify chart data follows the same rules)
+   - Confirm `dataAnalyticsService` contract supports account/subaccount context params before further work
+
+3. **Remaining responsive/polish issues** (if not resolved by backend work)
+   - SLA alert row badge wrapping in narrow widths
+   - General badge overflow in constrained table cells
+
+4. **Operations Requests detail page** (not on current roadmap but natural follow-on)
+   - `/dashboard/operations-requests/:id` showing request status timeline
+
+---
+
+## Known issues / risks
+
+- **Auth hydration is synchronous** (localStorage read) — will need async handling + loading state when real auth lands.
+- **Bundle size warning** (main chunk ~700 kB) — pre-existing, not blocking.
+- **SLA alert seed data** references tracking numbers from the original 10-transaction set; some may not match the expanded 25-transaction seed.
+- **`reportedCounts` mismatch**: seeded batch counts (e.g. 312 total) don't match the 2–3 visible mock transactions in the expanded view. Expected mock limitation, not a bug.
+- **`getPreferredAddress()`** returns a static seed record — will not reflect user-created addresses until an address service is wired up.
+- **Manager `user.accountName` matching** is a string comparison against `SubAccount.name`. Fragile against name changes. Replace with canonical `subaccountId` on the user object when real backend auth lands.
+
+---
 
 ## Suggested next prompt
 
-> "Start backend integration — swap auth service for real async fetch."
-> OR
-> "Add an Operations Request detail page at /dashboard/operations-requests/:id."
+> "Resume from session state. Continue with the roadmap — start with service-layer / backend integration cleanup. Begin with async auth hydration in AuthContext to replace the synchronous localStorage shortcut, then move to swapping transaction and claims services for real fetch calls."
 
 ---
 
