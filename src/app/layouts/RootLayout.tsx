@@ -20,7 +20,6 @@ import {
   IconUserCircle,
   IconLock,
   IconAdjustmentsHorizontal,
-  IconCurrencyDollar,
   IconCreditCard,
   IconWallet,
   IconCheck,
@@ -60,76 +59,113 @@ interface NavChild {
 interface NavItem {
   name: string;
   href?: string;
-  icon: ComponentType<{ className?: string }>;
-  isSection?: boolean;
+  icon?: ComponentType<{ className?: string }>;
+  type?: 'group';
   children?: NavChild[];
 }
 
+// Helper to build a group label entry.
+const grp = (name: string, children: NavChild[]): NavItem => ({ type: 'group', name, children });
+
 const standardAccountNavigation: NavItem[] = [
-  { name: 'Dashboard',       href: '/dashboard',               icon: IconLayoutDashboard },
-  { name: 'Transactions',    href: '/dashboard/transactions',  icon: IconPackage },
-  { name: 'Claims',          href: '/dashboard/claims',        icon: IconReceiptRefund },
-  { name: 'SLA Alerts',      href: '/dashboard/sla-alerts',    icon: IconActivityHeartbeat },
-  { name: 'Bulk Uploader',   href: '/dashboard/bulk-uploader', icon: IconUpload },
-  { name: 'Data Analytics',  href: '/dashboard/analytics',     icon: IconChartBar },
-  {
-    name: 'Finance',
-    isSection: true,
-    icon: IconCurrencyDollar,
-    children: [
-      { name: 'Earnings',           href: '/dashboard/earnings',         icon: IconWallet },
-      { name: 'Billing Statements', href: '/dashboard/billing',          icon: IconReceipt },
-      { name: 'Payment Settings',   href: '/dashboard/payment-settings', icon: IconCreditCard },
-    ],
-  },
-  { name: 'Reports',         href: '/dashboard/reports',       icon: IconFileText },
-  { name: 'Address Book',    href: '/dashboard/address-book',  icon: IconMapPin },
-  { name: 'API Integration', href: '/dashboard/api-access',    icon: IconCode },
-  { name: 'Support Tickets', href: '/dashboard/support-tickets',    icon: IconMessage },
-  { name: 'Subaccounts',     href: '/dashboard/subaccounts',   icon: IconBuilding },
-  { name: 'Notifications',   href: '/dashboard/notifications', icon: IconBell },
-  { name: 'Settings',        href: '/dashboard/settings',      icon: IconSettings },
+  { name: 'Dashboard', href: '/dashboard', icon: IconLayoutDashboard },
+  grp('Operations', [
+    { name: 'Transactions',  href: '/dashboard/transactions',  icon: IconPackage },
+    { name: 'Bulk Upload',   href: '/dashboard/bulk-uploader', icon: IconUpload },
+    { name: 'Claims',        href: '/dashboard/claims',        icon: IconReceiptRefund },
+    { name: 'SLA Alerts',    href: '/dashboard/sla-alerts',    icon: IconActivityHeartbeat },
+    { name: 'Support Tickets', href: '/dashboard/support-tickets', icon: IconMessage },
+  ]),
+  grp('Analytics & Reports', [
+    { name: 'Analytics', href: '/dashboard/analytics', icon: IconChartBar },
+    { name: 'Reports',   href: '/dashboard/reports',   icon: IconFileText },
+  ]),
+  grp('Finance', [
+    { name: 'Earnings',           href: '/dashboard/earnings',         icon: IconWallet },
+    { name: 'Billing Statements', href: '/dashboard/billing',          icon: IconReceipt },
+    { name: 'Payment Settings',   href: '/dashboard/payment-settings', icon: IconCreditCard },
+  ]),
+  grp('Account Management', [
+    { name: 'Subaccounts',   href: '/dashboard/subaccounts',  icon: IconBuilding },
+    { name: 'Address Book',  href: '/dashboard/address-book', icon: IconMapPin },
+    { name: 'API Integration', href: '/dashboard/api-access', icon: IconCode },
+  ]),
+  grp('System', [
+    { name: 'Notifications', href: '/dashboard/notifications', icon: IconBell },
+    { name: 'Settings',      href: '/dashboard/settings',      icon: IconSettings },
+  ]),
 ];
 
 const mainAccountNavigation: NavItem[] = [
-  { name: 'Dashboard',       href: '/dashboard',               icon: IconLayoutDashboard },
-  { name: 'Transactions',    href: '/dashboard/transactions',  icon: IconPackage },
-  { name: 'Claims',          href: '/dashboard/claims',        icon: IconReceiptRefund },
-  { name: 'SLA Alerts',      href: '/dashboard/sla-alerts',    icon: IconActivityHeartbeat },
-  { name: 'Analytics',       href: '/dashboard/analytics',     icon: IconChartBar },
-  {
-    name: 'Finance',
-    isSection: true,
-    icon: IconCurrencyDollar,
-    children: [
-      { name: 'Earnings',           href: '/dashboard/earnings',         icon: IconWallet },
-      { name: 'Billing Statements', href: '/dashboard/billing',          icon: IconReceipt },
-      { name: 'Payment Settings',   href: '/dashboard/payment-settings', icon: IconCreditCard },
-    ],
-  },
-  { name: 'Reports',             href: '/dashboard/reports',           icon: IconFileText },
-  { name: 'Address Book',        href: '/dashboard/address-book',      icon: IconMapPin },
-  { name: 'API Integration',     href: '/dashboard/api-access',        icon: IconCode },
-  { name: 'Support Tickets',     href: '/dashboard/support-tickets',        icon: IconMessage },
-  { name: 'Subaccounts',         href: '/dashboard/subaccounts',       icon: IconBuilding },
-  { name: 'Users & Permissions', href: '/dashboard/users-permissions', icon: IconUsers },
-  { name: 'Notifications',       href: '/dashboard/notifications',     icon: IconBell },
-  { name: 'Settings',            href: '/dashboard/settings',          icon: IconSettings },
+  { name: 'Dashboard', href: '/dashboard', icon: IconLayoutDashboard },
+  grp('Operations', [
+    { name: 'Transactions',    href: '/dashboard/transactions',   icon: IconPackage },
+    { name: 'Claims',          href: '/dashboard/claims',         icon: IconReceiptRefund },
+    { name: 'SLA Alerts',      href: '/dashboard/sla-alerts',     icon: IconActivityHeartbeat },
+    { name: 'Support Tickets', href: '/dashboard/support-tickets', icon: IconMessage },
+  ]),
+  grp('Analytics & Reports', [
+    { name: 'Analytics', href: '/dashboard/analytics', icon: IconChartBar },
+    { name: 'Reports',   href: '/dashboard/reports',   icon: IconFileText },
+  ]),
+  grp('Finance', [
+    { name: 'Earnings',           href: '/dashboard/earnings',         icon: IconWallet },
+    { name: 'Billing Statements', href: '/dashboard/billing',          icon: IconReceipt },
+    { name: 'Payment Settings',   href: '/dashboard/payment-settings', icon: IconCreditCard },
+  ]),
+  grp('Account Management', [
+    { name: 'Subaccounts',         href: '/dashboard/subaccounts',       icon: IconBuilding },
+    { name: 'Users & Permissions', href: '/dashboard/users-permissions', icon: IconUsers },
+    { name: 'Address Book',        href: '/dashboard/address-book',      icon: IconMapPin },
+    { name: 'API Integration',     href: '/dashboard/api-access',        icon: IconCode },
+  ]),
+  grp('System', [
+    { name: 'Notifications', href: '/dashboard/notifications', icon: IconBell },
+    { name: 'Settings',      href: '/dashboard/settings',      icon: IconSettings },
+  ]),
 ];
 
 const subaccountNavigation: NavItem[] = [
-  { name: 'Dashboard',       href: '/dashboard',               icon: IconLayoutDashboard },
-  { name: 'Transactions',    href: '/dashboard/transactions',  icon: IconPackage },
-  { name: 'Claims',          href: '/dashboard/claims',        icon: IconReceiptRefund },
-  { name: 'SLA Alerts',      href: '/dashboard/sla-alerts',    icon: IconActivityHeartbeat },
-  { name: 'Bulk Uploader',   href: '/dashboard/bulk-uploader', icon: IconUpload },
-  { name: 'Data Analytics',  href: '/dashboard/analytics',     icon: IconChartBar },
-  { name: 'Reports',         href: '/dashboard/reports',       icon: IconFileText },
-  { name: 'Address Book',    href: '/dashboard/address-book',  icon: IconMapPin },
-  { name: 'API Integration', href: '/dashboard/api-access',    icon: IconCode },
-  { name: 'Support Tickets', href: '/dashboard/support-tickets',    icon: IconMessage },
-  { name: 'Notifications',   href: '/dashboard/notifications', icon: IconBell },
-  { name: 'Settings',        href: '/dashboard/settings',      icon: IconSettings },
+  { name: 'Dashboard', href: '/dashboard', icon: IconLayoutDashboard },
+  grp('Operations', [
+    { name: 'Transactions',    href: '/dashboard/transactions',   icon: IconPackage },
+    { name: 'Bulk Upload',     href: '/dashboard/bulk-uploader',  icon: IconUpload },
+    { name: 'Claims',          href: '/dashboard/claims',         icon: IconReceiptRefund },
+    { name: 'SLA Alerts',      href: '/dashboard/sla-alerts',     icon: IconActivityHeartbeat },
+    { name: 'Support Tickets', href: '/dashboard/support-tickets', icon: IconMessage },
+  ]),
+  grp('Analytics & Reports', [
+    { name: 'Analytics', href: '/dashboard/analytics', icon: IconChartBar },
+    { name: 'Reports',   href: '/dashboard/reports',   icon: IconFileText },
+  ]),
+  grp('Account Management', [
+    { name: 'Address Book',    href: '/dashboard/address-book', icon: IconMapPin },
+    { name: 'API Integration', href: '/dashboard/api-access',   icon: IconCode },
+  ]),
+  grp('System', [
+    { name: 'Notifications', href: '/dashboard/notifications', icon: IconBell },
+    { name: 'Settings',      href: '/dashboard/settings',      icon: IconSettings },
+  ]),
+];
+
+// Managers: Operations + scoped Analytics & Reports + System only.
+const managerNavigation: NavItem[] = [
+  { name: 'Dashboard', href: '/dashboard', icon: IconLayoutDashboard },
+  grp('Operations', [
+    { name: 'Transactions',    href: '/dashboard/transactions',   icon: IconPackage },
+    { name: 'Bulk Upload',     href: '/dashboard/bulk-uploader',  icon: IconUpload },
+    { name: 'Claims',          href: '/dashboard/claims',         icon: IconReceiptRefund },
+    { name: 'SLA Alerts',      href: '/dashboard/sla-alerts',     icon: IconActivityHeartbeat },
+    { name: 'Support Tickets', href: '/dashboard/support-tickets', icon: IconMessage },
+  ]),
+  grp('Analytics & Reports', [
+    { name: 'Analytics', href: '/dashboard/analytics', icon: IconChartBar },
+    { name: 'Reports',   href: '/dashboard/reports',   icon: IconFileText },
+  ]),
+  grp('System', [
+    { name: 'Notifications', href: '/dashboard/notifications', icon: IconBell },
+    { name: 'Settings',      href: '/dashboard/settings',      icon: IconSettings },
+  ]),
 ];
 
 export function RootLayout() {
@@ -147,9 +183,9 @@ export function RootLayout() {
   const { user, logout } = useAuth();
   const isManager = user?.role === 'manager';
 
-  // Managers always get the subaccount nav (no parent-level finance/reports/etc.).
+  // Managers see only Operations, Analytics & Reports, and System.
   const navigation = isManager
-    ? subaccountNavigation
+    ? managerNavigation
     : !subAccountsEnabled
     ? standardAccountNavigation
     : isMainAccountView()
@@ -161,7 +197,6 @@ export function RootLayout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [switchAccountModalOpen, setSwitchAccountModalOpen] = useState(false);
-  const [financeExpanded, setFinanceExpanded] = useState(true);
   const [subaccountExpanded, setSubaccountExpanded] = useState(false);
   const [subaccountSearch, setSubaccountSearch] = useState('');
 
@@ -307,57 +342,45 @@ export function RootLayout() {
           </button>
         </div>
 
-        <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-0.5">
+        <nav className="flex-1 px-3 py-3 overflow-y-auto">
           {navigation.map((item) => {
-            if (item.isSection && item.children) {
-              const isChildActive = item.children.some((c) => location.pathname === c.href);
+            if (item.type === 'group' && item.children) {
               return (
-                <div key={item.name}>
-                  <button
-                    onClick={() => setFinanceExpanded(!financeExpanded)}
-                    className={cn(
-                      'flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer',
-                      isChildActive ? 'text-blue-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
-                      <span>{item.name}</span>
-                    </div>
-                    <IconChevronDown
-                      className={cn(
-                        'w-3.5 h-3.5 flex-shrink-0 text-gray-400 transition-transform duration-150',
-                        financeExpanded ? 'rotate-180' : ''
-                      )}
-                    />
-                  </button>
-                  {financeExpanded && (
-                    <div className="mt-0.5 ml-4 pl-3 border-l border-gray-200 space-y-0.5">
-                      {item.children.map((child) => {
-                        const isActive = location.pathname === child.href;
-                        return (
-                          <Link
-                            key={child.name}
-                            to={child.href}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className={cn(
-                              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer',
-                              isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                            )}
-                          >
-                            <child.icon className="w-[18px] h-[18px] flex-shrink-0" />
-                            <span>{child.name}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
+                <div key={item.name} className="mb-1">
+                  <p className="px-3 pt-4 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest select-none">
+                    {item.name}
+                  </p>
+                  <div className="space-y-0.5">
+                    {item.children.map((child) => {
+                      const isActive = location.pathname === child.href;
+                      const isNotifications = child.href === '/dashboard/notifications';
+                      return (
+                        <Link
+                          key={child.name}
+                          to={child.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+                            isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          )}
+                        >
+                          <child.icon className="w-[17px] h-[17px] flex-shrink-0" />
+                          <span>{child.name}</span>
+                          {isNotifications && unreadCount > 0 && (
+                            <span className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-bold text-white bg-red-500 rounded-full">
+                              {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             }
 
             const isActive = location.pathname === item.href;
-            const isNotifications = item.href === '/dashboard/notifications';
+            const Icon = item.icon!;
             return (
               <Link
                 key={item.name}
@@ -368,13 +391,8 @@ export function RootLayout() {
                   isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 )}
               >
-                <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
                 <span>{item.name}</span>
-                {isNotifications && unreadCount > 0 && (
-                  <span className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-bold text-white bg-red-500 rounded-full">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
               </Link>
             );
           })}
