@@ -284,17 +284,22 @@ export async function getTransactionBatches(
     const summaries = items
       .map((t) => deliveries.find((d) => d.tracking === t.trackingNumber))
       .filter((d): d is TransactionSummary => !!d);
+    // Use backend-reported counts when present (realistic upload sizes);
+    // fall back to counts derived from visible mock items.
+    const rc = batch.reportedCounts;
     return {
       batch,
       transactions: summaries,
-      counts: {
-        total: items.length,
-        delivered: items.filter((t) => t.status === 'delivered').length,
-        inProgress: items.filter(
-          (t) => t.status === 'in-transit' || t.status === 'picked-up' || t.status === 'pending'
-        ).length,
-        failed: items.filter((t) => t.status === 'failed' || t.status === 'returned').length,
-      },
+      counts: rc
+        ? { total: rc.total, delivered: rc.delivered, inProgress: rc.inProgress, failed: rc.failed }
+        : {
+            total: items.length,
+            delivered: items.filter((t) => t.status === 'delivered').length,
+            inProgress: items.filter(
+              (t) => t.status === 'in-transit' || t.status === 'picked-up' || t.status === 'pending'
+            ).length,
+            failed: items.filter((t) => t.status === 'failed' || t.status === 'returned').length,
+          },
       status: batchRollupStatus(items),
       uploadedDate: batchUploadedDate(batch.batchId),
     };
