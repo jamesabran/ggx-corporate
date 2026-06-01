@@ -81,21 +81,25 @@ Implementation notes:
 - Plan alongside the Operations Requests module since it affects navigation structure.
 - Review sidebar IA again after any major feature addition.
 
-### 3. Data Analytics account scoping fix
+### 3. Data Analytics account scoping fix ⚠️ CONFIRMED BUG
 
-Current state: the Data Analytics page may show data across all accounts even when the user context is scoped to a specific subaccount.
+Current state: **confirmed** — the Data Analytics page shows data across all accounts regardless of context. This affects two scenarios:
+
+- **Main Account admin viewing a specific subaccount** — analytics show consolidated/all-account data instead of scoping to the selected subaccount.
+- **Manager logged into a subaccount** — analytics show all-account data instead of only that manager's subaccount data.
 
 Expected scoping behavior:
-- **Admin on Main Account (no subaccount selected):** sees consolidated analytics across all subaccounts.
-- **Admin viewing a specific subaccount:** sees analytics scoped to that subaccount only — not consolidated.
-- **Manager in a subaccount context:** sees only their assigned/current subaccount's analytics — charts, tables, KPI cards all scoped.
+- **Admin on Main Account (no subaccount selected):** consolidated analytics across all subaccounts — correct.
+- **Admin viewing a specific subaccount:** analytics scoped to that subaccount only.
+- **Manager in a subaccount context:** analytics scoped to their assigned/current subaccount only — charts, tables, KPI cards all scoped.
 
 Pre-implementation checklist:
-- Confirm whether `dataAnalyticsService` (or the current analytics service) accepts account/subaccount context parameters.
-- If not, add context params before building UI scoping.
-- Follow the existing role-scoping model in `docs/account_model.md`.
+- Audit `DataAnalytics.tsx` and its service calls — confirm whether the current service accepts account/subaccount context params.
+- If `dataAnalyticsService` (or equivalent) does not support context filtering, add it before touching the UI.
+- Pass the active subaccount ID from `SubAccountContext` into the analytics service call.
+- Follow the role-scoping model in `docs/account_model.md`.
 - Analytics totals and business-critical metrics must come from service/backend contracts — not page-level frontend computations.
-- This is important for stakeholder review: wrong scoping misrepresents subaccount performance.
+- Wrong scoping actively misrepresents subaccount performance to stakeholders — treat this as high priority within the polish pass.
 
 ### 4. Bulk upload / batch transactions UX cleanup
 
