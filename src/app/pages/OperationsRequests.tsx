@@ -10,7 +10,7 @@ import { SearchInput } from '../components/SearchInput';
 import { Dialog } from '../components/ui/Dialog';
 import { StatCard } from '../components/StatCard';
 import { CompactAddressCard } from '../components/CompactAddressCard';
-import { AddressBook, type Address } from '../components/AddressBook';
+import { AddressBook, getPreferredAddress, type Address } from '../components/AddressBook';
 import { useSubAccounts, type SubAccount } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubaccountOptions } from '../services/userService';
@@ -296,7 +296,11 @@ export function OperationsRequests() {
     }
     // Context A (2+ subs): subaccountId = '' and selectedAddress = null.
     //   User must choose from the selector; address populates on selection.
-    // Context E (no subs): selectedAddress = null → "Select address" empty state.
+    // Context E (no subs enabled): fall back to the account's preferred address
+    //   from the address book so the user never faces a blank address field.
+    if (!init.selectedAddress && !subAccountsEnabled) {
+      init.selectedAddress = getPreferredAddress();
+    }
 
     setForm(init);
     setSubmitSuccess(false);

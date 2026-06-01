@@ -50,12 +50,22 @@ interface AddressBookProps {
   onClose?: () => void;
 }
 
+// Module-level seed so external helpers (e.g. default address for forms) can
+// read the preferred address without importing the full component.
+// Replace with a service call when a real address API is available.
+const SEED_ADDRESSES: Address[] = [
+  { id: '1', label: 'office',    name: 'Acme Corporation',         mobileNumber: '+63 917 123 4567', province: 'Metro Manila', city: 'Makati',     barangay: 'Poblacion', otherDetails: '5th Floor, ABC Building, Ayala Avenue',     isPreferred: true  },
+  { id: '2', label: 'home',      name: 'Max Rodriguez',            mobileNumber: '+63 917 987 6543', province: 'Metro Manila', city: 'Quezon City', barangay: 'Diliman',   otherDetails: 'Unit 203, XYZ Residences',                   isPreferred: false },
+  { id: '3', label: 'warehouse', name: 'Acme Warehouse - North',   mobileNumber: '+63 918 234 5678', province: 'Bulacan',      city: '',            barangay: '',          otherDetails: 'Km. 34, McArthur Highway, Calumpit',         isPreferred: false },
+];
+
+/** Returns the preferred (default) address for the current account, or null if none. */
+export function getPreferredAddress(): Address | null {
+  return SEED_ADDRESSES.find((a) => a.isPreferred) ?? SEED_ADDRESSES[0] ?? null;
+}
+
 export function AddressBook({ mode = 'full', onSelectAddress, onClose }: AddressBookProps) {
-  const [addresses, setAddresses] = useState<Address[]>([
-    { id: '1', label: 'office', name: 'Acme Corporation', mobileNumber: '+63 917 123 4567', province: 'Metro Manila', city: 'Makati', barangay: 'Poblacion', otherDetails: '5th Floor, ABC Building, Ayala Avenue', isPreferred: true },
-    { id: '2', label: 'home', name: 'Max Rodriguez', mobileNumber: '+63 917 987 6543', province: 'Metro Manila', city: 'Quezon City', barangay: 'Diliman', otherDetails: 'Unit 203, XYZ Residences', isPreferred: false },
-    { id: '3', label: 'warehouse', name: 'Acme Warehouse - North', mobileNumber: '+63 918 234 5678', province: 'Bulacan', city: '', barangay: '', otherDetails: 'Km. 34, McArthur Highway, Calumpit', isPreferred: false },
-  ]);
+  const [addresses, setAddresses] = useState<Address[]>(SEED_ADDRESSES);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
