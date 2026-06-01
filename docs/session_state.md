@@ -7,7 +7,7 @@
 
 ## Current goal
 
-All polish-pass roadmap items (1–4), Operations Requests (item 5), and Data Analytics subaccount scoping are complete. The service-layer migration is also complete (all non-config UI consumers go through service facades; intentional exceptions documented). The next stage is service-layer / backend integration — swapping mock service bodies for real `fetch()` calls against the BFF. This requires an actual backend to exist before meaningful work can proceed.
+All polish-pass roadmap items (1–4), Operations Requests (item 5), Data Analytics subaccount scoping, and the component/Figma polish pass (session 4) are complete. The service-layer migration is also complete (all non-config UI consumers go through service facades; intentional exceptions documented). The next stage is service-layer / backend integration — swapping mock service bodies for real `fetch()` calls against the BFF. This requires an actual backend to exist before meaningful work can proceed.
 
 ## Completed work
 
@@ -58,23 +58,30 @@ All polish-pass roadmap items (1–4), Operations Requests (item 5), and Data An
 - `SegmentedControl` — generic pill toggle; extracted from inline Transactions code; used in Transactions page
 - `CompactAddressCard` — inline address display + Change action for form contexts
 - `Dialog` gains `lg` size (`max-w-2xl`)
+- `IconContainer` (session 4) — shared component for the icon-in-colored-bg pill pattern; sm/md/lg sizes; `bg` + `color` + `rounded` props; StatCard now uses it
+- `Button.iconEnd` (session 4) — new boolean prop; applies `flex-row-reverse` to place icon after label without changing JSX order conventions
 
 ### Stat card alignment
 - Secondary pages use `StatCard`: SLA Alerts, Support Tickets, Reports, Billing Statements, Operations Requests
 - Dashboard and Earnings keep vibrant colored-background cards (intentional primary treatment)
 
 ### Figma design system (GGX-SHADCN)
-New pages added in this session:
+Pages added in session 3:
 - Segmented Control (Active=First / Active=Second)
 - Stat Card (7 color variants)
 - Search Input (Empty / Filled / Focused)
 - Address Display Card (4 label variants + Compact Address Card section)
+
+Added in session 4:
+- Button: "trailing icon" variant added (Variant=trailing icon, Size=default, State=default + hover) — icon appears on the right of the label, contrasting the existing "with icon" (icon left) variant
+- Icon Container: already existed (sm/md/lg/xl × 7 colors). No changes needed.
 
 ---
 
 ## Latest commits
 
 ```
+ace5da5 feat: IconContainer component, Button iconEnd prop, dashboard context banners, sidebar + Transactions polish
 299b5cc feat: Operations Requests detail page
 ff42e2c feat: Data Analytics subaccount scoping via dataAnalyticsService
 29223d6 docs: checkpoint — Operations Requests complete, all polish-pass items done
