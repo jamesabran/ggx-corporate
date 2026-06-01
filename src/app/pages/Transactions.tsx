@@ -380,7 +380,7 @@ export function Transactions() {
 
           <p className="text-xs text-gray-400 text-center">
             Showing {batchGroups.length} batch{batchGroups.length !== 1 ? 'es' : ''}.
-            Transactions booked individually do not appear in batch view.
+            Only batch uploads appear in this view.
           </p>
         </div>
       )}
