@@ -64,16 +64,21 @@ const returnsByReason = [
 ];
 
 export function DataAnalytics() {
-  const { subAccountsEnabled, isMainAccountView, getCurrentAccountName } = useSubAccounts();
+  const { subAccountsEnabled, isMainAccountView, getCurrentAccountName, getCurrentAccountId } = useSubAccounts();
   const inSubaccountView = subAccountsEnabled && !isMainAccountView();
+  const scopeId = inSubaccountView ? (getCurrentAccountId() ?? undefined) : undefined;
 
-  // Claims + SLA loaded from their service facades; safe empty fallback.
+  // Claims + SLA loaded from their service facades, scoped to the active subaccount
+  // when the user is in a subaccount context.
   const [claims, setClaims] = useState<Claim[]>([]);
   const [sla, setSla] = useState<SlaAlert[]>([]);
 
   useEffect(() => {
     let active = true;
-    Promise.all([getClaimsList(), getSlaAlertsList()])
+    Promise.all([
+      getClaimsList(scopeId ? { subaccountId: scopeId } : undefined),
+      getSlaAlertsList(scopeId ? { subaccountId: scopeId } : undefined),
+    ])
       .then(([claimsList, slaList]) => {
         if (!active) return;
         setClaims(claimsList);
@@ -85,7 +90,9 @@ export function DataAnalytics() {
         setSla([]);
       });
     return () => { active = false; };
-  }, []);
+  // Re-run whenever the account scope changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeId]);
 
   // Derived figures (presentation-only aggregation over service data).
   const claimsTotal = claims.length;
@@ -100,8 +107,9 @@ export function DataAnalytics() {
   const maxReason = Math.max(...returnsByReason.map((r) => r.count));
 
   // Performance Overview KPIs.
+  const scopeLabel = inSubaccountView ? getCurrentAccountName() : 'All accounts';
   const primaryKpis = [
-    { title: 'Total Orders',       value: '12,794',   sub: 'Across all accounts',   icon: IconPackage,     color: 'text-blue-600',   bg: 'bg-blue-100' },
+    { title: 'Total Orders',       value: '12,794',   sub: scopeLabel,              icon: IconPackage,     color: 'text-blue-600',   bg: 'bg-blue-100' },
     { title: 'Fulfilled Orders',   value: '12,180',   sub: '95.2% of total',        icon: IconCircleCheck, color: 'text-green-600',  bg: 'bg-green-100' },
     { title: 'Delivery Efficiency', value: '95.2%',   sub: '+0.4% vs last period',  icon: IconGauge,       color: 'text-violet-600', bg: 'bg-violet-100' },
     { title: 'RTS Rate',           value: '3.1%',     sub: 'Return-to-sender',      icon: IconArrowBackUp, color: 'text-amber-600',  bg: 'bg-amber-100' },
