@@ -7,7 +7,7 @@
 
 ## Current goal
 
-All roadmap items complete. Polish pass (items 1–4) and Operations Requests (item 5) shipped. Item 6 (backend integration) awaits a real BFF.
+All roadmap items complete + Operations Requests enhanced. StatCard component added to shared library. Item 6 (backend integration) awaits a real BFF.
 
 ## Completed work
 
