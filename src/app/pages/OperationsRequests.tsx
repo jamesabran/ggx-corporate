@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  IconPlus, IconCircleCheck, IconBox, IconTruck, IconAdjustments,
-  IconBuilding, IconMapPin, IconClipboardList,
+  IconPlus, IconCircleCheck, IconBox, IconTruck, IconAdjustments, IconMapPin,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -10,7 +9,9 @@ import { Select } from '../components/ui/Select';
 import { SearchInput } from '../components/SearchInput';
 import { Dialog } from '../components/ui/Dialog';
 import { StatCard } from '../components/StatCard';
-import { useSubAccounts } from '../contexts/SubAccountContext';
+import { CompactAddressCard } from '../components/CompactAddressCard';
+import { AddressBook, type Address } from '../components/AddressBook';
+import { useSubAccounts, type SubAccount } from '../contexts/SubAccountContext';
 import { getSubaccountOptions } from '../services/userService';
 import {
   getOpsRequests, submitOpsRequest,
@@ -19,8 +20,33 @@ import {
   type OperationsRequest, type OpsRequestCategory,
   type SupplyType, type PickupSupportType, type OperationalAssistanceType,
 } from '../services/opsRequestsService';
+import { IconClipboardList } from '@tabler/icons-react';
 
-// ─── new-request form state ──────────────────────────────────────────────────
+// ─── address helpers ─────────────────────────────────────────────────────────
+
+/** Synthesise a display Address from a SubAccount's pickup data. */
+function subToAddress(sub: SubAccount): Address {
+  return {
+    id: `sub-${sub.id}`,
+    label: 'office',
+    name: sub.senderName,
+    mobileNumber: sub.contactNumber,
+    province: '',
+    city: '',
+    barangay: '',
+    otherDetails: sub.pickupAddress,
+    isPreferred: true,
+  };
+}
+
+/** Format an Address object into the string stored on the service contract. */
+function formatAddress(addr: Address): string {
+  const parts = [addr.otherDetails, addr.barangay, addr.city, addr.province]
+    .filter(Boolean);
+  return parts.join(', ');
+}
+
+// ─── form state ───────────────────────────────────────────────────────────────
 
 interface FormState {
   category: OpsRequestCategory | '';
@@ -29,15 +55,15 @@ interface FormState {
   // supply
   supplyType: SupplyType | '';
   quantity: string;
-  deliveryAddress: string;
   // pickup support
   pickupSupportType: PickupSupportType | '';
   relatedBatchId: string;
-  pickupAddress: string;
   estimatedShipmentCount: string;
   estimatedWeight: string;
   // operational assistance
   assistanceType: OperationalAssistanceType | '';
+  // shared: address for delivery or pickup
+  selectedAddress: Address | null;
 }
 
 const emptyForm = (): FormState => ({
@@ -46,41 +72,34 @@ const emptyForm = (): FormState => ({
   notes: '',
   supplyType: '',
   quantity: '',
-  deliveryAddress: '',
   pickupSupportType: '',
   relatedBatchId: '',
-  pickupAddress: '',
   estimatedShipmentCount: '',
   estimatedWeight: '',
   assistanceType: '',
+  selectedAddress: null,
 });
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
+// ─── display helpers ──────────────────────────────────────────────────────────
 
 function requestTitle(r: OperationsRequest): string {
-  if (r.category === 'supply' && r.supplyType) {
+  if (r.category === 'supply' && r.supplyType)
     return `${SUPPLY_TYPE_LABELS[r.supplyType]} Supply — ${r.quantity ?? '?'} units`;
-  }
-  if (r.category === 'pickup_support' && r.pickupSupportType) {
+  if (r.category === 'pickup_support' && r.pickupSupportType)
     return PICKUP_SUPPORT_LABELS[r.pickupSupportType];
-  }
-  if (r.category === 'operational_assistance' && r.assistanceType) {
+  if (r.category === 'operational_assistance' && r.assistanceType)
     return ASSISTANCE_TYPE_LABELS[r.assistanceType];
-  }
   return CATEGORY_META[r.category].label;
 }
 
 function requestDetail(r: OperationsRequest): string {
   if (r.category === 'supply') {
-    // neededByDate kept for display of existing records
     return [r.deliveryAddress, r.neededByDate ? `Needed by ${r.neededByDate}` : ''].filter(Boolean).join(' · ');
   }
   if (r.category === 'pickup_support') {
-    // preferredPickupWindow kept for display of existing records
     return [
       r.pickupAddress,
       r.estimatedShipmentCount ? `~${r.estimatedShipmentCount} shipments` : '',
-      r.preferredPickupWindow ?? '',
     ].filter(Boolean).join(' · ');
   }
   if (r.category === 'operational_assistance') {
@@ -89,44 +108,51 @@ function requestDetail(r: OperationsRequest): string {
   return '';
 }
 
-// ─── component ───────────────────────────────────────────────────────────────
+// ─── component ────────────────────────────────────────────────────────────────
 
 export function OperationsRequests() {
   const {
     isMainAccountView, getCurrentAccountId, getCurrentAccountName,
-    subAccounts, currentAccount,
+    subAccountsEnabled, subAccounts, currentAccount,
   } = useSubAccounts();
+
   const mainView = isMainAccountView();
+  // When not in main view, scopeId is the current subaccount/account id.
   const scopeId = mainView ? undefined : (getCurrentAccountId() ?? undefined);
+  // The currently-viewed subaccount object (null when on main or no subaccounts).
+  const currentSubaccount = subAccounts.find((s) => s.id === currentAccount) ?? null;
 
-  // Current subaccount object — used to pre-fill the default pickup address.
-  const currentSubaccount = subAccounts.find((s) => s.id === currentAccount);
+  // Subaccount selector display rules:
+  //   • Admin, main view, 2+ subaccounts → show selector
+  //   • All other contexts → no selector (scope is already determined)
+  const showSubaccountSelector = mainView && subAccounts.length > 1;
 
-  const [requests, setRequests] = useState<OperationsRequest[]>([]);
+  const [requests, setRequests]               = useState<OperationsRequest[]>([]);
   const [subaccountOptions, setSubaccountOptions] = useState<{ id: string; name: string }[]>([]);
-
-  const [categoryFilter, setCategoryFilter] = useState<OpsRequestCategory | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter]   = useState<OpsRequestCategory | 'all'>('all');
+  const [statusFilter, setStatusFilter]       = useState<string>('all');
   const [subaccountFilter, setSubaccountFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery]         = useState('');
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [form, setForm] = useState<FormState>(emptyForm());
-  const [submitting, setSubmitting] = useState(false);
+  const [formOpen, setFormOpen]           = useState(false);
+  const [form, setForm]                   = useState<FormState>(emptyForm());
+  const [submitting, setSubmitting]       = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [addressPickerOpen, setAddressPickerOpen] = useState(false);
 
   const refresh = () => {
     getOpsRequests(scopeId ? { subaccountId: scopeId } : undefined)
       .then(setRequests)
       .catch(() => {});
   };
-  useEffect(refresh, [scopeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(refresh, [scopeId]);
 
   useEffect(() => {
     getSubaccountOptions().then(setSubaccountOptions).catch(() => {});
   }, []);
 
-  // Presentation-only filtering.
+  // ── Presentation-only filtering ─────────────────────────────────────────────
   const q = searchQuery.trim().toLowerCase();
   const visible = requests.filter((r) => {
     const searchOk =
@@ -135,39 +161,50 @@ export function OperationsRequests() {
       requestTitle(r).toLowerCase().includes(q) ||
       r.subaccountName.toLowerCase().includes(q);
     const catOk = categoryFilter === 'all' || r.category === categoryFilter;
-    const stOk  = statusFilter === 'all' || r.status === statusFilter;
+    const stOk  = statusFilter === 'all'   || r.status === statusFilter;
     const subOk = subaccountFilter === 'all' || r.subaccountId === subaccountFilter;
     return searchOk && catOk && stOk && subOk;
   });
 
-  // Summary counts.
+  // ── Summary counts ──────────────────────────────────────────────────────────
   const openCount   = requests.filter((r) => ['submitted', 'in_review', 'coordinating', 'scheduled'].includes(r.status)).length;
   const supplyCount = requests.filter((r) => r.category === 'supply').length;
   const pickupCount = requests.filter((r) => r.category === 'pickup_support').length;
 
-  // Form helpers.
+  // ── Form helpers ────────────────────────────────────────────────────────────
   const setField = <K extends keyof FormState>(key: K, val: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: val }));
 
-  // When admin selects a subaccount in main view, pre-fill address fields from
-  // that subaccount's default pickup address.
+  /** Derive the default address for a given subaccount (or current scope). */
+  const defaultAddressFor = (sub: SubAccount | null): Address | null =>
+    sub ? subToAddress(sub) : null;
+
+  /**
+   * When admin changes the subaccount selector, update both subaccountId and
+   * the default address for that subaccount.
+   */
   const handleSubaccountChange = (subId: string) => {
-    const sub = subAccounts.find((s) => s.id === subId);
+    const sub = subAccounts.find((s) => s.id === subId) ?? null;
     setForm((f) => ({
       ...f,
       subaccountId: subId,
-      deliveryAddress: sub?.pickupAddress ?? f.deliveryAddress,
-      pickupAddress:   sub?.pickupAddress ?? f.pickupAddress,
+      selectedAddress: sub ? subToAddress(sub) : f.selectedAddress,
     }));
   };
 
   const formValid = (): boolean => {
     if (!form.category) return false;
-    if (!mainView && !scopeId) return false;
-    if (mainView && !form.subaccountId) return false;
-    if (form.category === 'supply') return !!(form.supplyType && form.quantity && form.deliveryAddress);
-    if (form.category === 'pickup_support') return !!(form.pickupSupportType && form.pickupAddress);
-    if (form.category === 'operational_assistance') return !!form.assistanceType;
+    // Subaccount required when admin is in main view with subaccounts available.
+    if (mainView && subAccountsEnabled && subAccounts.length > 0 && !form.subaccountId) return false;
+    if (form.category === 'supply') {
+      return !!(form.supplyType && form.quantity && form.selectedAddress);
+    }
+    if (form.category === 'pickup_support') {
+      return !!(form.pickupSupportType && form.selectedAddress);
+    }
+    if (form.category === 'operational_assistance') {
+      return !!form.assistanceType;
+    }
     return false;
   };
 
@@ -175,22 +212,27 @@ export function OperationsRequests() {
     if (!formValid() || submitting) return;
     setSubmitting(true);
     try {
-      const subId = scopeId ?? form.subaccountId;
-      const subName = scopeId
-        ? getCurrentAccountName()
-        : (subaccountOptions.find((s) => s.id === form.subaccountId)?.name ?? form.subaccountId);
+      // Determine scope: use explicit subaccountId selection (main view) or the
+      // current account scope (subaccount view / standard account).
+      const subId   = mainView ? form.subaccountId : (scopeId ?? 'main');
+      const subName = mainView
+        ? (subaccountOptions.find((s) => s.id === form.subaccountId)?.name ?? form.subaccountId)
+        : getCurrentAccountName();
+
+      const addrStr = form.selectedAddress ? formatAddress(form.selectedAddress) : undefined;
+
       await submitOpsRequest({
-        category: form.category as OpsRequestCategory,
+        category:     form.category as OpsRequestCategory,
         subaccountId: subId,
         subaccountName: subName,
-        createdBy: 'Max Rodriguez',
-        notes: form.notes || undefined,
-        supplyType: form.supplyType as SupplyType || undefined,
-        quantity: form.quantity ? parseInt(form.quantity, 10) : undefined,
-        deliveryAddress: form.deliveryAddress || undefined,
+        createdBy:    'Max Rodriguez',
+        notes:        form.notes || undefined,
+        supplyType:   form.supplyType as SupplyType || undefined,
+        quantity:     form.quantity ? parseInt(form.quantity, 10) : undefined,
+        deliveryAddress: form.category === 'supply' ? addrStr : undefined,
         pickupSupportType: form.pickupSupportType as PickupSupportType || undefined,
-        relatedBatchId: form.relatedBatchId || undefined,
-        pickupAddress: form.pickupAddress || undefined,
+        relatedBatchId:    form.relatedBatchId || undefined,
+        pickupAddress:     form.category === 'pickup_support' ? addrStr : undefined,
         estimatedShipmentCount: form.estimatedShipmentCount ? parseInt(form.estimatedShipmentCount, 10) : undefined,
         estimatedWeight: form.estimatedWeight || undefined,
         assistanceType: form.assistanceType as OperationalAssistanceType || undefined,
@@ -207,21 +249,65 @@ export function OperationsRequests() {
     }
   };
 
-  // Pre-fill address from the current subaccount's default pickup address when
-  // the form opens (for scoped views). In main view, address is filled when the
-  // admin picks a subaccount via handleSubaccountChange.
+  /**
+   * Open the form with sensible defaults for the current account context.
+   *
+   * Context A — Admin, main view, 2+ subaccounts: pre-select first subaccount.
+   * Context B — Admin, main view, 1 subaccount: auto-select that subaccount.
+   * Context C/D — Admin/manager viewing a specific subaccount: scope is set by
+   *               currentSubaccount; no explicit selection needed.
+   * Context E — Standard account (no subaccounts): no default sub; address
+   *             may be empty → show the "Select address" empty state.
+   */
   const openForm = () => {
-    const defaultAddr = !mainView && currentSubaccount ? currentSubaccount.pickupAddress : '';
-    setForm({ ...emptyForm(), deliveryAddress: defaultAddr, pickupAddress: defaultAddr });
+    const init = emptyForm();
+
+    if (mainView && subAccounts.length > 0) {
+      // Pre-select the first subaccount and derive its default address.
+      const firstSub = subAccounts[0];
+      init.subaccountId    = firstSub.id;
+      init.selectedAddress = subToAddress(firstSub);
+    } else if (!mainView && currentSubaccount) {
+      // In a scoped view: derive default from the viewed subaccount.
+      init.selectedAddress = subToAddress(currentSubaccount);
+    }
+    // else: standard account with no subaccounts — selectedAddress stays null.
+
+    setForm(init);
     setSubmitSuccess(false);
     setFormOpen(true);
   };
 
-  // Address hint: shown below an address field when it matches the subaccount default.
-  const defaultAddr = currentSubaccount?.pickupAddress ?? '';
-  const selectedSubAddr = mainView
-    ? (subAccounts.find((s) => s.id === form.subaccountId)?.pickupAddress ?? '')
-    : defaultAddr;
+  // Address picker callback: update form address and close picker.
+  const handleAddressPicked = (addr: Address) => {
+    setField('selectedAddress', addr);
+    setAddressPickerOpen(false);
+  };
+
+  // ── Address section shared by supply and pickup support ─────────────────────
+  const addressLabel = form.category === 'pickup_support' ? 'Pickup address' : 'Delivery address';
+  const addressSection = (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+        {addressLabel} <span className="text-red-500">*</span>
+      </label>
+      {form.selectedAddress ? (
+        <CompactAddressCard
+          address={form.selectedAddress}
+          onChangeClick={() => setAddressPickerOpen(true)}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAddressPickerOpen(true)}
+          className="w-full rounded-lg border border-dashed border-gray-300 px-4 py-4 text-center text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-colors cursor-pointer"
+        >
+          <IconMapPin className="w-4 h-4 mx-auto mb-1 opacity-60" />
+          Select address from Address Book
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className="p-6 space-y-6">
@@ -362,7 +448,7 @@ export function OperationsRequests() {
         </div>
       )}
 
-      {/* New Request dialog */}
+      {/* ── New Request dialog ──────────────────────────────────────────────── */}
       <Dialog
         open={formOpen}
         onClose={() => { setFormOpen(false); setForm(emptyForm()); }}
@@ -379,18 +465,8 @@ export function OperationsRequests() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Task 1: Scoped context indicator — visible when not in main view */}
-            {!mainView && scopeId && (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-blue-50 border border-blue-200">
-                <IconBuilding className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                <span className="text-sm text-blue-800">
-                  Creating request for{' '}
-                  <span className="font-semibold">{getCurrentAccountName()}</span>
-                </span>
-              </div>
-            )}
 
-            {/* Category */}
+            {/* Category picker */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Request category <span className="text-red-500">*</span>
@@ -418,29 +494,34 @@ export function OperationsRequests() {
               </div>
             </div>
 
-            {/* Subaccount (Admin main view only) — picking it pre-fills address */}
-            {mainView && (
+            {/* Subaccount selector — only shown to admin in main view with 2+ subaccounts */}
+            {showSubaccountSelector && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Subaccount <span className="text-red-500">*</span>
                 </label>
-                <Select value={form.subaccountId} onChange={(e) => handleSubaccountChange(e.target.value)}>
-                  <option value="">Select subaccount…</option>
-                  {subaccountOptions.map((s) => (
+                <Select
+                  value={form.subaccountId}
+                  onChange={(e) => handleSubaccountChange(e.target.value)}
+                >
+                  {subAccounts.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </Select>
               </div>
             )}
 
-            {/* Supply fields — Task 3: no "Needed by" field */}
+            {/* ── Supply fields ─────────────────────────────────────────────── */}
             {form.category === 'supply' && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Supply type <span className="text-red-500">*</span>
                   </label>
-                  <Select value={form.supplyType} onChange={(e) => setField('supplyType', e.target.value as SupplyType)}>
+                  <Select
+                    value={form.supplyType}
+                    onChange={(e) => setField('supplyType', e.target.value as SupplyType)}
+                  >
                     <option value="">Select supply type…</option>
                     <option value="pouches">Pouches</option>
                     <option value="boxes">Boxes</option>
@@ -459,36 +540,21 @@ export function OperationsRequests() {
                     className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
-                {/* Task 2: address pre-filled from subaccount default */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Delivery address <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={form.deliveryAddress}
-                    onChange={(e) => setField('deliveryAddress', e.target.value)}
-                    placeholder="Full delivery address"
-                    className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  {selectedSubAddr && form.deliveryAddress === selectedSubAddr && (
-                    <p className="flex items-center gap-1 text-xs text-gray-400 mt-1.5">
-                      <IconMapPin className="w-3 h-3 flex-shrink-0" />
-                      Default pickup address from subaccount — edit to override
-                    </p>
-                  )}
-                </div>
+                {addressSection}
               </>
             )}
 
-            {/* Pickup support fields — Task 3: no "Preferred pickup window" */}
+            {/* ── Pickup support fields ─────────────────────────────────────── */}
             {form.category === 'pickup_support' && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Request type <span className="text-red-500">*</span>
                   </label>
-                  <Select value={form.pickupSupportType} onChange={(e) => setField('pickupSupportType', e.target.value as PickupSupportType)}>
+                  <Select
+                    value={form.pickupSupportType}
+                    onChange={(e) => setField('pickupSupportType', e.target.value as PickupSupportType)}
+                  >
                     <option value="">Select request type…</option>
                     <option value="immediate_pickup">Immediate Pickup</option>
                     <option value="bulk_pickup_assistance">Bulk Pickup Assistance</option>
@@ -497,25 +563,7 @@ export function OperationsRequests() {
                     <option value="escalate_missed_pickup">Escalate Missed Pickup</option>
                   </Select>
                 </div>
-                {/* Task 2: address pre-filled from subaccount default */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Pickup address <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={form.pickupAddress}
-                    onChange={(e) => setField('pickupAddress', e.target.value)}
-                    placeholder="Full pickup address"
-                    className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  {selectedSubAddr && form.pickupAddress === selectedSubAddr && (
-                    <p className="flex items-center gap-1 text-xs text-gray-400 mt-1.5">
-                      <IconMapPin className="w-3 h-3 flex-shrink-0" />
-                      Default pickup address from subaccount — edit to override
-                    </p>
-                  )}
-                </div>
+                {addressSection}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Est. shipment count</label>
@@ -551,13 +599,16 @@ export function OperationsRequests() {
               </>
             )}
 
-            {/* Operational assistance fields */}
+            {/* ── Operational assistance fields ─────────────────────────────── */}
             {form.category === 'operational_assistance' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Assistance type <span className="text-red-500">*</span>
                 </label>
-                <Select value={form.assistanceType} onChange={(e) => setField('assistanceType', e.target.value as OperationalAssistanceType)}>
+                <Select
+                  value={form.assistanceType}
+                  onChange={(e) => setField('assistanceType', e.target.value as OperationalAssistanceType)}
+                >
                   <option value="">Select assistance type…</option>
                   <option value="special_handling">Special Handling</option>
                   <option value="high_volume_dispatch">High-Volume Dispatch Coordination</option>
@@ -566,7 +617,7 @@ export function OperationsRequests() {
               </div>
             )}
 
-            {/* Notes (all categories) */}
+            {/* Notes */}
             {form.category && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
@@ -590,6 +641,20 @@ export function OperationsRequests() {
             </div>
           </div>
         )}
+      </Dialog>
+
+      {/* ── Address picker dialog ───────────────────────────────────────────── */}
+      <Dialog
+        open={addressPickerOpen}
+        onClose={() => setAddressPickerOpen(false)}
+        title="Select Address"
+        size="lg"
+      >
+        <AddressBook
+          mode="select"
+          onSelectAddress={handleAddressPicked}
+          onClose={() => setAddressPickerOpen(false)}
+        />
       </Dialog>
     </div>
   );

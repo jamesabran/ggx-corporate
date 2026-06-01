@@ -7,7 +7,7 @@ interface DialogProps {
   title?: string;
   children?: ReactNode;
   /** Max-width utility for the panel. Defaults to a small confirm-sized panel. */
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   /** Stacking context — confirmations layered over another modal use a higher z-index. */
   elevated?: boolean;
 }
@@ -19,7 +19,7 @@ interface DialogProps {
  */
 export function Dialog({ open, onClose, title, children, size = 'sm', elevated = false }: DialogProps) {
   if (!open) return null;
-  const maxW = size === 'md' ? 'max-w-md' : 'max-w-sm';
+  const maxW = size === 'lg' ? 'max-w-2xl' : size === 'md' ? 'max-w-md' : 'max-w-sm';
   return (
     <div
       className={`fixed inset-0 bg-gray-900/50 flex items-center justify-center p-4 ${elevated ? 'z-[60]' : 'z-50'}`}
