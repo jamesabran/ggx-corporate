@@ -24,7 +24,10 @@
       "Bash(git commit *)",
       "Bash(claude doctor *)",
       "Bash(grep -rln 'from '\\\\''\\\\.\\\\./data/__TRACKED_VAR__'\\\\''' src/app)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(gh pr *)",
+      "PowerShell($env:PATH -split \";\" | ForEach-Object { if \\(Test-Path \"$_\\\\gh.exe\"\\) { \"$_\\\\gh.exe\" } })",
+      "Bash(git push *)"
     ]
   }
 }
