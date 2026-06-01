@@ -1,0 +1,45 @@
+# Account Model — GGX Corporate
+
+## Terminology
+
+- Use **"Subaccount"** (one word, capital S). Never "sub-account" or "sub account."
+- Use **"Accounts"** not "Workspaces" or "Organizations."
+- Use **"Main Account"** for the parent/consolidated account level.
+
+## Account types
+
+### Default account (no subaccounts enabled)
+- Behaves like a standard corporate account with all main features available.
+- Subaccount-related features may be visible as an upgrade/discovery path (e.g. "Enable Subaccounts" prompt in Settings).
+- Finance, billing, and user management are at the account level.
+
+### Main Account (subaccounts enabled)
+- Can manage all subaccounts and see consolidated views across all of them.
+- Has access to all features including finance, earnings, billing, users, and permissions.
+- When viewing the main account level: sees aggregated/consolidated data.
+- When drilling into a specific subaccount: sees only that subaccount's scoped data.
+
+### Subaccount
+- Scoped to its own data — transactions, claims, SLA alerts, analytics, etc.
+- Limited finance and account management access depending on role.
+- Subaccount managers cannot see other subaccounts' data or Main Account consolidated views.
+
+## Role-based data scoping
+
+| Context | Sees |
+|---|---|
+| Admin on Main Account | Consolidated data across all subaccounts |
+| Admin viewing a specific subaccount | That subaccount's data only |
+| Manager logged into a subaccount | That subaccount's data only |
+| Manager on Main Account | Depends on permissions — typically scoped |
+
+**Analytics scoping rule:** Main Account viewing a specific subaccount must see subaccount-specific analytics, not consolidated totals. Manager users in a subaccount context must see only that subaccount's data — this applies to charts, tables, and KPI cards.
+
+## Address management
+
+- Prefer centralized address creation and editing at the Main Account level.
+- Subaccounts may use addresses from the shared address book but should not independently manage the master list.
+
+## Subaccount features (discovery path)
+
+When subaccounts are not enabled, surface the feature as an upgrade path — not as a locked feature. The UI should make it easy to enable without implying the user is missing out on critical functionality.
