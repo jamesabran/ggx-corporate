@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { IconMessageDots, IconCircleCheck, IconChevronRight, IconBuildingWarehouse, IconClock, IconAlertTriangle, IconAlertCircle } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { StatCard } from '../components/StatCard';
+import { IconContainer } from '../components/IconContainer';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { SearchInput } from '../components/SearchInput';
@@ -152,9 +153,7 @@ export function SlaAlerts() {
                 <CardContent className="p-5">
                   <div className="flex items-start gap-4">
                     {/* Type icon */}
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${meta.bgClass}`}>
-                      <Icon className={`w-5 h-5 ${meta.iconClass}`} />
-                    </div>
+                    <IconContainer icon={Icon} bg={meta.bgClass} color={meta.iconClass} className="mt-0.5" />
 
                     {/* Content */}
                     <div className="min-w-0 flex-1">

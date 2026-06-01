@@ -7,17 +7,18 @@ interface IconContainerProps {
   bg: string;
   /** Tailwind text class, e.g. 'text-blue-600' */
   color: string;
-  /** 'sm' = 28px, 'md' = 40px (default), 'lg' = 44px */
-  size?: 'sm' | 'md' | 'lg';
+  /** 'sm' = 28px, 'base' = 32px, 'md' = 40px (default), 'lg' = 44px */
+  size?: 'sm' | 'base' | 'md' | 'lg';
   /** Override rounded class. Defaults to 'rounded-lg'. */
   rounded?: string;
   className?: string;
 }
 
 const sizeMap = {
-  sm:  { container: 'w-7 h-7',   icon: 'w-3.5 h-3.5' },
-  md:  { container: 'w-10 h-10', icon: 'w-5 h-5'     },
-  lg:  { container: 'w-11 h-11', icon: 'w-5 h-5'     },
+  sm:   { container: 'w-7 h-7',   icon: 'w-3.5 h-3.5' },
+  base: { container: 'w-8 h-8',   icon: 'w-4 h-4'     },
+  md:   { container: 'w-10 h-10', icon: 'w-5 h-5'     },
+  lg:   { container: 'w-11 h-11', icon: 'w-5 h-5'     },
 };
 
 export function IconContainer({

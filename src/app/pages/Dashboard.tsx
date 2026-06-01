@@ -24,6 +24,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
+import { IconContainer } from '../components/IconContainer';
 // Recent transactions come through the transactionService facade. SLA alerts
 // remain on their data module (service migration out of scope for this pass).
 import { getRecentTransactions, getDashboardStats, statusConfig, type TransactionSummary, type DashboardStats } from '../services/transactionService';
@@ -118,9 +119,7 @@ export function Dashboard() {
         <Card className="border-violet-200 bg-violet-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
-                <IconUserCircle className="w-5 h-5 text-violet-600" />
-              </div>
+              <IconContainer icon={IconUserCircle} bg="bg-violet-100" color="text-violet-600" />
               <div className="flex-1">
                 <span className="text-sm font-semibold text-violet-900">Manager View — {user?.accountName}</span>
                 <p className="text-xs text-violet-700 mt-0.5">You are managing this subaccount. Data shown is scoped to {user?.accountName}.</p>
@@ -135,9 +134,7 @@ export function Dashboard() {
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <IconBuilding className="w-5 h-5 text-blue-600" />
-              </div>
+              <IconContainer icon={IconBuilding} bg="bg-blue-100" color="text-blue-600" />
               <div className="flex-1">
                 <span className="text-sm font-semibold text-blue-900">Viewing: {getCurrentAccountName()}</span>
                 <p className="text-xs text-blue-700 mt-0.5">Showing data for this subaccount only</p>
@@ -152,9 +149,7 @@ export function Dashboard() {
         <Card className="border-emerald-200 bg-emerald-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                <IconBuilding className="w-5 h-5 text-emerald-600" />
-              </div>
+              <IconContainer icon={IconBuilding} bg="bg-emerald-100" color="text-emerald-600" />
               <div className="flex-1">
                 <span className="text-sm font-semibold text-emerald-900">Main Account — Consolidated View</span>
                 <p className="text-xs text-emerald-700 mt-0.5">Data shown aggregates across all subaccounts. Use the account switcher to scope to a subaccount.</p>
@@ -196,9 +191,7 @@ export function Dashboard() {
             <Link key={action.title} to={action.href} className="group">
               <Card className="h-full border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-150 cursor-pointer">
                 <CardContent className="p-5">
-                  <div className={`w-10 h-10 rounded-xl ${action.iconBg} flex items-center justify-center mb-4`}>
-                    <action.icon className={`w-5 h-5 ${action.iconColor}`} />
-                  </div>
+                  <IconContainer icon={action.icon} bg={action.iconBg} color={action.iconColor} rounded="rounded-xl" className="mb-4" />
                   <p className="text-sm font-semibold text-gray-900 leading-snug">{action.title}</p>
                   <p className="text-sm text-gray-500 mt-1.5 leading-snug">{action.description}</p>
                 </CardContent>
@@ -253,9 +246,7 @@ export function Dashboard() {
             <CardHeader className="px-6 pt-5 pb-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
-                    <IconActivityHeartbeat className="w-4 h-4 text-amber-600" />
-                  </div>
+                  <IconContainer icon={IconActivityHeartbeat} bg="bg-amber-50" color="text-amber-600" size="sm" />
                   <CardTitle className="text-base font-semibold text-gray-900">SLA Alerts</CardTitle>
                 </div>
                 <Link to="/dashboard/sla-alerts">
@@ -288,9 +279,7 @@ export function Dashboard() {
                           onClick={() => navigate(`/dashboard/transactions/${a.trackingNumber}`)}
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors"
                         >
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${meta.bgClass}`}>
-                            <meta.icon className={`w-3.5 h-3.5 ${meta.iconClass}`} />
-                          </div>
+                          <IconContainer icon={meta.icon} bg={meta.bgClass} color={meta.iconClass} size="sm" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-gray-900 truncate leading-snug">{a.title}</p>
                             <p className="text-xs text-gray-500 leading-snug">{a.trackingNumber}</p>
@@ -322,9 +311,7 @@ export function Dashboard() {
                 {earningsRows.map((row, i) => (
                   <div key={i} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
                     <div className="flex items-start gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <row.icon className={`w-4 h-4 ${row.iconColor}`} />
-                      </div>
+                      <IconContainer icon={row.icon} bg="bg-gray-100" color={row.iconColor} size="base" className="mt-0.5" />
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-gray-800 leading-snug">{row.label}</p>
                         <div className="flex items-center gap-1 mt-1">

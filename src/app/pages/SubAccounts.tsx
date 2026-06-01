@@ -7,6 +7,7 @@ import {
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import { IconContainer } from '../components/IconContainer';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 // Subaccount LIST now comes from accountService (which reads the runtime store
 // mirrored by SubAccountContext, so Request-flow adds are included). The context
@@ -96,9 +97,7 @@ export function SubAccounts() {
                 { icon: IconChartBar, title: 'Consolidated reporting',       desc: 'View performance per subaccount or across all operations' },
               ].map((item) => (
                 <div key={item.title} className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <item.icon className="w-5 h-5 text-blue-600" />
-                  </div>
+                  <IconContainer icon={item.icon} bg="bg-blue-50" color="text-blue-600" />
                   <div>
                     <div className="font-medium text-gray-900 mb-1">{item.title}</div>
                     <div className="text-sm text-gray-600">{item.desc}</div>
