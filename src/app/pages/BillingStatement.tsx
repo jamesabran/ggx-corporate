@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { IconDownload, IconCreditCard, IconCircleCheck, IconLoader2 } from '@tabler/icons-react';
+import { IconDownload, IconCreditCard, IconCircleCheck, IconLoader2, IconCurrencyDollar, IconCalendar, IconAlertCircle } from '@tabler/icons-react';
+import { StatCard } from '../components/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -66,16 +67,11 @@ export function BillingStatement() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {summaryStats.map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="p-6">
-              <p className="text-sm font-medium text-gray-600 mb-2">{stat.label}</p>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              <p className="text-sm text-gray-500 mt-2">{stat.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label={summaryStats[0].label} value={summaryStats[0].value} sub={summaryStats[0].description} icon={IconCurrencyDollar} iconBg="bg-blue-50"    iconColor="text-blue-600" />
+        <StatCard label={summaryStats[1].label} value={summaryStats[1].value} sub={summaryStats[1].description} icon={IconCalendar}       iconBg="bg-orange-50"  iconColor="text-orange-600" />
+        <StatCard label={summaryStats[2].label} value={summaryStats[2].value} sub={summaryStats[2].description} icon={IconAlertCircle}    iconBg="bg-red-50"     iconColor="text-red-600" />
+        <StatCard label={summaryStats[3].label} value={summaryStats[3].value} sub={summaryStats[3].description} icon={IconCircleCheck}    iconBg="bg-emerald-50" iconColor="text-emerald-600" />
       </div>
 
       <Card className="bg-blue-50 border-blue-200">

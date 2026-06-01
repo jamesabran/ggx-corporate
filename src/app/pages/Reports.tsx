@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { IconDownload, IconRefresh, IconClock, IconPlus, IconFileText, IconCalendar, IconInfoCircle } from '@tabler/icons-react';
+import { IconDownload, IconRefresh, IconClock, IconPlus, IconFileText, IconCalendar, IconInfoCircle, IconCircleCheck } from '@tabler/icons-react';
+import { StatCard } from '../components/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -124,28 +125,10 @@ export function Reports() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm font-medium text-gray-600 mb-2">Total Reports</p>
-            <p className="text-2xl font-bold text-gray-900">{visibleReports.length}</p>
-            <p className="text-sm text-gray-500 mt-2">Available in your account</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm font-medium text-gray-600 mb-2">Ready to Download</p>
-            <p className="text-2xl font-bold text-green-700">{readyCount}</p>
-            <p className="text-sm text-gray-500 mt-2">Completed reports</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm font-medium text-gray-600 mb-2">Generating</p>
-            <p className="text-2xl font-bold text-amber-600">{generatingCount}</p>
-            <p className="text-sm text-gray-500 mt-2">In progress</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard label="Total Reports"      value={visibleReports.length} sub="Available in your account" icon={IconFileText}    iconBg="bg-blue-50"    iconColor="text-blue-600" />
+        <StatCard label="Ready to Download"  value={readyCount}            sub="Completed reports"         icon={IconCircleCheck} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+        <StatCard label="Generating"         value={generatingCount}       sub="In progress"               icon={IconClock}       iconBg="bg-amber-50"   iconColor="text-amber-600" />
       </div>
 
       {/* Generate a report */}

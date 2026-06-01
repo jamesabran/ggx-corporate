@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { IconMessageDots, IconCircleCheck, IconChevronRight, IconBuildingWarehouse } from '@tabler/icons-react';
+import { IconMessageDots, IconCircleCheck, IconChevronRight, IconBuildingWarehouse, IconClock, IconAlertTriangle, IconAlertCircle } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
+import { StatCard } from '../components/StatCard';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { SearchInput } from '../components/SearchInput';
@@ -100,28 +101,33 @@ export function SlaAlerts() {
       </div>
 
       {/* Summary cards — counts from scoped alerts (all in main view, filtered in subaccount view) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm font-medium text-gray-600 mb-2">No Movement</p>
-            <p className="text-2xl font-bold text-amber-600">{noMovement}</p>
-            <p className="text-sm text-gray-500 mt-2">Parcels with stalled scans</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm font-medium text-gray-600 mb-2">Breach SLA</p>
-            <p className="text-2xl font-bold text-red-600">{breaches}</p>
-            <p className="text-sm text-gray-500 mt-2">Past committed delivery window</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm font-medium text-gray-600 mb-2">Action Needed</p>
-            <p className="text-2xl font-bold text-gray-900">{actionNeeded}</p>
-            <p className="text-sm text-gray-500 mt-2">Awaiting first follow-up</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="No Movement"
+          value={noMovement}
+          sub="Parcels with stalled scans"
+          icon={IconClock}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-600"
+          valueColor="text-amber-600"
+        />
+        <StatCard
+          label="Breach SLA"
+          value={breaches}
+          sub="Past committed delivery window"
+          icon={IconAlertTriangle}
+          iconBg="bg-red-50"
+          iconColor="text-red-600"
+          valueColor="text-red-600"
+        />
+        <StatCard
+          label="Action Needed"
+          value={actionNeeded}
+          sub="Awaiting first follow-up"
+          icon={IconAlertCircle}
+          iconBg="bg-orange-50"
+          iconColor="text-orange-600"
+        />
       </div>
 
       {/* Alert list */}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { IconPlus, IconMessage, IconEye, IconPaperclip, IconX } from '@tabler/icons-react';
+import { IconPlus, IconMessage, IconEye, IconPaperclip, IconX, IconCircleCheck, IconClock } from '@tabler/icons-react';
+import { StatCard } from '../components/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -111,22 +112,11 @@ export function SupportTickets() {
       </div>
 
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {summaryCards.map((c) => (
-          <Card key={c.label}>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg ${c.bg} flex items-center justify-center`}>
-                  <IconMessage className={`w-5 h-5 ${c.color}`} />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{c.count}</p>
-                  <p className="text-sm text-gray-600">{c.label}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <StatCard label="Open Tickets"   value={summaryCards[0].count} sub="Awaiting response"    icon={IconMessage}      iconBg="bg-orange-50"  iconColor="text-orange-600" />
+        <StatCard label="In Review"      value={summaryCards[1].count} sub="Being investigated"   icon={IconEye}          iconBg="bg-blue-50"    iconColor="text-blue-600" />
+        <StatCard label="Resolved"       value={summaryCards[2].count} sub="Closed successfully"  icon={IconCircleCheck}  iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+        <StatCard label="Avg. Response"  value={summaryCards[3].count} sub="First response time"  icon={IconClock}        iconBg="bg-gray-50"    iconColor="text-gray-500" />
       </div>
 
       {showNewTicketForm && (
