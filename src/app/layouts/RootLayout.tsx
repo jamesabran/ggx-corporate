@@ -29,6 +29,7 @@ import {
   IconFileText,
   IconReceiptRefund,
   IconActivityHeartbeat,
+  IconClipboardList,
 } from '@tabler/icons-react';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { cn } from '../lib/utils';
@@ -73,8 +74,9 @@ const standardAccountNavigation: NavItem[] = [
     { name: 'Transactions',  href: '/dashboard/transactions',  icon: IconPackage },
     { name: 'Bulk Upload',   href: '/dashboard/bulk-uploader', icon: IconUpload },
     { name: 'Claims',        href: '/dashboard/claims',        icon: IconReceiptRefund },
-    { name: 'SLA Alerts',    href: '/dashboard/sla-alerts',    icon: IconActivityHeartbeat },
-    { name: 'Support Tickets', href: '/dashboard/support-tickets', icon: IconMessage },
+    { name: 'SLA Alerts',           href: '/dashboard/sla-alerts',          icon: IconActivityHeartbeat },
+    { name: 'Operations Requests',  href: '/dashboard/operations-requests', icon: IconClipboardList },
+    { name: 'Support Tickets',      href: '/dashboard/support-tickets',     icon: IconMessage },
   ]),
   grp('Analytics & Reports', [
     { name: 'Analytics', href: '/dashboard/analytics', icon: IconChartBar },
