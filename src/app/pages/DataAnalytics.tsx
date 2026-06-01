@@ -13,79 +13,61 @@ import { Select } from '../components/ui/Select';
 import { Badge } from '../components/ui/Badge';
 import { getClaimsList, CLAIM_STATUS_META, type Claim } from '../services/claimsService';
 import { getSlaAlertsList, type SlaAlert } from '../services/slaService';
+import {
+  getAnalyticsData,
+  type AnalyticsOverview,
+  type AnalyticsCharts,
+} from '../services/dataAnalyticsService';
 
-// ---------------------------------------------------------------------------
-// Curated mock metrics modelled on the Business Review (Zenith PH) deck.
-// Claims and SLA figures are derived from existing mock data modules; volume,
-// efficiency and regional figures are curated mock aggregates.
-// ---------------------------------------------------------------------------
+const DEFAULT_OVERVIEW: AnalyticsOverview = {
+  totalOrders: 0,
+  fulfilledOrders: 0,
+  deliveryEfficiencyPct: 0,
+  rtsRatePct: 0,
+  slaHitPct: 0,
+  slaMissPct: 0,
+  totalReturns: 0,
+  amountSettledBase: 0,
+};
 
-const monthlyVolume = [
-  { month: 'Jan', orders: 2501 },
-  { month: 'Feb', orders: 2312 },
-  { month: 'Mar', orders: 2678 },
-  { month: 'Apr', orders: 2456 },
-  { month: 'May', orders: 2847 },
-];
-
-const fulfillmentTrend = [
-  { month: 'Jan', fulfilled: 95.0, rts: 3.4 },
-  { month: 'Feb', fulfilled: 94.6, rts: 3.8 },
-  { month: 'Mar', fulfilled: 95.4, rts: 3.0 },
-  { month: 'Apr', fulfilled: 95.8, rts: 2.8 },
-  { month: 'May', fulfilled: 95.2, rts: 3.1 },
-];
-
-const slaHitMiss = [
-  { name: 'SLA Hit', value: 96.4, color: '#10b981' },
-  { name: 'SLA Miss', value: 3.6, color: '#ef4444' },
-];
-
-const regionVolume = [
-  { name: 'Metro Manila', value: 6120, color: '#3b82f6' },
-  { name: 'Luzon (ex-NCR)', value: 3340, color: '#6366f1' },
-  { name: 'Visayas', value: 2010, color: '#10b981' },
-  { name: 'Mindanao', value: 1324, color: '#f59e0b' },
-];
-
-const avgDeliveryDays = [
-  { area: 'Metro Manila', days: 1.4 },
-  { area: 'Luzon (ex-NCR)', days: 2.1 },
-  { area: 'Visayas', days: 3.0 },
-  { area: 'Mindanao', days: 3.6 },
-];
-
-const returnsByReason = [
-  { reason: 'Recipient unavailable', count: 168 },
-  { reason: 'Incorrect address', count: 96 },
-  { reason: 'Refused on delivery', count: 71 },
-  { reason: 'Damaged in transit', count: 38 },
-  { reason: 'Other', count: 24 },
-];
+const DEFAULT_CHARTS: AnalyticsCharts = {
+  monthlyVolume: [],
+  fulfillmentTrend: [],
+  regionVolume: [],
+  avgDeliveryDays: [],
+  returnsByReason: [],
+  slaHitMiss: [],
+};
 
 export function DataAnalytics() {
   const { subAccountsEnabled, isMainAccountView, getCurrentAccountName, getCurrentAccountId } = useSubAccounts();
   const inSubaccountView = subAccountsEnabled && !isMainAccountView();
   const scopeId = inSubaccountView ? (getCurrentAccountId() ?? undefined) : undefined;
 
-  // Claims + SLA loaded from their service facades, scoped to the active subaccount
-  // when the user is in a subaccount context.
+  const [overview, setOverview] = useState<AnalyticsOverview>(DEFAULT_OVERVIEW);
+  const [charts, setCharts] = useState<AnalyticsCharts>(DEFAULT_CHARTS);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [sla, setSla] = useState<SlaAlert[]>([]);
 
   useEffect(() => {
     let active = true;
+    const context = scopeId ? { subaccountId: scopeId } : undefined;
     Promise.all([
-      getClaimsList(scopeId ? { subaccountId: scopeId } : undefined),
-      getSlaAlertsList(scopeId ? { subaccountId: scopeId } : undefined),
+      getAnalyticsData(context),
+      getClaimsList(context),
+      getSlaAlertsList(context),
     ])
-      .then(([claimsList, slaList]) => {
+      .then(([analyticsData, claimsList, slaList]) => {
         if (!active) return;
+        setOverview(analyticsData.overview);
+        setCharts(analyticsData.charts);
         setClaims(claimsList);
         setSla(slaList);
       })
       .catch(() => {
         if (!active) return;
+        setOverview(DEFAULT_OVERVIEW);
+        setCharts(DEFAULT_CHARTS);
         setClaims([]);
         setSla([]);
       });
@@ -103,23 +85,24 @@ export function DataAnalytics() {
 
   const activeSlaMisses = sla.filter((a) => a.type === 'breach' && a.status !== 'resolved').length;
 
-  const totalReturns = returnsByReason.reduce((sum, r) => sum + r.count, 0);
-  const maxReason = Math.max(...returnsByReason.map((r) => r.count));
+  const maxReason = charts.returnsByReason.length
+    ? Math.max(...charts.returnsByReason.map((r) => r.count))
+    : 1;
 
   // Performance Overview KPIs.
   const scopeLabel = inSubaccountView ? getCurrentAccountName() : 'All accounts';
   const primaryKpis = [
-    { title: 'Total Orders',       value: '12,794',   sub: scopeLabel,              icon: IconPackage,     color: 'text-blue-600',   bg: 'bg-blue-100' },
-    { title: 'Fulfilled Orders',   value: '12,180',   sub: '95.2% of total',        icon: IconCircleCheck, color: 'text-green-600',  bg: 'bg-green-100' },
-    { title: 'Delivery Efficiency', value: '95.2%',   sub: '+0.4% vs last period',  icon: IconGauge,       color: 'text-violet-600', bg: 'bg-violet-100' },
-    { title: 'RTS Rate',           value: '3.1%',     sub: 'Return-to-sender',      icon: IconArrowBackUp, color: 'text-amber-600',  bg: 'bg-amber-100' },
+    { title: 'Total Orders',        value: overview.totalOrders.toLocaleString(),     sub: scopeLabel,             icon: IconPackage,     color: 'text-blue-600',   bg: 'bg-blue-100' },
+    { title: 'Fulfilled Orders',    value: overview.fulfilledOrders.toLocaleString(), sub: `${overview.deliveryEfficiencyPct.toFixed(1)}% of total`, icon: IconCircleCheck, color: 'text-green-600',  bg: 'bg-green-100' },
+    { title: 'Delivery Efficiency', value: `${overview.deliveryEfficiencyPct.toFixed(1)}%`, sub: '+0.4% vs last period', icon: IconGauge,       color: 'text-violet-600', bg: 'bg-violet-100' },
+    { title: 'RTS Rate',            value: `${overview.rtsRatePct.toFixed(1)}%`,      sub: 'Return-to-sender',     icon: IconArrowBackUp, color: 'text-amber-600',  bg: 'bg-amber-100' },
   ];
 
   const secondaryKpis = [
-    { title: 'SLA Hit / Miss',     value: '96.4% / 3.6%', sub: `${activeSlaMisses} active SLA breach${activeSlaMisses === 1 ? '' : 'es'}`, icon: IconClockCheck,    color: 'text-emerald-600', bg: 'bg-emerald-100' },
-    { title: 'Returned / For Return', value: `${totalReturns}`, sub: 'This period',          icon: IconTruckReturn,   color: 'text-orange-600',  bg: 'bg-orange-100' },
-    { title: 'Claims',             value: `${claimsTotal}`, sub: `${claimsOpen} open / in review`, icon: IconReceiptRefund, color: 'text-red-600',     bg: 'bg-red-100' },
-    { title: 'Amount Settled',     value: `₱${(2418000 + claimsSettledAmount).toLocaleString()}`, sub: 'Payouts + approved claims', icon: IconCash, color: 'text-green-700', bg: 'bg-green-100' },
+    { title: 'SLA Hit / Miss',        value: `${overview.slaHitPct.toFixed(1)}% / ${overview.slaMissPct.toFixed(1)}%`, sub: `${activeSlaMisses} active SLA breach${activeSlaMisses === 1 ? '' : 'es'}`, icon: IconClockCheck,    color: 'text-emerald-600', bg: 'bg-emerald-100' },
+    { title: 'Returned / For Return', value: overview.totalReturns.toLocaleString(),  sub: 'This period',          icon: IconTruckReturn,   color: 'text-orange-600',  bg: 'bg-orange-100' },
+    { title: 'Claims',                value: `${claimsTotal}`,                        sub: `${claimsOpen} open / in review`, icon: IconReceiptRefund, color: 'text-red-600',     bg: 'bg-red-100' },
+    { title: 'Amount Settled',        value: `₱${(overview.amountSettledBase + claimsSettledAmount).toLocaleString()}`, sub: 'Payouts + approved claims', icon: IconCash, color: 'text-green-700', bg: 'bg-green-100' },
   ];
 
   return (
@@ -165,12 +148,12 @@ export function DataAnalytics() {
             <Card key={s.title}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-600">{s.title}</p>
                     <p className="text-2xl font-bold text-gray-900 mt-2">{s.value}</p>
-                    <p className="text-sm text-gray-500 mt-2">{s.sub}</p>
+                    <p className="text-sm text-gray-500 mt-2 truncate">{s.sub}</p>
                   </div>
-                  <div className={`w-12 h-12 rounded-lg ${s.bg} flex items-center justify-center`}>
+                  <div className={`w-12 h-12 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0 ml-3`}>
                     <s.icon className={`w-6 h-6 ${s.color}`} />
                   </div>
                 </div>
@@ -186,12 +169,12 @@ export function DataAnalytics() {
           <Card key={s.title}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-600">{s.title}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">{s.value}</p>
-                  <p className="text-sm text-gray-500 mt-2">{s.sub}</p>
+                  <p className="text-sm text-gray-500 mt-2 truncate">{s.sub}</p>
                 </div>
-                <div className={`w-12 h-12 rounded-lg ${s.bg} flex items-center justify-center`}>
+                <div className={`w-12 h-12 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0 ml-3`}>
                   <s.icon className={`w-6 h-6 ${s.color}`} />
                 </div>
               </div>
@@ -209,7 +192,7 @@ export function DataAnalytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlyVolume}>
+              <BarChart data={charts.monthlyVolume}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="month" stroke="#6b7280" />
                 <YAxis stroke="#6b7280" />
@@ -227,7 +210,7 @@ export function DataAnalytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={fulfillmentTrend}>
+              <LineChart data={charts.fulfillmentTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="month" stroke="#6b7280" />
                 <YAxis stroke="#6b7280" />
@@ -251,9 +234,9 @@ export function DataAnalytics() {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={slaHitMiss} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value"
+                <Pie data={charts.slaHitMiss} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value"
                   label={({ name, value }) => `${name}: ${value}%`} labelLine={false}>
-                  {slaHitMiss.map((e) => <Cell key={e.name} fill={e.color} />)}
+                  {charts.slaHitMiss.map((e) => <Cell key={e.name} fill={e.color} />)}
                 </Pie>
                 <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
               </PieChart>
@@ -269,9 +252,9 @@ export function DataAnalytics() {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={regionVolume} cx="50%" cy="50%" outerRadius={100} dataKey="value"
+                <Pie data={charts.regionVolume} cx="50%" cy="50%" outerRadius={100} dataKey="value"
                   label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
-                  {regionVolume.map((e) => <Cell key={e.name} fill={e.color} />)}
+                  {charts.regionVolume.map((e) => <Cell key={e.name} fill={e.color} />)}
                 </Pie>
                 <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
               </PieChart>
@@ -286,7 +269,7 @@ export function DataAnalytics() {
           <CardHeader><CardTitle>Avg. Delivery Days by Area</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {avgDeliveryDays.map((d) => (
+              {charts.avgDeliveryDays.map((d) => (
                 <div key={d.area} className="flex items-center justify-between">
                   <span className="text-sm text-gray-700">{d.area}</span>
                   <span className="text-sm font-medium text-gray-900">{d.days.toFixed(1)} days</span>
@@ -300,7 +283,7 @@ export function DataAnalytics() {
           <CardHeader><CardTitle>Returns by Reason</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {returnsByReason.map((r) => (
+              {charts.returnsByReason.map((r) => (
                 <div key={r.reason}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm text-gray-700">{r.reason}</span>
