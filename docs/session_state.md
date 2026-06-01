@@ -7,7 +7,7 @@
 
 ## Current goal
 
-_Fill in at session start or when goal changes._
+Polish pass complete. All 4 priority items from the roadmap have been addressed.
 
 ## Completed work
 
@@ -23,6 +23,10 @@ _Fill in at session start or when goal changes._
 - Settings: Save Changes, Update Preferences, Change Password dialog
 - Claims list navigates to `/dashboard/claims/:id`; TransactionDetails claim row links there too
 - Documentation restructure: CLAUDE.md + docs/ created
+- **[NEW] Responsive layout fixes**: KPI card value font scaling (text-2xl xl:text-3xl), "vs last month" hidden at xl, flex-shrink-0 on trend %, individual booking copy removed from batch footer
+- **[NEW] Sidebar IA cleanup**: grouped hierarchy (Operations / Analytics & Reports / Finance / Account Management / System), static uppercase group labels, separate managerNavigation with scoped access only, removed financeExpanded toggle
+- **[NEW] Data Analytics scoping**: claims + SLA filtered by subaccountId when in subaccount context, KPI subtitle shows account name, re-runs on scope change
+- **[NEW] Bulk Upload UX**: reportedCounts field on TransactionBatch (backend-override for realistic counts), 5 batches seeded with 89–423 shipments, batch row improved (counter columns, progress bar, Export button, stopPropagation on action)
 
 ## Important decisions
 
@@ -30,29 +34,35 @@ _Fill in at session start or when goal changes._
 - Dashboard KPI numbers reflect the 25-transaction seed, not business-scale projections.
 - `data/bulkTemplate`, `data/dropoffLocations` intentionally not wrapped in services (frontend config).
 - `DEMO_USERS` in AuthContext is dead code — safe to remove, left to keep diffs minimal.
+- `reportedCounts` on TransactionBatch is a stand-in for backend-provided batch aggregates.
 
-## Files changed (recent)
+## Files changed (recent session)
 
-_Fill in during active work._
+- `src/app/pages/Dashboard.tsx` — KPI responsive + trend label
+- `src/app/pages/Transactions.tsx` — batch copy + batch row UX
+- `src/app/layouts/RootLayout.tsx` — sidebar IA refactor
+- `src/app/pages/DataAnalytics.tsx` — account scoping
+- `src/app/data/transactions.ts` — reportedCounts field + 5 batch seed values
+- `src/app/services/transactionService.ts` — use reportedCounts in getTransactionBatches
 
 ## Remaining tasks
 
-See `docs/roadmap.md` for the full list. Top items:
-1. Backend / API integration (auth first, then transactions + claims)
-2. Responsive layout fixes (KPI overflow, badge wrapping, SLA row chips)
-3. Sidebar reorganization (grouping + hierarchy)
-4. Batch realism + Transactions page copy cleanup
-5. Data Analytics subaccount scoping fix
+See `docs/roadmap.md`. Polish pass items 1–4 are now complete. Remaining:
+5. Operations Requests feature (future module — not yet started)
+6. Backend / API integration (auth first, then transactions + claims)
 
 ## Known risks
 
 - Auth hydration is synchronous (localStorage read) — will need async handling + loading state when real auth lands.
-- Bundle size warning (main chunk ~676 kB) — pre-existing, not blocking.
+- Bundle size warning (main chunk ~678 kB) — pre-existing, not blocking.
 - SLA alert seed data references tracking numbers from the original 10-transaction set; some may not match the expanded 25-transaction seed.
+- reportedCounts in batch seed: the delivered+inProgress+failed fields do not match the few visible mock transactions in the expanded view (expected — mock limitation, not a bug).
 
 ## Suggested next prompt
 
-> "Work through the roadmap — start with responsive layout fixes, then sidebar reorganization."
+> "Plan the Operations Requests module."
+> OR
+> "Start backend integration — swap auth service for real async fetch."
 
 ---
 
