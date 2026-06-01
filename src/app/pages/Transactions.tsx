@@ -294,36 +294,55 @@ export function Transactions() {
                       </div>
 
                       {/* Counts */}
-                      <div className="hidden sm:flex items-center gap-5 flex-shrink-0 text-sm text-gray-600">
-                        <div className="text-center">
-                          <p className="font-semibold text-gray-900">{total}</p>
-                          <p className="text-xs text-gray-400">Total</p>
+                      <div className="hidden sm:flex items-center gap-4 flex-shrink-0 border-l border-gray-100 pl-4 ml-1">
+                        <div className="text-center min-w-[40px]">
+                          <p className="text-base font-bold text-gray-900 tabular-nums">{total.toLocaleString()}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">Total</p>
                         </div>
-                        <div className="text-center">
-                          <p className="font-semibold text-green-700">{delivered}</p>
-                          <p className="text-xs text-gray-400">Delivered</p>
+                        <div className="text-center min-w-[40px]">
+                          <p className="text-base font-bold text-emerald-700 tabular-nums">{delivered.toLocaleString()}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">Delivered</p>
                         </div>
-                        {inProgress > 0 && (
-                          <div className="text-center">
-                            <p className="font-semibold text-blue-600">{inProgress}</p>
-                            <p className="text-xs text-gray-400">In Progress</p>
-                          </div>
-                        )}
-                        {failed > 0 && (
-                          <div className="text-center">
-                            <p className="font-semibold text-red-600">{failed}</p>
-                            <p className="text-xs text-gray-400">Failed</p>
-                          </div>
-                        )}
+                        <div className="text-center min-w-[40px]">
+                          <p className="text-base font-bold text-blue-600 tabular-nums">{inProgress.toLocaleString()}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">Active</p>
+                        </div>
+                        <div className="text-center min-w-[40px]">
+                          <p className={`text-base font-bold tabular-nums ${failed > 0 ? 'text-red-600' : 'text-gray-300'}`}>{failed.toLocaleString()}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">Failed</p>
+                        </div>
                       </div>
+
+                      {/* Download action — stopPropagation so it doesn't toggle expand */}
+                      <Button
+                        variant="ghost" size="sm"
+                        className="hidden sm:flex flex-shrink-0 text-gray-500 hover:text-gray-700 text-xs"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <IconDownload className="w-3.5 h-3.5 mr-1" />
+                        Export
+                      </Button>
                     </div>
+
+                    {/* Delivery progress bar — shown below the row */}
+                    {total > 0 && (
+                      <div className="mt-3 mx-0 hidden sm:block">
+                        <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 rounded-full"
+                            style={{ width: `${Math.round((delivered / total) * 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{Math.round((delivered / total) * 100)}% delivered</p>
+                      </div>
+                    )}
 
                     {/* Mobile counts */}
                     <div className="sm:hidden flex items-center gap-4 mt-3 ml-14 text-sm">
-                      <span className="text-gray-600">{total} total</span>
-                      <span className="text-green-700">{delivered} delivered</span>
-                      {inProgress > 0 && <span className="text-blue-600">{inProgress} in progress</span>}
-                      {failed > 0 && <span className="text-red-600">{failed} failed</span>}
+                      <span className="text-gray-600">{total.toLocaleString()} total</span>
+                      <span className="text-emerald-700">{delivered.toLocaleString()} delivered</span>
+                      {inProgress > 0 && <span className="text-blue-600">{inProgress.toLocaleString()} active</span>}
+                      {failed > 0 && <span className="text-red-600">{failed.toLocaleString()} failed</span>}
                     </div>
                   </CardContent>
                 </button>
