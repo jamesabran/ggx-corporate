@@ -332,12 +332,16 @@ Goal: make every Figma frame a faithful representation of the CODED app (code = 
   - **Address Book / Empty State** (`138:46`) — DONE. Was invented ("No addresses yet" + descriptive sentence + Add Address button). Reduced to code's actual empty state: centered pin icon + **"No addresses found."** only; subtitle corrected to match the list page.
   - **✅ PAGE 1:10 (Account Management) FULLY RECONCILED** — all 18 frames done.
 
+- **System** (`1:11`, 2 frames) — **DONE.** Code = `APIAccess.tsx`.
+  - **API Integration / Main** (`81:221`) — full rebuild. Was invented (subtitle "Connect your systems to GGX Corporate via REST API."; "Usage this month" 4-col stats API Calls 12,847/Webhooks 4,231/Avg Latency 142ms/Success 99.8%; dotted event keys delivery.status_updated etc.; Docs card at bottom; no Environment toggle / Quick Stats / Security card). Rebuilt to code: subtitle "Integrate GoGo Xpress with your systems"; blue **API Documentation** card at top ("Learn how to integrate our API…" + View Documentation); **Environment** card (Sandbox toggle ON, API Key + Test badge, masked key + eye + copy, Generate New Key + invalidate note); **Quick Stats** sidebar (API Calls Today 1,247 / Rate Limit 10,000 "Requests per hour" / Status ✓ All systems operational); **Webhook Configuration** (URL https://api.yourcompany.com/webhooks/gogo + copy, "Events to Subscribe" 5 real labels Pickup Confirmed✓/In Transit✓/Delivered✓/Delivery Failed✓/Returned to Sender✗, Save Configuration + Test Webhook); **Security Best Practices** gray card (4 bold-lead bullets).
+  - **API Integration / Modal — Regenerate Key Confirm** (`81:280`) — DONE. Removed "?" from title + invented warning-triangle icon; body → exact code copy ("This will invalidate your current test API key immediately. Any integrations using the old key will stop working until updated."); button "Regenerate" red → **"Regenerate Key" blue** (code Button default, not destructive); Cancel outline.
+  - **✅ PAGE 1:11 (System) FULLY RECONCILED.**
+
 **Remaining pages to reconcile (priority order):**
-1. **System** (`1:11`) — API Integration (main, regenerate confirm).
-2. **Auth / Public** (`1:12`) — Login, Public Tracking (empty/result/not found).
-3. **Role & Account Variants** (`1:13`) — In-app notifications panel.
-4. **App Shell** (`1:2`) — account menu, switch-account modal, topbar search states, account switcher panel.
+1. **Auth / Public** (`1:12`) — Login, Public Tracking (empty/result/not found).
+2. **Role & Account Variants** (`1:13`) — In-app notifications panel.
+3. **App Shell** (`1:2`) — account menu, switch-account modal, topbar search states, account switcher panel.
 
 Approach + helper patterns established (Inter font; hand-built light-pill badges w/ Tailwind hex; auto-width badge frames via `primaryAxisSizingMode='AUTO'`; resize() resets auto-layout sizing to FIXED so set sizing modes AFTER resize or avoid resizing auto-layout frames; placeholder emoji icons; screenshots downloaded via PowerShell Invoke-WebRequest to %TEMP% then Read). Screenshot→fix→verify per frame.
 
-_Last updated: 2026-06-02 (session 9 — strict code-to-Figma reconciliation IN PROGRESS: Notifications + Transactions + Transaction Detail + Dashboard + Bulk Upload + Operations Requests + **ALL of Claims/SLA/Support (1:7)** + **ALL of Analytics & Reports (1:8)** + **ALL of Finance (1:9 — all 5 frames)** + **ALL of Account Management (1:10 — all 18 frames)** done. Next: System (1:11), then Auth (1:12)/Role Variants (1:13)/App Shell (1:2).)_
+_Last updated: 2026-06-02 (session 9 — strict code-to-Figma reconciliation IN PROGRESS: Notifications + Transactions + Transaction Detail + Dashboard + Bulk Upload + Operations Requests + **ALL of Claims/SLA/Support (1:7)** + **ALL of Analytics & Reports (1:8)** + **ALL of Finance (1:9 — all 5 frames)** + **ALL of Account Management (1:10 — 18 frames)** + **ALL of System (1:11 — 2 frames)** done. Next: Auth (1:12), then Role Variants (1:13)/App Shell (1:2).)_
