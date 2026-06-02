@@ -112,6 +112,69 @@ All 14 GGX screen pages are now built. Remaining polish:
 - Code Connect mappings between Figma components and code components (separate task)
 - Backend integration (blocked on BFF)
 
+### Figma screens — new file (session 6): ceL7WwBQpaLl66Y7sUcgPR
+
+Complete screen coverage across all 9 previously-empty pages. All frames are content-only (1184px), matching the existing Dashboard/Transactions convention with route + nav metadata in subtitles.
+
+| Page | Frames |
+|------|--------|
+| ⬆ Bulk Upload | Step 1 (default + file selected), Step 2 Column Mapper, Step 4 Review & Confirm, Modals: Upload spinner, Background processing, Drop-off locations, Booking complete |
+| 🔧 Ops Requests | List, Empty state, Detail (in review), Detail (declined), Dialog: category select, supply fields, pickup support fields, success |
+| ⚠ Claims/SLA/Support | Claims list, Claim detail (in review + denied), SLA Alerts list, Support Tickets list, New ticket form, Ticket detail with thread |
+| 📈 Analytics & Reports | Data Analytics (main + subaccount scoped), Reports list + generate form |
+| 💰 Finance | Earnings + Settlement Detail, Billing Statement + Pay Now modal, Payment Settings |
+| 👥 Account Management | Subaccounts (not enabled, active, enable intro, enable confirm, enable success, request form, request success), Users & Permissions, Address Book, Settings, Notifications, Invite dialog |
+| ⚙ System | API Integration (main, regenerate confirm) |
+| 🔐 Auth / Public | Login, Public Tracking (empty, result, not found) |
+| 🧩 Role Variants | In-app notifications panel |
+
+**Visual audit + fixes applied (session 6):**
+- Ops Requests Detail + Claims Detail: status timelines rebuilt with correct card-relative coords; detail row gaps compacted
+- Data Analytics: Monthly Volume bar chart + SLA Performance bars rebuilt with correct card-relative coords
+- Ops Requests Stat Cards: corrected values (4, 3, 2)
+- Bulk Upload Step 1: button labels + badge text fixed (wrong component property pattern used on initial build)
+
+**GGX-SHADCN file cleanup:** 9 incorrectly-added GGX screen pages removed from `9zwtAL4RU3Y8WVRJAsSulX`. Design system file is clean.
+
+### Figma audit + fixes (session 7) — App Screens file `ceL7WwBQpaLl66Y7sUcgPR`
+
+Full code-vs-Figma accuracy audit completed. Match: High, Completeness: Medium-High. Key finding: two fully-built routes had no Figma screen, and several App-Shell interactive states existed in code but were mislabeled "future" in the Gap Log.
+
+**Critical fixes applied + visually validated (all 4 done):**
+- **Service Advisories** (`/dashboard/advisories`) → page *Operations — Claims / SLA / Support*: `List` + `Empty State`
+- **Subaccount Settings** (`/dashboard/subaccounts/:id/settings`) → page *Account Management*: `Main`, `Edit Managers`, `Not Found`
+- **App Shell** → page *App Shell*: `Account Menu Dropdown`, `Switch Account Modal`, `Topbar Search — Results`, `Topbar Search — No Results`, `Account Switcher Panel`
+- **Bulk Upload Summary** → page *Operations — Bulk Upload*: `Error Rows` (editable error table, per-field red states, duplicate trash, retry banner, 17-col scroll note) + `All Fixed`
+- **Gap Log** updated with dated audit-pass section.
+
+**DS publishing:** `SearchInput`, `SegmentedControl`, `StatCard`, `AddressDisplayCard` are now PUBLISHED to the GGX-SHADCN team library (user did this manually 2026-06-02) — they can now be imported as instances in the App Screens file.
+
+**Remaining (Important tier — NOT yet built):**
+- ~~Users & Permissions edit-permissions form; Address add/edit form~~ — done (session 8)
+- ~~Empty states: SLA Alerts, Address Book, Notification dropdown~~ — done (session 8)
+- ~~Extra status variants for Transaction/Claim/Ticket detail~~ — Claim Settled + Ticket Resolved done (session 8)
+- (Nice-to-have) create `StatusTimeline`, `BatchRow`, vibrant `KpiCard` in GGX-SHADCN; logo placeholder, unbound icon fills, tabler/selector placeholder, Notifications badge
+
+**Convention note:** App Screens frames are hand-built with hardcoded values mirroring the app's Tailwind classes (Inter font); Button is the main component instance used. Now that the 4 custom components are published, new frames can use real instances where they fit.
+
+### Figma Important-tier build (session 8) — App Screens file `ceL7WwBQpaLl66Y7sUcgPR`
+
+All Important-tier items built and visually validated. New frames:
+
+| Page | Frame | Node |
+|------|-------|------|
+| 👥 Account Management | Address Book / Add-Edit Form | `133:46` |
+| 👥 Account Management | Users / Dialog — Edit Permissions | `135:46` |
+| 👥 Account Management | Address Book / Empty State | `138:46` |
+| ⚠ Claims / SLA / Support | SLA Alerts / Empty State | `141:16` |
+| ⚠ Claims / SLA / Support | Claims / Detail — Settled | `148:16` |
+| ⚠ Claims / SLA / Support | Support Ticket Detail / Resolved | `148:73` |
+| 🧩 Role & Account Variants | In-App Notifications Panel — Empty | `143:2` |
+
+- Detail variants (Settled / Resolved) were cloned from the existing In Review / Open frames, then re-statused (badge colors, timeline completion, refund/status text, action button).
+- Gap Log page (`27:221`) updated with a dated session-8 section.
+- Build gotcha logged: icon circles created as auto-layout frames collapse to pills (HUG overrides `resize`); set `primaryAxisSizingMode`/`counterAxisSizingMode` to `FIXED` and resize after `layoutMode`.
+
 ---
 
 ## Latest commits
@@ -174,8 +237,8 @@ Per `docs/roadmap.md`. Suggested priority order:
 
 ## Suggested next prompt
 
-> "Resume from session state. The frontend is feature-complete and all polish-pass items are done. Next: either implement the Operations Requests detail page (`/dashboard/operations-requests/:id`), or begin backend integration if a BFF is available."
+> "Build the Nice-to-have Figma items in the GGX-SHADCN design system file (`9zwtAL4RU3Y8WVRJAsSulX`): create `StatusTimeline`, `BatchRow`, and a vibrant `KpiCard` component, plus a logo placeholder and fix unbound icon fills. The Critical + Important tiers are complete (sessions 7–8). See the 'Figma Important-tier build (session 8)' section above." — or pivot to service-layer/backend integration once a BFF exists.
 
 ---
 
-_Last updated: 2026-06-01 (session 3)_
+_Last updated: 2026-06-02 (session 8 — Figma Important-tier build: forms, empty states, detail status variants)_
