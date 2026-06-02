@@ -350,9 +350,27 @@ Goal: make every Figma frame a faithful representation of the CODED app (code = 
   - **In-App Notifications Panel — Empty** (`143:2`) — DONE. Was invented ("You're all caught up" + "Mark all read" header + "View all notifications" footer). Reduced to code's empty branch: header "Notifications" only (no right text), bell icon + **"No new notifications"** + "Important account, upload, and delivery updates will appear here." — no footer (code omits it in the empty branch).
   - **✅ PAGE 1:13 (Role & Account Variants) FULLY RECONCILED.**
 
-**Remaining pages to reconcile (priority order):**
-1. **App Shell** (`1:2`) — account menu, switch-account modal, topbar search states, account switcher panel. _(Built session 7; verify against `RootLayout.tsx`.)_
+- **App Shell** (`1:2`) — **DONE.** Code = `RootLayout.tsx` (topbar/sidebar/dropdowns) + 4 nav arrays + service facades.
+  - **App Shell / Main Account / Default** (`24:112`) — VERIFIED faithful (grouped sidebar nav, topbar search + bell + Max Rodriguez/Acme Corporation, bottom account switcher).
+  - **Account Menu Dropdown** (`126:264`) — VERIFIED faithful (Max Rodriguez/max@email.com, Main Account switch block + Switch, ACCOUNT section, My Profile/Security/Preferences, Log out).
+  - **Switch Account Modal** (`126:297`) — DONE. Replaced invented Northwind Retail/Summit Trading with real `accountOptions`: Main Account (selected ✓ / Manage all accounts) + Acme Corporation / Acme Luzon / Acme Visayas (all "Subaccount") + "Manage Subaccounts" link.
+  - **Account Switcher Panel** (`127:298`) — DONE. Same real account list (ACCOUNTS header + search + Main + 3 Acme subaccounts + Manage Subaccounts).
+  - **Topbar Search — Results** (`127:264`) — DONE. Real entities: Transactions GGX-2026-90010 Nexus Retail Group · Makati City + GGX-2026-90009 Meridian Health Corp. · Quezon City; Claims CLM-1008 GGX-2026-90006 · Delivery failed; Support Tickets TKT-2024-00847 Delivery Failed · GGX-2024-89236. Footer "Global Cmd+K search deferred…" matches.
+  - **Topbar Search — No Results** (`127:294`) — VERIFIED ("No results for \"zzz\"").
+  - **Sidebar Navigation — All 4 Variants** (`26:74`) — DONE. Was out of sync with the 4 real nav arrays: **Main** variant was missing Bulk Upload (added after Transactions); **Standard** variant wrongly had Bulk Upload (removed). Now matches: Standard (no Bulk Upload, AM=Subaccounts/Address Book/API), Main (Bulk Upload, AM=Subaccounts/Users & Permissions/Address Book/API), Subaccount (Bulk Upload, no Finance, AM=Address Book/API), Manager (Bulk Upload, no Finance, no AM). _(Inner nav lists are VERTICAL auto-layout — reorder via insertChild, not y.)_
+  - **Accepted minor gaps:** small annotation/label frames (`27:206`–`27:218`, `47:332`) are documentation labels, left as-is; logo is colored-square placeholder.
+  - **✅ PAGE 1:2 (App Shell) FULLY RECONCILED.**
+
+---
+
+## 🎉 STRICT CODE-TO-FIGMA RECONCILIATION COMPLETE (session 9)
+
+**All 15 pages of the App Screens file (`ceL7WwBQpaLl66Y7sUcgPR`) reconciled to the coded app.** Every frame now faithfully represents the code (code = source of truth); invented UI removed throughout. Pages: Notifications, Transactions, Transaction Detail, Dashboard, Bulk Upload, Operations Requests, Claims/SLA/Support (1:7), Analytics & Reports (1:8), Finance (1:9), Account Management (1:10), System (1:11), Auth/Public (1:12), Role & Account Variants (1:13), App Shell (1:2).
+
+**Standing accepted gaps (consistent across the file):** emoji/colored-square placeholder icons (no Tabler icon instances in hand-built frames); logo placeholders; hand-built chart approximations (donut arcs, line segments, bar rects); some condensed/representative mock data where the screen is input-driven (e.g. request-success, search results). These are intentional mock-fidelity tradeoffs, not divergences from code logic/content.
+
+**Suggested next step:** optional polish — swap emoji placeholders for real Tabler icon instances and the GoGoXpress logo, or add red-line/spacing annotations. Otherwise the reconciliation task is complete; pivot to service-layer/backend integration once a BFF exists.
 
 Approach + helper patterns established (Inter font; hand-built light-pill badges w/ Tailwind hex; auto-width badge frames via `primaryAxisSizingMode='AUTO'`; resize() resets auto-layout sizing to FIXED so set sizing modes AFTER resize or avoid resizing auto-layout frames; placeholder emoji icons; screenshots downloaded via PowerShell Invoke-WebRequest to %TEMP% then Read). Screenshot→fix→verify per frame.
 
-_Last updated: 2026-06-02 (session 9 — strict code-to-Figma reconciliation IN PROGRESS: Notifications + Transactions + Transaction Detail + Dashboard + Bulk Upload + Operations Requests + **ALL of Claims/SLA/Support (1:7)** + **ALL of Analytics & Reports (1:8)** + **ALL of Finance (1:9 — all 5 frames)** + **ALL of Account Management (1:10 — 18 frames)** + **ALL of System (1:11 — 2 frames)** + **ALL of Auth/Public (1:12 — 4 frames)** + **ALL of Role & Account Variants (1:13 — 2 frames)** done. Next (last page): App Shell (1:2).)_
+_Last updated: 2026-06-02 (session 9 — strict code-to-Figma reconciliation IN PROGRESS: Notifications + Transactions + Transaction Detail + Dashboard + Bulk Upload + Operations Requests + **ALL of Claims/SLA/Support (1:7)** + **ALL of Analytics & Reports (1:8)** + **ALL of Finance (1:9 — all 5 frames)** + **ALL of Account Management (1:10 — 18 frames)** + **ALL of System (1:11 — 2 frames)** + **ALL of Auth/Public (1:12 — 4 frames)** + **ALL of Role & Account Variants (1:13)** + **ALL of App Shell (1:2)** done. **🎉 ALL 15 PAGES RECONCILED — task complete.**)_
