@@ -301,14 +301,23 @@ Goal: make every Figma frame a faithful representation of the CODED app (code = 
 
 - **✅ PAGE 1:8 (Analytics & Reports) FULLY RECONCILED** — Reports frame + both Data Analytics frames done.
 
+- **Finance** (`1:9`, 5 frames) — **DONE.** Code = `Earnings.tsx`, `EarningsSettlementDetail.tsx`, `BillingStatement.tsx`, `PaymentSettings.tsx` + `earningsService`/`data/earnings`.
+  - **Earnings / Main** (`78:221`): full rebuild. Replaced invented STL-2026-047… rows + invented KPI subs + invented "Orders" column. Now: 4 **vibrant** KPI cards (green/orange/blue/purple) Available for Payout ₱472,875 "Ready to withdraw" / Pending Collection ₱98,450 "In process" / Scheduled for Deposit ₱472,875 "Next payout" / Remitted This Month ₱1,386,812 "May 2026"; MISSING "Primary Bank Account" blue card added (BDO Unibank · Verified · •••• ••34 5678 · Manage Bank Account); Settlement History table rebuilt to real SETTLEMENTS seed (SET-2026-05-003…04-005) with correct 9 columns (ID/Subaccount/Source badge/Collection Period/Gross/Fees/Net/Status badge/Expected Deposit) — Source COD=info, Online Payment=default; Status Scheduled=warning/Deposited=success/Processing=info; footer "Showing 5 of 24 settlements" + Prev(disabled)/Next.
+  - **Earnings / Settlement Detail** (`94:231`): retargeted from invented STL-2026-047 to real **SET-2026-05-003**. Breadcrumb + back, title "Settlement SET-2026-05-003", subtitle "May 13–18, 2026 · COD · Acme Corporation", Scheduled badge; 3 summary cards (Gross ₱487,500 / Total Fees (3%) -₱14,625 / Net Payout ₱472,875 green "Expected: 2026-05-22"); tx table = 4 real seed txns (GGX-2024-89240/89238/89235 Delivered, 89231 Failed) with COD/Fees/Net; totals Total COD ₱13,850 / Total Fees -₱415.50 / Total Net ₱13,434.50; footer "4 transactions…".
+  - **Billing Statement / List** (`78:317`): title "Billing" → "Billing Statements"; subtitle → "Manage invoices for services owed to GoGo Xpress"; 4 StatCards (icon-right); MISSING "Payment Method on File" blue card added (Visa •••• 4242, Auto-pay enabled, Manage Payment); Invoice History table rebuilt to 6 real invoices (INV-2026-05…2025-12) with correct 8 columns (ID/Subaccount/Period full month names/Deliveries/Amount/Due Date/Status badge/Actions) — pending row gets Pay Now+Download, paid rows Download; added bottom "Payment Method" (Visa •••• 4242 / Primary / Update Payment Method) + "Billing Contact" (Acme Corporation / billing@acme.com / 123 Ayala Avenue / Update Billing Info) cards.
+  - **Billing / Modal — Confirm Pay Now** (`78:447`): replaced invented body (Amount/Payment method/cannot-be-undone lines + GCash) with code copy: "You are about to pay **₱2,418,000** for invoice **INV-2026-05** (May 2026) using the Visa card on file." + Cancel / Confirm Payment.
+  - **Payment Settings** (`78:405`): structurally invented (Billing Account plan + GCash/BDO/Visa rows + Auto-pay toggle) — full rebuild to code: subtitle "Manage how you pay GoGo Xpress and receive earnings"; blue OTP security note; **Payment Methods** section (Visa •••• 4242 Default+Verified blue card / Mastercard •••• 8888 Verified / Add Payment Method dashed) + Auto-Pay (Coming Soon) gray card; **Payout Bank Accounts** section (BDO Unibank Primary+Verified green card / BPI Pending / Add Bank Account dashed) + blue Payout info card (Payout Schedule + Bank Account Verification). Card-style with Set Default/Set Primary/Edit/Remove actions per code.
+  - **Accepted minor gaps:** emoji placeholder icons (💳/🏦/🔒/🛡/✓); settlement/billing tables show real seed rows but pagination footers are static; vibrant KPI icon glyphs are emoji not Tabler.
+
+- **✅ PAGE 1:9 (Finance) FULLY RECONCILED** — all 5 frames done.
+
 **Remaining pages to reconcile (priority order):**
-1. **Finance** (`1:9`) — Earnings + Settlement Detail, Billing Statement + Pay Now modal, Payment Settings.
-2. **Account Mgmt** (`1:10`) — Subaccounts states, Users & Permissions, Address Book, Settings (frame `80:63` likely overstates notif toggles — code Settings has exactly 5), Notifications, Invite dialog.
-3. **System** (`1:11`) — API Integration (main, regenerate confirm).
-4. **Auth / Public** (`1:12`) — Login, Public Tracking (empty/result/not found).
-5. **Role & Account Variants** (`1:13`) — In-app notifications panel.
-6. **App Shell** (`1:2`) — account menu, switch-account modal, topbar search states, account switcher panel.
+1. **Account Mgmt** (`1:10`) — Subaccounts states, Users & Permissions, Address Book, Settings (frame `80:63` likely overstates notif toggles — code Settings has exactly 5), Notifications, Invite dialog.
+2. **System** (`1:11`) — API Integration (main, regenerate confirm).
+3. **Auth / Public** (`1:12`) — Login, Public Tracking (empty/result/not found).
+4. **Role & Account Variants** (`1:13`) — In-app notifications panel.
+5. **App Shell** (`1:2`) — account menu, switch-account modal, topbar search states, account switcher panel.
 
 Approach + helper patterns established (Inter font; hand-built light-pill badges w/ Tailwind hex; auto-width badge frames via `primaryAxisSizingMode='AUTO'`; resize() resets auto-layout sizing to FIXED so set sizing modes AFTER resize or avoid resizing auto-layout frames; placeholder emoji icons; screenshots downloaded via PowerShell Invoke-WebRequest to %TEMP% then Read). Screenshot→fix→verify per frame.
 
-_Last updated: 2026-06-02 (session 9 — strict code-to-Figma reconciliation IN PROGRESS: Notifications + Transactions + Transaction Detail + Dashboard + Bulk Upload + Operations Requests + **ALL of Claims/SLA/Support (1:7)** + **ALL of Analytics & Reports (1:8 — Reports + both Data Analytics)** done. Next: Finance (1:9), then Account Mgmt/System/Auth/Role Variants/App Shell.)_
+_Last updated: 2026-06-02 (session 9 — strict code-to-Figma reconciliation IN PROGRESS: Notifications + Transactions + Transaction Detail + Dashboard + Bulk Upload + Operations Requests + **ALL of Claims/SLA/Support (1:7)** + **ALL of Analytics & Reports (1:8)** + **ALL of Finance (1:9 — all 5 frames)** done. Next: Account Mgmt (1:10), then System/Auth/Role Variants/App Shell.)_
