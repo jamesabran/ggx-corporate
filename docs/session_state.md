@@ -5,6 +5,16 @@
 
 ---
 
+## Session 10 (2026-06-03) — Icons + Payment component + Gap Log
+
+- **Emoji → real Tabler icons:** swapped ~115 colorful-emoji placeholders across all 15 pages for live `tabler/*` instances imported from the **GGX SHADCN** library by component key, recolored to each context. Engine: scan TEXT nodes, match whole-node single colorful emoji → `importComponentByKeyAsync(key).createInstance()` → resize to fontSize → recolor (set strokes+fills on vector children) → insert at the text node's index (auto-layout) or its x/y (absolute) → remove text. Plain glyphs (`✓ ! ↓ × ▾ → ⤴ ★`) intentionally left (render fine, not emoji). Key map (emoji→tabler) and component keys are inlined in the swap scripts (harvested from sidebar instances + `search_design_system`).
+- **PaymentMethodTabs component:** created a local Figma COMPONENT `PaymentMethodTabs / Cash` (node `316:72`, on Bulk Upload page) mirroring `components/PaymentMethodTabs.tsx` — Cash/E-wallets/Card/Online banking tab bar (real Tabler tab icons: cash/wallet/credit-card/building-bank) + the two COD radio cards (Pay upon pick-up / Deduct from order total). Matches the user's reference screenshot. NOT yet published to GGX SHADCN (local only).
+- **Gap Log (in-Figma):** the App Screens Gap Log page (`1:15`, frame `27:221`) was last updated at "App Shell pass 2" and was NOT touched during the entire session-9 reconciliation. Added a dated **Session 9–10** entry + updated the header; framed as "audit in progress" since the user flagged remaining inconsistencies. (Going forward: update the in-Figma Gap Log, not just this file.)
+- **Tabler icon component keys** (GGX SHADCN library) for reuse: package 44889b6e…, building 47f1da70…, building-bank 29da4e8b…, credit-card ce4e6133…, bell e181bad7…, file-text 978d3c6f…, clipboard-list 9eddeb4f…, map-pin 91678a67…, users aca0373c…, alert-triangle 1934828d…, circle-check 5455107b…, info-circle bded79ff…, search b047700b…, cash 4b58ece7…, chart-bar e464846e…, lock 3f76ae86…, activity-heartbeat d8c3455e…, calendar-event 6b511d6c…, eye c3e04b07…, copy eec81535…, edit 952cd704…, trash 8104c803…, settings e7a3be2c…, wallet f2df4f1b…, receipt 6d9446e0…, message b00faf92…, upload af5477de…, receipt-refund 1ef51c0f….
+- **Known remaining (for next audit):** a few inline emoji inside button/link text not split (e.g. drop-off phone/clock); Earnings vibrant-KPI plain glyphs (✓/!/↓) not converted; icon fills per-instance recolored (not variable-bound); logo placeholder; tabler/selector + chevron-down placeholders in some selects; PaymentMethodTabs unpublished. **User will share another manual audit of inconsistent UIs.**
+
+---
+
 ## Current goal
 
 All polish-pass roadmap items (1–4), Operations Requests (item 5), Data Analytics subaccount scoping, and the component/Figma polish pass (session 4) are complete. The service-layer migration is also complete (all non-config UI consumers go through service facades; intentional exceptions documented). The next stage is service-layer / backend integration — swapping mock service bodies for real `fetch()` calls against the BFF. This requires an actual backend to exist before meaningful work can proceed.
