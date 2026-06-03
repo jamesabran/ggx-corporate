@@ -5,7 +5,15 @@
 
 ---
 
-## Session 13 (2026-06-03) — Full code-to-Figma parity audit (Batch 1: Bulk Upload)
+## Session 13 (2026-06-03) — Full code-to-Figma parity audit (Batch 1 + Page reorg)
+
+**User decisions this session:** (1) **Consolidate** the file into numbered group pages (NOT keep per-area pages); (2) **run continuously**, report at end.
+
+**Page reorg DONE (App Screens `ceL7WwBQpaLl66Y7sUcgPR`):** renamed all pages to the numbered scheme and consolidated the 4 separate Operations pages into ONE "02 — Operations" page using labeled Figma **Sections** as vertical bands:
+- Pages now: Cover / `00 — App Shell` / `01 — Dashboard` / `01b — Auth / Public` / `02 — Operations` / `03 — Analytics & Reports` / `04 — Finance` / `05 — Account Management` / `06 — System` / `06b — Role & Account Variants` / `07 — Shared Components / Patterns` (new, empty) / `08 — Archived / Not Coded / For Review` (new, empty) / `09 — Prototype / Review Flows` / `10 — Roadmap / Gap Log`.
+- `02 — Operations` (page `1:4`) now holds 4 Sections: **Transactions** (`409:2`, 3 frames), **Bulk Upload** (`410:60`, 10 frames), **Operations Requests** (`411:112`, 8 frames), **Claims / SLA / Support / Service Advisories** (`412:68`, 12 frames) = 33 coded frames total, no loose children, cleanly banded (Transactions y-60..3220, Bulk Upload 3340..4680, Ops 4720..6460, Claims 6520..8360). Old pages `1:5/1:6/1:7` **deleted**.
+- ⚠ The user's scratch comparison images (image1/image2/CODED/FIGMA/VS) that were on the old Bulk Upload page are gone (were not present when frames were moved; likely removed with page delete). Harmless — reference only.
+- **STILL TODO for reorg:** populate `07 — Shared Components` (link/showcase the published GGX-SHADCN components) and move any non-coded frames to `08 — Archived`. Renumber `01b`/`06b` if a stricter scheme is wanted. Reorder pages in the panel (createPage appended 07/08 at end).
 
 **Trigger:** user supplied a strict full code-to-Figma audit/reorg/parity directive with a side-by-side Bulk Upload screenshot as the quality standard. Code is the source of truth; no redesign.
 
