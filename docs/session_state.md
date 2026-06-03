@@ -5,6 +5,27 @@
 
 ---
 
+## Session 14 (2026-06-03) — Parity passes continued (per-screen visual bar)
+
+**Mode:** continue Session-13 per-screen code-to-Figma parity passes, code = source of truth, run continuously. App Screens file `ceL7WwBQpaLl66Y7sUcgPR` (now per-screen pages mirroring sidebar IA).
+
+**DONE this session:**
+- **Bulk Upload page (`419:237`) — FULLY RECONCILED.** Step 1 already done (S13). **File Selected (`70:39`) rebuilt:** the old frame used a condensed left-column summary + two invented elements (blue "This file uses custom headers…" note + "Not using the GGX template?…" card) that don't exist in the file-selected state. Replaced by cloning the corrected Step 1 (new frame `435:2`) and swapping the dropzone for the faithful file-selected upload state (file card `orders_custom_format.xlsx` / 342 KB · ready to validate / × + full-width "Upload & Validate" button) — so it now shows the full left column (Sender/Pickup, First-mile & Schedule, Payment w/ PaymentMethodTabs **billing** variant) + Recent Uploads, exactly like code. Old `70:39` deleted. Verified via screenshot. The other 8 frames (Column Mapper, Review, Error Rows, All Fixed, 4 modals) verified faithful (Uploading Orders / Processing Upload headings + copy + buttons match; Drop-off real DROPOFF_LOCATIONS; Booking Complete copy matches BulkUploadSummary L972–999). Accepted gaps: emoji placeholder icons; non-dismissible code Dialogs still show an × in Figma.
+- **Transactions page (`419:236`) — VERIFIED faithful, no changes.** All View (real 25-tx data, correct cols, light-pill badges, "Showing 25 of 25"), By Batch (real UPLOAD ids, counter badges, progress bars, Export, footer), Transaction Detail (full S9 rebuild — Order Summary, fees ₱325, COD, tracking timeline, upload source, Need Help, Upload New Delivery) all match code.
+
+- **Dashboard (`1:3`) — VERIFIED.** A (Standard) + Main Account (Org Overview) faithful (real KPIs, recent tx, delivery perf, subaccount perf, SLA alerts). B/C/D held from S9. Known minor gap: Subaccount Performance success-rate badges (`I42:190;3096:78`, `I42:213;3096:78`) clip ("succ ess" wraps) — the Badge component instance is 37px wide; fix needs editing the shared Badge/StatCard component, left as accepted gap.
+- **OPERATIONS group — VERIFIED intact post-reorg.** Claims List (8 real rows, "4 in progress", correct status badges), SLA Alerts List (4 cards, stat cards 2/2/2, follow-up notes, buttons), Ops Requests List (8 real seed cards, correct category/status badges, stat cards 4/3/3), Support Tickets List (7 rows, 12/8/127/2.4hrs stat cards, priority+status badges) all match code. Detail/dialog/empty frames + Service Advisories held from S9. Minor: Ops list card 6 notes line slightly overlaps meta (S9 accepted, fixed-height card).
+- **Analytics (`77:221`) + Earnings (`78:221`) + Subaccounts (`79:244`) + API Integration (`81:221`) — VERIFIED faithful** (full S9 rebuilds intact: Analytics 8 KPIs/bars/line/2 donuts/bottom-3; Earnings 4 vibrant KPIs + Primary Bank + settlement seed; Subaccounts 3 real units; API doc/environment/quick-stats/webhook/security).
+
+**Coverage note:** broadly sampled the most complex frame on every page group — all faithful, confirming the S9 reconciliation survived the S13 page reorg cleanly (frame moves preserve content). Frames NOT individually re-screenshotted this session but trusted as intact from S9: Transaction Detail variants beyond default, Reports, Billing Statements, Payment Settings, Address Book, Users & Permissions, Settings, Notifications, Role-Variant notification panels, and the various detail/dialog/empty-state frames in each group.
+
+**NEXT (remaining real work):**
+1. Populate the empty `SHARED COMPONENTS / PATTERNS` page (`407:2`) — showcase/link the published GGX-SHADCN components (S13 TODO).
+2. Optional: if a stricter visual bar is wanted, re-screenshot the trusted frames above one-by-one and apply auto-layout / component-instance upgrades (the deep S13 standard) rather than the current hand-built absolute frames.
+3. Carryover rollouts (Button/Select/Badge instances, text styles) + user publish of `PaymentMethodTabs / Cash`.
+
+---
+
 ## Session 13 (2026-06-03) — Full code-to-Figma parity audit (Batch 1 + Page reorg)
 
 **CORRECTION (user reclarified structure):** the numbered container approach was wrong. Figma page list must mirror the **sidebar IA** — one Figma page per coded screen, group names as EMPTY separator pages only. **DONE — final page list (in order):** Cover / `App Shell / Navigation` / `Auth / Public` / `Dashboard` / **`OPERATIONS`** (sep) / Transactions / Bulk Upload / Claims / SLA Alerts / Operations Requests / Support Tickets / Service Advisories / **`ANALYTICS & REPORTS`** (sep) / Analytics / Reports / **`FINANCE`** (sep) / Earnings / Billing Statements / Payment Settings / **`ACCOUNT MANAGEMENT`** (sep) / Subaccounts / Address Book / API Integration / Users & Permissions / **`SYSTEM`** (sep) / Notifications / Settings / Role & Account Variants / `SHARED COMPONENTS / PATTERNS` (empty) / `ARCHIVED / NOT CODED / FOR REVIEW` / Prototype / Roadmap.
