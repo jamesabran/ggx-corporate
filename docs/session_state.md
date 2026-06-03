@@ -5,6 +5,23 @@
 
 ---
 
+## Session 15 (2026-06-03) — Transactions page structural rebuild (nested auto-layout)
+
+**Mode:** continue Session-14 per-screen structural rebuilds (code-DOM-based nested auto-layout + DS instances), code = source of truth. App Screens file `ceL7WwBQpaLl66Y7sUcgPR`, Transactions page `419:236`.
+
+**DONE — ALL 3 TRANSACTIONS FRAMES REBUILT to nested auto-layout (replaced the old flat/absolute hand-built frames):**
+- **All View (`526:2`, replaced `48:367`)** — shell (VERTICAL p24 gap24 bg gray-50) → Header row (title group ⇄ [SegmentedControl pill (All Transactions active / By Batch) + **Export CSV outline Button instance**]) → Card [CardHeader filter toolbar: SearchInput FILL + 3 Selects (All Subaccounts / All Statuses / All Types, fixed 160) ; divider ; CardContent: table thead (8 cols: TRACKING NUMBER/RECIPIENT/DESTINATION/SUBACCOUNT/TYPE/STATUS/DATE/ACTIONS, fixed col widths, Destination FILL) + 8 data rows (real tx 90010→90003 w/ **Badge status instances** mapped via statusConfig: pending/info/danger/success/secondary) each w/ "○ View" ghost + per-row dividers ; footer "Showing 25 of 25 transactions" + Previous/Next outline buttons]. Column widths array `[140,160,FILL,150,80,110,100,80]` keeps thead/rows aligned.
+- **By Batch View (`531:20`, replaced `48:535`)** — cloned All View shell, flipped active segment to By Batch, dropped the table card, built BatchList: 3 real batch cards (UPLOAD-2026-05-31-001 / 05-30-001 / 05-17-001) each = top row [chevron › + 40px blue-50 icon box + details col (id semibold + **In Progress info Badge** + gray tag chip "Acme Corporation") + filename·Uploaded date] ⇄ counters group (4 Badge instances: total secondary / delivered success / active info / failed danger) ⇄ Export ghost ; progress bar (HORIZONTAL auto-layout w/ emerald fill child layoutGrow=pct + empty child layoutGrow=100-pct, clipsContent) + "X% delivered". Footer "Showing 12 batches…".
+- **Transaction Detail / Default (Delivered) (`535:52`, replaced `49:99`)** — full `TransactionDetails.tsx` rebuild: shell → Back row → Header (H1 + Tracking Number GGX-2026-90007 + **Delivered success Badge** + Created date) → 2-col Grid [LeftCol FILL / RightCol fixed 372]. Left cards (white, radius12, border, CardHeader+CardContent, `field(label,value)` helper): Pick-up/Delivery Dates, Sender & Recipient (real addresses), Order Summary (2 items + dividers, Items Total ₱14,500, Packaging 3-col, Ordered From techgear.ph), Transaction Fees (…Total ₱325), Payment Method (COD / Recipient / COD ₱27,500), Upload Source (blue icon box + Batch info Badge + 3 fields + View batch summary outline Button), Need Help (blue-50 + Send a Report primary Button), Upload New Delivery full-width primary Button. Right: Rating card (green-50, 5★, Submit Rating outline Button FILL), Tracking Timeline (header + 7 events w/ dot [first green] + proof links on Delivered & Picked Up).
+- **Gotcha confirmed:** `field()` value TEXT must be FILL **and** the field frame itself FILL — setting only the text to FILL inside a HUG frame collapses the frame to label width and wraps the value char-by-char. Set BOTH.
+- All verified via screenshots — faithful visual + structural match. **Buttons + Badges are real GGX-SHADCN instances** (Button set `b1a89b48…`, Badge set `a09ae1f4…`). Cards/inputs/tables/selects/timeline/progress are clean auto-layout frames.
+- **Accepted gaps:** emoji/glyph placeholders (▦ ⬆ ✉ ★ ○ ↗ ⤓ → ⊞ ⌄); SegmentedControl hand-built (not a published instance); "View batch summary" Button shows baked ↗ + "→" in label (minor double-arrow).
+- **✅ TRANSACTIONS PAGE STRUCTURALLY COMPLETE.**
+
+**NEXT (continue down sidebar IA, same standard):** OPERATIONS group — Claims, SLA Alerts, Operations Requests, Support Tickets, Service Advisories — then Analytics & Reports, Finance, Account Management, System, Role Variants. (Bulk Upload + Dashboard + Auth/Public + App Shell already structurally complete from S14.)
+
+---
+
 ## Session 14 (2026-06-03) — Parity passes continued (per-screen visual bar)
 
 **Mode:** continue Session-13 per-screen code-to-Figma parity passes, code = source of truth, run continuously. App Screens file `ceL7WwBQpaLl66Y7sUcgPR` (now per-screen pages mirroring sidebar IA).
