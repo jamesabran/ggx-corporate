@@ -7,6 +7,13 @@
 
 ## Session 13 (2026-06-03) — Full code-to-Figma parity audit (Batch 1 + Page reorg)
 
+**CORRECTION (user reclarified structure):** the numbered container approach was wrong. Figma page list must mirror the **sidebar IA** — one Figma page per coded screen, group names as EMPTY separator pages only. **DONE — final page list (in order):** Cover / `App Shell / Navigation` / `Auth / Public` / `Dashboard` / **`OPERATIONS`** (sep) / Transactions / Bulk Upload / Claims / SLA Alerts / Operations Requests / Support Tickets / Service Advisories / **`ANALYTICS & REPORTS`** (sep) / Analytics / Reports / **`FINANCE`** (sep) / Earnings / Billing Statements / Payment Settings / **`ACCOUNT MANAGEMENT`** (sep) / Subaccounts / Address Book / API Integration / Users & Permissions / **`SYSTEM`** (sep) / Notifications / Settings / Role & Account Variants / `SHARED COMPONENTS / PATTERNS` (empty) / `ARCHIVED / NOT CODED / FOR REVIEW` / Prototype / Roadmap.
+- Sections deleted; every coded frame moved to its own per-screen page (verified counts: Transactions 3, Bulk Upload 10, Claims 4, SLA Alerts 2, Ops Requests 8, Support Tickets 4, Service Advisories 2, Analytics 2, Reports 1, Earnings 2, Billing 2, Payment Settings 1, Subaccounts 10, Address Book 3, API Integration 2, Users & Permissions 3, Notifications 1, Settings 1, Dashboard 5, Auth 4, Role Variants 2).
+- **Code-correct relocations:** API Integration → under ACCOUNT MANAGEMENT (was on System page); Notifications + Settings → under SYSTEM (were on Account Mgmt page). Service Advisories kept its own page (coded, /dashboard/advisories). Users & Permissions kept its own page (coded).
+- 3 loose Rectangle nodes from old Account Mgmt page → moved to ARCHIVED for review.
+- All 5 group-header pages confirmed EMPTY (0 children) = pure separators.
+- **TODO:** populate `SHARED COMPONENTS / PATTERNS`; resume per-screen visual parity passes (only Bulk Upload Step 1 done so far).
+
 **User decisions this session:** (1) **Consolidate** the file into numbered group pages (NOT keep per-area pages); (2) **run continuously**, report at end.
 
 **Page reorg DONE (App Screens `ceL7WwBQpaLl66Y7sUcgPR`):** renamed all pages to the numbered scheme and consolidated the 4 separate Operations pages into ONE "02 — Operations" page using labeled Figma **Sections** as vertical bands:
