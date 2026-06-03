@@ -5,6 +5,28 @@
 
 ---
 
+## Session 13 (2026-06-03) — Full code-to-Figma parity audit (Batch 1: Bulk Upload)
+
+**Trigger:** user supplied a strict full code-to-Figma audit/reorg/parity directive with a side-by-side Bulk Upload screenshot as the quality standard. Code is the source of truth; no redesign.
+
+**Part 1 audit (Bulk Upload, `pages/BulkUploader.tsx` + `components/PaymentMethodTabs.tsx`):** confirmed coded layout = header + Download Template (outline) / mode toggle card / 2-col grid [left: Sender-Pickup card w/ **ghost** Change btn, First-mile & Schedule, Payment] [right: Upload Orders] / full-width Recent Uploads table / 4 modals. Key truth: **Payment renders `PaymentMethodTabs` in billing variant** (Acme = billing account, `billingAvailable=true`) → "Pay via billing (Default)" selected radio + "Other payment options" radio + **disabled** NormalPaymentCard (tab row Cash/E-wallets/Card/Online-banking, opacity-60) + two COD radio cards (Pay upon pick-up selected / Deduct from order total). The Figma had a wrong simplified segmented bar.
+
+**Part 2 structure finding:** App Screens file (`ceL7WwBQpaLl66Y7sUcgPR`) is already organized **one Figma page per sidebar area** (App Shell, Dashboard, Operations—Transactions/Bulk Upload/Ops Requests/Claims-SLA-Support, Analytics & Reports, Finance, Account Management, System, Auth/Public, Role Variants, Prototype, Gap Log). This is an acceptable equivalent to the user's "02—Operations container" recommendation — no page reorg needed; per-area pages are cleaner than cramming all Operations frames onto one page. **Decision pending user:** keep per-area pages (recommended) vs. consolidate into numbered group containers.
+
+**Part 3/5 fixes applied — Bulk Upload / Step 1 frame (`65:342`, page `1:5`):**
+- **Change button** (`65:362`): was Variant=default (solid blue, label auto-flipped to "Ghost") → set Variant=ghost + relabeled "Change". (Ghost variant has no icon slot → map-pin icon omitted, minor gap.)
+- **Payment section rebuilt** to match code: deleted old segmented bar (`65:392`–`65:402`); built 3 new **auto-layout** subcomponents parented to the page frame at absolute coords — billing radio card (`400:60`, selected/blue + Default badge), other-options radio (`400:69`), disabled tab card (`401:60`, opacity 0.6, 4 tabs + 2 COD cards). Grew Payment bg card `65:389` to h340.
+- **Recent Uploads** shifted down +220 (frame is FLAT/absolute — all content are page-frame siblings, not nested; moved bg `65:434` + content nodes). Frame grown to h1180.
+- Verified via screenshot: matches coded app.
+
+**KEY STRUCTURAL FINDING for the rest of the audit:** App Screens frames are **fully flat** — every text/rect/badge is a direct child of the page-level frame positioned by absolute x/y; the "Frame" nodes are just background cards, NOT parents of their content. This is the Part 5 layer-organization debt. Auto-layout rebuild of each frame is a large separate effort; this session only added auto-layout for the NEW payment subcomponents.
+
+**Minor gaps logged (Bulk Upload):** disabled-tab-card icons fell back to "•" bullets (Tabler icon import in the build script failed/caught — keys: cash 4b58ece7, wallet f2df4f1b, credit-card ce4e6133, building-bank 29da4e8b); ghost Change btn has no map-pin icon.
+
+**Remaining batches (per-page parity passes still to do):** Bulk Upload other frames (File Selected, Column Mapper, Review, modals) → then Dashboard, Transactions, Ops Requests, Claims/SLA/Support, Analytics & Reports, Finance, Account Mgmt, System, Auth/Public, Role Variants. Approach each like Batch 1: read coded page → screenshot Figma frame → fix mismatches → prefer component instances/auto-layout. **Paused for user review after Batch 1.**
+
+---
+
 ## Session 11 (2026-06-03) — Button variants fix + instance pilot
 
 **Trigger:** user thought the icon-LEFT Button variant was deleted when the trailing-icon variant was added, and noticed app-page buttons are frames not component instances.
@@ -25,6 +47,32 @@
 - Pay Now modal `78:447`: Cancel (outline), Confirm Payment (default/blue) — clean text-only overrides.
 - Mechanics: `importComponentSetByKeyAsync(key)` → `set.defaultVariant.createInstance()` → `inst.setProperties({Variant,Size,State})` → override label text (load font via getStyledTextSegments) → insert at old frame's parent/index → remove old frame.
 - **PAUSED for user review before rolling out to the rest of Finance / all pages.** Open decision: roll out with per-instance overrides for primary+icon buttons, OR extend the Button component first (recommended) so icon is a combinable property.
+
+---
+
+## Session 12 (2026-06-03) — Overflow/spillover fixes + component & style rollout
+
+**Task from user:** elements spilling outside containers (esp. modals) across Bulk Upload, Ops Requests, Claims, Subaccounts; move PaymentMethodTabs to GGX SHADCN; continue Button rollout; extend Select/Search/Badge rollout; roll out text styles. **Permission pref recorded:** grant by action-type (tool-level), not per-file — blanket Figma writes + code Edits approved (see memory `feedback_permission_granularity`).
+
+**Method:** automated overflow scan (read-only `use_figma` traversal flagging children whose absolute bounds exceed parent bounds) per page, then targeted fixes + visual verify.
+
+**Overflow fixes done (App Screens file `ceL7WwBQpaLl66Y7sUcgPR`):**
+- **Bulk Upload (1:5):** Step 1 — relabeled stray "Button"→"Change" (65:362); fixed "Preferred" badge wrapping (hug, 65:372); both Download Template buttons had invented trailing ↗ sub-button (code = single outline btn) → hid sub-buttons + hugged + repositioned (header 65:345 in-margin; in-card 65:426 onto heading row, no longer overlapping required-cols text). File Selected (70:39) — status badges (hand-built rect+text 70:81-106) widened to one line. Step 4 Review (71:45) — error-column text (71:95/103/111/121) was overflowing into Recipient col → constrained to 144px + wrap. Column Mapper (70:107) — footer helper text (70:240) ran under Confirm button → moved left. Drop-off modal (71:196) — Makati address overlapped phone line → widened address boxes (428) + ENDING truncation on all 4. Spinner modals + Booking Complete + All Fixed + Error Rows summary verified clean.
+- **Ops Requests (1:6):** Detail—Declined card (72:506) was BLANK — row children at local y 272-432 inside a 244-tall clipping card (content below clip). Shifted rows up 224 → renders correctly. Both New Request dialogs (Supply 74:57, Pickup Support 74:96) footer buttons spilled ~8-12px below → grew dialog heights to 584/568.
+- **Claims/SLA/Support (1:7):** Support Ticket Detail Open (76:138) + Resolved (148:73) verified clean. Flagged overflow on Details cards 76:146/148:81 = HIDDEN clipped remnant rows (invisible, from cloning) — left in place.
+- **Account Management/Subaccounts (1:10):** subaccount-card addresses (278:78/278:113) clipped 14px → single-line ENDING truncation. "Need changes?" (93:339) 8px vertical overflow left as negligible.
+
+**PaymentMethodTabs MOVED to GGX SHADCN (DONE):** rebuilt faithfully as COMPONENT `PaymentMethodTabs / Cash` on new page **"Payment Method Tabs"** (node `3275:75`, page `3275:74`) in DS file `9zwtAL4RU3Y8WVRJAsSulX` — 4-tab bar (real tabler cash/wallet/credit-card/building-bank icon instances, Cash active blue) + 2 COD radio cards (selected "Pay upon pick-up" blue / "Deduct from order total"). Added component description. Local copy (was `316:72` on Bulk Upload page) had 0 instances → removed from App Screens file. **USER ACTION NEEDED: publish `PaymentMethodTabs / Cash` to the GGX-SHADCN team library** (manual, like the session-7 publish of SearchInput/SegmentedControl/StatCard/AddressDisplayCard) so it can be imported as an instance in App Screens.
+
+**Button rollout — STARTED + inventory taken (user chose per-instance-override approach, NOT extending component yet):**
+- Button set key = `b1a89b48b296e05273d73881b300b9defc890295` (set node `73:3681` in DS file). Variants: default/Rounded/destructive/ghost/icon/link/loading/outline/secondary/**with icon**/**trailing icon**; Size default/sm/lg; State default/hover/loading/disabled/focus. **No icon-swap or text property exposed** — "with icon" variant carries a BAKED placeholder icon (flag-ish), so a specific glyph (e.g. search) can't be set from the picker. **"with icon"/"trailing icon" exist ONLY at Size=default** (not sm/lg). To show a real glyph you'd override the nested icon vector per-instance, OR extend the component with an INSTANCE_SWAP icon property (recommended for clean rollout; user deferred).
+- **Recipe:** `set=await importComponentSetByKeyAsync(key)` → `inst=set.defaultVariant.createInstance()` → `inst.setProperties({Variant,Size,State})` → override nested TEXT (load font via getStyledTextSegments) → append to parent + set x/y (right-edge align) → remove old rect+label.
+- **Per-page inventory (App Screens):** Dashboard (1:3) = 11 Button instances, 0 hand-built ✓already done. Account Mgmt (1:10) = 7 instances, 0 hand-built ✓. Transactions (1:4) = 0 instances + 0 rect-based hand-built BUT uses **frame-based hand-built buttons** the rect-scan misses (needs frame-based detection). Auth/Public (1:12) had 2 hand-built blue "Track" buttons (rects 81:342/81:394) → **CONVERTED this session** to real Button instances (386:266 Empty State, 386:281 Not Found; Variant='with icon' Size=default, label 'Track'; baked icon ≠ search = accepted gap). Finance (1:9) = session-11 pilot. **Not yet scanned:** App Shell 1:2, Ops 1:6, Claims 1:7, Analytics 1:8, System 1:11, Role Variants 1:13.
+- **Rollout scope reality:** smaller than feared — many pages already use instances. Remaining = find frame-based + rect-based hand-built buttons on unscanned pages and convert. Build a frame-based detector (FRAME with radius+fill+single short TEXT child, not already an instance).
+
+**STILL NOT STARTED:** Select/Search/Badge instance rollout; text-style rollout (apply DS text styles — check if text styles even exist in DS file first via `getLocalTextStylesAsync`). Both large/multi-page.
+
+**Context note:** session 12 hit handoff threshold after overflow fixes + component move + Button rollout start. Resume the rollouts (Button continuation, Select/Search/Badge, text styles) in a fresh session.
 
 ---
 
