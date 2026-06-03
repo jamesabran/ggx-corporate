@@ -5,6 +5,29 @@
 
 ---
 
+## Session 11 (2026-06-03) — Button variants fix + instance pilot
+
+**Trigger:** user thought the icon-LEFT Button variant was deleted when the trailing-icon variant was added, and noticed app-page buttons are frames not component instances.
+
+**Findings (GGX SHADCN `Buttons` set `73:3681`, published, key `b1a89b48b296e05273d73881b300b9defc890295`):**
+- The icon-left **`with icon`** variant is intact and correct (icon as first child = left). Nothing was lost.
+- The real mistake: **duplicate icon-right variants** — `with trailing icon` (4 states but broken **20px** height) AND `trailing icon` (2 states, correct **32px**).
+- **Fix applied (per user):** kept `trailing icon` (32px), back-filled its **disabled** (opacity 0.5) + **focus** (ring effects copied from `with icon` focus) states → now 4 states; **deleted** the four `with trailing icon` variants. `Variant` options now: …with icon, trailing icon (no "with trailing icon").
+- ⚠ `Buttons` is a published library component — **user must click Publish in the Assets panel** for these edits (and the variant deletion) to propagate to other files.
+
+**Variant-model limitations discovered (matter for any rollout):**
+- No **primary + icon** combo: `with icon`/`trailing icon` are white/outline-styled; `default` (blue) has no icon. → primary+icon needs per-instance overrides (fill→blue, text→white, swap nested icon) OR a component extension (icon as a boolean/INSTANCE_SWAP prop combinable with color variants).
+- **Sizes** (sm/lg) exist only on the `default` variant; outline/with-icon/etc. are default size only.
+- Icon in with-icon/trailing-icon is a fixed `remix/git-branch` (no instance-swap prop) → swapping requires reaching into the nested instance.
+
+**Pilot (Finance page `1:9`) — converted hand-built frame-buttons → real `Buttons` instances:**
+- Earnings frame `78:221`: Download Report (with-icon + fill→blue + white text + nested icon swapped to `tabler/download` — demonstrates the primary+icon workaround), Manage Bank Account (outline), Previous (outline/disabled), Next (outline).
+- Pay Now modal `78:447`: Cancel (outline), Confirm Payment (default/blue) — clean text-only overrides.
+- Mechanics: `importComponentSetByKeyAsync(key)` → `set.defaultVariant.createInstance()` → `inst.setProperties({Variant,Size,State})` → override label text (load font via getStyledTextSegments) → insert at old frame's parent/index → remove old frame.
+- **PAUSED for user review before rolling out to the rest of Finance / all pages.** Open decision: roll out with per-instance overrides for primary+icon buttons, OR extend the Button component first (recommended) so icon is a combinable property.
+
+---
+
 ## Session 10 (2026-06-03) — Icons + Payment component + Gap Log
 
 - **Emoji → real Tabler icons:** swapped ~115 colorful-emoji placeholders across all 15 pages for live `tabler/*` instances imported from the **GGX SHADCN** library by component key, recolored to each context. Engine: scan TEXT nodes, match whole-node single colorful emoji → `importComponentByKeyAsync(key).createInstance()` → resize to fontSize → recolor (set strokes+fills on vector children) → insert at the text node's index (auto-layout) or its x/y (absolute) → remove text. Plain glyphs (`✓ ! ↓ × ▾ → ⤴ ★`) intentionally left (render fine, not emoji). Key map (emoji→tabler) and component keys are inlined in the swap scripts (harvested from sidebar instances + `search_design_system`).
