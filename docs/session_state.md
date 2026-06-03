@@ -5,6 +5,25 @@
 
 ---
 
+## Session 16 (2026-06-03) — OPERATIONS group structural rebuilds (nested auto-layout)
+
+**Mode:** continue per-screen structural rebuilds (code-DOM-based nested auto-layout + DS instances), code = source of truth. App Screens file `ceL7WwBQpaLl66Y7sUcgPR`. User directive: work continuously through the whole OPERATIONS group (Claims → SLA Alerts → Ops Requests → Support Tickets → Service Advisories), commit each, report at end.
+
+**Reusable findings this session:**
+- **Badge set** `a09ae1f46ae283be55ad8fff2897c7cd753be5aa` — props `Variant` (default/destructive/outline/secondary/success/info/warning/danger/pending) + `Display` (text/icon/number). Instances named **"Badge"**. After `setProperties` the inner TEXT node ref is invalidated → **re-find the TEXT after setProperties** before editing characters. Set inner TEXT `textAutoResize='WIDTH_AND_HEIGHT'` + instance HUG so labels don't wrap.
+- **Button set** `b1a89b48b296e05273d73881b300b9defc890295` — props `Variant`/`Size`/`State`; most variants exist **only at Size=default** (e.g. ghost). Instances named **"Buttons"**. The **`default` (primary) variant is a SPLIT button**: a label "Button" frame + a baked **arrow-right-up** "Button" frame, both backgrounds bound to a `color` variable that **resolves WHITE in App Screens** → white label invisible. **Primary-button fix (reuse everywhere):** `inst.findAll(n=>n.name==='Button' && n.type==='FRAME')` → for the frame containing an `arrow` node set `visible=false`; for the other set `fills=[blue-600]`; set label TEXT fill white. Ghost/outline render fine (just set label TEXT fill dark `#111827`).
+
+**DONE — Claims page (`420:68`) — ALL 4 FRAMES rebuilt to nested auto-layout (replaced old flat/absolute):**
+- **List (`549:2`, replaced `75:271`)** — shell (V p24 gap24 bg gray-50) → Header (title group [H1 + amber "4 in progress." subtitle] ⇄ toolbar [SearchInput 300 + All subaccounts/All statuses selects 160]) → **blue Info card** (the old frame omitted this) → Card [CardHeader "Claims" + desc; Table: thead (Claim ID/Tracking/Reason FILL/Amount right/Status/Filed/Subaccount — **code column order**, old frame had reordered cols) + **8 real rows** CLM-1008→1001 with **Badge status instances** pending/info/success/danger]. Verified.
+- **Detail — In Review (`558:222`, replaced `75:360`)** = CLM-1006. Full `ClaimDetail.tsx` rebuild: Back ghost Button → Header (H1 + Filed date + info Badge) → 3-col Grid [LeftCol FILL / RightCol fixed 364]. Left: Claim Summary card (2-col field grid + Status Badge + divider + Reason + Details), Linked Transaction card (📦 icon box + tracking + danger "Failed" Badge + recipient·dest + type·booked + View link), **Need Help blue card** (the old frames omitted this — has "Open Support Ticket" primary Button). Right: Claim Status timeline (4 steps: dot rail with green-check done / blue-active / gray pending + colored connectors) + gray disclaimer.
+- **Detail — Settled (`565:30`, replaced `148:16`)** = CLM-1003. Cloned In Review; text+badge swaps (success "Settled"); right col rebuilt: timeline all-done + Settled active, **emerald "Refund Issued ₱15,600" card**, disclaimer.
+- **Detail — Denied (`565:127`, replaced `75:418`)** = CLM-1002. Cloned In Review; text+badge swaps (danger "Denied"); right col rebuilt: Claim Status card containing **red "Claim Denied" box** (no timeline, no refund — matches current code; **old frame used an outdated full-width-banner + Contact Support layout, now replaced**), disclaimer.
+- All verified via screenshots. Accepted gaps: emoji/glyph placeholders (🔍 ⌄ ⓘ 📦 💬 ✓ ⚠ ←); selects/inputs hand-built (no published Select/Input component). **✅ CLAIMS PAGE STRUCTURALLY COMPLETE.**
+
+**NEXT:** SLA Alerts (`420:69`) → Operations Requests (`419:238`) → Support Tickets (`420:70`) → Service Advisories (`420:71`).
+
+---
+
 ## Session 15 (2026-06-03) — Transactions page structural rebuild (nested auto-layout)
 
 **Mode:** continue Session-14 per-screen structural rebuilds (code-DOM-based nested auto-layout + DS instances), code = source of truth. App Screens file `ceL7WwBQpaLl66Y7sUcgPR`, Transactions page `419:236`.
