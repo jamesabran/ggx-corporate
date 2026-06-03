@@ -19,9 +19,10 @@
 
 **Coverage note:** broadly sampled the most complex frame on every page group — all faithful, confirming the S9 reconciliation survived the S13 page reorg cleanly (frame moves preserve content). Frames NOT individually re-screenshotted this session but trusted as intact from S9: Transaction Detail variants beyond default, Reports, Billing Statements, Payment Settings, Address Book, Users & Permissions, Settings, Notifications, Role-Variant notification panels, and the various detail/dialog/empty-state frames in each group.
 
+- **SHARED COMPONENTS / PATTERNS page (`407:2`) — POPULATED.** Built board `452:2` (vertical auto-layout): header + source-of-truth note (GGX-SHADCN `9zwtAL4RU3Y8WVRJAsSulX`); **live Buttons instances** (set key `b1a89b48b296e05273d73881b300b9defc890295` — default/secondary/outline/ghost/destructive/link/with-icon/trailing-icon at Size=default); **live Badge instances** (set key `a09ae1f46ae283be55ad8fff2897c7cd753be5aa` — default/secondary/info/success/warning/danger/pending/outline, set to HUG so labels don't wrap); and an **index card** documenting the other shared components (StatCard, SearchInput, SegmentedControl, AddressDisplayCard, IconContainer, PaymentMethodTabs[publish pending], Tabler icon set). Note: with-icon/trailing-icon button variants render the published baked git-branch icon + "New Branch" label (accurate to the DS component as-published; instance-swap/relabel deferred per S11/S12). Finding: most "shared components" in App Screens frames are hand-built replicas — only Buttons, Badge, and tabler/* icons are real published-component instances.
+
 **NEXT (remaining real work):**
-1. Populate the empty `SHARED COMPONENTS / PATTERNS` page (`407:2`) — showcase/link the published GGX-SHADCN components (S13 TODO).
-2. Optional: if a stricter visual bar is wanted, re-screenshot the trusted frames above one-by-one and apply auto-layout / component-instance upgrades (the deep S13 standard) rather than the current hand-built absolute frames.
+1. Optional: if a stricter visual bar is wanted, re-screenshot the trusted frames above one-by-one and apply auto-layout / component-instance upgrades (the deep S13 standard) rather than the current hand-built absolute frames.
 3. Carryover rollouts (Button/Select/Badge instances, text styles) + user publish of `PaymentMethodTabs / Cash`.
 
 ---
