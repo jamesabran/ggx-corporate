@@ -20,7 +20,12 @@
 - **Detail — Denied (`565:127`, replaced `75:418`)** = CLM-1002. Cloned In Review; text+badge swaps (danger "Denied"); right col rebuilt: Claim Status card containing **red "Claim Denied" box** (no timeline, no refund — matches current code; **old frame used an outdated full-width-banner + Contact Support layout, now replaced**), disclaimer.
 - All verified via screenshots. Accepted gaps: emoji/glyph placeholders (🔍 ⌄ ⓘ 📦 💬 ✓ ⚠ ←); selects/inputs hand-built (no published Select/Input component). **✅ CLAIMS PAGE STRUCTURALLY COMPLETE.**
 
-**NEXT:** SLA Alerts (`420:69`) → Operations Requests (`419:238`) → Support Tickets (`420:70`) → Service Advisories (`420:71`).
+**DONE — SLA Alerts page (`420:69`) — BOTH FRAMES rebuilt to nested auto-layout:**
+- **List (`574:54`, replaced `75:449`)** — shell → Header (title + sub ⇄ Search 300 + All subaccounts/All alert types selects) → **3 StatCards** row (No Movement 2 amber / Breach SLA 2 red / Action Needed 2, each colored value + soft icon box) → Alert List: **4 real alert cards** (SLA-2001..2004) each = type IconContainer (red ⛔ / amber ⏱) + content [title + **dual Badge instances** (type warning/danger + status danger "Action needed"/pending "Monitoring") + detail + meta row (tracking link › + 🏬 hub + · account + · time) + optional **follow-up note pill** (blue-50) on 2002/2004] + CTA col [**outline "Follow-up" + ghost "Resolve" Button instances**]. Verified.
+- **Empty State (`578:86`, replaced `141:16`)** — cloned List, zeroed StatCards (0/0/0), replaced alert list with centered empty Card (✓ gray + "No SLA alerts" + "No alerts match the current filter."). Verified.
+- **✅ SLA ALERTS PAGE STRUCTURALLY COMPLETE.** Accepted gaps: emoji glyph placeholders; selects/inputs hand-built; outline/ghost buttons lack leading icons (no icon slot).
+
+**NEXT:** Operations Requests (`419:238`) → Support Tickets (`420:70`) → Service Advisories (`420:71`).
 
 ---
 
