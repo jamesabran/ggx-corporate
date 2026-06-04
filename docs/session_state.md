@@ -28,11 +28,15 @@
 
 **DONE — Address Book (`423:143`) — ✅ ALL 3 frames:** List (`696:357`, DS **Search Input** + **Select** in toolbar + 3 address cards w/ label Badges), Add-Edit Form (`698:45`, DS Select/Input/Textarea throughout — Label/Province/City/Barangay Selects, Name/Mobile Inputs, Other Details Textarea), Empty State (`700:53`). Old `80:20`/`133:46`/`138:46` replaced.
 
-**⏳ REMAINING this group (resume here, same standard, use DS form instances):**
-- **API Integration (`425:9`) — 2 frames:** Main (`81:221`), Modal — Regenerate Key Confirm (`81:280`). Source `APIAccess.tsx`.
-- **Users & Permissions (`423:144`) — 3 frames:** List (`79:331`), Dialog — Invite Team Member (`80:168` — Input/Select), Dialog — Edit Permissions (`135:46` — Select/checkboxes). Source `UsersPermissions.tsx`.
-- Then **SYSTEM** group: Notifications (`424:2`), Settings (`424:3`), Role & Account Variants (`1:13`).
-- **THEN the retrofit pass** over done pages (swap hand-built selects/search/inputs → DS instances).
+**DONE — API Integration (`425:9`) — ✅ BOTH frames:** Main (`701:239`, DS **Input** for API Key + Webhook URL, toggle, Test badge, checkboxes, doc/environment/quick-stats/webhook/security cards), Modal — Regenerate Key Confirm (`706:20`). Old `81:221`/`81:280` replaced.
+
+**DONE — Users & Permissions (`423:144`) — ✅ ALL 3 frames:** List (`707:255`, DS **Search Input** + 2 stat cards + 4-col table w/ Admin/Manager Badges + avatar initials + Edit/Remove pills), Invite Team Member dialog (`710:38`, DS **Input** Name/Email + subaccount checklist w/ capacity/Full states), Edit Permissions dialog (`711:20`, DS Input Name + **disabled-state** Input email + selected-sub checklist). Old `79:331`/`80:168`/`135:46` replaced.
+
+**✅ ENTIRE ACCOUNT MANAGEMENT GROUP STRUCTURALLY COMPLETE** (18 frames: Subaccounts 10, Address Book 3, API Integration 2, Users & Permissions 3). Verified page counts + Cover = 0 children. All form fields use real GGX-SHADCN Select/Search Input/Input/Textarea instances.
+
+**⏳ REMAINING:**
+- **SYSTEM** group: Notifications (`424:2`), Settings (`424:3`), Role & Account Variants (`1:13`). Use DS form instances.
+- **THEN the retrofit pass** over done pages (Operations/Analytics/Reports/Finance) — swap hand-built selects/search/inputs → DS instances (Select `dc8a2f4d…`, Input `03367de…`, Search Input `bb6d8f2e…`, Textarea `f3ae25ca…`).
 
 **Staging note:** new frames built at y=2000 (clear), then old frame deleted and new moved to old x/y. Per-build `setCurrentPageAsync` honored. Reuse Badge/Button helpers + primary-button white-label fix + StatCard/vibrant-KPI patterns + clipsContent=false on FILL cells.
 
