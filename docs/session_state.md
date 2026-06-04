@@ -5,6 +5,38 @@
 
 ---
 
+## Session 18 (2026-06-04) — FINANCE group structural rebuilds (nested auto-layout)
+
+**Mode:** continue per-screen structural rebuilds (code-DOM-based nested auto-layout + DS instances), code = source of truth. App Screens file `ceL7WwBQpaLl66Y7sUcgPR`. Worked the FINANCE group (Earnings → Billing Statements → Payment Settings). High-level permission granted by user up front (no per-action prompts). Reused Badge set `a09ae1f46ae283be55ad8fff2897c7cd753be5aa` + Button set `b1a89b48b296e05273d73881b300b9defc890295` + primary-button white-label fix + StatCard pattern + **setCurrentPageAsync-per-build-call rule** + **clipsContent=false on FILL table/text cells** (carried from S17).
+
+**Page IDs:** Earnings `422:71`, Billing Statements `422:72`, Payment Settings `422:73`.
+
+**DONE — Earnings page (`422:71`) — BOTH FRAMES rebuilt (replaced old flat `78:221` + `94:231`):**
+- **Earnings / Main (`652:22`, replaced `78:221`)** — `Earnings.tsx` main-account view: shell → Header (H1 + subtitle ⇄ **primary "⤓ Download Report" Button**) → **4 vibrant full-color KPI cards** (Available for Payout ₱472,875 green / Pending Collection ₱98,450 orange / Scheduled for Deposit ₱472,875 blue / Remitted This Month ₱1,386,812 purple — each colored-100 bg + colored-600 white-glyph icon box, hardcoded values per code) → **Primary Bank Account card** (blue-50/blue-200; BDO Unibank + Verified **success Badge** + masked acct + Acme Corporation ⇄ **outline "Manage Bank Account" Button**) → **Settlement History card** (CardHeader title ⇄ 3 selects + date input; 9-col table — Settlement ID blue / Subaccount / Source **Badge** / Collection Period FILL / Gross / Fees / Net green / Status **Badge** / Expected Deposit; **5 real `SETTLEMENTS` rows** SET-2026-05-003→04-005 w/ source info/default + status warning/success/info; footer "Showing 5 of 24 settlements" + Previous(disabled)/Next **outline Buttons**). Source column widened to 120 so "Online Payment" badge doesn't clip.
+- **Earnings / Settlement Detail (`658:52`, replaced `94:231`)** = SET-2026-05-003. `EarningsSettlementDetail.tsx`: breadcrumb (Earnings › id) → Back ghost Button → Header (H1 "Settlement SET-2026-05-003" + "May 13–18, 2026 · COD · Acme Corporation" ⇄ Scheduled **warning Badge**) → 3 summary cards (Gross ₱487,500 / Total Fees (3%) -₱14,625 / **Net Payout ₱472,875** green-50/green-200) → Transactions card (7-col table, 4 tx rows w/ blue tracking links + right-aligned COD/Fees/Net + Delivered/Failed **Badges**; right-aligned totals row Total COD ₱13,850 / Total Fees -₱415.50 / Total Net ₱13,434.50 [tx-subset sums, not settlement gross — matches code]; mock-data caption).
+- **✅ EARNINGS PAGE STRUCTURALLY COMPLETE.**
+
+**DONE — Billing Statements page (`422:72`) — BOTH FRAMES rebuilt (replaced old flat `78:317` + `78:447`):**
+- **Billing Statement / List (`662:21`, replaced `78:317`)** — `BillingStatement.tsx` main view: Header → **4 StatCards** (Current Balance ₱2,418,000 blue 💲 / Due This Month ₱2,418,000 orange 📅 / Overdue ₱0 red ⚠ / Last Payment ₱2,062,500 emerald ✓) → **Payment Method on File card** (blue-50; 💳 + Visa •••• 4242 + auto-pay note ⇄ outline "Manage Payment") → **Invoice History card** (3 filter selects; 8-col table — Invoice ID / Subaccount / Period / Deliveries / Amount / Due Date / Status **Badge** / Actions; **6 real invoice rows** INV-2026-05→2025-12; row 1 pending → **primary "Pay Now" Button** + ⤓ Download ghost, rows 2–6 paid → Download ghost) → bottom 2-col [**Payment Method card** (VISA gradient chip + •••• 4242 + Expires 12/2027 + Primary **success Badge**; full-width outline "Update Payment Method") / **Billing Contact card** (Company/Email/Address fields; full-width outline "Update Billing Info")]. Fixed StatCard sub-label clipping by setting sub text FILL + wrap (4-col cards are narrow).
+- **Billing / Modal — Confirm Pay Now (`667:55`, replaced `78:447`)** — 440-wide dialog (drop-shadow): header "Confirm Payment" + ✕; body "You are about to pay **₱2,418,000** for invoice **INV-2026-05** (May 2026) using the Visa card on file." (bold ranges); footer [Cancel **outline** + Confirm Payment **primary** Buttons].
+- **✅ BILLING STATEMENTS PAGE STRUCTURALLY COMPLETE.**
+
+**DONE — Payment Settings page (`422:73`) — rebuilt (replaced old flat `78:405`):**
+- **Payment Settings / Methods & Preferences (`670:32`)** — `PaymentSettings.tsx` admin/main-account view (financialAccessAllowed=true): Header → blue **security note** (🔒 + OTP-required copy) → **Payment Methods** section (h2 + sub; 4-col grid: Visa •••• 4242 **default** [blue-300 border + blue-50 bg + gradient icon, Default info + Verified success **Badges**, Edit/Remove], Mastercard •••• 8888 [Verified, Set Default/Edit/Remove], **Add Payment Method** dashed card; + **Auto-Pay (Coming Soon)** gray card max-w-xl) → **Payout Bank Accounts** section (border-top; h2 + sub; 4-col grid: BDO Unibank **primary** [green-300 border + green-50 bg + green icon, Primary info + Verified success, Edit/Remove], BPI [Pending warning, Set Primary/Edit/Remove], **Add Bank Account** dashed; + **Payout info** blue card w/ 2 ✓ rows [Payout Schedule, Bank Account Verification]).
+- **Decision:** the micro action controls (Set Default / Set Primary / Edit / Remove, code `h-7`) were **hand-built as compact pills** (outline = bordered gray, ghost = plain gray-700, Remove = red-600) rather than DS Button instances — the Button component only offers ghost/outline at Size=default (too tall for these), and per-card instance counts would balloon. Status **Badges remain real instances**. Logged as an accepted gap consistent with hand-built selects/inputs.
+- Modals (Edit / Add method / Add bank / Remove confirm / OTP) are not separate Figma frames (page has 1 coded frame) — not built.
+- **✅ PAYMENT SETTINGS PAGE STRUCTURALLY COMPLETE.**
+
+**Verification:** Earnings holds its 2 frames, Billing its 2, Payment Settings its 1; **Cover page = 0 children** (no leak). All frames verified via screenshots.
+
+**Accepted gaps (Finance group):** emoji/glyph placeholders (⤓ ✓ ⚠ 🏢 💲 📅 💳 🔒 🛡 ＋ ⌄ 📅 ›); selects/inputs/date-inputs hand-built; tables, StatCards, vibrant KPI cards, VISA gradient chip, dashed Add cards, and Payment-Settings micro action pills are clean auto-layout (only Badge + primary/outline/ghost CTA Buttons are real GGX-SHADCN instances); emoji icons inside gradient/colored icon boxes render faint.
+
+**✅ ENTIRE FINANCE GROUP STRUCTURALLY COMPLETE.**
+
+**NEXT (resume next session, same standard, down sidebar IA):** **ACCOUNT MANAGEMENT** group — Subaccounts (`423:142`), Address Book (`423:143`), API Integration (`425:9`), Users & Permissions (`423:144`). Then SYSTEM (Notifications `424:2`, Settings `424:3`, Role & Account Variants `1:13`). Reuse Badge/Button helpers + primary-button white-label fix + StatCard pattern + vibrant-KPI pattern + arcData donut/pie + Vector line + hand-built compact pills + **setCurrentPageAsync-per-build-call rule** + **clipsContent=false on FILL table/text cells**.
+
+---
+
 ## Session 17 (2026-06-04) — ANALYTICS & REPORTS group structural rebuilds (nested auto-layout)
 
 **Mode:** continue per-screen structural rebuilds (code-DOM-based nested auto-layout + DS instances), code = source of truth. App Screens file `ceL7WwBQpaLl66Y7sUcgPR`. Worked down the sidebar IA from OPERATIONS into the ANALYTICS & REPORTS group. Reused Badge set `a09ae1f46ae283be55ad8fff2897c7cd753be5aa` + Button set `b1a89b48b296e05273d73881b300b9defc890295` + primary-button white-label fix + **setCurrentPageAsync-per-build-call rule** (no Cover leak this session — verified Cover = 0 children at end).
