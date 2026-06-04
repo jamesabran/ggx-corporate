@@ -5,6 +5,20 @@
 
 ---
 
+## Session 22 (2026-06-05) — Emoji → Tabler icons (all standalone glyphs, all pages)
+
+**DONE — replaced ~426 standalone text-emoji glyphs with real Tabler vector icon instances across ALL 22 pages** (icon containers, sidebar nav [84], dashboard [61], list/row icons, empty states, stat icons, breadcrumb separators, etc.). Verified Notifications + sidebar (all 4 role variants) — crisp colored vectors, no regression.
+- **Discovery:** 58 Tabler icon component keys harvested from DS "Tabler Icons" page (`642:97`, 4963 icons) for the needed glyphs. Built **emoji→tablerKey map (59 entries)** stored in file shared plugin data (`figma.root.getSharedPluginData("ggx","tablerMap")`).
+- **Method (per page):** walk TEXT nodes; if the **whole** trimmed text (variation-selectors stripped) is a single mapped emoji AND the node is **not inside an INSTANCE** → import the Tabler COMPONENT (cached), `createInstance`, `resize(fontSize²)`, recolor (set strokes + any existing fills to the text's color), `insertChild(idx)`, remove the text. Whole-glyph-only match avoids touching "+63…" phones, "GGX… →" links, etc.
+- Color map (S21) + Tabler map both live in shared plugin data for reuse.
+
+**⚠️ TWO ITEMS NEED COMPONENT WORK (couldn't complete cleanly — flagged for decision):**
+1. **Button-label emojis** (e.g. "＋ Generate Report", "⤓ Download", "↻ Generate New Key", "📋" copy) — these live **inside Button instances**; Figma doesn't allow inserting icon nodes into an instance, so a real leading Tabler icon requires the **GGX Button component to expose a swappable icon slot** (its current "with icon" variant has a baked git-branch icon, no instance-swap). Options: (a) extend the Button component with an INSTANCE_SWAP icon prop (recommended), then switch button instances to it + swap icon; (b) strip the emoji to text-only buttons. Left as-is pending decision.
+2. **Checkbox instance swap** — the published Checkbox (`f56f1a6d…`) is a **box+label composition with `Variant`=Default/Subtext/Disabled and NO checked state**. My App-Screens checkboxes are atomic `[box + separate label]` rows, mostly **checked**. Swapping would double the label and lose the checked state. Needs a **box-only primitive variant + a `Checked` state** added to the DS Checkbox before a clean swap. (Boxes already look correct after S20b squish-fix + S21 color-binding.)
+- Also remaining: inline emojis embedded mid-text (e.g. "📅 Effective: …", "📍 area") weren't replaced (would require splitting the text node); minor.
+
+---
+
 ## Session 21 (2026-06-05) — Color variable binding (all pages)
 
 **DONE — bound fills + strokes to `tw/colors` variables across ALL 22 pages (~5,660 fills + ~540 strokes ≈ 6,200 bindings).** Zero visual regression (verified Settings + Analytics) — binding snaps my hand-coded RGB approximations to the exact tailwind values (imperceptible) and links them to DS variables.
