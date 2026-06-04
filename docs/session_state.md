@@ -5,6 +5,19 @@
 
 ---
 
+## Session 21 (2026-06-05) — Color variable binding (all pages)
+
+**DONE — bound fills + strokes to `tw/colors` variables across ALL 22 pages (~5,660 fills + ~540 strokes ≈ 6,200 bindings).** Zero visual regression (verified Settings + Analytics) — binding snaps my hand-coded RGB approximations to the exact tailwind values (imperceptible) and links them to DS variables.
+- **Method:** read `tw/colors` (243 vars, named by tailwind shade e.g. `gray/600`, `blue/600`) → built **hex→variableKey map (116 entries)** stored in file shared plugin data (`figma.root.getSharedPluginData("ggx","colorMap")`) so per-page scripts stay compact. Per page: walk all nodes, for each SOLID fill/stroke find **nearest** palette color (euclidean RGB, threshold dist²≤0.0036 ≈ 0.06) → `importVariableByKeyAsync` (cached) → `setBoundVariableForPaint(paint,'color',v)` → reassign array. Skips gradients/images + already-bound paints. Threshold means an unmatched custom color stays unbound (no wrong bindings).
+- Per-page counts (fills): Dashboard 514, Transactions 522, BulkUpload 563, Ops 530, Subaccounts 421, Analytics 430, App Shell 313, Claims 368, Support 359, Earnings 224, Billing 163, Reports 157, SLA 145, Auth 143, Users 142, Notifications 126, PaymentSettings 123, AddressBook 107, API 107, Advisories 79, Settings 70, RoleVariants 58.
+
+**⏳ STILL REMAINING (deferred — lower priority/visually invisible):**
+- **Spacing/radius/gap variable binding** — `tw/border-radius`, `tw/space`/`tw/gap`, `tw/padding` are **aliased FLOAT vars** (rounded-sm/md/lg…, space-x/y-N) that need multi-level alias resolution to get px, then match my paddings/gaps/cornerRadii. Fiddlier + invisible; deferred. (cornerRadius→border-radius, paddingX/Y+itemSpacing→padding/gap.)
+- Icon Container conversion + emoji→Tabler (needs DS component color extension + publish — see S20c roadmap).
+- Checkbox instance swap (needs publish of merged Checkbox set `f56f1a6d…`).
+
+---
+
 ## Session 20c (2026-06-04) — Checkbox fix (existing component) + icon-container/emoji roadmap
 
 **Corrected course on checkbox** (user feedback): I wrongly created a duplicate "Checkbox (Atomic)" page in S20b — **deleted it**. The canonical Checkbox lives on the existing **Checkbox page (`72:2723`)**. Findings + fixes:
