@@ -5,6 +5,22 @@
 
 ---
 
+## Session 20c (2026-06-04) — Checkbox fix (existing component) + icon-container/emoji roadmap
+
+**Corrected course on checkbox** (user feedback): I wrongly created a duplicate "Checkbox (Atomic)" page in S20b — **deleted it**. The canonical Checkbox lives on the existing **Checkbox page (`72:2723`)**. Findings + fixes:
+- **Shape regression fixed:** the checkbox **Box was `cornerRadius:8` on a 16×16 frame = a full circle** (regressed during an earlier audit). shadcn checkbox is `rounded-[4px]`. Set `cornerRadius=4` on all 7 checkbox boxes (Default/Subtext/Disabled + Checkbox_card variants).
+- **Variant structure fixed:** Default/Subtext/Disabled were **3 separate COMPONENTs** → combined into **one variant set "Checkbox"** (new set key **`f56f1a6d5bea2580b306770386d5e7d619bcfb47`**, property `Variant` = Default/Subtext/Disabled). Box+label compositions retained per user choice (not box-only). `Checkbox_card` set left as-is.
+- shadcn checkbox reference: primitive = box+check only (16px, rounded-4, border-input, checked = bg-primary + Check icon); label is a separate `<Label>`. The DS "Variant=Default/Subtext" bundle a label as convenience.
+- **⚠️ USER ACTION: publish the updated Checkbox set** (key `f56f1a6d…`) so App-Screens hand-built checkboxes can be swapped to instances. (S20b atomic-checkbox key `3bbe41e8…` is now defunct — its page was deleted.)
+
+**🗺️ ROADMAP — remaining DS-adoption passes (timeline after publish steps):**
+1. **Color/spacing/radius VARIABLE binding** across all nodes (the big mechanical pass not yet started): fills/strokes → `tokens`/`tw/colors`; padding/gap/space → `tw/*`; corner-radius → `tw/border-radius`. See `reference_ggx_shadcn_full_inventory.md`.
+2. **Icon Container conversion** — convert the dozens of hand-built colored icon squares → instances of the existing **Icon Container** set (`3166:277`, Size sm28/md32/lg40/xl44 × Color Blue/Emerald/Amber/Red/Orange/Violet/Gray, swappable Tabler icon inside). **BLOCKER/extension needed:** the fixed Color property is too limiting — several existing icon boxes use colors NOT in that set (Indigo, Purple, green-700, and the vibrant **white-icon-on-solid-600** treatment in Earnings/Dashboard KPIs). Must **extend Icon Container** (add Indigo/Purple + a solid/filled treatment) before/in conversion, then re-publish.
+3. **Emoji → Tabler audit (file-wide):** many glyphs that should be Tabler vector icons are still **text emoji placeholders** (📦 🏢 💳 🔒 👤 🛡 ✓ ⚠ 📅 🔍 ⤓ etc.). Replace with real Tabler icon instances (DS has tabler/* component keys; see S10 key map in older session notes). Pair this with the Icon Container conversion (the icon inside each container becomes a real Tabler instance).
+4. **Checkbox instance swap** in App Screens (after publish): API webhook events, Users dialogs, Settings, Address Book.
+
+---
+
 ## Session 20b (2026-06-04) — Squish-fix + Add Payment Method modal + atomic Checkbox
 
 **User punch-list (post-/btw):** keep demo components as-is; fix squished icon containers/avatars/checkboxes; add missing Add Payment Method modal; make checkboxes a real component.
