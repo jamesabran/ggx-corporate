@@ -5,6 +5,39 @@
 
 ---
 
+## Session 19 (2026-06-04) — DS form-component discovery + ACCOUNT MANAGEMENT group (in progress)
+
+**Mode:** continue per-screen structural rebuilds, code = source of truth. App Screens file `ceL7WwBQpaLl66Y7sUcgPR`. **User directive this session:** the hand-built selects/search/inputs on done pages are wrong — these MUST be real GGX-SHADCN component instances. Verified and corrected.
+
+**🔑 MAJOR FINDING — GGX-SHADCN DOES publish a full shadcn form-component set (prior "no published Select/Input" notes were WRONG).** Discovered by listing the DS file (`9zwtAL4RU3Y8WVRJAsSulX`) directly. Importable component-set keys (each: single `State` variant prop + one overridable TEXT node). **Saved to memory `reference_ggx_shadcn_form_components.md`:**
+- **Input** `03367deef9fc99ca2dbfbd1f1ba82e195d249896` (320×36, text "Email")
+- **Select** `dc8a2f4d37f2369dac3d70fc6e54bfa46ba9fce9` (180×36, text "Select a fruit", has chevron)
+- **Search Input** `bb6d8f2e53e592ebc36d9103e997ff9ef03a7d7a` (280×40, text "Search...")
+- **Textarea** `f3ae25cac452a64163c997c568bfb8aec9adca70` (has resize handle)
+- Native Select `561a136688d8d952548943b34b1fbe4d5583f61e`, Combobox `c68c579d7dd454e65a4a57282236ea2f0b6c3dc3`
+- GGX library key: `lk-5db94320da25cdb7816fd44ce253fd142cdee013a4607bf8d1ac14951e3a984d1a779f1953835fb500a678731caf990a1b09f2c6d3fe7138819718b994c4d925`
+- **Recipe:** `set=await importComponentSetByKeyAsync(key)` → `inst=set.defaultVariant.createInstance()` → override single TEXT (`inst.findOne(n=>n.type==='TEXT')`, load its font, set characters — do NOT change textAutoResize, component manages it) → append to parent → `inst.layoutSizingHorizontal="FILL"`. Verified: Input/Select/Textarea render with correct placeholder styling + chevrons + resize handle.
+
+**USER DECISION:** build Account Management + System now with real DS form instances; then do **ONE dedicated retrofit pass** over the done pages (Operations/Analytics/Reports/Finance, ~30+ hand-built selects/search/inputs) at the very end. Do NOT retrofit mid-walk.
+
+**DONE — Subaccounts page (`423:142`) — 4 of 10 frames rebuilt to nested auto-layout:**
+- **Active List (`679:103`, replaced `79:244`)** — header (H1 + sub ⇄ **primary "＋ Request Additional Subaccount" Button**) + 3 subaccount cards (Acme Corporation default/active 5,234 / Acme Luzon additional 3,708 / Acme Visayas additional 1,842 — real `accounts.mock.ts` + `users.ts` data; each card = 🏢 icon + name + info/success **Badges** + 4-col details [Primary/Backup Manager slots w/ gradient-avatar initials or Vacant, Pickup Address (truncates per code), Total Bookings] + **outline View Dashboard / Settings Buttons**). Managers: Corp→Mike Johnson; Luzon→Mike Johnson+Sarah Williams; Visayas→both Vacant.
+- **Not Enabled (`683:105`, replaced `79:221`)** — centered onboarding: 🔒 hero + H1 "Subaccounts are not enabled yet" + feature card (3 rows) + **primary "Enable Subaccounts" Button**.
+- **Request Additional — Form (`684:183`, replaced `93:249`)** — full `RequestSubAccount.tsx` form using **REAL DS instances**: Business Information card (Name **Input** / Type **Select** / Business Address **Input** / Pickup **Input** / Billing **Input**), Operational Details card (Volume **Select** / Start Date **Input** / Manager **Input** / Role **Input**), Additional Information card (Notes **Textarea**, resized to 120h), Cancel **outline** + Submit Request **primary** Buttons. ✅ This frame is the reference example for the DS-form-component standard.
+- **Request Additional — Success (`686:116`, replaced `93:297`)** — centered ✓ green hero + Prototype Note blue box + 2 ✓ rows (Subaccount Created "Acme Mindanao" / Manager Assigned "Carlos Reyes" — illustrative demo values) + View All Subaccounts outline / Go to Dashboard primary.
+
+**⏳ REMAINING this group (resume here, same standard, use DS form instances):**
+- **Subaccounts (`423:142`) — 6 frames left:** Enable Flow — Intro (`79:296`), Enable Setup — Confirm Account Structure (`93:323`), Enable Setup — Success (`93:361`), Subaccount Settings / Main (`117:46`), Subaccount Settings / Edit Managers (`120:46`), Subaccount Settings / Not Found (`120:70`). Sources: enable-flow route component (find it), `SubAccountSettings.tsx`. Settings/Edit Managers use **Select** for manager assignment.
+- **Address Book (`423:143`) — 3 frames:** List (`80:20`), Add-Edit Form (`133:46` — Inputs/Select), Empty State (`138:46`). Source `AddressBookPage.tsx`.
+- **API Integration (`425:9`) — 2 frames:** Main (`81:221`), Modal — Regenerate Key Confirm (`81:280`). Source `APIAccess.tsx`.
+- **Users & Permissions (`423:144`) — 3 frames:** List (`79:331`), Dialog — Invite Team Member (`80:168` — Input/Select), Dialog — Edit Permissions (`135:46` — Select/checkboxes). Source `UsersPermissions.tsx`.
+- Then **SYSTEM** group: Notifications (`424:2`), Settings (`424:3`), Role & Account Variants (`1:13`).
+- **THEN the retrofit pass** over done pages (swap hand-built selects/search/inputs → DS instances).
+
+**Staging note:** new frames built at y=2000 (clear), then old frame deleted and new moved to old x/y. Per-build `setCurrentPageAsync` honored. Reuse Badge/Button helpers + primary-button white-label fix + StatCard/vibrant-KPI patterns + clipsContent=false on FILL cells.
+
+---
+
 ## Session 18 (2026-06-04) — FINANCE group structural rebuilds (nested auto-layout)
 
 **Mode:** continue per-screen structural rebuilds (code-DOM-based nested auto-layout + DS instances), code = source of truth. App Screens file `ceL7WwBQpaLl66Y7sUcgPR`. Worked the FINANCE group (Earnings → Billing Statements → Payment Settings). High-level permission granted by user up front (no per-action prompts). Reused Badge set `a09ae1f46ae283be55ad8fff2897c7cd753be5aa` + Button set `b1a89b48b296e05273d73881b300b9defc890295` + primary-button white-label fix + StatCard pattern + **setCurrentPageAsync-per-build-call rule** + **clipsContent=false on FILL table/text cells** (carried from S17).
