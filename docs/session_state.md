@@ -5,6 +5,17 @@
 
 ---
 
+## Session 20b (2026-06-04) — Squish-fix + Add Payment Method modal + atomic Checkbox
+
+**User punch-list (post-/btw):** keep demo components as-is; fix squished icon containers/avatars/checkboxes; add missing Add Payment Method modal; make checkboxes a real component.
+
+**DONE:**
+- **🐛 SQUISH BUG fixed across all pages (67 containers on 7 pages: Subaccounts 26, Notifications 15, Users 7, API 5, Payment Settings 5, Role Variants 5, Settings 4).** Root cause: builders that did `figma.createFrame(); resize(W,W); …; layoutMode="HORIZONTAL"` — setting `layoutMode` AFTER resize flips `primaryAxisSizingMode→AUTO` (width hugs the glyph) while `counterAxisSizingMode` stays FIXED (height kept). Result: icon boxes/avatars/checkbox-boxes render thin (width<height). **Fix (idempotent, ran on all 22 pages):** find FRAME with `layoutMode`, `cornerRadius>0`, exactly one short (≤3-char) TEXT child, and exactly one auto axis → set both sizing modes FIXED and `resize(fixedVal,fixedVal)` (square to the preserved fixed-axis = intended size). Excludes hug-pills (Edit/Remove), "VISA" chip (4 chars), AUTO/AUTO chips. **Going-forward rule: when building a fixed-size icon box, use `createAutoLayout()` + `resize` + set `primaryAxisSizingMode/counterAxisSizingMode='FIXED'` (or set layoutSizing FIXED) — never set `layoutMode` after `resize` without re-fixing both axes.**
+- **Add Payment Method modal** built on Payment Settings page (`770:303`, 512w): Card Brand **Select** + Card Number **Input** + Cardholder/Expiry **Inputs** + OTP note + Cancel/Continue, shadow-xl. (Hit the `layoutGrow=1`-collapses-in-vertical-container bug again on the 2 full-width fields → fixed with layoutGrow=0 + HUG. Recurring gotcha: the `field()` helper's `layoutGrow=1` is only valid for fields inside a HORIZONTAL row; direct children of a VERTICAL container must be layoutGrow=0.)
+- **Atomic Checkbox component created in GGX-SHADCN** (page "Checkbox (Atomic)", set `3296:78`, **key `3bbe41e80589216215772718501ebf3fefbbca94`**, variants `State=Unchecked` [16×16 rounded-4 border] / `State=Checked` [blue-600 fill + white ✓]) — shadcn-aligned, since the existing DS "Checkbox" is a 440px labeled demo. **⚠️ USER ACTION: publish this new Checkbox to the GGX-SHADCN team library**, then the hand-built App-Screens checkboxes (API webhook events, Users dialogs, Settings, Address Book "set default") can be swapped to instances. Squish-fix already corrected their 16×16 proportions in the meantime.
+
+---
+
 ## Session 20 (2026-06-04) — Comprehensive DS adoption: styles + (component atomicity finding)
 
 **User /btw directive (clarified):** retrofit must cover **ALL** UI elements with GGX-SHADCN counterparts (checkboxes, radios, switches, tables, tabs, separators, avatars, progress, popovers, scroll-area, calendar, etc.) AND apply DS **variables** (colors/padding/space/radius/gap) + **text styles** + **effect styles** to every element. Full inventory + keys saved to memory `reference_ggx_shadcn_full_inventory.md`.
