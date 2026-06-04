@@ -5,6 +5,27 @@
 
 ---
 
+## Session 20 (2026-06-04) — Comprehensive DS adoption: styles + (component atomicity finding)
+
+**User /btw directive (clarified):** retrofit must cover **ALL** UI elements with GGX-SHADCN counterparts (checkboxes, radios, switches, tables, tabs, separators, avatars, progress, popovers, scroll-area, calendar, etc.) AND apply DS **variables** (colors/padding/space/radius/gap) + **text styles** + **effect styles** to every element. Full inventory + keys saved to memory `reference_ggx_shadcn_full_inventory.md`.
+
+**DONE this session:**
+- **DS text styles applied to EVERY page** (~3,370 TEXT nodes across all ~22 per-screen pages: App Shell, Auth, Dashboard, Transactions, Bulk Upload[484], Claims, SLA, Ops, Support, Advisories, Analytics, Reports, Earnings, Billing, Payment Settings, Subaccounts, Address Book, API, Users, Notifications, Settings, Role Variants). Mapping: fontSize→size token (≤12 xs / ≤14 sm / ≤16 base / ≤18 lg / ≤22 xl / ≤27 2xl / else 3xl) + fontName.style→weight → `Text-{tok}/{weight}` style, imported by key + applied via `node.textStyleId`. Italic + mixed-font nodes skipped (~12 total). Zero layout regression (DS ramp = Inter at same sizes). **Style key map for xs–3xl × Regular/Medium/Semi Bold/Bold is inlined in the per-page scripts** (re-query `getLocalTextStylesAsync` for 4xl+).
+- **DS effect styles applied** to the 6 modal/popover frames: Billing Pay Now, API Regenerate, Users Invite, Users Edit → `Box Shadow/shadow-xl` (`b54ba698…`); Role Variants 2 panels → `Box Shadow/shadow-lg` (`d3890ab0…`).
+
+**⚠️ KEY FINDING — most non-form DS components are authored as DEMO/labeled instances, NOT atomic primitives, so they can't be mechanically swapped without REGRESSING fidelity. Needs a user/designer decision (atomize in the DS, or leave faithful hand-built).** Inspected:
+- Checkbox = 440px-wide row w/ baked label "Accept terms and conditions", **no checked/unchecked prop**.
+- Switch (149w) + Radio (a 3-option GROUP, 107×76) bake labels.
+- Separator = 116px demo block containing "Radix Primitives / Blog / Docs" content (not a 1px line).
+- Progress (430×8) has **no value property** (can't set arbitrary %).
+- Avatar (32×32) is an image placeholder, **no initials text**.
+- (Table/Card/Tabs are container-level — swapping would lose my composed content.)
+Cleanly-atomic components (Select/Input/Search Input/Textarea/Badge/Button) were already swapped (S19/S20-retrofit).
+
+**⏳ REMAINING (the big wave) — bind DS VARIABLES across all nodes:** colors (fills/strokes → `tokens`/`tw/colors`/`rdx/colors`), padding/gap/space (→ `tw/padding`,`tw/gap`,`tw/space`), corner-radius (→ `tw/border-radius`), border-width. Approach: read each DS collection's variable name→value, build value→variableKey maps, walk nodes, `setBoundVariable`/`setBoundVariableForPaint` where the hardcoded value matches a token. Large, careful pass — do per collection. Also: resolve the component-atomicity decision before any further component swaps.
+
+---
+
 ## Session 19 (2026-06-04) — DS form-component discovery + ACCOUNT MANAGEMENT group (in progress)
 
 **Mode:** continue per-screen structural rebuilds, code = source of truth. App Screens file `ceL7WwBQpaLl66Y7sUcgPR`. **User directive this session:** the hand-built selects/search/inputs on done pages are wrong — these MUST be real GGX-SHADCN component instances. Verified and corrected.
