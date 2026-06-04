@@ -26,8 +26,9 @@
 - **Request Additional — Form (`684:183`, replaced `93:249`)** — full `RequestSubAccount.tsx` form using **REAL DS instances**: Business Information card (Name **Input** / Type **Select** / Business Address **Input** / Pickup **Input** / Billing **Input**), Operational Details card (Volume **Select** / Start Date **Input** / Manager **Input** / Role **Input**), Additional Information card (Notes **Textarea**, resized to 120h), Cancel **outline** + Submit Request **primary** Buttons. ✅ This frame is the reference example for the DS-form-component standard.
 - **Request Additional — Success (`686:116`, replaced `93:297`)** — centered ✓ green hero + Prototype Note blue box + 2 ✓ rows (Subaccount Created "Acme Mindanao" / Manager Assigned "Carlos Reyes" — illustrative demo values) + View All Subaccounts outline / Go to Dashboard primary.
 
+**DONE — Address Book (`423:143`) — ✅ ALL 3 frames:** List (`696:357`, DS **Search Input** + **Select** in toolbar + 3 address cards w/ label Badges), Add-Edit Form (`698:45`, DS Select/Input/Textarea throughout — Label/Province/City/Barangay Selects, Name/Mobile Inputs, Other Details Textarea), Empty State (`700:53`). Old `80:20`/`133:46`/`138:46` replaced.
+
 **⏳ REMAINING this group (resume here, same standard, use DS form instances):**
-- **Address Book (`423:143`) — 3 frames:** List (`80:20`), Add-Edit Form (`133:46` — Inputs/Select), Empty State (`138:46`). Source `AddressBookPage.tsx`.
 - **API Integration (`425:9`) — 2 frames:** Main (`81:221`), Modal — Regenerate Key Confirm (`81:280`). Source `APIAccess.tsx`.
 - **Users & Permissions (`423:144`) — 3 frames:** List (`79:331`), Dialog — Invite Team Member (`80:168` — Input/Select), Dialog — Edit Permissions (`135:46` — Select/checkboxes). Source `UsersPermissions.tsx`.
 - Then **SYSTEM** group: Notifications (`424:2`), Settings (`424:3`), Role & Account Variants (`1:13`).
