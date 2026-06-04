@@ -44,7 +44,16 @@
 
 **🎉 ALL SIDEBAR-IA SCREEN GROUPS NOW STRUCTURALLY COMPLETE** (App Shell, Auth, Dashboard, Operations, Analytics & Reports, Finance, Account Management, System, Role Variants).
 
-**⏳ REMAINING — the DS-component RETROFIT PASS** over earlier-built pages (Operations / Analytics / Reports / Finance) — swap the ~30+ hand-built selects/search/date-inputs → real DS instances (Select `dc8a2f4d37f2369dac3d70fc6e54bfa46ba9fce9`, Input `03367deef9fc99ca2dbfbd1f1ba82e195d249896`, Search Input `bb6d8f2e53e592ebc36d9103e997ff9ef03a7d7a`, Textarea `f3ae25cac452a64163c997c568bfb8aec9adca70`). Pages with hand-built fields to retrofit: Transactions (search + 3 selects), Claims/SLA/Ops/Support/Advisories (search + selects), Analytics (2 selects ×2 frames), Reports (2 selects + subaccount select + date inputs), Earnings (3 selects + date input), Billing (3 selects), Bulk Upload (URL input + selects), Dashboard (none), Subaccount Settings already DS. Find hand-built selects by name "Select"/"DateInput" + hand-built search frames; swap in place preserving label text.
+**✅ DONE — DS-component RETROFIT PASS COMPLETE.** Swapped **~69 hand-built field controls → real GGX-SHADCN instances** across all earlier pages, in place (preserving label/value text, width, FILL/FIXED sizing, and position):
+- **By name** (`Select`/`DateInput`/`SearchInput`): Analytics 4, Transactions 1 search + 3 selects, Claims 2 selects, Reports 3 selects, Earnings 3 selects + 1 date-input→Input, Billing 3 selects.
+- **By glyph** (hand-built frames named "Frame"/"Field" with `⌄`/`▾`/`🔍`): SLA 2 search + 4 selects, Ops Requests 2 search + 11 selects (incl. New-Request dialog FILL selects), Support Tickets 3 selects, Service Advisories 2 selects, Claims 1 search (`Field` 549:8).
+- **Support Tickets extras:** inline-glyph list search → Search Input, Tracking Number → Input, 3 textareas (Description + 2 reply boxes) → Textarea (height preserved).
+- **Bulk Upload:** 15 column-mapper selects (`▾` chevron) → Select, 2 date-inputs + 2 url-inputs (`Input / *`) → Input.
+- **Swap recipe (reusable):** capture parent+index+sizing+grow+width+primary-text → create DS instance, set its single TEXT, `insertChild(index)`, restore FILL(`+layoutGrow`) or FIXED(`resize`+FIXED), remove old. `primaryText` = longest TEXT child excluding glyphs `⌄ ▾ 📅 🔍 🔎 🔗`.
+- **Intentionally left as-is:** display `field` label/value pairs (read-only, NOT inputs), payment/mode choice tabs (Pick-up/Drop-off/Cash), pagination + attach-file buttons.
+- Verified Bulk Upload mapper + Analytics/Earnings headers + Support form render correctly with DS instances.
+
+**🎉 PROJECT-WIDE FIGMA REBUILD COMPLETE:** every sidebar-IA screen group rebuilt to nested auto-layout, and every select/search/input/textarea is now a real GGX-SHADCN component instance (alongside Badge + Button instances). Remaining future polish only: emoji-glyph placeholders → Tabler vector icons; publish-pending custom components; optional Code Connect mapping.
 
 **Staging note:** new frames built at y=2000 (clear), then old frame deleted and new moved to old x/y. Per-build `setCurrentPageAsync` honored. Reuse Badge/Button helpers + primary-button white-label fix + StatCard/vibrant-KPI patterns + clipsContent=false on FILL cells.
 
