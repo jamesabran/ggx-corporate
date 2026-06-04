@@ -34,9 +34,17 @@
 
 **✅ ENTIRE ACCOUNT MANAGEMENT GROUP STRUCTURALLY COMPLETE** (18 frames: Subaccounts 10, Address Book 3, API Integration 2, Users & Permissions 3). Verified page counts + Cover = 0 children. All form fields use real GGX-SHADCN Select/Search Input/Input/Textarea instances.
 
-**⏳ REMAINING:**
-- **SYSTEM** group: Notifications (`424:2`), Settings (`424:3`), Role & Account Variants (`1:13`). Use DS form instances.
-- **THEN the retrofit pass** over done pages (Operations/Analytics/Reports/Finance) — swap hand-built selects/search/inputs → DS instances (Select `dc8a2f4d…`, Input `03367de…`, Search Input `bb6d8f2e…`, Textarea `f3ae25ca…`).
+**DONE — SYSTEM group — ✅ ALL 4 frames:**
+- **Notifications / Feed (`714:2`, replaced `80:101`)** — header + tabs row (All 6 / Bulk Uploads 1 / Transactions 2 / Account 1 / Service 1 / Reports 1 / Support, active=All blue underline + count pills) + list card w/ 9 notification rows (category icon boxes per CATEGORY_META, uppercase label + unread blue dot + title + account chip + body + relative time; unread rows blue-tinted).
+- **Settings / Profile & Security (`716:334`, replaced `80:63`)** — Account Information card (Company Name **Input**, Email/Phone **Inputs**, Pickup Address blue-bordered AddressDisplayCard + Edit-in-Address-Book ghost, Save Changes/Cancel), Notifications card (4 checkboxes + Update Preferences), Security card (Change Password outline + 2FA checkbox). **Gotcha fixed:** a field block appended directly to a VERTICAL card-content collapsed to h1 because the `field()` helper set `layoutGrow=1` (grows the vertical/primary axis) — for direct-to-column fields set `layoutGrow=0` + `layoutSizingVertical="HUG"`; only use layoutGrow=1 for fields inside a HORIZONTAL row.
+- **Role Variants / In-App Notifications Panel (`721:26`, replaced `81:401`)** — 400w popover: header "Notifications" + "8 recent" + 5 compact notification rows + "View all notifications" footer.
+- **Role Variants / In-App Notifications Panel — Empty (`722:4`, replaced `143:2`)** — header + centered 🔔 empty state.
+
+**✅ ENTIRE SYSTEM GROUP STRUCTURALLY COMPLETE.** Verified page counts + Cover = 0 children.
+
+**🎉 ALL SIDEBAR-IA SCREEN GROUPS NOW STRUCTURALLY COMPLETE** (App Shell, Auth, Dashboard, Operations, Analytics & Reports, Finance, Account Management, System, Role Variants).
+
+**⏳ REMAINING — the DS-component RETROFIT PASS** over earlier-built pages (Operations / Analytics / Reports / Finance) — swap the ~30+ hand-built selects/search/date-inputs → real DS instances (Select `dc8a2f4d37f2369dac3d70fc6e54bfa46ba9fce9`, Input `03367deef9fc99ca2dbfbd1f1ba82e195d249896`, Search Input `bb6d8f2e53e592ebc36d9103e997ff9ef03a7d7a`, Textarea `f3ae25cac452a64163c997c568bfb8aec9adca70`). Pages with hand-built fields to retrofit: Transactions (search + 3 selects), Claims/SLA/Ops/Support/Advisories (search + selects), Analytics (2 selects ×2 frames), Reports (2 selects + subaccount select + date inputs), Earnings (3 selects + date input), Billing (3 selects), Bulk Upload (URL input + selects), Dashboard (none), Subaccount Settings already DS. Find hand-built selects by name "Select"/"DateInput" + hand-built search frames; swap in place preserving label text.
 
 **Staging note:** new frames built at y=2000 (clear), then old frame deleted and new moved to old x/y. Per-build `setCurrentPageAsync` honored. Reuse Badge/Button helpers + primary-button white-label fix + StatCard/vibrant-KPI patterns + clipsContent=false on FILL cells.
 
