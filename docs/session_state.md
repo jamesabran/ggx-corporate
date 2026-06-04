@@ -5,6 +5,22 @@
 
 ---
 
+## Session 22b (2026-06-05) — Button Tabler icons + Checkbox clarified (corrected earlier errors)
+
+**Corrected two earlier wrong claims (user challenged, rightly):**
+- **Button icons ARE doable without changing the component.** `inst.setProperties({Variant:"with icon"/"trailing icon"/"icon", Size:"default", State:"default"})` then **`nestedIconInstance.swapComponent(tablerComp)` WORKS** (tested). The with-icon variant holds its **bg fill on the instance itself** (default white) — so recolor = set `inst.fills`. Recipe per button: detect leading vs trailing emoji in label → set variant → swap nested icon to Tabler(emoji) → strip emoji from label → **primary** (white label detected) ⇒ `inst.fills=[blue]`, `inst.strokes=[]`, text+icon white; **else** restore captured `inst.fills/strokes/strokeWeight` + icon stroke = label color. (`with icon`/`trailing icon` exist only at Size=default → setProperties wrapped in try/catch.)
+- **Checkbox component is CORRECT/shadcn-aligned — no change needed** (box 16px rounded-4 + border; checked = primary fill + check instance, as in Checkbox_card). I won't touch it.
+
+**DONE — converted ~39 button-label emojis → Tabler icons** across Earnings(1), Reports(5), Subaccounts(10), Ops(2), Billing(6), Address Book(2), Users(1), API(4), Transactions(1), Bulk Upload(4), Auth(3). Verified: primary buttons (blue + white Tabler icon) and outline buttons (preserved border + dark Tabler icon) both correct. Detection: instance named "Buttons" / mainComponent.parent is the "Buttons" set. ASCII "+" added to the emoji map for buttons only (safe — no phone numbers in button labels). Pages with no emoji-prefixed buttons (Claims, Support, Payment Settings, App Shell, etc.) returned 0 (their buttons use plain labels). Tabler key map in shared data `ggx/tablerMap`.
+
+**⏳ REMAINING (minor):**
+- **Checkbox instance swap of *checked* boxes** still blocked: the standalone Checkbox set has no `Checked` variant and Figma can't inject the checkmark into an instance. The app checkboxes already look correct (rounded-4 + blue+check, color-bound). Leave as-is unless a `Checked` variant is added to the DS Checkbox. (Component itself is fine — do NOT change.)
+- A few not-swept button pages (Analytics/SLA/Advisories/Dashboard/Settings/Role Variants/Notifications) — verified pattern: their buttons use plain (no-emoji) labels, so nothing to convert.
+- Inline mid-text emojis (e.g. "📅 Effective:") — would need text-splitting; minor.
+- Spacing/radius variable binding (deferred, S21).
+
+---
+
 ## Session 22 (2026-06-05) — Emoji → Tabler icons (all standalone glyphs, all pages)
 
 **DONE — replaced ~426 standalone text-emoji glyphs with real Tabler vector icon instances across ALL 22 pages** (icon containers, sidebar nav [84], dashboard [61], list/row icons, empty states, stat icons, breadcrumb separators, etc.). Verified Notifications + sidebar (all 4 role variants) — crisp colored vectors, no regression.
