@@ -5,6 +5,22 @@
 
 ---
 
+## Session 23 (2026-06-05) — Inline-emoji Tablerization + spacing variable binding (all pages)
+
+**Inline mid-text emojis → Tabler icons (DONE, ~67 conversions).** Completed the leftover from S22/S22b: glyphs embedded inside a `[icon][text]` or `[text][icon]` row (e.g. "📅 Effective:", "📍 area"). Method: for a TEXT node whose trimmed content *starts/ends* with a mapped emoji but also has words, split off the emoji → import the Tabler COMPONENT (cached from `ggx/tablerMap`), `createInstance`, size to fontSize, recolor to the text's fill, insert beside the now-stripped text inside the row's auto-layout. Multi-emoji documentation prose (e.g. legend strings, several glyphs in one paragraph) was intentionally skipped — splitting those would fragment the copy.
+
+**Spacing variable binding — reconciliation FIRST, then full rollout (DONE).**
+- **Reconciliation check (gating per user rule "if they don't match then don't proceed"):** resolved the DS aliased FLOAT spacing vars to px. **Spacing MATCHES code** — DS `tw/space`/`tw/gap`/`tw/padding` resolve to the 4px Tailwind scale (4/8/12/16/20/24/32…), identical to the coded `gap-*`/`p-*`. ✅ Proceeded. **Radius MISMATCHES** — DS vanilla `rounded-sm/md/lg/xl` = 4/6/8/12 but the **code uses shadcn `--radius` (0.625rem) → sm6/md8/lg10/xl14** (`src/styles/theme.css`; Card = `rounded-xl` = 14). ❌ **Radius binding SKIPPED** (per rule).
+- **Method:** built a px→variableKey map for gap/paddingL/R/T/B (`ggx/spaceMap`, values 2–64). Per page: walk auto-layout frames, bind `itemSpacing`→gap-N + the four paddings→pl/pr/pt/pb-N via `setBoundVariable`; skip already-bound + values with no matching token. Settings pilot (74) verified zero layout change.
+- **Per-page bindings this pass:** App Shell 653, Claims 330, SLA 158, Support 271, Advisories 89, Reports 110, Earnings 176, Billing 147, Payment Settings 145, Address Book 133, API 100, Users 180, Notifications 125, Auth 181, Role Variants 58. Plus prior pages from earlier in the rollout: Settings 74, Dashboard 663, Bulk Upload 787, Ops 508, Subaccounts 417, Analytics 323, Transactions 330. **Group-header divider pages (OPERATIONS/ANALYTICS/… 1:4,1:8,…) = 0 (no auto-layout content).** Grand total ≈ 5,958 spacing bindings across all content pages.
+
+**⏳ REMAINING (unchanged, deferred):**
+- **Radius binding — do NOT proceed** (DS scale ≠ code shadcn scale). Would require either re-tokenizing the DS radius vars to the shadcn `--radius` scale, or leaving cornerRadius hardcoded. Flag for product/DS decision.
+- Checkbox *checked*-instance swap (needs a `Checked` variant on the DS Checkbox; component itself is correct).
+- Icon Container component conversion (needs DS color-prop extension + publish — S20c roadmap).
+
+---
+
 ## Session 22b (2026-06-05) — Button Tabler icons + Checkbox clarified (corrected earlier errors)
 
 **Corrected two earlier wrong claims (user challenged, rightly):**
