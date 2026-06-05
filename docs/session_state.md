@@ -10,14 +10,16 @@
 Addressed the root cause behind the recurring manual reconciliation passes (colors S21, spacing S23, radius mismatch): three independent token representations (code `theme.css`, Figma DS variables, App Screens) that drift. Established a generated pipeline. **Full write-up: `docs/token_pipeline.md`.**
 
 - **Phase 2 — code generated from tokens ✅:** new `tokens/tokens.json` (single source of truth) + `scripts/build-tokens.mjs` (`npm run tokens`) regenerates `src/styles/theme.css`. Verified **77/77 CSS declarations identical** to the previous hand-authored file (zero behavior change) and `npm run build` passes. theme.css now carries an AUTO-GENERATED header and stays committed. (Custom 50-line emitter, not Style Dictionary — lower risk for ~40 tokens; noted as drop-in if the set grows.)
-- **Phase 1 — radius aligned ✅ (publish pending):** code scale is shadcn `--radius` (sm6/md8/lg10/xl14); DS only had the vanilla Tailwind scale (2/6/8/12) → the mismatch we'd flagged. Created a new **`radius` variable collection** in the DS file (`9zwtAL…`) with CORNER_RADIUS-scoped vars matching code. Keys recorded in `docs/token_pipeline.md`. **Binding the App Screens cornerRadii is blocked until the user publishes the DS library** (cross-file var import needs publish).
+- **Phase 1 — radius aligned ✅ COMPLETE:** code scale is shadcn `--radius` (sm6/md8/lg10/xl14); DS only had the vanilla Tailwind scale (2/6/8/12) → the mismatch we'd flagged. Created a new **`radius` variable collection** in the DS file (`9zwtAL…`) with CORNER_RADIUS-scoped vars matching code (keys in `docs/token_pipeline.md`). User **published** the library; then bound App Screens cornerRadii across all 22 content pages: **761 radii bound** to `radius/sm|md|lg|xl`, including normalizing **~372 nodes from 12→14** (vanilla-Tailwind rounded-xl → code rounded-xl; these were cards/StatCards/banners — confirmed by name sampling; 12 was equidistant lg/xl so intent was needed). Exact matches (6/8/10/14) bound without value change; 16(2xl)/4(checkbox)/pills/misc left unbound (no matching var in the 4-var set). INSTANCE nodes skipped (radius comes from their main component). Verified visually (Dashboard + Subaccounts) — clean corners, zero breakage. Only remaining 12s/unbound are on the **doc/reference pages** (SHARED COMPONENTS, Roadmap), out of app scope.
 - **Phase 3 — Figma sync:** `scripts/sync-figma-variables.mjs` (`npm run tokens:figma`) written as the REST/CI path (Enterprise-gated for writes); non-Enterprise path is the Plugin API (used to create the radius collection above).
 - **Phase 4 — Code Connect prepared:** `Button.figma.tsx` + `Card.figma.tsx` (Button set `3321:130`, Card `3321:344`) + `figma.config.json` + `@figma/code-connect` devDep. Co-located but **excluded from the app build** via `tsconfig.app.json` (`src/**/*.figma.tsx`) so the bundle/build is unaffected (re-verified green).
 
 **⏳ HAND-OFF steps (need user / auth):**
-1. **Publish** the GGX-SHADCN library in Figma → then run the App-Screens cornerRadius binding pass against the new `radius` vars.
+1. ✅ DONE — library published; App-Screens cornerRadius binding pass complete (761 bound, ~372 normalized 12→14).
 2. `npm i && npx figma connect publish` (Figma auth token) to activate Code Connect; extend pattern to Input/Select/Badge/etc.
 3. (Optional) provide an Enterprise `FIGMA_TOKEN` to run `npm run tokens:figma` in CI; otherwise keep syncing via the Plugin API.
+
+**Variable-adoption status:** colors (S21) + spacing (S23) + radius (S24) now all bound to DS variables across all 22 app pages. The DS↔code token reconciliation is effectively closed; remaining open items are Code Connect activation (#2) and optional CI sync (#3).
 
 ---
 
