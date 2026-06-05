@@ -30,7 +30,11 @@ Library published. Verified the enhanced **Stat Card** (`Icon#3335:0` swap + `Co
 
 **Field component BUILT in DS ✅ (key `410fcb27554b57a6fefb9e61876b617a4475c08b`, page "Field"):** label/value stack (VERTICAL gap 4; Label 12 gray `Label#3340:0`, Value 14 dark `Value#3340:1`). KEY FINDING: the app's `field` (×32, Transactions/Claims) and `Info` (×21) frames are the **same** label/value display pattern (NOT form inputs) — ~53 uses, the most-reused custom element. This one component covers both.
 
-**⏳ REMAINING (queue):** (1) **publish** GGX-SHADCN → adopt **Field** across the ~53 `field`/`Info` label-value frames (preserve per-instance label/value sizes; skip ones whose value is a badge/frame not text). (2) **Toolbar** (search+filters ×5) — lowest value/most variable; optional. Dashboard KPIs stay bespoke.
+**Field adoption COMPLETE ✅ (45 instances):** Transactions(11), Claims(15), Analytics(16), Reports(3). Per-instance label/value font sizes preserved; frames whose value is a badge/frame (not text) correctly skipped (Claims 6, BulkUpload 2). Verified Transactions detail visually.
+
+**🎉 Component-adoption initiative essentially complete:** Stat Card (12), Page Header (25), Field (45) all adopted from the enhanced/new GGX-SHADCN components. Plus prior: colors/spacing/radius variable binding + emoji→Tabler across all pages.
+
+**⏳ ONLY REMAINING (optional, low value):** **Toolbar** (search+filter bars ×5) — highly variable per page (different filter sets), so a component would need heavy per-instance overrides → recommend leaving bespoke unless a consistent toolbar spec is defined. Dashboard KPIs stay bespoke (or add a dedicated KPI Card treatment if desired).
 
 ---
 
