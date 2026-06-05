@@ -28,7 +28,9 @@ Library published. Verified the enhanced **Stat Card** (`Icon#3335:0` swap + `Co
 
 **Page Header adoption — COMPLETE ✅ (25 instances across all content pages):** Subaccounts(1), Transactions(3), Bulk Upload(2), Claims(4), SLA(2), Ops(4), Support(1), Analytics(2), Reports(1), Earnings(2), Billing(1), Payment Settings(1), Users(1). List + detail headers both handled (detail = Show action false). Original title/subtitle **font sizes preserved** per-instance (most titles 30px; component default 24) to avoid shrinking/diverging from code. Action buttons replicated (variant/label/leading-icon swap). Verified: Transactions (button), Claims detail (no button). Dashboard/Notifications/Address Book/API/Settings/Advisories headers weren't named "Header"/≥20px title → not matched (left as-is).
 
-**⏳ REMAINING (queue):** build + adopt **Form Field** (`field` ×32), **Info Item** (label/value ×21), **Toolbar** (search+filters ×5) — model each from app first, build in GGX-SHADCN, publish, then adopt. Dashboard KPIs stay bespoke (or add a dedicated KPI Card treatment).
+**Field component BUILT in DS ✅ (key `410fcb27554b57a6fefb9e61876b617a4475c08b`, page "Field"):** label/value stack (VERTICAL gap 4; Label 12 gray `Label#3340:0`, Value 14 dark `Value#3340:1`). KEY FINDING: the app's `field` (×32, Transactions/Claims) and `Info` (×21) frames are the **same** label/value display pattern (NOT form inputs) — ~53 uses, the most-reused custom element. This one component covers both.
+
+**⏳ REMAINING (queue):** (1) **publish** GGX-SHADCN → adopt **Field** across the ~53 `field`/`Info` label-value frames (preserve per-instance label/value sizes; skip ones whose value is a badge/frame not text). (2) **Toolbar** (search+filters ×5) — lowest value/most variable; optional. Dashboard KPIs stay bespoke.
 
 ---
 
