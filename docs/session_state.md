@@ -5,6 +5,25 @@
 
 ---
 
+## Session 27 (2026-06-05) — Adoption begun: Stat Card swap (Support done) post-publish
+
+Library published. Verified the enhanced **Stat Card** (`Icon#3335:0` swap + `Color`) and **Page Header** (`Title`/`Subtitle`/`Show action`) import cross-file.
+
+**Stat Card adoption — Support page DONE ✅** (4 cards → real Stat Card instances): Open Tickets/Orange/mail, In Review/Blue/eye, Resolved/Emerald/check, Avg Response/Gray/clock. Content (Label/value/Subtitle) + icons + colors all correct, verified visually.
+
+**Proven swap recipe (use for remaining pages):**
+1. Per card capture: label/value/subtitle texts (sort by y; value = max fontSize; label above value else below; subtitle below), original icon `mainComponent.key`, and **chip tint** (NOT icon color — icons may be neutral).
+2. `inst=SET.defaultVariant.createInstance()`; set `Color` from the chip-tint hue (light blue tints under-saturate → classify carefully / fall back to label); set texts via nested `Label`/`Subtitle text`/max-size value (load fonts).
+3. **Icon swap needs a component NODE ID, not key**: `const c=await importComponentByKeyAsync(origKey); inst.setProperties({"Icon#3335:0": c.id})`. Then recolor the nested `Icon` instance to the variant accent.
+4. Insert at the card's index, `layoutSizingHorizontal="FILL"`, remove original.
+5. **Capture-then-mutate**: read all labels first, then apply `setProperties({Color})` by node id — a variant change invalidates previously-found nested nodes.
+
+**DECISION — Dashboard KPIs NOT swapped:** they use **tinted card bg + solid colored chip/white icon + colored trend delta** — a richer pattern than the white-bg DS Stat Card; swapping would downgrade and likely diverge from code. Either keep bespoke or add a dedicated "KPI Card" treatment later.
+
+**⏳ REMAINING adoption (next session):** Stat Card swap for Users(2)/SLA(3)/Ops(3) white-bg cards (same recipe); Page Header swap across 15 pages; build+adopt Form Field / Info Item / Toolbar. Variant-accent map: Blue#3b82f6 Emerald#11b06e Amber#d88b15 Red#e22727 Orange#ee6110 Violet#8b5cf6 Gray#575b62.
+
+---
+
 ## Session 26 (2026-06-05) — DS component work: Stat Card enhanced + Page Header created (adopt after publish)
 
 **Decision (user): "enhance then adopt"** for Stat Card, + identify/auto-create other reusable patterns as components **in GGX-SHADCN** (not App Screens).
