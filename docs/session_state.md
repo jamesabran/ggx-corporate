@@ -5,6 +5,18 @@
 
 ---
 
+## Session 25 (2026-06-05) — Verification audit + emoji misses + stray white backgrounds
+
+**UI audit (verify intact):** colors 97% / spacing 97–99% / radius 83% (rest intentional) bound; strokes effectively complete (1,523 of 1,526 "unbound" are inside DS instances which own their strokes). Components in heavy use (Badge ×197, Button ×136, Select ×64, hundreds of Tabler icons). Visual integrity confirmed (Dashboard, Subaccounts, SLA, Auth).
+
+**Emoji retrofit gap CLOSED:** audit found **39 visible emoji glyphs** the earlier passes missed (glyphs outside the original 59-entry map: `↘ ↑ ← ↔ ⇄ ⇅ 🔑 🚪 ✉ 📨 📎 🏦 ❗ ⭐ ⏳ 📘` + stray `💓`). Harvested 18 more Tabler keys; converted across 7 pages (App Shell, Auth, Dashboard, Transactions, Bulk Upload, SLA, Support): **24 replaced + 6 inline-stripped+iconified + 8 stray `💓` deleted**. Re-audit: **39 → 1** (the 1 is a variant descriptor label, left). Verified visually (KPI trend arrows, Quick Actions key icon, account menu switch/logout).
+
+**Stray white backgrounds — Auth login FIXED:** the right-pane "Feature card" (blue gradient) had its 4 feature rows + 4 icon chips built as **solid `#ffffff`**. Code (`Login.tsx:306-308`) specifies `bg-white/10 border-white/20` rows and `bg-white/20` chips. Fixed to those translucent values → frosted panels, glaring white gone. (Same "translucent-on-gradient rendered as solid white" pattern may exist elsewhere — flagged.)
+
+**Stat Card component — FINDING (decision needed):** DS has a "Stat Card" set (`ad33fb5d…`, 280×127, only a `Color` variant Blue/Emerald/Amber/Red/Orange/Violet/Gray; Label/value/Subtitle text + a **plain colored chip with NO icon glyph and no instance-swap slot**). The app's real stat cards carry **distinct Tabler icons + trend deltas** the component can't hold → a straight swap would LOSE icons. Needs a decision: enhance the DS component (add INSTANCE_SWAP icon slot + delta text) then adopt, vs keep hand-built. NOT swapped pending decision.
+
+---
+
 ## Session 24 (2026-06-05) — Token pipeline / single source of truth (scalability)
 
 Addressed the root cause behind the recurring manual reconciliation passes (colors S21, spacing S23, radius mismatch): three independent token representations (code `theme.css`, Figma DS variables, App Screens) that drift. Established a generated pipeline. **Full write-up: `docs/token_pipeline.md`.**
