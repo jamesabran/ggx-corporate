@@ -5,6 +5,22 @@
 
 ---
 
+## Session 26 (2026-06-05) — DS component work: Stat Card enhanced + Page Header created (adopt after publish)
+
+**Decision (user): "enhance then adopt"** for Stat Card, + identify/auto-create other reusable patterns as components **in GGX-SHADCN** (not App Screens).
+
+- **Stat Card ENHANCED** (DS `9zwtAL…`, set `3124:134`, key `ad33fb5da435429ad6b6699a33f5ec00e86ca451`): each of the 7 Color variants had a plain 20×20 `icon` RECTANGLE placeholder → replaced with a `tabler/activity` instance recolored to the variant accent, and added an **`Icon` INSTANCE_SWAP property** (`Icon#3335:0`, default = tabler/activity node `3334:74`) bound across all variants. Now has `Icon` (swap) + `Color` (Blue/Emerald/Amber/Red/Orange/Violet/Gray). Gotcha: `addComponentProperty(…,"INSTANCE_SWAP", …)` needs the component **node id**, not the key. Verified visually.
+- **Page Header CREATED** (new DS page "Page Header", component key `46ddf51e7b28e6233acfb885f68c5722032f1e65`): horizontal space-between — left Titles block (Title 24/Semi Bold + Subtitle 14/gray), right = DS Button instance. Props: `Title` (TEXT), `Subtitle` (TEXT), `Show action` (BOOLEAN→button visible). Models the "Header" frame found on all 15 pages.
+
+**Reuse survey (App Screens):** top recurring hand-built patterns → CardContent/CardHeader/Card (already DS Card), Header ×32/15pp (→ Page Header, built), field ×32 (→ **Form Field** candidate), Info ×21 (→ **Info Item** label/value candidate), Toolbar ×5 (→ **Toolbar/Filter bar** candidate), Table (already DS). Stat patterns covered by Stat Card.
+
+**⏳ GATED ON PUBLISH (user):** publish GGX-SHADCN so the enhanced Stat Card `Icon` slot + the new Page Header are importable cross-file. THEN adoption (next session):
+1. Swap app stat cards → enhanced Stat Card instances (set Color variant + Icon swap to the card's Tabler glyph + recolor + Label/value/Subtitle = label/value/trend). Targets: Dashboard KPIs(4), Support(3), SLA stats, Users, etc.
+2. Swap page "Header" frames → Page Header instances (Title/Subtitle/Show action + button label).
+3. Build + adopt the remaining candidates (Form Field, Info Item, Toolbar) — model first.
+
+---
+
 ## Session 25 (2026-06-05) — Verification audit + emoji misses + stray white backgrounds
 
 **UI audit (verify intact):** colors 97% / spacing 97–99% / radius 83% (rest intentional) bound; strokes effectively complete (1,523 of 1,526 "unbound" are inside DS instances which own their strokes). Components in heavy use (Badge ×197, Button ×136, Select ×64, hundreds of Tabler icons). Visual integrity confirmed (Dashboard, Subaccounts, SLA, Auth).
