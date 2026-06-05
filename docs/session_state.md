@@ -22,7 +22,11 @@ Library published. Verified the enhanced **Stat Card** (`Icon#3335:0` swap + `Co
 
 **Stat Card adoption COMPLETE for all white-bg matches (12 cards):** Support(4: mail/eye/check/clock — Orange/Blue/Emerald/Gray), Users(2: user/shield — Blue/Emerald), SLA(3: clock/alert-triangle/alert-circle — Amber/Red/Orange), Ops(3: copy/package/truck — Blue/Violet/Blue). All verified visually. Color now mapped from **chip tint** via exact Tailwind-tint→variant lookup (reliable; light tints under-saturate for hue math). Variant-accent map: Blue#3b82f6 Emerald#11b06e Amber#d88b15 Red#e22727 Orange#ee6110 Violet#8b5cf6 Gray#575b62.
 
-**⏳ REMAINING adoption:** Page Header swap across 15 pages (note: header action buttons often carry a leading Tabler icon — needs the Button "with icon" variant + icon swap, or accept label-only); build+adopt Form Field / Info Item / Toolbar. Dashboard KPIs stay bespoke.
+**Page Header adoption — PILOT done (Subaccounts ✅):** swapped its "Header" frame → Page Header instance (Title "Subaccounts" + Subtitle + "with icon" button "Request Additional Subaccount" w/ tabler/plus). Verified.
+- **Recipe (corrected):** extract Title/Subtitle from header TEXT nodes **excluding any text inside the Button instance** (else the button label is mis-read as subtitle — the pilot's first bug). For the action button: read original button's label + leading-icon `mainComponent.key`; on the Page Header's nested Button set `{Variant:"with icon",Size:"default",State:"default"}`, set label via its TEXT property, and `nestedIcon.swapComponent(importComponentByKeyAsync(iconKey))`. Set `Show action` false when the header has no button. Insert at header's index, FILL, remove original.
+- Per-page nuances to watch: some headers have breadcrumbs/tabs or no button; title sizes vary (24 vs 30 → component standardizes to 24).
+
+**⏳ REMAINING adoption:** Page Header swap for the other ~14 pages (App Shell N/A, Auth N/A; content pages: Dashboard, Transactions, Bulk Upload, Claims, SLA, Ops, Support, Advisories, Analytics, Reports, Earnings, Billing, Payment Settings, Address Book, API, Users, Notifications, Settings — those with a title/subtitle header); build+adopt Form Field / Info Item / Toolbar (model first). Dashboard KPIs stay bespoke.
 
 ---
 
