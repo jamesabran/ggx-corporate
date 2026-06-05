@@ -5,6 +5,18 @@
 
 ---
 
+## Session 29 (2026-06-05) — Stray white backgrounds fixed (all pages) + payment icon squish
+
+**Root cause (white-bg bug):** inner content frames carried solid neutral-white fills that should be transparent — invisible on white cards but showing as **white boxes over tinted parents** (blue-50/sky-50/green-50 banners, default/primary cards, unread notif rows). Confirmed against code (e.g. `PaymentSettings` reminders `bg-blue-50`, default method `bg-blue-50/50`; `Notifications` unread `bg-blue-50/40`).
+- **Systematic fix:** strip neutral-white fills (min>0.92 AND channel-spread<0.02) from any frame that has a **hued-tint ancestor** (channel-spread>0.02). Distinguish white vs blue-50 by HUE, not lightness (blue-50 #eff6ff has all channels >0.93 → looks "white" by lightness). Also blanked white fills on `*Section*` wrapper frames.
+- **Applied (≈58 frames):** Payment Settings 8 (+2 sections), Claims 8, Ops 7, Earnings 9, Billing 3, Subaccounts 3, API 2, Notifications 16. Verified visually (Payment Settings, Claims detail, Notifications — unread blue tint now shows).
+- **Squish (Part 3):** Payment Settings first card (Visa default) icon wrapper was 16×40 (collapsed) → resized to 40×40 square, sizing set FIXED + centered. Verified.
+- **Reusable strip recipe** lives in this entry; re-run on any page if new stray-whites appear.
+
+**⏳ Part 1 PENDING — unify stat/KPI cards into ONE usage-variant component (user request):** combine Stat Card + Dashboard KPI + Earnings/Billing/Settlement/Reports/Analytics top cards. Replace the **color-focused** variants (Blue/Emerald/…) with **usage-focused** config: keep `Icon` swap; make chip/icon color a simple override (not a variant); add content config — `Show subtitle` (BOOL), `Show trend` (BOOL → trend row = small arrow icon + delta % + "vs …" text). This is a component REBUILD + re-publish + RE-ADOPT (the 12 live Stat Card instances + Dashboard KPIs + the finance/analytics top cards). Sizeable — do as a focused pass. Note: Visa default card should also get `bg-blue-50/50` tint (currently neutral) — fold into Part 1 or a small follow-up.
+
+---
+
 ## Session 27 (2026-06-05) — Adoption begun: Stat Card swap (Support done) post-publish
 
 Library published. Verified the enhanced **Stat Card** (`Icon#3335:0` swap + `Color`) and **Page Header** (`Title`/`Subtitle`/`Show action`) import cross-file.
