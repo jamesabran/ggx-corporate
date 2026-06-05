@@ -5,6 +5,22 @@
 
 ---
 
+## Session 24 (2026-06-05) — Token pipeline / single source of truth (scalability)
+
+Addressed the root cause behind the recurring manual reconciliation passes (colors S21, spacing S23, radius mismatch): three independent token representations (code `theme.css`, Figma DS variables, App Screens) that drift. Established a generated pipeline. **Full write-up: `docs/token_pipeline.md`.**
+
+- **Phase 2 — code generated from tokens ✅:** new `tokens/tokens.json` (single source of truth) + `scripts/build-tokens.mjs` (`npm run tokens`) regenerates `src/styles/theme.css`. Verified **77/77 CSS declarations identical** to the previous hand-authored file (zero behavior change) and `npm run build` passes. theme.css now carries an AUTO-GENERATED header and stays committed. (Custom 50-line emitter, not Style Dictionary — lower risk for ~40 tokens; noted as drop-in if the set grows.)
+- **Phase 1 — radius aligned ✅ (publish pending):** code scale is shadcn `--radius` (sm6/md8/lg10/xl14); DS only had the vanilla Tailwind scale (2/6/8/12) → the mismatch we'd flagged. Created a new **`radius` variable collection** in the DS file (`9zwtAL…`) with CORNER_RADIUS-scoped vars matching code. Keys recorded in `docs/token_pipeline.md`. **Binding the App Screens cornerRadii is blocked until the user publishes the DS library** (cross-file var import needs publish).
+- **Phase 3 — Figma sync:** `scripts/sync-figma-variables.mjs` (`npm run tokens:figma`) written as the REST/CI path (Enterprise-gated for writes); non-Enterprise path is the Plugin API (used to create the radius collection above).
+- **Phase 4 — Code Connect prepared:** `Button.figma.tsx` + `Card.figma.tsx` (Button set `3321:130`, Card `3321:344`) + `figma.config.json` + `@figma/code-connect` devDep. Co-located but **excluded from the app build** via `tsconfig.app.json` (`src/**/*.figma.tsx`) so the bundle/build is unaffected (re-verified green).
+
+**⏳ HAND-OFF steps (need user / auth):**
+1. **Publish** the GGX-SHADCN library in Figma → then run the App-Screens cornerRadius binding pass against the new `radius` vars.
+2. `npm i && npx figma connect publish` (Figma auth token) to activate Code Connect; extend pattern to Input/Select/Badge/etc.
+3. (Optional) provide an Enterprise `FIGMA_TOKEN` to run `npm run tokens:figma` in CI; otherwise keep syncing via the Plugin API.
+
+---
+
 ## Session 23 (2026-06-05) — Inline-emoji Tablerization + spacing variable binding (all pages)
 
 **Inline mid-text emojis → Tabler icons (DONE, ~67 conversions).** Completed the leftover from S22/S22b: glyphs embedded inside a `[icon][text]` or `[text][icon]` row (e.g. "📅 Effective:", "📍 area"). Method: for a TEXT node whose trimmed content *starts/ends* with a mapped emoji but also has words, split off the emoji → import the Tabler COMPONENT (cached from `ggx/tablerMap`), `createInstance`, size to fontSize, recolor to the text's fill, insert beside the now-stripped text inside the row's auto-layout. Multi-emoji documentation prose (e.g. legend strings, several glyphs in one paragraph) was intentionally skipped — splitting those would fragment the copy.
