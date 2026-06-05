@@ -20,7 +20,9 @@ Library published. Verified the enhanced **Stat Card** (`Icon#3335:0` swap + `Co
 
 **DECISION — Dashboard KPIs NOT swapped:** they use **tinted card bg + solid colored chip/white icon + colored trend delta** — a richer pattern than the white-bg DS Stat Card; swapping would downgrade and likely diverge from code. Either keep bespoke or add a dedicated "KPI Card" treatment later.
 
-**⏳ REMAINING adoption (next session):** Stat Card swap for Users(2)/SLA(3)/Ops(3) white-bg cards (same recipe); Page Header swap across 15 pages; build+adopt Form Field / Info Item / Toolbar. Variant-accent map: Blue#3b82f6 Emerald#11b06e Amber#d88b15 Red#e22727 Orange#ee6110 Violet#8b5cf6 Gray#575b62.
+**Stat Card adoption COMPLETE for all white-bg matches (12 cards):** Support(4: mail/eye/check/clock — Orange/Blue/Emerald/Gray), Users(2: user/shield — Blue/Emerald), SLA(3: clock/alert-triangle/alert-circle — Amber/Red/Orange), Ops(3: copy/package/truck — Blue/Violet/Blue). All verified visually. Color now mapped from **chip tint** via exact Tailwind-tint→variant lookup (reliable; light tints under-saturate for hue math). Variant-accent map: Blue#3b82f6 Emerald#11b06e Amber#d88b15 Red#e22727 Orange#ee6110 Violet#8b5cf6 Gray#575b62.
+
+**⏳ REMAINING adoption:** Page Header swap across 15 pages (note: header action buttons often carry a leading Tabler icon — needs the Button "with icon" variant + icon swap, or accept label-only); build+adopt Form Field / Info Item / Toolbar. Dashboard KPIs stay bespoke.
 
 ---
 
