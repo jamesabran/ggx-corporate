@@ -5,6 +5,17 @@
 
 ---
 
+## Session 31 (2026-06-10) — Post-Part-1: cleanup, scoping bug class, blue-banner buttons
+
+- **DS file cleanup:** deleted 13 empty `GGX / *` screen pages that lingered in GGX-SHADCN (should never be in the DS file — saved feedback memory). Reworded the GGX Brand page's "POC" note (naming-rule compliance).
+- **Repo:** pushed all pending commits to `origin/master` (was 69 behind; remote `jabranux/ggx-corporate` is private, `jamesabran` added as collaborator). Closed stale PR #1 (merged master→pre-session-snapshot backup, wrong direction).
+- **Data Analytics scoping bug FIXED** (`216f228`): root cause was the page reading only `SubAccountContext` (admin switcher), ignoring `AuthContext.accountId` — managers (currentAccount stays `main`) saw consolidated data. Added shared **`useScopedAccountId()`** hook (`src/app/hooks/useAccountScope.ts`) combining auth role + subaccount view. Wired into DataAnalytics (data + label + admin-only banner hint).
+- **Scoping rollout** (`d37c8a3`): applied `useScopedAccountId()` to **Transactions, Claims, SLA Alerts** too (same latent bug). Consolidated-view UI flag = `subAccountsEnabled && scopeId === undefined`. Transactions flat list now scoped at service layer via `getTransactionsBySubaccountId`. Build green. **Roadmap item 3 closed.**
+- **Code Connect prep** (`ce2a88a`): added Stat Card mapping (`StatCard.figma.tsx` → node 3351:81) + `cc:parse`/`cc:publish` npm scripts. `npm run cc:parse` validates Button/Card/Stat Card clean. **Authenticated `npx figma connect publish` still pending (needs Figma token).**
+- **Blue-banner buttons FIXED (Figma App Screens):** the S29 white-strip over-reached and blanked the white fills of the two `variant="outline" bg-white` buttons inside blue-50 banners — "Manage Payment" (Billing `663:9`) + "View Documentation" (API `701:249`). Restored white instance fills; verified visually. Code was already correct (these are the only two such banner buttons per grep).
+
+---
+
 ## Session 30 (2026-06-10) — Part 1: Stat/KPI card unified into ONE usage-focused component (BUILT; publish-gated)
 
 **DONE — rebuilt Stat Card in GGX-SHADCN (`9zwtAL4RU3Y8WVRJAsSulX`, page "Stat Card") as a usage-focused SINGLE component.** Old 7-color-variant SET `ad33fb5d…` DELETED. **New component key `ce4fd0e4d11f3c37c4d3d689dd58b3644c626117`** (id `3351:81`).
