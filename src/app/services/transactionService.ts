@@ -249,17 +249,21 @@ function batchUploadedDate(batchId: string): string {
   return m ? m[1] : '—';
 }
 
+/** Roll-up status from a count breakdown (used for backend-reported counts). */
+function rollupStatusFromCounts(c: BatchCounts): { label: string; variant: StatusVariant } {
+  if (c.total > 0 && c.delivered === c.total) return { label: 'Complete', variant: 'success' };
+  if (c.inProgress > 0) return { label: 'In Progress', variant: 'info' };
+  if (c.failed === c.total) return { label: 'Failed', variant: 'danger' };
+  return { label: 'Partial', variant: 'warning' };
+}
+
 /** Sample roll-up status derived from member statuses (stands in for backend value). */
 function batchRollupStatus(items: Transaction[]): { label: string; variant: StatusVariant } {
   const total = items.length;
   const delivered = items.filter((t) => t.status === 'delivered').length;
   const failed = items.filter((t) => t.status === 'failed' || t.status === 'returned').length;
   const inProgress = total - delivered - failed;
-
-  if (delivered === total) return { label: 'Complete', variant: 'success' };
-  if (inProgress > 0) return { label: 'In Progress', variant: 'info' };
-  if (failed === total) return { label: 'Failed', variant: 'danger' };
-  return { label: 'Partial', variant: 'warning' };
+  return rollupStatusFromCounts({ total, delivered, inProgress, failed });
 }
 
 /**
@@ -300,7 +304,7 @@ export async function getTransactionBatches(
             ).length,
             failed: items.filter((t) => t.status === 'failed' || t.status === 'returned').length,
           },
-      status: batchRollupStatus(items),
+      status: rc ? rollupStatusFromCounts(rc) : batchRollupStatus(items),
       uploadedDate: batchUploadedDate(batch.batchId),
     };
   });

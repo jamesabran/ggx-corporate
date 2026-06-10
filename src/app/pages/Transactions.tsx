@@ -246,6 +246,14 @@ export function Transactions() {
           ) : batchGroups.map(({ batch, transactions: items, counts, status: st, uploadedDate }) => {
             const isExpanded = expandedBatch === batch.batchId;
             const { total, delivered, inProgress, failed } = counts;
+            // Compact, consistent count breakdown (dot + value + label) — replaces
+            // the old row of competing colored badges.
+            const countStats = [
+              { label: 'Total',     value: total,      dot: 'bg-gray-300' },
+              { label: 'Delivered', value: delivered,  dot: 'bg-emerald-500' },
+              { label: 'Active',    value: inProgress, dot: 'bg-blue-500' },
+              { label: 'Failed',    value: failed,     dot: 'bg-red-500' },
+            ];
 
             return (
               <Card key={batch.batchId}>
@@ -285,24 +293,17 @@ export function Transactions() {
                         </p>
                       </div>
 
-                      {/* Counter badges */}
-                      <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
-                        <Badge variant="secondary" className="tabular-nums font-semibold px-2">
-                          {total.toLocaleString()} total
-                        </Badge>
-                        <Badge variant="success" className="tabular-nums font-semibold px-2">
-                          {delivered.toLocaleString()} delivered
-                        </Badge>
-                        {inProgress > 0 && (
-                          <Badge variant="info" className="tabular-nums font-semibold px-2">
-                            {inProgress.toLocaleString()} active
-                          </Badge>
-                        )}
-                        {failed > 0 && (
-                          <Badge variant="destructive" className="tabular-nums font-semibold px-2">
-                            {failed.toLocaleString()} failed
-                          </Badge>
-                        )}
+                      {/* Counter stats — compact, consistent format */}
+                      <div className="hidden sm:flex items-center gap-5 flex-shrink-0 tabular-nums">
+                        {countStats.map((s) => (
+                          <div key={s.label} className="flex flex-col items-end leading-tight">
+                            <span className="text-sm font-semibold text-gray-900">{s.value.toLocaleString()}</span>
+                            <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                              <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                              {s.label}
+                            </span>
+                          </div>
+                        ))}
                       </div>
 
                       {/* Download action — stopPropagation so it doesn't toggle expand */}
@@ -329,12 +330,14 @@ export function Transactions() {
                       </div>
                     )}
 
-                    {/* Mobile counts */}
-                    <div className="sm:hidden flex flex-wrap items-center gap-1.5 mt-3 ml-14">
-                      <Badge variant="secondary" className="tabular-nums">{total.toLocaleString()} total</Badge>
-                      <Badge variant="success" className="tabular-nums">{delivered.toLocaleString()} delivered</Badge>
-                      {inProgress > 0 && <Badge variant="info" className="tabular-nums">{inProgress.toLocaleString()} active</Badge>}
-                      {failed > 0 && <Badge variant="destructive" className="tabular-nums">{failed.toLocaleString()} failed</Badge>}
+                    {/* Mobile counts — same compact format, inline */}
+                    <div className="sm:hidden flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 ml-14 tabular-nums">
+                      {countStats.map((s) => (
+                        <span key={s.label} className="flex items-center gap-1 text-xs text-gray-500">
+                          <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                          <span className="font-semibold text-gray-900">{s.value.toLocaleString()}</span> {s.label}
+                        </span>
+                      ))}
                     </div>
                   </CardContent>
                 </button>
@@ -383,6 +386,13 @@ export function Transactions() {
                         ))}
                       </TableBody>
                     </Table>
+                    {items.length < total && (
+                      <div className="px-5 py-3 border-t border-gray-100">
+                        <p className="text-xs text-gray-400">
+                          Showing {items.length.toLocaleString()} of {total.toLocaleString()} transactions in this batch. Use Export for the full list.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </Card>

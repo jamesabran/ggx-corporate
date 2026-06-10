@@ -107,9 +107,11 @@ Pre-implementation checklist:
 - Analytics totals and business-critical metrics must come from service/backend contracts — not page-level frontend computations.
 - Wrong scoping actively misrepresents subaccount performance to stakeholders — treat this as high priority within the polish pass.
 
-### 4. Bulk upload / batch transactions UX cleanup
+### 4. Bulk upload / batch transactions UX cleanup ✅ DONE (2026-06-10)
 
-Issues:
+Resolved: (1) all 7 remaining single-item batches given realistic `reportedCounts` (67–423 tx); service rollup status now derives from `reportedCounts` when present. (2) Individual-booking copy was already gone (no match on Transactions). (3) Batch list is a card-based expandable list (not the old cramped table); counts redesigned. (4) The 4 competing colored badges replaced with a compact, consistent stat group (small colored dot + value + label) for Total/Delivered/Active/Failed, desktop + mobile; expanded list now notes "Showing N of {total}". Build green.
+
+Original issues:
 - **Unrealistic batch sizes.** Current batch seed data has only 1–2 transactions per batch. GGX Corporate is bulk-upload focused — batches should represent realistic operations: 50–500+ transactions per batch. Only use small batches if intentionally showing an edge case (e.g. a corrective re-upload).
 - **Irrelevant individual booking note/CTA.** The Transactions page contains a note or CTA implying individual booking is available. This app is bulk-upload only — remove or replace with something relevant to bulk operations.
 - **Cluttered batch list layout.** Current batch table columns are overcrowded, especially the counters section. Redesign for scannability: reduce primary visible columns, move secondary stats to a secondary row, tooltip, or expandable area.
