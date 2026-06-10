@@ -14,6 +14,7 @@ import { CompactAddressCard } from '../components/CompactAddressCard';
 import { AddressBook, getPreferredAddress, type Address } from '../components/AddressBook';
 import { useSubAccounts, type SubAccount } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useScopedAccountId } from '../hooks/useAccountScope';
 import { getSubaccountOptions } from '../services/userService';
 import {
   getOpsRequests, submitOpsRequest,
@@ -57,11 +58,13 @@ interface FormState {
   // supply
   supplyType: SupplyType | '';
   quantity: string;
+  neededByDate: string;
   // pickup support
   pickupSupportType: PickupSupportType | '';
   relatedBatchId: string;
   estimatedShipmentCount: string;
   estimatedWeight: string;
+  preferredPickupWindow: string;
   // operational assistance
   assistanceType: OperationalAssistanceType | '';
   // shared: address for delivery or pickup
@@ -74,10 +77,12 @@ const emptyForm = (): FormState => ({
   notes: '',
   supplyType: '',
   quantity: '',
+  neededByDate: '',
   pickupSupportType: '',
   relatedBatchId: '',
   estimatedShipmentCount: '',
   estimatedWeight: '',
+  preferredPickupWindow: '',
   assistanceType: '',
   selectedAddress: null,
 });
@@ -115,15 +120,16 @@ function requestDetail(r: OperationsRequest): string {
 export function OperationsRequests() {
   const navigate = useNavigate();
   const {
-    isMainAccountView, getCurrentAccountId, getCurrentAccountName,
-    subAccountsEnabled, subAccounts, currentAccount,
+    getCurrentAccountName, subAccountsEnabled, subAccounts, currentAccount,
   } = useSubAccounts();
   const { user } = useAuth();
   const isManager = user?.role === 'manager';
 
-  const mainView = isMainAccountView();
-  // When not in main view, scopeId is the current subaccount/account id.
-  const scopeId = mainView ? undefined : (getCurrentAccountId() ?? undefined);
+  // Role-aware scope: managers are hard-scoped to their subaccount (they may have
+  // currentAccount='main' inherited from an admin session); admins see consolidated
+  // on Main Account and scoped when drilled into a subaccount.
+  const scopeId = useScopedAccountId();
+  const mainView = subAccountsEnabled && scopeId === undefined;
   // The currently-viewed subaccount object (null when on main or no subaccounts).
   const currentSubaccount = subAccounts.find((s) => s.id === currentAccount) ?? null;
 
@@ -210,7 +216,7 @@ export function OperationsRequests() {
     // Context A: selector is shown — user must make an explicit selection.
     if (showSubaccountSelector && !form.subaccountId) return false;
     if (form.category === 'supply') {
-      return !!(form.supplyType && form.quantity && form.selectedAddress);
+      return !!(form.supplyType && form.quantity && form.neededByDate && form.selectedAddress);
     }
     if (form.category === 'pickup_support') {
       return !!(form.pickupSupportType && form.selectedAddress);
@@ -254,11 +260,13 @@ export function OperationsRequests() {
         supplyType:   form.supplyType as SupplyType || undefined,
         quantity:     form.quantity ? parseInt(form.quantity, 10) : undefined,
         deliveryAddress: form.category === 'supply' ? addrStr : undefined,
+        neededByDate:    form.category === 'supply' ? (form.neededByDate || undefined) : undefined,
         pickupSupportType: form.pickupSupportType as PickupSupportType || undefined,
         relatedBatchId:    form.relatedBatchId || undefined,
         pickupAddress:     form.category === 'pickup_support' ? addrStr : undefined,
         estimatedShipmentCount: form.estimatedShipmentCount ? parseInt(form.estimatedShipmentCount, 10) : undefined,
         estimatedWeight: form.estimatedWeight || undefined,
+        preferredPickupWindow: form.category === 'pickup_support' ? (form.preferredPickupWindow || undefined) : undefined,
         assistanceType: form.assistanceType as OperationalAssistanceType || undefined,
       });
       setSubmitSuccess(true);
@@ -578,6 +586,17 @@ export function OperationsRequests() {
                     className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Needed by <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={form.neededByDate}
+                    onChange={(e) => setField('neededByDate', e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
                 {addressSection}
               </>
             )}
@@ -623,6 +642,16 @@ export function OperationsRequests() {
                       className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Preferred pickup window</label>
+                  <input
+                    type="text"
+                    value={form.preferredPickupWindow}
+                    onChange={(e) => setField('preferredPickupWindow', e.target.value)}
+                    placeholder="e.g. Tomorrow 9 AM–12 PM"
+                    className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Related batch ID (optional)</label>

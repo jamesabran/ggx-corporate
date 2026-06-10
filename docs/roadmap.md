@@ -126,7 +126,9 @@ Design direction:
 
 ## Feature additions
 
-### 5. Operations Requests (future module)
+### 5. Operations Requests ✅ IMPLEMENTED + AUDITED (2026-06-10)
+
+Audit vs spec: service contract (`opsRequestsService`), data types, all category/type labels, the 7 statuses, the no-frontend-feasibility rule, sidebar placement, and the detail view all match the spec. Two gaps found and fixed: (1) **list scope manager bug** — the list derived `scopeId` from `SubAccountContext` only, so a manager with `currentAccount='main'` saw all subaccounts' requests; now uses `useScopedAccountId()` (managers hard-scoped). (2) **missing form fields** — the create form omitted supply "Needed by" date (now required) and pickup "Preferred pickup window" (now collected); the data type + detail view already supported both. Build green. Remaining (backend-era): per-id detail access enforcement is a BFF concern.
 
 **Purpose:** Allow corporate users to send logistics execution requests to the Operations team. These are not issue reports — they are fulfillment and coordination requests.
 
