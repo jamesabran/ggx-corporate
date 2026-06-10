@@ -8,6 +8,9 @@ import {
   IconClockCheck, IconCash, IconTruckReturn, IconGauge, IconInfoCircle,
 } from '@tabler/icons-react';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useScopedAccountId } from '../hooks/useAccountScope';
+import { useAuth } from '../contexts/AuthContext';
+import { getAccountNameById } from '../data/accounts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Select } from '../components/ui/Select';
 import { Badge } from '../components/ui/Badge';
@@ -40,9 +43,13 @@ const DEFAULT_CHARTS: AnalyticsCharts = {
 };
 
 export function DataAnalytics() {
-  const { subAccountsEnabled, isMainAccountView, getCurrentAccountName, getCurrentAccountId } = useSubAccounts();
-  const inSubaccountView = subAccountsEnabled && !isMainAccountView();
-  const scopeId = inSubaccountView ? (getCurrentAccountId() ?? undefined) : undefined;
+  const { getCurrentAccountName } = useSubAccounts();
+  const { user } = useAuth();
+  // Effective scope combines the authenticated user (managers are hard-scoped to
+  // their subaccount) with the Admin Main Account switcher. See useAccountScope.
+  const scopeId = useScopedAccountId();
+  const inSubaccountView = scopeId !== undefined;
+  const scopeName = scopeId ? (getAccountNameById(scopeId) ?? getCurrentAccountName()) : null;
 
   const [overview, setOverview] = useState<AnalyticsOverview>(DEFAULT_OVERVIEW);
   const [charts, setCharts] = useState<AnalyticsCharts>(DEFAULT_CHARTS);
@@ -90,7 +97,7 @@ export function DataAnalytics() {
     : 1;
 
   // Performance Overview KPIs.
-  const scopeLabel = inSubaccountView ? getCurrentAccountName() : 'All accounts';
+  const scopeLabel = scopeName ?? 'All accounts';
   const primaryKpis = [
     { title: 'Total Orders',        value: overview.totalOrders.toLocaleString(),     sub: scopeLabel,             icon: IconPackage,     color: 'text-blue-600',   bg: 'bg-blue-100' },
     { title: 'Fulfilled Orders',    value: overview.fulfilledOrders.toLocaleString(), sub: `${overview.deliveryEfficiencyPct.toFixed(1)}% of total`, icon: IconCircleCheck, color: 'text-green-600',  bg: 'bg-green-100' },
@@ -134,8 +141,8 @@ export function DataAnalytics() {
         <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
           <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-blue-800">
-            Showing analytics for <span className="font-semibold">{getCurrentAccountName()}</span>.
-            Switch to Main Account to see consolidated data across all subaccounts.
+            Showing analytics for <span className="font-semibold">{scopeName}</span>.
+            {user?.role !== 'manager' && ' Switch to Main Account to see consolidated data across all subaccounts.'}
           </p>
         </div>
       )}

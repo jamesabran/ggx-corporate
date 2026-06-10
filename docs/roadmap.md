@@ -81,9 +81,15 @@ Implementation notes:
 - Plan alongside the Operations Requests module since it affects navigation structure.
 - Review sidebar IA again after any major feature addition.
 
-### 3. Data Analytics account scoping fix ⚠️ CONFIRMED BUG
+### 3. Data Analytics account scoping fix ✅ FIXED (2026-06-10)
 
-Current state: **confirmed** — the Data Analytics page shows data across all accounts regardless of context. This affects two scenarios:
+Current state: **resolved.** Root cause: `DataAnalytics.tsx` derived scope only from `SubAccountContext` (the Admin switcher), ignoring `AuthContext.accountId` — so a manager (whose `currentAccount` stays `'main'`) fell into the Main Account branch and saw consolidated data. The service (`dataAnalyticsService`) already supported `subaccountId` context.
+
+Fix: added a shared `useScopedAccountId()` hook (`src/app/hooks/useAccountScope.ts`) that combines auth role + subaccount view — managers are hard-scoped to `user.accountId`; admins get consolidated on Main Account and scoped when drilled into a subaccount. `DataAnalytics` now uses it for the analytics + claims + SLA fetches and for the scoped label/banner (banner's "Switch to Main Account" hint is admin-only). Build green.
+
+**Follow-up (same bug class, not yet done):** the standalone `Transactions`, `Claims`, and `SLA Alerts` pages still derive scope from `SubAccountContext` only and have the same manager gap — apply `useScopedAccountId()` there too.
+
+Originally affected two scenarios:
 
 - **Main Account admin viewing a specific subaccount** — analytics show consolidated/all-account data instead of scoping to the selected subaccount.
 - **Manager logged into a subaccount** — analytics show all-account data instead of only that manager's subaccount data.
