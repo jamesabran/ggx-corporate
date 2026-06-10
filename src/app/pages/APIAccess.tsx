@@ -10,6 +10,10 @@ import { Select } from '../components/ui/Select';
 import { SearchInput } from '../components/SearchInput';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
+import { useAuth } from '../contexts/AuthContext';
+import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useScopedAccountId } from '../hooks/useAccountScope';
+import { getAccountNameById } from '../data/accounts';
 import {
   getApiLogs, API_LOG_STATUS_META, type ApiLog, type ApiLogStatus,
 } from '../services/apiLogsService';
@@ -21,16 +25,19 @@ function logStatusIcon(status: ApiLogStatus) {
   return <IconAlertTriangle className={status === 'failed' ? 'w-4 h-4 text-red-500' : 'w-4 h-4 text-amber-500'} />;
 }
 
-function ApiLogsTab() {
+function ApiLogsTab({ scopeId, showAccount }: { scopeId?: string; showAccount: boolean }) {
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
-    getApiLogs({ status: statusFilter as ApiLogStatus | 'all', search })
+    // `scopeId` carries the account scope (undefined = consolidated). Scoping is
+    // applied at the service layer so a manager/subaccount only ever receives
+    // their own entries.
+    getApiLogs({ accountId: scopeId, status: statusFilter as ApiLogStatus | 'all', search })
       .then(setLogs)
       .catch(() => {});
-  }, [statusFilter, search]);
+  }, [scopeId, statusFilter, search]);
 
   return (
     <div className="space-y-4">
@@ -67,6 +74,7 @@ function ApiLogsTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Timestamp</TableHead>
+                  {showAccount && <TableHead>Subaccount</TableHead>}
                   <TableHead>Endpoint / Event</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Message</TableHead>
@@ -79,6 +87,11 @@ function ApiLogsTab() {
                   return (
                     <TableRow key={log.id}>
                       <TableCell className="text-gray-500 whitespace-nowrap">{log.timestamp}</TableCell>
+                      {showAccount && (
+                        <TableCell className="text-gray-600">
+                          {getAccountNameById(log.accountId) ?? log.accountId}
+                        </TableCell>
+                      )}
                       <TableCell className="font-mono text-xs text-gray-700">{log.endpoint}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5">
@@ -103,6 +116,19 @@ function ApiLogsTab() {
 }
 
 export function APIAccess() {
+  const { user } = useAuth();
+  const { subAccountsEnabled, getCurrentAccountName } = useSubAccounts();
+  // Effective account scope: undefined = consolidated (Main Account admin or a
+  // standard account, both unchanged); a subaccount id = scoped (admin drilled
+  // into a subaccount, or a manager locked to their assigned subaccount).
+  const scopeId = useScopedAccountId();
+  const isScoped = scopeId !== undefined;
+  const showAccountColumn = subAccountsEnabled && !isScoped; // consolidated admin view
+  const scopedAccountName = isScoped
+    ? (getAccountNameById(scopeId) ?? getCurrentAccountName())
+    : null;
+  const isManager = user?.role === 'manager';
+
   const [sandboxMode, setSandboxMode] = useState(true);
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('https://api.yourcompany.com/webhooks/gogo');
@@ -154,7 +180,11 @@ export function APIAccess() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">API Integration</h1>
-        <p className="text-gray-600 mt-1">Integrate GoGo Xpress with your systems</p>
+        <p className="text-gray-600 mt-1">
+          {isScoped
+            ? <>Integrate GoGo Xpress with your systems — scoped to <span className="font-medium text-gray-700">{scopedAccountName}</span></>
+            : 'Integrate GoGo Xpress with your systems'}
+        </p>
       </div>
 
       <Tabs defaultValue="config">
@@ -347,7 +377,12 @@ export function APIAccess() {
         </TabsContent>
 
         <TabsContent value="logs" className="mt-6">
-          <ApiLogsTab />
+          <ApiLogsTab scopeId={scopeId} showAccount={showAccountColumn} />
+          {isManager && (
+            <p className="text-xs text-gray-400 mt-3">
+              Showing API activity for your assigned subaccount only.
+            </p>
+          )}
         </TabsContent>
       </Tabs>
 

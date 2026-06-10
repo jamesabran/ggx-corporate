@@ -178,9 +178,11 @@ const managerNavigation: NavItem[] = [
     { name: 'Analytics', href: '/dashboard/analytics', icon: IconChartBar },
     { name: 'Reports',   href: '/dashboard/reports',   icon: IconFileText },
   ]),
-  // Managers see Shopify scoped to their assigned subaccount's connection state.
+  // Managers see Integrations scoped to their assigned subaccount: API
+  // Integration (logs/config) + Shopify connection state.
   grp('Integrations', [
-    { name: 'Shopify', href: '/dashboard/shopify', icon: IconBuildingStore },
+    { name: 'API Integration', href: '/dashboard/api-access', icon: IconCode },
+    { name: 'Shopify',         href: '/dashboard/shopify',    icon: IconBuildingStore },
   ]),
   grp('System', [
     { name: 'Notifications', href: '/dashboard/notifications', icon: IconBell },

@@ -11,6 +11,13 @@ export type ApiLogStatus = 'success' | 'failed' | 'warning';
 
 export interface ApiLog {
   id: string;
+  /**
+   * Canonical account/subaccount id that owns this log entry (see
+   * `data/accounts.ts`). Used for role-based scoping: Main Account admins see
+   * all entries consolidated; subaccount/manager contexts see only their own.
+   * Backend-owned — the frontend only filters by it.
+   */
+  accountId: string;
   /** Request / event timestamp. */
   timestamp: string;
   /** Endpoint path or webhook event name. */
@@ -24,10 +31,13 @@ export interface ApiLog {
   reference?: string;
 }
 
-// Newest-first sample log set.
+// Newest-first sample log set. Spread across subaccounts so role-based scoping
+// is demonstrable: the demo Manager (acme-luzon) sees a mix of success/warning/
+// failed; other subaccounts' entries must stay hidden from that manager.
 export const apiLogs: ApiLog[] = [
   {
     id: 'LOG-2026-10241',
+    accountId: 'acme-corporation',
     timestamp: '2026-06-10 10:12:44',
     endpoint: 'POST /v1/bookings',
     method: 'POST',
@@ -37,6 +47,7 @@ export const apiLogs: ApiLog[] = [
   },
   {
     id: 'LOG-2026-10240',
+    accountId: 'acme-luzon',
     timestamp: '2026-06-10 10:11:08',
     endpoint: 'webhook: delivery.status_changed',
     method: 'EVENT',
@@ -46,6 +57,7 @@ export const apiLogs: ApiLog[] = [
   },
   {
     id: 'LOG-2026-10239',
+    accountId: 'acme-corporation',
     timestamp: '2026-06-10 10:04:51',
     endpoint: 'GET /v1/transactions/GGX-2026-90008',
     method: 'GET',
@@ -55,6 +67,7 @@ export const apiLogs: ApiLog[] = [
   },
   {
     id: 'LOG-2026-10238',
+    accountId: 'acme-luzon',
     timestamp: '2026-06-10 09:58:19',
     endpoint: 'POST /v1/bookings',
     method: 'POST',
@@ -64,6 +77,7 @@ export const apiLogs: ApiLog[] = [
   },
   {
     id: 'LOG-2026-10237',
+    accountId: 'acme-luzon',
     timestamp: '2026-06-10 09:51:37',
     endpoint: 'webhook: delivery.status_changed',
     method: 'EVENT',
@@ -73,6 +87,7 @@ export const apiLogs: ApiLog[] = [
   },
   {
     id: 'LOG-2026-10236',
+    accountId: 'acme-visayas',
     timestamp: '2026-06-10 09:45:02',
     endpoint: 'POST /v1/bookings/bulk',
     method: 'POST',
@@ -82,6 +97,7 @@ export const apiLogs: ApiLog[] = [
   },
   {
     id: 'LOG-2026-10235',
+    accountId: 'acme-corporation',
     timestamp: '2026-06-10 09:30:55',
     endpoint: 'GET /v1/rates',
     method: 'GET',
@@ -90,6 +106,7 @@ export const apiLogs: ApiLog[] = [
   },
   {
     id: 'LOG-2026-10234',
+    accountId: 'acme-luzon',
     timestamp: '2026-06-10 09:12:23',
     endpoint: 'POST /v1/keys/authenticate',
     method: 'POST',
@@ -98,6 +115,7 @@ export const apiLogs: ApiLog[] = [
   },
   {
     id: 'LOG-2026-10233',
+    accountId: 'acme-visayas',
     timestamp: '2026-06-10 08:47:10',
     endpoint: 'GET /v1/transactions',
     method: 'GET',
@@ -106,6 +124,7 @@ export const apiLogs: ApiLog[] = [
   },
   {
     id: 'LOG-2026-10232',
+    accountId: 'acme-corporation',
     timestamp: '2026-06-10 08:30:41',
     endpoint: 'webhook: pickup.confirmed',
     method: 'EVENT',

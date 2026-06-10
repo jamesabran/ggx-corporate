@@ -22,14 +22,28 @@ export const API_LOG_STATUS_META: Record<ApiLogStatus, {
 };
 
 export interface ApiLogFilters {
+  /**
+   * Account/subaccount scope. When set, only that account's entries are
+   * returned (subaccount/manager contexts). When `undefined`, all entries are
+   * returned consolidated (Main Account admin / standard account). Role-based
+   * scoping is enforced here at the service layer, never in the page.
+   */
+  accountId?: string;
   status?: ApiLogStatus | 'all';
   search?: string;
 }
 
-/** Return API logs (newest-first), optionally filtered by status and search. */
+/**
+ * Return API logs (newest-first), scoped by account and optionally filtered by
+ * status and search. Pass `accountId` to restrict to a single subaccount; omit
+ * it for the consolidated Main Account / standard-account view.
+ */
 export async function getApiLogs(filters?: ApiLogFilters): Promise<ApiLog[]> {
   let result = [...apiLogs];
-  const { status, search } = filters ?? {};
+  const { accountId, status, search } = filters ?? {};
+  if (accountId) {
+    result = result.filter((l) => l.accountId === accountId);
+  }
   if (status && status !== 'all') {
     result = result.filter((l) => l.status === status);
   }
