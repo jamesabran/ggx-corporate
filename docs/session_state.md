@@ -5,6 +5,22 @@
 
 ---
 
+## Session 33 (2026-06-10) — Shopify product-direction revision (metrics + Install CTA + Activity Logs)
+
+Revised the Shopify module per new product direction. **Code + Figma both updated; build green.** Commit `d8c56d2`.
+
+- **Overview metrics retargeted to pickup activity** (`shopifyService.ts` + `data/shopify.ts`): dropped Orders Synced / Sync Issues / Connection Issues. Added backend-provided per-store rollups (`pendingPickups`, `monthlyBookings`, `failedRequests`).
+  - **Main Account:** Connected Stores / Pending Pickups / Shopify Bookings / Failed Pickup Requests (`getMainShopifyMetrics(accounts)` sums store rollups).
+  - **Scoped (subaccount/manager/standard):** Store Status / Pending Pickups / Shopify Bookings / Failed Pickup Requests (`getScopedShopifyMetrics(accountId)` → null when no store). `getStoreStatusLabel` → Connected / Needs attention / Disconnected + `STORE_STATUS_META`.
+  - **Scoped + no store:** Overview shows the empty state (no metric cards).
+- **Single Install CTA everywhere:** `InstallPluginButton` ("Install Shopify Plugin" → `apps.shopify.com/gogo-xpress-beta`, external-link icon). Removed "Connect Shopify Store" / "View on Shopify App Store" / "Open Shopify App Listing". Empty state + overview callout each have ONE button. Hero copy = "Install the Shopify Plugin" + revised body.
+- **Coverage table** columns now: Account/Subaccount, Shopify Store, Status, Pending Pickups, Failed Requests, Last Activity, Action. No-store rows → "No store installed" + "Install Plugin" (install language, not connect).
+- **"Sync Logs" → "Activity Logs"** (tab label + heading + empty-state copy). Data model/events unchanged.
+- **Figma App Screens updated** (`ceL7WwBQpaLl66Y7sUcgPR`, page `1059:4`): Overview (`1063:2`) banner/CTA/stat-cards/how-it-works; Empty State (`1066:6`) single CTA + install copy (also fixed a pre-existing collapsed inner column — vertical sizing was FIXED at 10px, set to HUG); Connected card (`1067:81`) single status badge + Pending Pickups/Last Activity fields; Coverage (`1068:16`) rebuilt with new columns + install language; Activity Logs (`1069:22`, frame renamed). All verified by screenshot.
+- **Note:** "Not installed" coverage badge still renders blue (DS Badge set has no outline/text variant) — pre-existing, acceptable.
+
+---
+
 ## Session 32 (2026-06-10) — Integrations sidenav group + Shopify module + API Logs + Shopify tx tagging
 
 **Code COMPLETE + build green.** New **Integrations** sidebar group; API Integration moved under it; new **Shopify** module; Shopify-sourced transactions tagged in the Subaccount column.
