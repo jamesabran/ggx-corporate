@@ -10,7 +10,7 @@
 //   - `report` notifications can later link to a real downloads/reports page.
 //   - Bulk upload events are sourced live from `bulkUploads.ts`.
 
-import type { ComponentType } from 'react';
+import { useMemo, type ComponentType } from 'react';
 import {
   IconUpload, IconPackage, IconUserCog, IconAlertTriangle, IconFileText, IconMessage,
 } from '@tabler/icons-react';
@@ -268,17 +268,23 @@ export function useNotificationViewer(): NotificationViewer {
   const { subAccountsEnabled, currentAccount, getCurrentAccountId, getCurrentAccountName, isMainAccountView } = useSubAccounts();
 
   // Manager: scoped to their assigned subaccount id (from the auth session).
-  if (user?.role === 'manager') {
-    return { role: 'manager', accountId: user.accountId, accountName: user.accountName };
-  }
-
   // Admin: 'all' at parent/main view, otherwise the drilled-into subaccount id.
   const isAll = !subAccountsEnabled || isMainAccountView() || currentAccount === 'main';
-  return {
-    role: 'admin',
-    accountId: isAll ? 'all' : getCurrentAccountId(),
-    accountName: isAll ? 'all' : getCurrentAccountName(),
-  };
+  const role = user?.role === 'manager' ? 'manager' : 'admin';
+  const accountId =
+    role === 'manager' ? (user?.accountId ?? '') : isAll ? 'all' : getCurrentAccountId();
+  const accountName =
+    role === 'manager' ? (user?.accountName ?? '') : isAll ? 'all' : getCurrentAccountName();
+
+  // Memoize on the primitive scope fields so the returned object keeps a stable
+  // reference across renders. Consumers use this viewer as a useEffect dependency
+  // (Notifications page, bell badge); an unstable object would re-fire those
+  // effects every render — and since the page's effect calls setState, that
+  // produces an infinite render loop that freezes the app.
+  return useMemo<NotificationViewer>(
+    () => ({ role, accountId, accountName }),
+    [role, accountId, accountName],
+  );
 }
 
 /**
