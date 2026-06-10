@@ -21,7 +21,12 @@
 
 **Adoption recipe (reusable):** import comp by key → `createInstance` → `insertChild(oldIdx)` → `layoutSizingHorizontal=FILL` → `setProperties({Label,Value,Subtitle,Show subtitle,Show trend,Icon:<oldIconMainId>, [down]Trend icon:936:283})` → override fills (chip, icon strokes, card tint/strokes=[], trend/delta -700, label style for KPI) → `oldInst.remove()`. Trend-down tabler in App Screens = `936:283`. radius/xl var `96942860a3871a37525c675ed6c1b06b22870eb8`.
 
-**⏳ REMAINING (DECISION PENDING — see below):** **Reports (3)** + **Analytics (16 = 8×2 variants)** top cards are currently built in Figma as **label/value only (Field component, NO icon chip, NO subtitle)** — a simpler treatment than code (code has icon chips + subs). Converting to Stat Card would ADD icons+subtitles (design change toward code-fidelity), not a like-for-like swap. Asked user whether to proceed. Also still TODO: Payment Settings Visa default card `bg-blue-50/50` tint.
+**✅ PART 1 COMPLETE — all 47 stat/KPI cards unified onto the single component:**
+- 12 white secondary (Support/Users/SLA/Ops), 8 Dashboard KPIs (trend), 4 Billing (white), 4 Earnings (solid tint), **3 Reports + 16 Analytics** (label/value/icon, no trend/subtitle — these DID have icon chips; earlier "no icon" reading was a scan bug, the findOne grabbed the Field label/value instance before the icon frame). Each preserves exact chip tint + icon accent read from the old card.
+- **Payment Settings Visa default card** → `bg-blue-50/50` tint applied (card `671:99`, blue-50 @ 0.5 opacity, blue-300 border kept); stripped 4 inner near-white frame fills to avoid white boxes over the tint. Verified.
+- All verified visually (Support, SLA, Ops, Users, both Dashboards, Billing, Earnings, Reports, Analytics, Visa card).
+
+**Nothing outstanding for Part 1.** Optional future: Toolbar component (bespoke, low value). Scratch screenshots (`_*.png`) left in working tree.
 
 **Other:** `git push` failed this session — `origin` (https://github.com/jabranux/ggx-corporate.git) returns "Repository not found" (remote/auth issue, 69 commits unpushed). Left for user to resolve. 4 untracked scratch files in tree (`_capture_tmp.mjs`, `_compose_tmp.mjs`, `_sp.png`, `_ts.png`) + new `_statcard_*.png` screenshots.
 
