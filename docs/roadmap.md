@@ -87,7 +87,7 @@ Current state: **resolved.** Root cause: `DataAnalytics.tsx` derived scope only 
 
 Fix: added a shared `useScopedAccountId()` hook (`src/app/hooks/useAccountScope.ts`) that combines auth role + subaccount view — managers are hard-scoped to `user.accountId`; admins get consolidated on Main Account and scoped when drilled into a subaccount. `DataAnalytics` now uses it for the analytics + claims + SLA fetches and for the scoped label/banner (banner's "Switch to Main Account" hint is admin-only). Build green.
 
-**Follow-up (same bug class, not yet done):** the standalone `Transactions`, `Claims`, and `SLA Alerts` pages still derive scope from `SubAccountContext` only and have the same manager gap — apply `useScopedAccountId()` there too.
+**Follow-up — DONE (2026-06-10):** rolled `useScopedAccountId()` out to the standalone `Transactions`, `Claims`, and `SLA Alerts` pages too. Each now scopes data by role (managers hard-scoped) and derives its consolidated-view flag as `subAccountsEnabled && scopeId === undefined` (preserves admin/default-account UI behavior, hides the subaccount filter/column for managers). Transactions' flat list is now scoped at the service layer via `getTransactionsBySubaccountId`. Build green.
 
 Originally affected two scenarios:
 

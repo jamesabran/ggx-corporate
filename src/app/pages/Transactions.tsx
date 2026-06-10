@@ -12,11 +12,13 @@ import { SearchInput } from '../components/SearchInput';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useScopedAccountId } from '../hooks/useAccountScope';
 // Data access goes through the transactionService facade (not the data module
 // directly). The service shapes data the UI needs; in production it is fronted
 // by the GGX Corporate BFF over OMS/fulfillment/FTX. See transactionService.ts.
 import {
   getTransactions,
+  getTransactionsBySubaccountId,
   getTransactionBatches,
   statusConfig,
   type TransactionSummary,
@@ -27,8 +29,11 @@ import {
 
 export function Transactions() {
   const navigate = useNavigate();
-  const { isMainAccountView, getCurrentAccountId } = useSubAccounts();
-  const mainView = isMainAccountView();
+  const { subAccountsEnabled } = useSubAccounts();
+  // Role-aware scope: managers are hard-scoped to their subaccount; admins see
+  // consolidated on Main Account and scoped when drilled into a subaccount.
+  const scopeId = useScopedAccountId();
+  const mainView = subAccountsEnabled && scopeId === undefined; // consolidated admin view
 
   // View mode: flat list vs. grouped by batch
   const [viewMode, setViewMode] = useState<'all' | 'batches'>('all');
@@ -51,22 +56,24 @@ export function Transactions() {
   // locally below — filtering/search/grouping are allowed UI operations).
   useEffect(() => {
     let cancelled = false;
-    getTransactions()
+    // Scope the flat list at the service layer: managers / drilled-in admins get
+    // only their subaccount's transactions; consolidated view gets all.
+    const load = scopeId ? getTransactionsBySubaccountId(scopeId) : getTransactions();
+    load
       .then((list) => { if (!cancelled) setAllDeliveries(list); })
       .catch(() => { if (!cancelled) setLoadError('Unable to load transactions.'); });
     return () => { cancelled = true; };
-  }, []);
+  }, [scopeId]);
 
   // Load batch groups, scoped to the active subaccount when not in main view.
   // Counts/status come precomputed from the service (treated as backend-provided).
   useEffect(() => {
     let cancelled = false;
-    const scopeId = mainView ? undefined : (getCurrentAccountId() ?? undefined);
     getTransactionBatches(scopeId)
       .then((groups) => { if (!cancelled) setBatchGroups(groups); })
       .catch(() => { if (!cancelled) setLoadError('Unable to load batches.'); });
     return () => { cancelled = true; };
-  }, [mainView, getCurrentAccountId]);
+  }, [scopeId]);
 
   // ── All Transactions view (presentation-only filtering) ────────────────────
   const q = searchQuery.trim().toLowerCase();
@@ -126,7 +133,7 @@ export function Transactions() {
                   onChange={setSearchQuery}
                 />
               </div>
-              {isMainAccountView() && (
+              {mainView && (
                 <div className="w-full sm:w-[160px] flex-shrink-0">
                   <Select value={subaccountFilter} onChange={(e) => setSubaccountFilter(e.target.value)}>
                     <option value="all">All Subaccounts</option>
@@ -162,7 +169,7 @@ export function Transactions() {
                   <TableHead>Tracking Number</TableHead>
                   <TableHead>Recipient</TableHead>
                   <TableHead>Destination</TableHead>
-                  {isMainAccountView() && <TableHead>Subaccount</TableHead>}
+                  {mainView && <TableHead>Subaccount</TableHead>}
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
@@ -172,7 +179,7 @@ export function Transactions() {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isMainAccountView() ? 8 : 7} className="text-center py-8 text-gray-400 text-sm">
+                    <TableCell colSpan={mainView ? 8 : 7} className="text-center py-8 text-gray-400 text-sm">
                       No transactions match your search or filters.
                     </TableCell>
                   </TableRow>
@@ -185,7 +192,7 @@ export function Transactions() {
                     <TableCell className="font-medium">{delivery.tracking}</TableCell>
                     <TableCell>{delivery.recipient}</TableCell>
                     <TableCell>{delivery.destination}</TableCell>
-                    {isMainAccountView() && (
+                    {mainView && (
                       <TableCell>
                         <span className="text-sm font-medium text-gray-700">{delivery.subaccount}</span>
                       </TableCell>

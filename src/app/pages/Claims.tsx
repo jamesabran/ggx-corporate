@@ -10,12 +10,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 // filtering below is presentation-only over the service-provided list.
 import { getClaimsList, CLAIM_STATUS_META, type Claim, type ClaimStatus } from '../services/claimsService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useScopedAccountId } from '../hooks/useAccountScope';
 import { getSubaccountOptions } from '../services/userService';
 
 export function Claims() {
   const navigate = useNavigate();
-  const { isMainAccountView, getCurrentAccountId } = useSubAccounts();
-  const mainView = isMainAccountView();
+  const { subAccountsEnabled } = useSubAccounts();
+  // Role-aware scope: managers are hard-scoped to their subaccount; admins see
+  // consolidated on Main Account and scoped when drilled into a subaccount.
+  const scopeId = useScopedAccountId();
+  const mainView = subAccountsEnabled && scopeId === undefined; // consolidated admin view
 
   const [allClaims, setAllClaims] = useState<Claim[]>([]);
   useEffect(() => {
@@ -38,9 +42,9 @@ export function Claims() {
   }, []);
 
   // In subaccount view, scope to current account only.
-  const scopedClaims = mainView
-    ? allClaims
-    : allClaims.filter((c) => c.accountId === getCurrentAccountId());
+  const scopedClaims = scopeId
+    ? allClaims.filter((c) => c.accountId === scopeId)
+    : allClaims;
 
   const visible = scopedClaims.filter((c) => {
     const q = searchQuery.trim().toLowerCase();

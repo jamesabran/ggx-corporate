@@ -15,12 +15,16 @@ import {
   SLA_TYPE_META, SLA_STATUS_META, type SlaAlert, type SlaAlertType,
 } from '../services/slaService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useScopedAccountId } from '../hooks/useAccountScope';
 import { getSubaccountOptions } from '../services/userService';
 
 export function SlaAlerts() {
   const navigate = useNavigate();
-  const { isMainAccountView, getCurrentAccountId } = useSubAccounts();
-  const mainView = isMainAccountView();
+  const { subAccountsEnabled } = useSubAccounts();
+  // Role-aware scope: managers are hard-scoped to their subaccount; admins see
+  // consolidated on Main Account and scoped when drilled into a subaccount.
+  const scopeId = useScopedAccountId();
+  const mainView = subAccountsEnabled && scopeId === undefined; // consolidated admin view
 
   const [allAlerts, setAllAlerts] = useState<SlaAlert[]>([]);
   const [typeFilter, setTypeFilter] = useState<'all' | SlaAlertType>('all');
@@ -41,9 +45,9 @@ export function SlaAlerts() {
   const handleResolve  = async (id: string) => { await resolveSlaAlert(id); refresh(); };
 
   // In subaccount view, scope stat counts and visible list to current account.
-  const scopedAlerts = mainView
-    ? allAlerts
-    : allAlerts.filter((a) => a.accountId === getCurrentAccountId());
+  const scopedAlerts = scopeId
+    ? allAlerts.filter((a) => a.accountId === scopeId)
+    : allAlerts;
 
   const noMovement   = scopedAlerts.filter((a) => a.type === 'no_movement' && a.status !== 'resolved').length;
   const breaches     = scopedAlerts.filter((a) => a.type === 'breach'      && a.status !== 'resolved').length;
