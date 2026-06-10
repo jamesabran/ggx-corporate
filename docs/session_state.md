@@ -5,6 +5,22 @@
 
 ---
 
+## Session 34 (2026-06-10) — API Integration enabled + scoped for subaccount Managers
+
+Enabled API Integration for Managers assigned to a subaccount, scoped to their subaccount only. **Code committed (`ae57f51`, build green) + Figma manager sidebar variant updated.**
+
+- **Route was already shared** (`/dashboard/api-access` is NOT wrapped in `AdminRoute`), so managers could already reach it by URL — no route-guard change needed. The only gaps were sidebar visibility + data scoping.
+- **Sidebar (`RootLayout.tsx`):** added `API Integration` (IconCode) to the **manager** Integrations nav group, before Shopify (matches code order). Other variants unchanged.
+- **Scoping via `useScopedAccountId()`** — already returns exactly the right id for all four contexts: standard→undefined, admin-main→undefined, admin-in-subaccount→subaccount id, manager→hard-locked to their `accountId`. So a single hook call scopes correctly with no role branching on the page.
+  - `data/apiLogs.ts`: added backend-owned `accountId` to `ApiLog` + each seed entry; spread the 10 logs across subaccounts. **Manager demo (acme-luzon) gets 4 entries** (success/warning/warning/failed) for validation; acme-corporation/acme-visayas get the rest (must stay hidden from the manager).
+  - `apiLogsService.getApiLogs`: added `accountId` filter (undefined = consolidated). Scoping enforced at the service layer.
+  - `APIAccess.tsx`: derives `scopeId`/`isScoped`/`showAccountColumn` from `useScopedAccountId` + `useSubAccounts`; passes `accountId` to the logs query; **Subaccount column shown only in the consolidated admin view**; header subtitle notes the scoped account; manager gets a "Showing API activity for your assigned subaccount only" note. Configuration tab (API key/webhook/quick stats) left as-is (demo placeholders) per scope limits.
+- **Validation:** build/typecheck green (`npm run build`). Standard + Main-Account consolidated = all logs (unchanged); admin-in-subaccount + manager = scoped; manager cannot reach other accounts' logs (service filters by their locked `accountId` regardless of any switcher).
+- **Figma App Screens (`ceL7WwBQpaLl66Y7sUcgPR`):** cloned the Subaccount column's `API Integration` nav item (`521:367`) into the Manager column's Integrations group (`1086:276`) at index 1 → INTEGRATIONS / API Integration / Shopify. Verified by screenshot. Non-destructive, reused existing nav-item structure. **DS file untouched** (no new component needed).
+- **Assumptions:** (1) seed-log account split is illustrative; acme-luzon chosen because it's the demo manager's subaccount. (2) Configuration tab values stay demo placeholders — only logs/data are scoped, per "focus on access + scoping; don't duplicate the page".
+
+---
+
 ## Session 33 (2026-06-10) — Shopify product-direction revision (metrics + Install CTA + Activity Logs)
 
 Revised the Shopify module per new product direction. **Code + Figma both updated; build green.** Commit `d8c56d2`.
