@@ -565,16 +565,11 @@ export function Shopify() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-            <IconBuildingStore className="w-6 h-6 text-emerald-600" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Shopify</h1>
-            <p className="text-gray-600 mt-0.5">
-              Connect a Shopify store and book orders for pickup through GoGo Xpress.
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Shopify</h1>
+          <p className="text-gray-600 mt-1">
+            Connect a Shopify store and book orders for pickup through GoGo Xpress.
+          </p>
         </div>
         <InstallPluginButton variant="outline" />
       </div>
