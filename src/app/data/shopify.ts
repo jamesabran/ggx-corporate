@@ -40,13 +40,20 @@ export interface ConnectedStore {
   /** Shopify store domain, e.g. acme-luzon.myshopify.com */
   storeDomain: string;
   status: ShopifyConnectionStatus;
-  /** Backend-provided last successful sync timestamp. */
+  /** Backend-provided last activity timestamp (most recent sync/pickup/status event). */
   lastSyncAt: string;
   /** Name of the user who connected the store. */
   connectedBy: string;
   connectedAt: string;
-  /** Rolled-up sync health for the coverage view (backend-provided). */
+  /** Rolled-up connection health for the coverage view (backend-provided). */
   syncHealth: 'healthy' | 'warning' | 'error';
+  // ── Backend-provided operational rollups (treated as BFF-supplied, not UI-computed) ──
+  /** Shopify-origin bookings currently awaiting pickup. */
+  pendingPickups: number;
+  /** Shopify-origin bookings created this period (recent/month). */
+  monthlyBookings: number;
+  /** Shopify pickup requests that failed and need attention. */
+  failedRequests: number;
 }
 
 export interface SyncLog {
@@ -79,6 +86,9 @@ export const connectedStores: ConnectedStore[] = [
     connectedBy: 'Max Rodriguez',
     connectedAt: '2026-03-14',
     syncHealth: 'healthy',
+    pendingPickups: 4,
+    monthlyBookings: 26,
+    failedRequests: 0,
   },
   {
     accountId: 'acme-luzon',
@@ -89,8 +99,11 @@ export const connectedStores: ConnectedStore[] = [
     lastSyncAt: '2026-06-10 08:15 AM',
     connectedBy: 'Sarah Williams',
     connectedAt: '2026-04-02',
-    // Has recent warning/failed sync activity (incomplete address + auth error).
+    // Has recent failed pickup requests + an auth warning needing attention.
     syncHealth: 'warning',
+    pendingPickups: 3,
+    monthlyBookings: 18,
+    failedRequests: 2,
   },
   // Acme Visayas — intentionally NOT connected (empty-state demo).
 
@@ -105,6 +118,9 @@ export const connectedStores: ConnectedStore[] = [
     connectedBy: 'Max Rodriguez',
     connectedAt: '2026-05-01',
     syncHealth: 'healthy',
+    pendingPickups: 2,
+    monthlyBookings: 12,
+    failedRequests: 0,
   },
 ];
 

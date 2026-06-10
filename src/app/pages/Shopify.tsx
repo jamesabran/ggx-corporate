@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   IconExternalLink, IconPlugConnected, IconBuildingStore,
   IconWorld, IconUser, IconRefresh, IconCircleCheck, IconAlertTriangle,
-  IconPlus, IconBook, IconTruck, IconPackageImport, IconInfoCircle,
+  IconBook, IconTruck, IconInfoCircle, IconClock, IconShoppingBag,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
-import { Button, buttonVariants } from '../components/ui/Button';
+import { buttonVariants } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { SearchInput } from '../components/SearchInput';
@@ -17,17 +17,24 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useScopedAccountId } from '../hooks/useAccountScope';
 import {
-  getConnectedStore, getStoreCoverage, getSyncLogs, getShopifyOverviewStats,
-  SYNC_STATUS_META, SYNC_EVENT_META, HEALTH_META, SHOPIFY_APP_URL, STANDARD_ACCOUNT_ID,
+  getConnectedStore, getStoreCoverage, getSyncLogs,
+  getMainShopifyMetrics, getScopedShopifyMetrics,
+  getStoreStatusLabel, STORE_STATUS_META,
+  SYNC_STATUS_META, SYNC_EVENT_META, SHOPIFY_APP_URL, STANDARD_ACCOUNT_ID,
   type ConnectedStore, type StoreCoverageRow, type SyncLog, type SyncStatus,
-  type ShopifyOverviewStats,
+  type MainShopifyMetrics, type ScopedShopifyMetrics,
 } from '../services/shopifyService';
 
-// ─── shared external-link CTA (anchor styled as a Button) ──────────────────────
+// ─── shared Install-Plugin CTA (anchor styled as a Button) ─────────────────────
+//
+// The single Shopify external CTA. Redirects to the GoGo Xpress plugin listing
+// on the Shopify App Store. Uses the DS external-link icon treatment.
 
-function ShopifyAppLink({
-  label, variant = 'default', className,
-}: { label: string; variant?: 'default' | 'outline'; className?: string }) {
+const INSTALL_LABEL = 'Install Shopify Plugin';
+
+function InstallPluginButton({
+  variant = 'default', className,
+}: { variant?: 'default' | 'outline'; className?: string }) {
   return (
     <a
       href={SHOPIFY_APP_URL}
@@ -36,13 +43,13 @@ function ShopifyAppLink({
       className={cn(buttonVariants({ variant, size: 'default' }), className)}
     >
       <IconBuildingStore className="w-4 h-4" />
-      {label}
+      {INSTALL_LABEL}
       <IconExternalLink className="w-3.5 h-3.5 opacity-70" />
     </a>
   );
 }
 
-// ─── Connected Store: empty state ──────────────────────────────────────────────
+// ─── Connected Store: empty / not-installed state ──────────────────────────────
 
 function StoreEmptyState({ accountName }: { accountName: string }) {
   return (
@@ -51,15 +58,14 @@ function StoreEmptyState({ accountName }: { accountName: string }) {
         <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
           <IconBuildingStore className="w-7 h-7 text-emerald-600" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900">No Shopify store connected</h3>
+        <h3 className="text-lg font-semibold text-gray-900">No Shopify store installed</h3>
         <p className="text-sm text-gray-500 mt-2">
-          Connect a Shopify store to <span className="font-medium text-gray-700">{accountName}</span> so
-          orders can be booked for pickup through GoGo Xpress. Once connected, sellers can request
-          pickups for Shopify orders directly from the GGX plugin.
+          Install the Shopify plugin and connect a store to{' '}
+          <span className="font-medium text-gray-700">{accountName}</span> so pickup requests from
+          Shopify can be booked through GoGo Xpress and monitored from this account.
         </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mt-6">
-          <ShopifyAppLink label="Install Shopify Plugin" />
-          <ShopifyAppLink label="Connect Shopify Store" variant="outline" />
+        <div className="flex items-center justify-center mt-6">
+          <InstallPluginButton />
         </div>
         <p className="text-xs text-gray-400 mt-4">
           Opens the GoGo Xpress listing on the Shopify App Store.
@@ -81,7 +87,8 @@ function field(label: string, value: ReactNode) {
 }
 
 function ConnectedStoreCard({ store }: { store: ConnectedStore }) {
-  const health = HEALTH_META[store.syncHealth];
+  const status = getStoreStatusLabel(store);
+  const meta = STORE_STATUS_META[status];
   return (
     <Card>
       <CardContent className="p-6">
@@ -93,11 +100,10 @@ function ConnectedStoreCard({ store }: { store: ConnectedStore }) {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-base font-semibold text-gray-900">{store.storeName}</h3>
-                <Badge variant="success">
+                <Badge variant={meta.variant}>
                   <IconPlugConnected className="w-3 h-3 mr-1" />
-                  Connected
+                  {status}
                 </Badge>
-                <Badge variant={health.variant}>{health.label}</Badge>
               </div>
               <a
                 href={`https://${store.storeDomain}`}
@@ -124,12 +130,8 @@ function ConnectedStoreCard({ store }: { store: ConnectedStore }) {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mt-6 pt-6 border-t border-gray-100">
           {field('Connected Account', store.accountName)}
-          {field('Connection Status', (
-            <span className="inline-flex items-center gap-1.5 text-emerald-700">
-              <IconCircleCheck className="w-4 h-4" /> Active
-            </span>
-          ))}
-          {field('Last Sync', store.lastSyncAt)}
+          {field('Pending Pickups', <span className="tabular-nums">{store.pendingPickups}</span>)}
+          {field('Last Activity', store.lastSyncAt)}
           {field('Connected By', (
             <span className="inline-flex items-center gap-1.5">
               <IconUser className="w-4 h-4 text-gray-400" /> {store.connectedBy}
@@ -145,13 +147,13 @@ function ConnectedStoreCard({ store }: { store: ConnectedStore }) {
 // ─── Connected Store: Main Account coverage ────────────────────────────────────
 
 function CoverageView({ rows }: { rows: StoreCoverageRow[] }) {
-  const connected = rows.filter((r) => r.store).length;
+  const installed = rows.filter((r) => r.store).length;
   return (
     <Card>
       <CardHeader>
         <CardTitle>Shopify Store Coverage</CardTitle>
         <CardDescription>
-          {connected} of {rows.length} subaccount{rows.length !== 1 ? 's' : ''} have a connected
+          {installed} of {rows.length} subaccount{rows.length !== 1 ? 's' : ''} have an installed
           Shopify store. One Shopify store maps to one subaccount.
         </CardDescription>
       </CardHeader>
@@ -162,59 +164,72 @@ function CoverageView({ rows }: { rows: StoreCoverageRow[] }) {
               <TableHead>Subaccount</TableHead>
               <TableHead>Shopify Store</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Last Sync</TableHead>
+              <TableHead>Pending Pickups</TableHead>
+              <TableHead>Failed Requests</TableHead>
+              <TableHead>Last Activity</TableHead>
               <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.accountId}>
-                <TableCell className="font-medium text-gray-900">{row.accountName}</TableCell>
-                <TableCell>
-                  {row.store ? (
-                    <span className="inline-flex items-center gap-2">
-                      <IconBuildingStore className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-700">{row.store.storeDomain}</span>
-                    </span>
-                  ) : (
-                    <span className="text-sm text-gray-400">No store connected</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {row.store ? (
-                    <Badge variant={HEALTH_META[row.store.syncHealth].variant}>
-                      {HEALTH_META[row.store.syncHealth].label}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline">Not connected</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-gray-600">
-                  {row.store ? row.store.lastSyncAt : '—'}
-                </TableCell>
-                <TableCell className="text-right">
-                  {row.store ? (
-                    <a
-                      href={`https://${row.store.storeDomain}/admin`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
-                    >
-                      Manage <IconExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  ) : (
-                    <a
-                      href={SHOPIFY_APP_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700"
-                    >
-                      <IconPlus className="w-3.5 h-3.5" /> Connect
-                    </a>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+            {rows.map((row) => {
+              const status = row.store ? getStoreStatusLabel(row.store) : null;
+              return (
+                <TableRow key={row.accountId}>
+                  <TableCell className="font-medium text-gray-900">{row.accountName}</TableCell>
+                  <TableCell>
+                    {row.store ? (
+                      <span className="inline-flex items-center gap-2">
+                        <IconBuildingStore className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-700">{row.store.storeDomain}</span>
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">No store installed</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {status ? (
+                      <Badge variant={STORE_STATUS_META[status].variant}>{status}</Badge>
+                    ) : (
+                      <Badge variant="outline">Not installed</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="tabular-nums text-gray-700">
+                    {row.store ? row.store.pendingPickups : '—'}
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {row.store ? (
+                      <span className={row.store.failedRequests > 0 ? 'text-red-600 font-medium' : 'text-gray-700'}>
+                        {row.store.failedRequests}
+                      </span>
+                    ) : '—'}
+                  </TableCell>
+                  <TableCell className="text-gray-600">
+                    {row.store ? row.store.lastSyncAt : '—'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {row.store ? (
+                      <a
+                        href={`https://${row.store.storeDomain}/admin`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        Manage <IconExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    ) : (
+                      <a
+                        href={SHOPIFY_APP_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                      >
+                        Install Plugin <IconExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>
@@ -293,7 +308,7 @@ function BookingGuide() {
   );
 }
 
-// ─── Sync Logs ─────────────────────────────────────────────────────────────────
+// ─── Activity Logs ─────────────────────────────────────────────────────────────
 
 function statusIcon(status: SyncStatus) {
   if (status === 'success') return <IconCircleCheck className="w-4 h-4 text-emerald-500" />;
@@ -301,7 +316,7 @@ function statusIcon(status: SyncStatus) {
   return <IconAlertTriangle className="w-4 h-4 text-amber-500" />;
 }
 
-function SyncLogsView({
+function ActivityLogsView({
   logs, showAccount, search, setSearch, statusFilter, setStatusFilter,
 }: {
   logs: SyncLog[];
@@ -334,9 +349,9 @@ function SyncLogsView({
           {logs.length === 0 ? (
             <div className="py-12 text-center">
               <IconRefresh className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-gray-700">No sync activity yet</p>
+              <p className="text-sm font-semibold text-gray-700">No activity yet</p>
               <p className="text-xs text-gray-400 mt-1">
-                Sync events between Shopify and GGX will appear here once a store is active.
+                Pickup and status activity between Shopify and GGX will appear here once a store is active.
               </p>
             </div>
           ) : (
@@ -392,81 +407,85 @@ function SyncLogsView({
 
 // ─── Overview ──────────────────────────────────────────────────────────────────
 
-function OverviewView({ stats, scoped }: { stats: ShopifyOverviewStats | null; scoped: boolean }) {
+function HowItWorks() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {[
+        { icon: IconPlugConnected, title: 'Install once', body: 'One Shopify store maps to one GGX account or subaccount. Install the plugin from the Shopify App Store and link it to this account.' },
+        { icon: IconTruck, title: 'Book pickups', body: 'Sellers request pickups for Shopify orders straight from the plugin — single orders or in bulk. Orders flow into GGX for fulfillment.' },
+        { icon: IconRefresh, title: 'Stay informed', body: 'Tracking and delivery status are pushed back to Shopify automatically. Track pickup and status activity in Activity Logs.' },
+      ].map((c) => (
+        <Card key={c.title}>
+          <CardContent className="p-5">
+            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center mb-3">
+              <c.icon className="w-5 h-5 text-gray-600" />
+            </div>
+            <p className="text-sm font-semibold text-gray-900">{c.title}</p>
+            <p className="text-sm text-gray-500 mt-1 leading-relaxed">{c.body}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+/** Install callout shown on the Main Account overview. */
+function InstallCallout() {
+  return (
+    <Card className="bg-emerald-50 border-emerald-200">
+      <CardContent className="p-6">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+            <IconBuildingStore className="w-5 h-5 text-emerald-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-emerald-900 mb-1">Install the Shopify Plugin</h3>
+            <p className="text-sm text-emerald-800 mb-3 max-w-2xl">
+              Connect your Shopify store to GGX Corporate so pickup requests from Shopify can be
+              booked through GoGo Xpress and monitored from this account.
+            </p>
+            <InstallPluginButton variant="outline" className="bg-white" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MainOverview({ metrics }: { metrics: MainShopifyMetrics | null }) {
   return (
     <div className="space-y-6">
-      <Card className="bg-emerald-50 border-emerald-200">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-              <IconBuildingStore className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-emerald-900 mb-1">Connect Shopify to GoGo Xpress</h3>
-              <p className="text-sm text-emerald-800 mb-3 max-w-2xl">
-                The Shopify integration lets your business connect a Shopify store to GGX Corporate.
-                Sellers can request pickups for Shopify orders through the GGX plugin, and you can
-                monitor {scoped ? 'this account’s' : 'each account and subaccount’s'} connection
-                status and sync activity from here.
-              </p>
-              <ShopifyAppLink label="View on Shopify App Store" variant="outline" className="bg-white" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+      <InstallCallout />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Connected Stores"
-          value={stats?.connectedStores ?? '—'}
-          sub={scoped ? 'For this account' : 'Across accounts'}
-          icon={IconPlugConnected}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-        />
-        <StatCard
-          label="Orders Synced"
-          value={stats?.ordersSynced ?? '—'}
-          sub="Recent activity"
-          icon={IconPackageImport}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
-        />
-        <StatCard
-          label="Pickups Requested"
-          value={stats?.pickupsRequested ?? '—'}
-          sub="Sent to GGX"
-          icon={IconTruck}
-          iconBg="bg-violet-50"
-          iconColor="text-violet-600"
-        />
-        <StatCard
-          label="Sync Issues"
-          value={stats?.syncIssues ?? '—'}
-          sub="Warnings & failures"
-          icon={IconAlertTriangle}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-600"
-        />
+        <StatCard label="Connected Stores" value={metrics?.connectedStores ?? '—'} sub="Across subaccounts"
+          icon={IconPlugConnected} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+        <StatCard label="Pending Pickups" value={metrics?.pendingPickups ?? '—'} sub="Awaiting pickup"
+          icon={IconClock} iconBg="bg-blue-50" iconColor="text-blue-600" />
+        <StatCard label="Shopify Bookings" value={metrics?.shopifyBookings ?? '—'} sub="This month"
+          icon={IconShoppingBag} iconBg="bg-violet-50" iconColor="text-violet-600" />
+        <StatCard label="Failed Pickup Requests" value={metrics?.failedPickupRequests ?? '—'} sub="Need attention"
+          icon={IconAlertTriangle} iconBg="bg-amber-50" iconColor="text-amber-600" />
       </div>
+      <HowItWorks />
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {[
-          { icon: IconPlugConnected, title: 'Connect once', body: 'One Shopify store maps to one GGX account or subaccount. Install the plugin from the Shopify App Store and link it to this account.' },
-          { icon: IconTruck, title: 'Book pickups', body: 'Sellers request pickups for Shopify orders straight from the plugin — single orders or in bulk. Orders flow into GGX for fulfillment.' },
-          { icon: IconRefresh, title: 'Stay in sync', body: 'Tracking and delivery status are pushed back to Shopify automatically. Watch connection health and sync activity in Sync Logs.' },
-        ].map((c) => (
-          <Card key={c.title}>
-            <CardContent className="p-5">
-              <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center mb-3">
-                <c.icon className="w-5 h-5 text-gray-600" />
-              </div>
-              <p className="text-sm font-semibold text-gray-900">{c.title}</p>
-              <p className="text-sm text-gray-500 mt-1 leading-relaxed">{c.body}</p>
-            </CardContent>
-          </Card>
-        ))}
+function ScopedOverview({ metrics }: { metrics: ScopedShopifyMetrics }) {
+  const meta = STORE_STATUS_META[metrics.storeStatus];
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Store Status" value={metrics.storeStatus} sub="Shopify connection"
+          icon={IconPlugConnected} iconBg={meta.bg} iconColor={meta.color} valueColor={meta.color} />
+        <StatCard label="Pending Pickups" value={metrics.pendingPickups} sub="Awaiting pickup"
+          icon={IconClock} iconBg="bg-blue-50" iconColor="text-blue-600" />
+        <StatCard label="Shopify Bookings" value={metrics.shopifyBookings} sub="This month"
+          icon={IconShoppingBag} iconBg="bg-violet-50" iconColor="text-violet-600" />
+        <StatCard label="Failed Pickup Requests" value={metrics.failedPickupRequests} sub="Need attention"
+          icon={IconAlertTriangle} iconBg="bg-amber-50" iconColor="text-amber-600" />
       </div>
+      <HowItWorks />
     </div>
   );
 }
@@ -490,18 +509,30 @@ export function Shopify() {
   }, [subAccountsEnabled, subAccounts, scopeId, getCurrentAccountName]);
 
   const [tab, setTab] = useState('overview');
-  const [stats, setStats] = useState<ShopifyOverviewStats | null>(null);
+  const [mainMetrics, setMainMetrics] = useState<MainShopifyMetrics | null>(null);
+  const [scopedMetrics, setScopedMetrics] = useState<ScopedShopifyMetrics | null>(null);
+  const [metricsLoaded, setMetricsLoaded] = useState(false);
   const [store, setStore] = useState<ConnectedStore | null>(null);
   const [coverage, setCoverage] = useState<StoreCoverageRow[]>([]);
   const [logs, setLogs] = useState<SyncLog[]>([]);
   const [logSearch, setLogSearch] = useState('');
   const [logStatus, setLogStatus] = useState('all');
 
-  // Overview stats
+  // Metrics — main aggregate vs scoped (null when no store connected → empty state)
   useEffect(() => {
-    getShopifyOverviewStats(mainView ? undefined : lookupId)
-      .then(setStats).catch(() => {});
-  }, [mainView, lookupId]);
+    let cancelled = false;
+    setMetricsLoaded(false);
+    if (mainView) {
+      getMainShopifyMetrics(subAccounts.map((s) => ({ id: s.id, name: s.name })))
+        .then((m) => { if (!cancelled) { setMainMetrics(m); setScopedMetrics(null); setMetricsLoaded(true); } })
+        .catch(() => {});
+    } else {
+      getScopedShopifyMetrics(lookupId)
+        .then((m) => { if (!cancelled) { setScopedMetrics(m); setMainMetrics(null); setMetricsLoaded(true); } })
+        .catch(() => {});
+    }
+    return () => { cancelled = true; };
+  }, [mainView, lookupId, subAccounts]);
 
   // Connected store / coverage
   useEffect(() => {
@@ -518,7 +549,7 @@ export function Shopify() {
     return () => { cancelled = true; };
   }, [mainView, lookupId, subAccounts]);
 
-  // Sync logs (presentation filtering happens in the service for status/search)
+  // Activity logs (service applies status/search filters)
   useEffect(() => {
     getSyncLogs({
       accountId: mainView ? undefined : lookupId,
@@ -526,6 +557,9 @@ export function Shopify() {
       search: logSearch,
     }).then(setLogs).catch(() => {});
   }, [mainView, lookupId, logStatus, logSearch]);
+
+  // Scoped view with no connected store → metric cards are replaced by the empty state.
+  const scopedNoStore = !mainView && metricsLoaded && scopedMetrics === null;
 
   return (
     <div className="p-6 space-y-6">
@@ -542,7 +576,7 @@ export function Shopify() {
             </p>
           </div>
         </div>
-        <ShopifyAppLink label="Open Shopify App Listing" variant="outline" />
+        <InstallPluginButton variant="outline" />
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -550,11 +584,22 @@ export function Shopify() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="store">Connected Store</TabsTrigger>
           <TabsTrigger value="guide">Booking Guide</TabsTrigger>
-          <TabsTrigger value="logs">Sync Logs</TabsTrigger>
+          <TabsTrigger value="logs">Activity Logs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <OverviewView stats={stats} scoped={!mainView} />
+          {scopedNoStore ? (
+            <StoreEmptyState accountName={scopedAccountName} />
+          ) : mainView ? (
+            <MainOverview metrics={mainMetrics} />
+          ) : scopedMetrics ? (
+            <ScopedOverview metrics={scopedMetrics} />
+          ) : null}
+          {isManager && !scopedNoStore && (
+            <p className="text-xs text-gray-400 mt-3">
+              Showing Shopify activity for your assigned subaccount only.
+            </p>
+          )}
         </TabsContent>
 
         <TabsContent value="store" className="mt-6">
@@ -577,7 +622,7 @@ export function Shopify() {
         </TabsContent>
 
         <TabsContent value="logs" className="mt-6">
-          <SyncLogsView
+          <ActivityLogsView
             logs={logs}
             showAccount={mainView}
             search={logSearch}

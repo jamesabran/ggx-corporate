@@ -16,7 +16,6 @@
  */
 
 import {
-  connectedStores,
   syncLogs,
   getStoreByAccountId,
   STANDARD_ACCOUNT_ID,
@@ -61,14 +60,25 @@ export const SYNC_EVENT_META: Record<SyncEventType, {
   auth_error:           { label: 'Authentication Error',  icon: IconLock },
 };
 
-/** Connection-health presentation for the coverage view. */
-export const HEALTH_META: Record<ConnectedStore['syncHealth'], {
-  label: string;
+/** Store status label shown on scoped Overview + coverage. */
+export type StoreStatusLabel = 'Connected' | 'Needs attention' | 'Disconnected';
+
+/** Resolve a connected store to its product-facing status label. */
+export function getStoreStatusLabel(store: ConnectedStore): StoreStatusLabel {
+  if (store.status === 'error' || store.syncHealth === 'error') return 'Disconnected';
+  if (store.syncHealth === 'warning') return 'Needs attention';
+  return 'Connected';
+}
+
+/** Presentation meta for a store status label (badge variant + accent). */
+export const STORE_STATUS_META: Record<StoreStatusLabel, {
   variant: 'success' | 'warning' | 'danger';
+  color: string;
+  bg: string;
 }> = {
-  healthy: { label: 'Healthy', variant: 'success' },
-  warning: { label: 'Needs Attention', variant: 'warning' },
-  error:   { label: 'Sync Error', variant: 'danger' },
+  'Connected':       { variant: 'success', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  'Needs attention': { variant: 'warning', color: 'text-amber-600',   bg: 'bg-amber-50' },
+  'Disconnected':    { variant: 'danger',  color: 'text-red-600',     bg: 'bg-red-50' },
 };
 
 // ─── service functions ──────────────────────────────────────────────────────────
@@ -133,24 +143,58 @@ export async function getSyncLogs(filters?: SyncLogFilters): Promise<SyncLog[]> 
   return result;
 }
 
-/** Summary counts for the Shopify Overview, optionally scoped to one account. */
-export interface ShopifyOverviewStats {
+// ─── Overview metrics ─────────────────────────────────────────────────────────
+//
+// Transactional-activity focused (NOT generic technical health). All counts are
+// backend-provided rollups (treated as BFF-supplied), not UI-computed.
+
+/** Main Account metrics: store coverage + aggregate pickup activity across subaccounts. */
+export interface MainShopifyMetrics {
   connectedStores: number;
-  ordersSynced: number;
-  pickupsRequested: number;
-  syncIssues: number;
+  pendingPickups: number;
+  shopifyBookings: number;
+  failedPickupRequests: number;
 }
 
-export async function getShopifyOverviewStats(accountId?: string): Promise<ShopifyOverviewStats> {
-  const scoped = accountId && accountId !== 'main';
-  const stores = scoped
-    ? connectedStores.filter((s) => s.accountId === accountId)
-    : connectedStores.filter((s) => s.accountId !== STANDARD_ACCOUNT_ID || !accountId);
-  const logs = scoped ? syncLogs.filter((l) => l.accountId === accountId) : syncLogs;
+/** Scoped (subaccount / standard) metrics for a connected store. */
+export interface ScopedShopifyMetrics {
+  storeStatus: StoreStatusLabel;
+  pendingPickups: number;
+  shopifyBookings: number;
+  failedPickupRequests: number;
+}
+
+/**
+ * Aggregate Shopify metrics across the supplied accounts/subaccounts (Main
+ * Account view). Sums each connected store's backend-provided rollups.
+ */
+export async function getMainShopifyMetrics(
+  accounts: { id: string; name: string }[]
+): Promise<MainShopifyMetrics> {
+  const stores = accounts
+    .map((a) => getStoreByAccountId(a.id))
+    .filter((s): s is ConnectedStore => !!s);
   return {
     connectedStores: stores.length,
-    ordersSynced: logs.filter((l) => l.event === 'order_synced' && l.status === 'success').length,
-    pickupsRequested: logs.filter((l) => l.event === 'pickup_request_sent').length,
-    syncIssues: logs.filter((l) => l.status === 'failed' || l.status === 'warning').length,
+    pendingPickups: stores.reduce((n, s) => n + s.pendingPickups, 0),
+    shopifyBookings: stores.reduce((n, s) => n + s.monthlyBookings, 0),
+    failedPickupRequests: stores.reduce((n, s) => n + s.failedRequests, 0),
+  };
+}
+
+/**
+ * Scoped metrics for a single account/subaccount's connected store.
+ * Returns null when no store is connected (caller shows the empty state).
+ */
+export async function getScopedShopifyMetrics(
+  accountId: string | undefined
+): Promise<ScopedShopifyMetrics | null> {
+  const s = getStoreByAccountId(accountId);
+  if (!s) return null;
+  return {
+    storeStatus: getStoreStatusLabel(s),
+    pendingPickups: s.pendingPickups,
+    shopifyBookings: s.monthlyBookings,
+    failedPickupRequests: s.failedRequests,
   };
 }
