@@ -5,6 +5,20 @@
 
 ---
 
+## Session 30 (2026-06-10) — Part 1: Stat/KPI card unified into ONE usage-focused component (BUILT; publish-gated)
+
+**DONE — rebuilt Stat Card in GGX-SHADCN (`9zwtAL4RU3Y8WVRJAsSulX`, page "Stat Card") as a usage-focused SINGLE component.** Old 7-color-variant SET `ad33fb5d…` DELETED. **New component key `ce4fd0e4d11f3c37c4d3d689dd58b3644c626117`** (id `3351:81`).
+- **Color is now a per-instance override** (no Color variant): adopters set the chip fill / Icon stroke / Value + Trend fills directly.
+- **Props (9):** `Label`/`Value`/`Subtitle`/`Trend delta`/`Trend label` (TEXT); `Show subtitle`/`Show trend` (BOOL); `Icon` (INSTANCE_SWAP chip glyph, default tabler/activity `649:4116`); `Trend icon` (INSTANCE_SWAP, default tabler/trending-up `649:7273`; down=`649:7276`).
+- **Structure:** HORIZONTAL card (pad 24, white, gray-200 stroke 1, 4 corners bound to radius/xl var) = text column [Label 14 Medium gray-600 / Value 24 Bold gray-900 / Trend row{16px icon + delta 14 SemiBold + label 14 gray-400} / Subtitle 14 Regular gray-500] + 40×40 icon chip (radius md-bound, blue-50 fill, blue-600 icon). Verified visually: full card 280×152, both toggles-off collapses to Label+Value+chip (102h). Booleans + swaps confirmed working.
+- Code basis: white `StatCard.tsx` (label/value/sub + soft-tint chip) + Dashboard KPI (`Dashboard.tsx:91-178`: tinted card, uppercase label, trend row TrendingUp/Down + change% + "vs last month", solid chip + white icon). Component absorbs both.
+
+**⏳ NEXT (Task #3, GATED ON USER PUBLISH):** publish GGX-SHADCN so new key is importable cross-file. THEN re-adopt in App Screens (`ceL7WwBQpaLl66Y7sUcgPR`): 12 live Stat Card instances (Support 4, Users 2, SLA 3, Ops 3) + Dashboard KPIs (4, tinted) + finance/analytics top cards. Per-instance: set Label/Value, toggle Show trend/Show subtitle, swap Icon (+ Trend icon up/down), override chip fill + icon/value/trend colors to match each card's accent. Also give Payment Settings Visa default card a `bg-blue-50/50` tint. Then verify + commit.
+
+**Other:** `git push` failed this session — `origin` (https://github.com/jabranux/ggx-corporate.git) returns "Repository not found" (remote/auth issue, 69 commits unpushed). Left for user to resolve. 4 untracked scratch files in tree (`_capture_tmp.mjs`, `_compose_tmp.mjs`, `_sp.png`, `_ts.png`) + new `_statcard_*.png` screenshots.
+
+---
+
 ## Session 29 (2026-06-05) — Stray white backgrounds fixed (all pages) + payment icon squish
 
 **Root cause (white-bg bug):** inner content frames carried solid neutral-white fills that should be transparent — invisible on white cards but showing as **white boxes over tinted parents** (blue-50/sky-50/green-50 banners, default/primary cards, unread notif rows). Confirmed against code (e.g. `PaymentSettings` reminders `bg-blue-50`, default method `bg-blue-50/50`; `Notifications` unread `bg-blue-50/40`).
