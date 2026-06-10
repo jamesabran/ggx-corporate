@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IconCopy, IconEye, IconEyeOff, IconRefresh, IconExternalLink, IconAlertTriangle, IconCircleCheck, IconBook, IconLoader2, IconCheck } from '@tabler/icons-react';
 import { Dialog } from '../components/ui/Dialog';
 import { IconContainer } from '../components/IconContainer';
@@ -6,6 +6,101 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
+import { Select } from '../components/ui/Select';
+import { SearchInput } from '../components/SearchInput';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs';
+import {
+  getApiLogs, API_LOG_STATUS_META, type ApiLog, type ApiLogStatus,
+} from '../services/apiLogsService';
+
+// ─── API Logs tab ──────────────────────────────────────────────────────────────
+
+function logStatusIcon(status: ApiLogStatus) {
+  if (status === 'success') return <IconCircleCheck className="w-4 h-4 text-emerald-500" />;
+  return <IconAlertTriangle className={status === 'failed' ? 'w-4 h-4 text-red-500' : 'w-4 h-4 text-amber-500'} />;
+}
+
+function ApiLogsTab() {
+  const [logs, setLogs] = useState<ApiLog[]>([]);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    getApiLogs({ status: statusFilter as ApiLogStatus | 'all', search })
+      .then(setLogs)
+      .catch(() => {});
+  }, [statusFilter, search]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="flex-1 min-w-[240px]">
+          <SearchInput
+            placeholder="Search by endpoint, message, or reference…"
+            value={search}
+            onChange={setSearch}
+          />
+        </div>
+        <div className="w-full sm:w-[160px] flex-shrink-0">
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">All Statuses</option>
+            <option value="success">Success</option>
+            <option value="warning">Warning</option>
+            <option value="failed">Failed</option>
+          </Select>
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className={logs.length === 0 ? '' : 'p-0'}>
+          {logs.length === 0 ? (
+            <div className="py-12 text-center">
+              <IconRefresh className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-gray-700">No API activity yet</p>
+              <p className="text-xs text-gray-400 mt-1">
+                API requests and webhook events will appear here as your integration runs.
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Endpoint / Event</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Message</TableHead>
+                  <TableHead>Reference</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logs.map((log) => {
+                  const st = API_LOG_STATUS_META[log.status];
+                  return (
+                    <TableRow key={log.id}>
+                      <TableCell className="text-gray-500 whitespace-nowrap">{log.timestamp}</TableCell>
+                      <TableCell className="font-mono text-xs text-gray-700">{log.endpoint}</TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center gap-1.5">
+                          {logStatusIcon(log.status)}
+                          <Badge variant={st.variant}>{st.label}</Badge>
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-gray-600 max-w-md">{log.message}</TableCell>
+                      <TableCell className="font-mono text-xs text-gray-500">
+                        {log.reference ?? '—'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export function APIAccess() {
   const [sandboxMode, setSandboxMode] = useState(true);
@@ -62,6 +157,13 @@ export function APIAccess() {
         <p className="text-gray-600 mt-1">Integrate GoGo Xpress with your systems</p>
       </div>
 
+      <Tabs defaultValue="config">
+        <TabsList>
+          <TabsTrigger value="config">Configuration</TabsTrigger>
+          <TabsTrigger value="logs">API Logs</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="config" className="mt-6 space-y-6">
       <Card className="bg-blue-50 border-blue-200">
         <CardContent className="p-6">
           <div className="flex items-start gap-3">
@@ -242,6 +344,13 @@ export function APIAccess() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="logs" className="mt-6">
+          <ApiLogsTab />
+        </TabsContent>
+      </Tabs>
+
       <Dialog open={showRegenerateConfirm} onClose={() => setShowRegenerateConfirm(false)} size="sm" title="Regenerate API Key">
         <p className="text-sm text-gray-600 mb-4">
           This will invalidate your current {sandboxMode ? 'test' : 'live'} API key immediately. Any integrations using the old key will stop working until updated.

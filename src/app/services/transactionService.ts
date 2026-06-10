@@ -57,15 +57,30 @@ import {
   deliveries,
   statusConfig,
   getTransactionByTracking,
+  subaccountDisplayLabel,
   type Transaction,
   type TransactionSummary,
   type TransactionStatus,
+  type TransactionSource,
   type TransactionBatch,
 } from '../data/transactions';
+import { getAccountIdByName } from '../data/accounts';
 import { getSettlement } from '../data/earnings';
 import type { SettlementTransaction } from '../data/earnings';
 
-export type { Transaction, TransactionSummary, TransactionStatus, TransactionBatch };
+export type { Transaction, TransactionSummary, TransactionStatus, TransactionSource, TransactionBatch };
+
+/**
+ * Subaccount column display label (re-exported for UI consumers). Shopify-sourced
+ * transactions render as "{Subaccount Name} - Shopify"; the underlying value is
+ * unchanged so filtering/scoping stays intact.
+ */
+export { subaccountDisplayLabel };
+
+/** Resolve a transaction's subaccount name to its canonical account id. */
+function txAccountId(tx: Transaction): string | undefined {
+  return tx.batch?.accountId ?? getAccountIdByName(tx.subaccount);
+}
 
 /**
  * Presentation status mapping (status → label + badge variant). Re-exported so
@@ -102,16 +117,12 @@ export async function getTransactions(
     result = result.filter((t) => t.type.toLowerCase() === type.toLowerCase());
   }
   if (subaccountId && subaccountId !== 'all' && subaccountId !== 'main') {
-    // Match via batch.accountId if available, otherwise fall back to display name.
-    const txById = transactions.filter(
-      (t) => t.batch?.accountId === subaccountId
+    // Match via batch.accountId or the subaccount-name→id bridge, so manual and
+    // Shopify-sourced rows (no batch origin) are scoped correctly too.
+    const ids = new Set(
+      transactions.filter((t) => txAccountId(t) === subaccountId).map((t) => t.trackingNumber)
     );
-    if (txById.length > 0) {
-      const ids = new Set(txById.map((t) => t.trackingNumber));
-      result = result.filter((t) => ids.has(t.tracking));
-    } else if (subaccountName) {
-      result = result.filter((t) => t.subaccount === subaccountName);
-    }
+    result = result.filter((t) => ids.has(t.tracking));
   } else if (subaccountName && subaccountName !== 'all') {
     result = result.filter((t) => t.subaccount === subaccountName);
   }
@@ -143,19 +154,12 @@ export async function getTransactionsBySubaccountId(
 ): Promise<TransactionSummary[]> {
   if (subaccountId === 'main') return deliveries;
 
-  // Prefer ID-based matching via batch origin; fall back to subaccount display name.
-  const byId = transactions
-    .filter((t) => t.batch?.accountId === subaccountId)
-    .map((t) => deliveries.find((d) => d.tracking === t.trackingNumber))
-    .filter((d): d is TransactionSummary => !!d);
-
-  if (byId.length > 0) return byId;
-
-  // Fallback: name-based (not all transactions have a batch origin).
-  return deliveries.filter((d) => {
-    const tx = transactions.find((t) => t.trackingNumber === d.tracking);
-    return tx?.subaccount === subaccountId; // will miss if subaccount is a name, not id
-  });
+  // Match via batch origin OR the subaccount-name→id bridge, so batch, manual,
+  // and Shopify-sourced rows for the subaccount are all included.
+  const ids = new Set(
+    transactions.filter((t) => txAccountId(t) === subaccountId).map((t) => t.trackingNumber)
+  );
+  return deliveries.filter((d) => ids.has(d.tracking));
 }
 
 /**

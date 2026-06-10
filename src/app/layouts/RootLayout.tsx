@@ -30,6 +30,7 @@ import {
   IconReceiptRefund,
   IconActivityHeartbeat,
   IconClipboardList,
+  IconBuildingStore,
 } from '@tabler/icons-react';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { cn } from '../lib/utils';
@@ -90,7 +91,10 @@ const standardAccountNavigation: NavItem[] = [
   grp('Account Management', [
     { name: 'Subaccounts',   href: '/dashboard/subaccounts',  icon: IconBuilding },
     { name: 'Address Book',  href: '/dashboard/address-book', icon: IconMapPin },
+  ]),
+  grp('Integrations', [
     { name: 'API Integration', href: '/dashboard/api-access', icon: IconCode },
+    { name: 'Shopify',         href: '/dashboard/shopify',    icon: IconBuildingStore },
   ]),
   grp('System', [
     { name: 'Notifications', href: '/dashboard/notifications', icon: IconBell },
@@ -121,7 +125,10 @@ const mainAccountNavigation: NavItem[] = [
     { name: 'Subaccounts',         href: '/dashboard/subaccounts',       icon: IconBuilding },
     { name: 'Users & Permissions', href: '/dashboard/users-permissions', icon: IconUsers },
     { name: 'Address Book',        href: '/dashboard/address-book',      icon: IconMapPin },
-    { name: 'API Integration',     href: '/dashboard/api-access',        icon: IconCode },
+  ]),
+  grp('Integrations', [
+    { name: 'API Integration', href: '/dashboard/api-access', icon: IconCode },
+    { name: 'Shopify',         href: '/dashboard/shopify',    icon: IconBuildingStore },
   ]),
   grp('System', [
     { name: 'Notifications', href: '/dashboard/notifications', icon: IconBell },
@@ -145,7 +152,10 @@ const subaccountNavigation: NavItem[] = [
   ]),
   grp('Account Management', [
     { name: 'Address Book',    href: '/dashboard/address-book', icon: IconMapPin },
-    { name: 'API Integration', href: '/dashboard/api-access',   icon: IconCode },
+  ]),
+  grp('Integrations', [
+    { name: 'API Integration', href: '/dashboard/api-access', icon: IconCode },
+    { name: 'Shopify',         href: '/dashboard/shopify',    icon: IconBuildingStore },
   ]),
   grp('System', [
     { name: 'Notifications', href: '/dashboard/notifications', icon: IconBell },
@@ -167,6 +177,10 @@ const managerNavigation: NavItem[] = [
   grp('Analytics & Reports', [
     { name: 'Analytics', href: '/dashboard/analytics', icon: IconChartBar },
     { name: 'Reports',   href: '/dashboard/reports',   icon: IconFileText },
+  ]),
+  // Managers see Shopify scoped to their assigned subaccount's connection state.
+  grp('Integrations', [
+    { name: 'Shopify', href: '/dashboard/shopify', icon: IconBuildingStore },
   ]),
   grp('System', [
     { name: 'Notifications', href: '/dashboard/notifications', icon: IconBell },

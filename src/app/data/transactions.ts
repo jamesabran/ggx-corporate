@@ -12,6 +12,9 @@ export type TransactionStatus =
   | 'failed'
   | 'returned';
 
+/** Where a transaction originated. Drives the Shopify "- Shopify" tag. */
+export type TransactionSource = 'manual' | 'bulk_upload' | 'api' | 'shopify';
+
 export const statusConfig: Record<TransactionStatus, { variant: 'success' | 'info' | 'warning' | 'danger' | 'pending' | 'default'; label: string }> = {
   delivered: { variant: 'success', label: 'Delivered' },
   'in-transit': { variant: 'info', label: 'In Transit' },
@@ -66,6 +69,10 @@ export interface Transaction {
   status: TransactionStatus;
   date: string;
   subaccount: string;
+  /** Origin channel of the transaction. Defaults to 'manual' / 'bulk_upload'. */
+  source: TransactionSource;
+  /** Shopify store display name when source === 'shopify'. */
+  shopifyStoreName?: string;
   // Detail fields
   createdAt: string;
   pickupDate: string;
@@ -147,12 +154,21 @@ interface RowSeed {
   date: string;
   subaccount: string;
   codAmount: number;
+  /** Origin channel. Omit to derive: 'bulk_upload' when a batch is present, else 'manual'. */
+  source?: TransactionSource;
+  /** Shopify store display name (source === 'shopify' rows). */
+  shopifyStoreName?: string;
   /** Set when the transaction originated from a Bulk Upload batch. batchId values
    *  match the seed batches shown in BulkUploader's Recent Uploads. */
   batch?: TransactionBatch;
 }
 
 const rows: RowSeed[] = [
+  // ── Shopify-sourced orders (booked via the GGX Shopify plugin) ───────────────
+  { tracking: 'GGX-2026-90021', recipient: 'Liza Mendoza', destination: 'Quezon City, Metro Manila', contactNumber: '+63 917 220 3344', recipientAddress: 'Blk 7 Lot 12, Visayas Ave, Quezon City, Metro Manila', status: 'in-transit', type: 'Standard', date: '2026-05-31', subaccount: 'Acme Luzon', codAmount: 1850, source: 'shopify', shopifyStoreName: 'Acme Luzon Online' },
+  { tracking: 'GGX-2026-90020', recipient: 'Marco Villanueva', destination: 'Makati City, Metro Manila', contactNumber: '+63 918 330 4455', recipientAddress: 'Unit 802, Salcedo Park Twr, Makati City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-31', subaccount: 'Acme Corporation', codAmount: 3200, source: 'shopify', shopifyStoreName: 'Acme Corporation Store' },
+  { tracking: 'GGX-2026-90019', recipient: 'Carla Santos', destination: 'Pasig City, Metro Manila', contactNumber: '+63 919 441 5566', recipientAddress: 'The Grove, Capitol Commons, Pasig City, Metro Manila', status: 'pending', type: 'Standard', date: '2026-05-30', subaccount: 'Acme Luzon', codAmount: 990, source: 'shopify', shopifyStoreName: 'Acme Luzon Online' },
+  { tracking: 'GGX-2026-90018', recipient: 'Tonette Reyes', destination: 'Taguig City, Metro Manila', contactNumber: '+63 917 552 6677', recipientAddress: 'Two Serendra, BGC, Taguig City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-30', subaccount: 'Acme Corporation', codAmount: 2450, source: 'shopify', shopifyStoreName: 'Acme Corporation Store' },
   // ── May 31 (today) ───────────────────────────────────────────────────────────
   { tracking: 'GGX-2026-90010', recipient: 'Nexus Retail Group', destination: 'Makati City, Metro Manila', contactNumber: '+63 917 211 0011', recipientAddress: 'Ayala Mall, Glorietta 5, Makati City, Metro Manila', status: 'pending', type: 'Express', date: '2026-05-31', subaccount: 'Acme Corporation', codAmount: 32000, batch: { batchId: 'UPLOAD-2026-05-31-001', fileName: 'may31_express_orders.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 247, delivered: 5, inProgress: 240, failed: 2 } }},
   { tracking: 'GGX-2026-90009', recipient: 'Meridian Health Corp.', destination: 'Quezon City, Metro Manila', contactNumber: '+63 918 322 0022', recipientAddress: 'Trinoma Mall, North EDSA, Quezon City, Metro Manila', status: 'in-transit', type: 'Express', date: '2026-05-31', subaccount: 'Acme Luzon', codAmount: 18750, batch: { batchId: 'UPLOAD-2026-05-31-002', fileName: 'may31_luzon_am.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 184, delivered: 12, inProgress: 170, failed: 2 } } },
@@ -192,6 +208,8 @@ export const transactions: Transaction[] = rows.map((r) => ({
   status: r.status,
   date: r.date,
   subaccount: r.subaccount,
+  source: r.source ?? (r.batch ? 'bulk_upload' : 'manual'),
+  shopifyStoreName: r.shopifyStoreName,
   createdAt: `${r.date} 09:30 AM`,
   pickupDate: r.date,
   deliveryDate: r.status === 'delivered' ? r.date : '—',
@@ -199,7 +217,9 @@ export const transactions: Transaction[] = rows.map((r) => ({
   recipient: { name: r.recipient, contactNumber: r.contactNumber, address: r.recipientAddress },
   items: defaultItems,
   packaging: { size: 'MEDIUM', dimensions: '40cm x 30cm x 20cm', weight: '3.2 kg' },
-  store: { name: 'TechGear Philippines', url: 'techgear.ph' },
+  store: r.shopifyStoreName
+    ? { name: r.shopifyStoreName, url: `${r.subaccount.toLowerCase().replace(/\s+/g, '-')}.myshopify.com` }
+    : { name: 'TechGear Philippines', url: 'techgear.ph' },
   fees: defaultFees,
   payment: { method: 'Cash on Delivery (COD)', paidBy: 'Recipient', codAmount: r.codAmount },
   timeline: buildTimeline(r.status, r.date),
@@ -215,6 +235,8 @@ export interface TransactionSummary {
   type: string;
   date: string;
   subaccount: string;
+  source: TransactionSource;
+  shopifyStoreName?: string;
 }
 
 export const deliveries: TransactionSummary[] = transactions.map((t) => ({
@@ -225,7 +247,18 @@ export const deliveries: TransactionSummary[] = transactions.map((t) => ({
   type: t.type,
   date: t.date,
   subaccount: t.subaccount,
+  source: t.source,
+  shopifyStoreName: t.shopifyStoreName,
 }));
+
+/**
+ * Subaccount column display label. Shopify-sourced transactions are tagged
+ * "{Subaccount Name} - Shopify"; all other sources show the plain name.
+ * The underlying `subaccount` value is unchanged so filtering stays intact.
+ */
+export function subaccountDisplayLabel(t: Pick<TransactionSummary, 'subaccount' | 'source'>): string {
+  return t.source === 'shopify' ? `${t.subaccount} - Shopify` : t.subaccount;
+}
 
 /** Look up a full transaction by its tracking number (the `:id` route param). */
 export function getTransactionByTracking(tracking: string | undefined): Transaction | undefined {

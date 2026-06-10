@@ -21,6 +21,7 @@ import {
   getTransactionsBySubaccountId,
   getTransactionBatches,
   statusConfig,
+  subaccountDisplayLabel,
   type TransactionSummary,
   type TransactionBatchGroup,
 } from '../services/transactionService';
@@ -194,7 +195,9 @@ export function Transactions() {
                     <TableCell>{delivery.destination}</TableCell>
                     {mainView && (
                       <TableCell>
-                        <span className="text-sm font-medium text-gray-700">{delivery.subaccount}</span>
+                        <span className="text-sm font-medium text-gray-700">
+                          {subaccountDisplayLabel(delivery)}
+                        </span>
                       </TableCell>
                     )}
                     <TableCell>

@@ -5,6 +5,27 @@
 
 ---
 
+## Session 32 (2026-06-10) — Integrations sidenav group + Shopify module + API Logs + Shopify tx tagging
+
+**Code COMPLETE + build green.** New **Integrations** sidebar group; API Integration moved under it; new **Shopify** module; Shopify-sourced transactions tagged in the Subaccount column.
+
+- **Sidebar IA (`RootLayout.tsx`):** new `Integrations` group across all four nav variants. Standard/Main/Subaccount → `API Integration` + `Shopify` (API Integration removed from Account Management). Manager → `Integrations > Shopify` only (managers still have no API Integration, but now get Shopify scoped to their assigned subaccount). **Tabler note: there is NO `IconBrandShopify` in @tabler/icons-react@3.26 — used `IconBuildingStore` for Shopify branding everywhere.**
+- **Routes:** added `/dashboard/shopify` (shared, not AdminRoute → managers can reach it). API route unchanged.
+- **API Integration (`APIAccess.tsx`):** existing content wrapped in DS `Tabs` — **Configuration** (unchanged) + new **API Logs** tab. Logs = table (timestamp / endpoint·event / status Success·Failed·Warning / message / reference) with search + status filter + empty state. Backed by `data/apiLogs.ts` → `services/apiLogsService.ts`.
+- **Shopify page (`pages/Shopify.tsx`):** tabbed IA — **Overview / Connected Store / Booking Guide / Sync Logs**. Account-context aware via `useScopedAccountId` + `useSubAccounts` + auth:
+  - **Main Account admin** → Connected Store shows a **coverage table** (Subaccount / Store / Status / Last Sync / Action); rows with no store show “No store connected” + Connect CTA. Sync Logs show a Subaccount column + all accounts.
+  - **Subaccount/Manager/scoped** → single Connected Store card OR empty state for that one account; logs scoped.
+  - **Standard (non-subaccount) account** → resolves a synthetic `STANDARD_ACCOUNT_ID` store.
+  - **Empty state** → CTAs “Install Shopify Plugin” + “Connect Shopify Store”, both anchors to `https://apps.shopify.com/gogo-xpress-beta` (external-link icon treatment). Explains connecting lets orders be booked for pickup through GGX.
+  - **Booking Guide** = static how-to (3 steps + payment note + final note), not settings. **No Import Settings / Booking Rules** per spec.
+  - Connected card shows store name, domain (ext link), connected account, status, last sync, connected by, Manage action.
+- **Shopify service (`services/shopifyService.ts`)** over `data/shopify.ts`: `getConnectedStore`, `getStoreCoverage`, `getSyncLogs`, `getShopifyOverviewStats` + status/event/health meta + `SHOPIFY_APP_URL`. Demo data: Acme Corporation = connected/healthy, **Acme Luzon = connected + warning/failed sync logs**, **Acme Visayas = no store (empty-state demo)**, plus a standard-account store. Sync logs cover success/warning/failed events.
+- **Transactions Shopify tagging (`data/transactions.ts` + `transactionService.ts` + `Transactions.tsx`):** added `source: 'manual'|'bulk_upload'|'api'|'shopify'` (+ `shopifyStoreName?`) to the model/summary; existing rows derive `bulk_upload`/`manual`; added 4 Shopify rows (Acme Corporation/Acme Luzon). New `subaccountDisplayLabel()` renders the Subaccount column as **“{name} - Shopify”** for Shopify rows only (underlying `subaccount` value unchanged → filters intact). **Scoping hardened:** `getTransactions`/`getTransactionsBySubaccountId` now match via batch.accountId **OR** the `getAccountIdByName` name→id bridge, so manual + Shopify rows scope correctly (managers/subaccount views include their Shopify txs). Tag only renders where the Subaccount column exists (Main Account view).
+- **Assumptions:** (1) Acme Visayas kept as the no-store empty-state demo, so Shopify-tagged txs use Acme Corporation/Acme Luzon (both have stores) rather than the spec's literal "Acme Visayas - Shopify" example — internal consistency over the illustrative example. (2) `IconBuildingStore` substitutes for the unavailable `IconBrandShopify`.
+- **⏳ Figma NOT yet done** (Task #6): App Screens + DS updates (Integrations sidebar, API Logs, 4 Shopify screens + empty state + coverage + scoped view, transactions tag). Pending — large pass; do next.
+
+---
+
 ## Session 31 (2026-06-10) — Post-Part-1: cleanup, scoping bug class, blue-banner buttons
 
 - **DS file cleanup:** deleted 13 empty `GGX / *` screen pages that lingered in GGX-SHADCN (should never be in the DS file — saved feedback memory). Reworded the GGX Brand page's "POC" note (naming-rule compliance).

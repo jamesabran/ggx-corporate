@@ -16,6 +16,7 @@ import { BillingStatement } from './pages/BillingStatement';
 import { PaymentSettings } from './pages/PaymentSettings';
 import { AddressBookPage } from './pages/AddressBookPage';
 import { APIAccess } from './pages/APIAccess';
+import { Shopify } from './pages/Shopify';
 import { SupportTickets } from './pages/SupportTickets';
 import { SupportTicketDetail } from './pages/SupportTicketDetail';
 import { SubAccounts } from './pages/SubAccounts';
@@ -79,6 +80,7 @@ export const router = createBrowserRouter([
       },
       { path: 'address-book', Component: AddressBookPage },
       { path: 'api-access', Component: APIAccess },
+      { path: 'shopify', Component: Shopify },
       { path: 'support-tickets', Component: SupportTickets },
       { path: 'support-tickets/:id', Component: SupportTicketDetail },
       { path: 'complaints', element: <Navigate to="/dashboard/support-tickets" replace /> },
