@@ -49,15 +49,20 @@ in the frontend).
 ## Grid columns
 
 Recipient name · Recipient mobile · Delivery address · Province · City ·
-Barangay/District · Product / SKU · Quantity · Declared value · Parcel size ·
-Payment method.
+Barangay/District · Product / SKU · Quantity · Declared value · Parcel size.
 
 - **Service type is page-level, not per-row.** It's chosen once for the batch in
   the service-mode selector (Standard / Same-Day / **On-Demand** when enabled for
   the scope) and drives the whole spreadsheet context — do not reintroduce a
   per-row service column.
+- **No per-row Payment column.** Shipping-fee payment is selected once for the
+  batch under **Confirm booking details** (account payment options), so a per-row
+  Payment column (COD / Prepaid / Billing) is misleading — do not reintroduce it.
+  FUTURE: align the grid with the Bulk Upload template's item/payment fields (e.g.
+  COD amount, declared value, line-item protection) in a dedicated pass — not yet
+  implemented.
 - **Notes** is intentionally omitted to keep the row focused on booking /
-  recipient / parcel / location / payment / product fields.
+  recipient / parcel / location / product fields.
 - **Product / SKU** is a wide cell. When **Inventory is enabled for the scope** it
   becomes a product picker: the cell shows a compact summary (primary product name
   + "+N more") and opens a dialog (`components/ProductAttachDialog`) to attach one

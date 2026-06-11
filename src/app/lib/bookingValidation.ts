@@ -26,7 +26,6 @@ export type BookingField =
   | 'declaredValue'
   | 'parcelSize'
   | 'serviceType'
-  | 'paymentMethod'
   | 'notes';
 
 /**
@@ -77,8 +76,6 @@ export interface ColumnDef {
   width: number;
 }
 
-export const PAYMENT_METHODS = ['COD', 'Prepaid', 'Billing'] as const;
-
 export const SERVICE_TYPE_OPTIONS: { value: ServiceTypeKey; label: string }[] =
   BOOKING_SERVICE_TYPES.map((k) => ({ value: k, label: SERVICE_TYPES[k].label }));
 
@@ -98,7 +95,6 @@ export const BOOKING_COLUMNS: ColumnDef[] = [
   { key: 'quantity',       label: 'Qty',              required: true,  width: 90 },
   { key: 'declaredValue',  label: 'Declared value',   required: false, width: 160 },
   { key: 'parcelSize',     label: 'Parcel size',      required: false, width: 180, options: RECEPTACLE_SIZES },
-  { key: 'paymentMethod',  label: 'Payment',          required: true,  width: 180, options: PAYMENT_METHODS },
 ];
 
 /** Fixed widths (px) for the grid's row-number and row-actions columns. */
@@ -106,7 +102,13 @@ export const ROW_NUMBER_WIDTH = 48;
 export const ROW_ACTIONS_WIDTH = 80;
 // Service type is chosen at the page/flow level (Standard / Same-Day / On-Demand),
 // not per row, so it is NOT a grid column. Notes were removed to keep the row
-// focused on booking/recipient/parcel/location/payment/product fields.
+// focused on booking/recipient/parcel/location/product fields.
+//
+// Shipping-fee payment is handled once for the batch under "Confirm booking
+// details" (account payment options), so there is NO per-row Payment column.
+// FUTURE: align this grid with the Bulk Upload template's item/payment fields
+// (e.g. COD amount, declared value, line-item protection) in a dedicated pass —
+// not implemented yet.
 
 const REQUIRED_FIELDS = BOOKING_COLUMNS.filter((c) => c.required).map((c) => c.key);
 
@@ -123,7 +125,7 @@ export function makeEmptyRow(id: string): BookingRow {
     id,
     recipientName: '', recipientMobile: '', address: '', province: '', city: '',
     barangay: '', productSku: '', quantity: '', declaredValue: '', parcelSize: '',
-    serviceType: '', paymentMethod: '', notes: '',
+    serviceType: '', notes: '',
   };
 }
 
@@ -173,10 +175,6 @@ export function validateRow(
 
   if (row.serviceType && !BOOKING_SERVICE_TYPES.includes(row.serviceType as ServiceTypeKey)) {
     errors.serviceType = 'Unsupported service type';
-  }
-
-  if (row.paymentMethod && !(PAYMENT_METHODS as readonly string[]).includes(row.paymentMethod)) {
-    errors.paymentMethod = 'Unsupported payment method';
   }
 
   // Attached-product stock / status / reference checks (live, no deduction).
