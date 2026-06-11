@@ -47,3 +47,25 @@ export function getFeatureStateForScope(featureId: FeatureId, scopeId: ScopeId |
   const id = scopeId ?? MAIN_ACCOUNT_ID;
   return seed[id]?.[featureId] ?? DEFAULT_STATE;
 }
+
+// ─── Mutations (session-only; backend-owned in production) ──────────────────────
+
+/** Set a feature's enablement state for a scope. */
+export function setFeatureStateForScope(
+  featureId: FeatureId,
+  scopeId: ScopeId | undefined,
+  state: FeatureState,
+): FeatureState {
+  const id = scopeId ?? MAIN_ACCOUNT_ID;
+  seed[id] = { ...(seed[id] ?? {}), [featureId]: state };
+  return state;
+}
+
+/**
+ * Enable a feature for a scope (self-activation). Turns it on and marks it
+ * configured so the add-on is immediately usable (status → "Enabled", CTA →
+ * "Open"). Per-feature guided setup can refine this later.
+ */
+export function enableFeatureForScope(featureId: FeatureId, scopeId: ScopeId | undefined): FeatureState {
+  return setFeatureStateForScope(featureId, scopeId, { enabled: true, configured: true });
+}

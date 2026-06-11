@@ -13,6 +13,7 @@
 
 import {
   getFeatureStateForScope,
+  enableFeatureForScope,
   STANDARD_SCOPE_ID,
   type FeatureId,
   type FeatureState,
@@ -20,6 +21,17 @@ import {
 
 export type { FeatureId, FeatureState };
 export { STANDARD_SCOPE_ID };
+
+/**
+ * Enable a feature for a scope (self-activation), making it immediately usable.
+ * Future BFF: POST /accounts/:id/features/:featureId/enable.
+ */
+export async function enableFeature(
+  featureId: FeatureId,
+  scopeId: string | undefined,
+): Promise<FeatureState> {
+  return enableFeatureForScope(featureId, scopeId);
+}
 
 /** Effective enablement/config state for a feature in a scope. */
 export async function getFeatureState(

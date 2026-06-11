@@ -16,7 +16,7 @@ column was removed**, the review **summary is data-driven for spreadsheet batche
 (roadmap #3), the Dashboard has a **Basic Analytics** section (roadmap #6),
 **Inventory has full create/edit/import/export flows** (roadmap #7), and
 **Storefront has product management + a public `/shop/:slug` surface** (roadmap #4,
-no checkout).
+no checkout), and **Account Add-ons run real activation/request flows** (roadmap #8).
 
 - **Branch:** `master`. **Build:** green (`npm run build`). Latest work committed.
   Not pushed (per project rule — push only when explicitly asked).
@@ -28,13 +28,12 @@ no checkout).
   pixel-width grid with forced horizontal scroll, fee estimate. The Product/SKU cell
   is a product picker when Inventory is enabled (else free text + upsell teaser).
 
-**Next task (roadmap, next deferred items):** #8 real activation/request flows +
-BFF wiring (replace the mock acknowledge dialog), or #9 full Business+ rebrand pass
+**Next task (roadmap, next deferred items):** #9 full Business+ rebrand pass
 (titles/marketing copy; logo already done; routes intentionally unchanged). #2
 (adopt `lib/bookingValidation` in the file path) stays blocked on real file parsing.
 Done: #5 (On-Demand), #1 (Inventory attachment), #3 (data-driven summary), #6
 (Dashboard Basic Analytics), #7 (Inventory CRUD/import/export), #4 (Storefront
-management + public `/shop/:slug`).
+management + public `/shop/:slug`), #8 (real activation/request flows).
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
 decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); no Inventory
@@ -45,6 +44,33 @@ deps; non-destructive; preserve Upload File behavior; commit after stable milest
 strip it after any Write. PowerShell `Get-Content`/`Set-Content` round-trips corrupt UTF-8
 (₱, em-dash) → mojibake; prefer Edit, or `sed -i` (byte-safe) for bulk line ops. See
 [[reference-powershell-utf8-roundtrip]].
+
+---
+
+## Session 47 (2026-06-12) — Real activation/request flows for Account Add-ons (roadmap #8)
+
+One commit. **Build green.** Replaces the no-op acknowledge dialog with a real,
+state-changing workflow; BFF-shaped contracts in place (no real backend yet).
+
+- **Self-enable (Inventory / Storefront / On-Demand):** `featureEnablement` is now
+  mutable — added `setFeatureStateForScope` + `enableFeatureForScope` (enables AND
+  marks configured so the add-on is immediately usable → Enabled / Open).
+  `featureEnablementService.enableFeature` wraps it.
+- **Approval / contract requests:** new session store `data/moduleRequests.ts`
+  (keyed scope+module; `getModuleRequest` / `submitModuleRequest` → `in_review`).
+- **Orchestrator:** new `services/moduleActivationService.activateModule(ctx, module)`
+  — enables the feature for `enable` CTAs, submits a request for
+  `request_approval` / `request_activation`, returns a presentation-shaped outcome.
+- **Catalog reflects requests:** `businessModulesService.buildResolved` reads the
+  request store; a submitted approval/contract request flips the CTA to a disabled
+  **"Request submitted"** + a pending `requestNote` (`ResolvedModule.requestPending`/
+  `requestNote`), preventing duplicate submits. `ModuleCard` shows the pending note.
+- **Dialog (`AccountAddOns.tsx`):** confirm → **submitting** (spinner, scrim locked)
+  → **done** success view (green check for enabled w/ "Open <name>" route, blue clock
+  for requested), then refreshes the catalog so statuses/CTAs update live (incl.
+  dependents — enabling Inventory unlocks Storefront).
+- Manager activation gating (account-level modules) is unchanged — blocked CTAs never
+  reach the request flow.
 
 ---
 

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 import {
-  IconInfoCircle, IconLock, IconMapPin, IconAlertTriangle,
+  IconInfoCircle, IconLock, IconMapPin, IconAlertTriangle, IconClockHour4,
 } from '@tabler/icons-react';
 import { Card, CardContent } from './ui/Card';
 import { Button } from './ui/Button';
@@ -69,6 +69,9 @@ export function ModuleCard({
           )}
           {module.activationBlocked && module.blockedNote && (
             <Note icon={IconAlertTriangle} className="text-gray-500">{module.blockedNote}</Note>
+          )}
+          {module.requestPending && module.requestNote && (
+            <Note icon={IconClockHour4} className="text-blue-600">{module.requestNote}</Note>
           )}
         </div>
 

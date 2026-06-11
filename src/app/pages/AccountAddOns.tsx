@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { IconCircleCheck, IconClockHour4, IconLoader2 } from '@tabler/icons-react';
 import { Dialog } from '../components/ui/Dialog';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
@@ -9,28 +11,59 @@ import {
   type ModuleCategory,
   type ResolvedModule,
 } from '../services/businessModulesService';
+import { activateModule, type ActivationOutcome } from '../services/moduleActivationService';
+
+type Phase = 'confirm' | 'submitting' | 'done';
 
 /**
  * Account Add-ons — the discovery surface for OPTIONAL account capabilities.
- * Only shows add-ons that are gated, requestable, contract-based, require
- * setup/approval/dependencies, or aren't fully available yet (default/always-on
- * features are not listed). Status + CTA are resolved by businessModulesService.
+ * Status + CTA are resolved by businessModulesService.
  *
- * Activation/request CTAs without a real workflow are acknowledged via a mock
- * dialog (no activation backend yet). Routed CTAs (Open / Set up / dependency /
- * self-enable workflow) navigate.
+ * Activation/request CTAs run a REAL action via moduleActivationService:
+ * self-enable add-ons (Inventory/Storefront) flip feature enablement, and
+ * approval/contract add-ons submit a persisted request the catalog reflects as
+ * "Request submitted". Routed CTAs (Open / Set up / dependency) navigate.
  */
 export function AccountAddOns() {
   const ctx = useModuleAccessContext();
+  const navigate = useNavigate();
   const [groups, setGroups] = useState<{ category: ModuleCategory; label: string; modules: ResolvedModule[] }[]>([]);
   const [filter, setFilter] = useState<'all' | 'active' | 'available' | 'locked'>('all');
+
   const [actioned, setActioned] = useState<ResolvedModule | null>(null);
+  const [phase, setPhase] = useState<Phase>('confirm');
+  const [outcome, setOutcome] = useState<ActivationOutcome | null>(null);
+
+  const reload = useCallback(() => {
+    getModuleCatalog(ctx).then(setGroups);
+  }, [ctx]);
 
   useEffect(() => {
     let active = true;
     getModuleCatalog(ctx).then((g) => { if (active) setGroups(g); });
     return () => { active = false; };
   }, [ctx]);
+
+  const openAction = (m: ResolvedModule) => {
+    setActioned(m);
+    setPhase('confirm');
+    setOutcome(null);
+  };
+
+  const closeDialog = () => {
+    setActioned(null);
+    setPhase('confirm');
+    setOutcome(null);
+  };
+
+  const handleConfirm = async () => {
+    if (!actioned) return;
+    setPhase('submitting');
+    const result = await activateModule(ctx, actioned);
+    setOutcome(result);
+    setPhase('done');
+    reload(); // refresh statuses/CTAs (enabled / request submitted)
+  };
 
   const filteredGroups = useMemo(() => {
     if (filter === 'all') return groups;
@@ -69,7 +102,7 @@ export function AccountAddOns() {
           <h2 className="text-sm font-semibold text-gray-900 mb-3">{group.label}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {group.modules.map((m) => (
-              <ModuleCard key={m.def.id} module={m} onAction={setActioned} />
+              <ModuleCard key={m.def.id} module={m} onAction={openAction} />
             ))}
           </div>
         </section>
@@ -81,16 +114,45 @@ export function AccountAddOns() {
 
       <Dialog
         open={!!actioned}
-        onClose={() => setActioned(null)}
-        title={actioned ? actionTitle(actioned) : ''}
+        onClose={phase === 'submitting' ? () => {} : closeDialog}
+        title={actioned ? (phase === 'done' && outcome ? outcome.title : actionTitle(actioned)) : ''}
         size="sm"
       >
-        {actioned && (
+        {actioned && phase !== 'done' && (
           <>
             <p className="text-sm text-gray-600">{actionBody(actioned)}</p>
             <div className="mt-5 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setActioned(null)}>Close</Button>
-              <Button onClick={() => setActioned(null)}>{actioned.cta.label}</Button>
+              <Button variant="outline" onClick={closeDialog} disabled={phase === 'submitting'}>Cancel</Button>
+              <Button onClick={handleConfirm} disabled={phase === 'submitting'}>
+                {phase === 'submitting'
+                  ? <><IconLoader2 className="w-4 h-4 animate-spin" /> Submitting…</>
+                  : actioned.cta.label}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {actioned && phase === 'done' && outcome && (
+          <>
+            <div className="flex items-start gap-3">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${outcome.kind === 'requested' ? 'bg-blue-100' : 'bg-green-100'}`}>
+                {outcome.kind === 'requested'
+                  ? <IconClockHour4 className="w-5 h-5 text-blue-600" />
+                  : <IconCircleCheck className="w-5 h-5 text-green-600" />}
+              </div>
+              <p className="text-sm text-gray-600 flex-1">{outcome.message}</p>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              {outcome.kind === 'enabled' && outcome.route ? (
+                <>
+                  <Button variant="outline" onClick={closeDialog}>Close</Button>
+                  <Button onClick={() => { const r = outcome.route!; closeDialog(); navigate(r); }}>
+                    Open {actioned.def.name}
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={closeDialog}>Done</Button>
+              )}
             </div>
           </>
         )}
@@ -112,7 +174,7 @@ function actionTitle(m: ResolvedModule): string {
 function actionBody(m: ResolvedModule): string {
   switch (m.cta.kind) {
     case 'enable':
-      return `${m.def.name} can be enabled for your account. Confirm to turn it on and add it to your workspace.`;
+      return `${m.def.name} can be enabled for your account. Confirm to turn it on and start using it right away.`;
     case 'request_approval':
       return `${m.def.name} requires approval. Submitting will send a request to your GGX account team for review.`;
     case 'request_activation':

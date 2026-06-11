@@ -26,6 +26,7 @@ import {
 } from '../data/businessModules';
 import { getFeatureStateSync } from './featureEnablementService';
 import { hasPermission, type PermissionKey } from '../data/permissions';
+import { getModuleRequest } from '../data/moduleRequests';
 
 export type {
   AccountType, BusinessModuleDef, ModuleCategory, ModuleRole,
@@ -208,6 +209,10 @@ export interface ResolvedModule {
   activationBlocked: boolean;
   /** Note explaining a blocked/role-gated CTA. */
   blockedNote?: string;
+  /** True when an approval/contract request has already been submitted. */
+  requestPending: boolean;
+  /** Note shown while a submitted request is pending review. */
+  requestNote?: string;
 }
 
 const ACTIVATION_CTA_KINDS: CtaKind[] = ['enable', 'request_approval', 'request_activation'];
@@ -228,6 +233,21 @@ function buildResolved(m: BusinessModuleDef, ctx: ModuleAccessContext): Resolved
     }
   }
 
+  // Reflect an already-submitted approval/contract request: the CTA becomes a
+  // non-actionable "Request submitted" so the user can't resubmit, and a note
+  // explains the pending review. Self-enable ('enable') needs no request.
+  let requestPending = false;
+  let requestNote: string | undefined;
+  if (!activationBlocked && (cta.kind === 'request_approval' || cta.kind === 'request_activation')) {
+    const existing = getModuleRequest(ctx.scopeAccountId, m.id);
+    if (existing) {
+      requestPending = true;
+      requestNote = 'Request submitted — your GGX account team is reviewing it.';
+      cta.label = 'Request submitted';
+      cta.disabled = true;
+    }
+  }
+
   const dependencyNote = m.dependsOn
     ? `Requires ${getModuleById(m.dependsOn)?.name ?? 'another module'} first.`
     : undefined;
@@ -244,6 +264,8 @@ function buildResolved(m: BusinessModuleDef, ctx: ModuleAccessContext): Resolved
     coverageNote: m.coverageNote,
     activationBlocked,
     blockedNote,
+    requestPending,
+    requestNote,
   };
 }
 

@@ -93,7 +93,14 @@ add-ons read as `enabled`.
    `inventory.*` permissions (managers get create/edit, not delete/import/export)
    and require a concrete scope. Stock is a managed field here; booking-time
    deduction stays backend-owned.
-8. Real activation/request flows (replace the mock acknowledge dialog) + BFF wiring.
+8. ✅ **DONE (Session 47).** Real activation/request flows replace the mock
+   acknowledge dialog. Self-enable add-ons (Inventory/Storefront/On-Demand) flip
+   runtime feature enablement (→ Enabled / Open); approval & contract add-ons
+   submit a **persisted request** (`moduleActivationService` + `data/moduleRequests`)
+   that the catalog reflects as a disabled "Request submitted" + pending note (no
+   duplicate submits). The dialog has confirm → submitting → success phases and
+   refreshes the catalog. BFF-shaped contracts in place
+   (`POST /accounts/:id/features/:fid/enable`, `POST /accounts/:id/module-requests`).
 9. Full GGX Business+ rebrand pass (titles, marketing copy) — logo done; routes
    intentionally unchanged.
 
