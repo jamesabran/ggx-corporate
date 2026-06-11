@@ -90,7 +90,7 @@ export function SpreadsheetBookingGrid({
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto border border-gray-200 rounded-xl">
-        <table className="border-collapse text-xs">
+        <table className="border-collapse text-xs min-w-[1280px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="sticky left-0 z-10 bg-gray-50 px-2 py-2 w-10 text-gray-400 font-medium text-center">#</th>
@@ -118,6 +118,7 @@ export function SpreadsheetBookingGrid({
                         <LocationCascadeCells
                           key="location"
                           compact
+                          widthClass="w-40"
                           province={row.province}
                           city={row.city}
                           barangay={row.barangay}

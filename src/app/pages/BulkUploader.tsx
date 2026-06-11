@@ -512,10 +512,11 @@ export function BulkUploader() {
               )}
 
               {/* Alternate path — manual entry via the in-app spreadsheet.
-                  Lives inside the Upload Orders card; still part of Bulk Booking. */}
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  Lives inside the Upload Orders card; still part of Bulk Booking.
+                  Text + button read as one centered CTA group. */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-3">
                 <p className="text-xs text-gray-500">No file ready? Enter your orders manually.</p>
-                <Button size="sm" className="flex-shrink-0" onClick={() => navigate('/dashboard/bulk-uploader/spreadsheet')}>
+                <Button className="flex-shrink-0" onClick={() => navigate('/dashboard/bulk-uploader/spreadsheet')}>
                   <IconFileSpreadsheet className="w-4 h-4 mr-1.5" />
                   Use our in-app spreadsheet
                 </Button>

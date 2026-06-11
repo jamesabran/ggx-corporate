@@ -5,6 +5,16 @@
 
 ---
 
+## Session 40 (2026-06-12) — In-app Spreadsheet visual polish (CTA + grid widths)
+
+Minor visual-only polish. **Build green; one commit.** No behavior/flow changes.
+
+- **Bulk Upload CTA row (`BulkUploader.tsx`):** the manual-entry helper text + "Use our in-app spreadsheet" button now read as one **centered** group (`items-center justify-center gap-3`, removed `justify-between`); button bumped from `sm` to default size for prominence. Still inside the Upload Orders card, not banner-like.
+- **Grid readability (`bookingValidation` widths + `SpreadsheetBookingGrid` + `LocationCascadeCells`):** widened columns (address `w-72`, mobile/province/city/barangay `w-40`, parcel/payment `w-40`, declared `w-36`, qty `w-24`; Product/SKU stays `w-64`); table now has `min-w-[1280px]` so the wrapper scrolls horizontally instead of compressing. Added a `widthClass` prop to `LocationCascadeCells` (passed `w-40`) so province/city dropdown labels ("Select province", "Select city") no longer clip. Add row + tip stay bottom-left below the grid.
+- **Unchanged:** page title "In-app Spreadsheet", page-level service mode, removed Service type/Notes columns, inventory teaser, shared validation, Upload File behavior.
+
+---
+
 ## Session 39 (2026-06-12) — In-app Spreadsheet flow refinements (CTA, page-level service mode, column trim, inventory teaser)
 
 Refined the Bulk Upload → In-app Spreadsheet UX. **Build green; one commit.** Inventory attachment still deferred (this pass only prepares the layout + teaser).

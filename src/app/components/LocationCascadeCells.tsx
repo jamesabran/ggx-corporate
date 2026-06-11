@@ -26,12 +26,14 @@ export interface LocationCascadeCellsProps {
   onChange: (province: string, city: string, barangay: string) => void;
   /** Tighter cell styling for the in-app spreadsheet grid. */
   compact?: boolean;
+  /** Width utility applied to each of the 3 cells (e.g. 'w-40') in compact grids. */
+  widthClass?: string;
   /** Required-but-empty flags → red borders (grid validation). */
   errors?: { province?: boolean; city?: boolean; barangay?: boolean };
 }
 
 export function LocationCascadeCells({
-  province, city, barangay, onChange, compact = false, errors,
+  province, city, barangay, onChange, compact = false, widthClass, errors,
 }: LocationCascadeCellsProps) {
   const [provinceId, setProvinceId] = useState<number | null>(null);
   const [cityId,     setCityId]     = useState<number | null>(null);
@@ -103,7 +105,9 @@ export function LocationCascadeCells({
   const handleBarangay = (e: React.ChangeEvent<HTMLSelectElement>) =>
     onChange(province, city, e.target.value);
 
-  const tdCls = compact ? 'px-1 py-1 align-top' : 'px-3 py-2.5 align-top';
+  const tdCls = compact
+    ? `px-1 py-1 align-top${widthClass ? ` ${widthClass}` : ''}`
+    : 'px-3 py-2.5 align-top';
   const selCls = (err?: boolean) =>
     compact
       ? `w-full h-8 px-2 rounded border bg-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 ${err ? 'border-red-400 ring-1 ring-red-300' : 'border-gray-200'}`

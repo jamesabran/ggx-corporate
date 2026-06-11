@@ -49,20 +49,23 @@ export const PAYMENT_METHODS = ['COD', 'Prepaid', 'Billing'] as const;
 export const SERVICE_TYPE_OPTIONS: { value: ServiceTypeKey; label: string }[] =
   BOOKING_SERVICE_TYPES.map((k) => ({ value: k, label: SERVICE_TYPES[k].label }));
 
+// Column widths are sized so labels and content (incl. cascade dropdown labels
+// like "Select province") have breathing room. The grid forces horizontal scroll
+// rather than compressing columns (see SpreadsheetBookingGrid).
 export const BOOKING_COLUMNS: ColumnDef[] = [
   { key: 'recipientName',  label: 'Recipient name',   required: true,  width: 'w-44' },
-  { key: 'recipientMobile',label: 'Recipient mobile', required: true,  width: 'w-36' },
-  { key: 'address',        label: 'Delivery address', required: true,  width: 'w-52' },
-  { key: 'province',       label: 'Province',         required: true,  width: 'w-36' },
-  { key: 'city',           label: 'City',             required: true,  width: 'w-36' },
-  { key: 'barangay',       label: 'Barangay',         required: true,  width: 'w-36' },
+  { key: 'recipientMobile',label: 'Recipient mobile', required: true,  width: 'w-40' },
+  { key: 'address',        label: 'Delivery address', required: true,  width: 'w-72' },
+  { key: 'province',       label: 'Province',         required: true,  width: 'w-40' },
+  { key: 'city',           label: 'City',             required: true,  width: 'w-40' },
+  { key: 'barangay',       label: 'Barangay',         required: true,  width: 'w-40' },
   // Product / SKU is intentionally wide to support a future multi-product
   // summary (chip + "+N more") once Inventory attachment lands. Manual entry now.
   { key: 'productSku',     label: 'Product / SKU',    required: false, width: 'w-64' },
-  { key: 'quantity',       label: 'Qty',              required: true,  width: 'w-20' },
-  { key: 'declaredValue',  label: 'Declared value',   required: false, width: 'w-32' },
-  { key: 'parcelSize',     label: 'Parcel size',      required: false, width: 'w-32', options: RECEPTACLE_SIZES },
-  { key: 'paymentMethod',  label: 'Payment',          required: true,  width: 'w-32', options: PAYMENT_METHODS },
+  { key: 'quantity',       label: 'Qty',              required: true,  width: 'w-24' },
+  { key: 'declaredValue',  label: 'Declared value',   required: false, width: 'w-36' },
+  { key: 'parcelSize',     label: 'Parcel size',      required: false, width: 'w-40', options: RECEPTACLE_SIZES },
+  { key: 'paymentMethod',  label: 'Payment',          required: true,  width: 'w-40', options: PAYMENT_METHODS },
 ];
 // Service type is chosen at the page/flow level (Standard / Same-Day / On-Demand),
 // not per row, so it is NOT a grid column. Notes were removed to keep the row
