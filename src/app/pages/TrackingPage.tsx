@@ -131,7 +131,7 @@ function TrackingResult({ transaction }: { transaction: Transaction }) {
       <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 flex items-center gap-3">
         <IconPackage className="w-5 h-5 text-gray-400 flex-shrink-0" />
         <p className="text-sm text-gray-600">
-          Sent via <span className="font-medium text-gray-800">GGX Corporate</span> by{' '}
+          Sent via <span className="font-medium text-gray-800">GGX Business+</span> by{' '}
           <span className="font-medium text-gray-800">{transaction.sender.name}</span>
         </p>
       </div>
@@ -185,7 +185,7 @@ export function TrackingPage() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <IconPackage className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-gray-900 text-lg">GGX Corporate</span>
+            <span className="font-bold text-gray-900 text-lg">GGX Business+</span>
           </div>
           <Link
             to="/"
@@ -242,7 +242,7 @@ export function TrackingPage() {
       </main>
 
       <footer className="max-w-2xl mx-auto px-4 py-8 text-center text-xs text-gray-400">
-        &copy; {new Date().getFullYear()} GGX Corporate. All rights reserved.
+        &copy; {new Date().getFullYear()} GGX Business+. All rights reserved.
       </footer>
     </div>
   );

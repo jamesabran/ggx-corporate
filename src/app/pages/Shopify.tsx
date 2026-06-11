@@ -441,7 +441,7 @@ function InstallCallout() {
           <div className="flex-1">
             <h3 className="font-semibold text-emerald-900 mb-1">Install the Shopify Plugin</h3>
             <p className="text-sm text-emerald-800 mb-3 max-w-2xl">
-              Connect your Shopify store to GGX Corporate so pickup requests from Shopify can be
+              Connect your Shopify store to GGX Business+ so pickup requests from Shopify can be
               booked through GoGo Xpress and monitored from this account.
             </p>
             <InstallPluginButton variant="outline" className="bg-white" />

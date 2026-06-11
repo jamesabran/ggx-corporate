@@ -81,7 +81,7 @@ export function Login() {
               <>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h1>
                 <p className="text-gray-600">
-                  Manage your corporate shipments, billing, analytics, and API access in one place.
+                  Manage your business shipments, billing, analytics, and API access in one place.
                 </p>
               </>
             ) : (
@@ -93,9 +93,9 @@ export function Login() {
                   <IconArrowLeft className="w-4 h-4" />
                   Back to login
                 </button>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Join GoGo Xpress</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Join GoGo Xpress Business+</h1>
                 <p className="text-gray-600">
-                  Start managing your corporate deliveries efficiently. Our team will reach out to set up your account.
+                  Start managing your business deliveries efficiently. Our team will reach out to set up your account.
                 </p>
               </>
             )}
@@ -202,7 +202,7 @@ export function Login() {
               ) : (
                 <form onSubmit={handleRegister} className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-blue-900 font-medium mb-2">Why choose GoGo Xpress Corporate?</p>
+                    <p className="text-sm text-blue-900 font-medium mb-2">Why choose GoGo Xpress Business+?</p>
                     <ul className="text-sm text-blue-800 space-y-1">
                       <li>• Dedicated account management and support</li>
                       <li>• Volume-based pricing and discounts</li>
@@ -300,7 +300,7 @@ export function Login() {
                   { icon: IconTrendingUp, title: 'Flexible Pricing', desc: 'Fixed, volumetric, weight-based, and tiered pricing options that align with your operational needs.' },
                   { icon: IconClock, title: 'Seamless Booking', desc: 'Effortlessly integrate our API for automated booking processes and efficient operations.' },
                   { icon: IconMapPin, title: 'Tailored Data Analytics', desc: 'Track KPIs and gain valuable insights for informed decisions and optimized performance.' },
-                  { icon: IconTrendingUp, title: 'Exclusive Corporate Support', desc: 'Priority service and personalized care for seamless operations and customer satisfaction.' },
+                  { icon: IconTrendingUp, title: 'Exclusive Business+ Support', desc: 'Priority service and personalized care for seamless operations and customer satisfaction.' },
                 ].map((f, i) => (
                   <div key={i} className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
                     <div className="flex items-start gap-3">
@@ -317,7 +317,7 @@ export function Login() {
               </div>
               <div className="mt-6 pt-6 border-t border-white/20">
                 <p className="text-sm text-blue-100">
-                  Trusted by businesses across the Philippines for reliable corporate logistics solutions.
+                  Trusted by businesses across the Philippines for reliable business logistics solutions.
                 </p>
               </div>
             </CardContent>

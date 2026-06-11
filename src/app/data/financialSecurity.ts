@@ -37,7 +37,7 @@ const ACCOUNT_HOLDER = 'Max Rodriguez';
 
 const EMAIL_SUBJECT = 'Important: Financial account details were updated';
 const EMAIL_BODY =
-  'A financial setting was updated in your GGX Corporate account. If you did not authorize this change, please contact support immediately.';
+  'A financial setting was updated in your GGX Business+ account. If you did not authorize this change, please contact support immediately.';
 
 const ATTENTION_EMAILS: AttentionEmailEvent[] = [];
 const SECURITY_LOG: SecurityLogEntry[] = [];

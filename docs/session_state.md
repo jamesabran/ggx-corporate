@@ -16,7 +16,10 @@ column was removed**, the review **summary is data-driven for spreadsheet batche
 (roadmap #3), the Dashboard has a **Basic Analytics** section (roadmap #6),
 **Inventory has full create/edit/import/export flows** (roadmap #7), and
 **Storefront has product management + a public `/shop/:slug` surface** (roadmap #4,
-no checkout), and **Account Add-ons run real activation/request flows** (roadmap #8).
+no checkout), **Account Add-ons run real activation/request flows** (roadmap #8),
+and the **user-facing rebrand to GGX Business+** is complete (roadmap #9). **All
+GGX Business+ deferred items are now done except #2** (adopt `lib/bookingValidation`
+in the file path), which stays blocked on real file parsing.
 
 - **Branch:** `master`. **Build:** green (`npm run build`). Latest work committed.
   Not pushed (per project rule — push only when explicitly asked).
@@ -28,12 +31,12 @@ no checkout), and **Account Add-ons run real activation/request flows** (roadmap
   pixel-width grid with forced horizontal scroll, fee estimate. The Product/SKU cell
   is a product picker when Inventory is enabled (else free text + upsell teaser).
 
-**Next task (roadmap, next deferred items):** #9 full Business+ rebrand pass
-(titles/marketing copy; logo already done; routes intentionally unchanged). #2
-(adopt `lib/bookingValidation` in the file path) stays blocked on real file parsing.
-Done: #5 (On-Demand), #1 (Inventory attachment), #3 (data-driven summary), #6
-(Dashboard Basic Analytics), #7 (Inventory CRUD/import/export), #4 (Storefront
-management + public `/shop/:slug`), #8 (real activation/request flows).
+**Next task:** the GGX Business+ deferred list is cleared except **#2** (adopt
+`lib/bookingValidation` in the uploaded-file path) — still blocked on real file
+parsing; revisit when a parser lands. Otherwise the next major stage is **backend
+integration** (swap mock service bodies for BFF `fetch()` calls; dependency order
+auth → transactions + claims → everything else — see roadmap "Backend integration").
+Done: #5, #1, #3, #6, #7, #4, #8, #9.
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
 decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); no Inventory
@@ -44,6 +47,30 @@ deps; non-destructive; preserve Upload File behavior; commit after stable milest
 strip it after any Write. PowerShell `Get-Content`/`Set-Content` round-trips corrupt UTF-8
 (₱, em-dash) → mojibake; prefer Edit, or `sed -i` (byte-safe) for bulk line ops. See
 [[reference-powershell-utf8-roundtrip]].
+
+---
+
+## Session 48 (2026-06-12) — GGX Business+ rebrand pass (roadmap #9)
+
+One commit. **Build green.** Copy-only; no behavior/route changes.
+
+- **Rebranded user-facing copy** "GGX Corporate" / "GoGo Xpress Corporate" →
+  **"GGX Business+"** / **"GoGo Xpress Business+"**, and softened generic
+  marketing "corporate" → "business":
+  - `Login.tsx`: hero subtitle, register heading ("Join GoGo Xpress Business+") +
+    intro, "Why choose GoGo Xpress Business+?", feature bullet "Exclusive Business+
+    Support", footer trust line.
+  - `TrackingPage.tsx` (public): "Sent via GGX Business+", header wordmark, copyright.
+  - `Shopify.tsx`: install-plugin description.
+  - `data/financialSecurity.ts`: security email body.
+  - `index.html`: browser `<title>` → "GGX Business+".
+- **Intentionally unchanged:** internal BFF/architecture comments ("GGX Corporate
+  BFF/frontend" — the project itself is GGX Corporate), seed company names
+  ("Acme Corporation") + filenames ("may30_corporate.xlsx"), and package/route
+  identifiers (`ggx-corporate`, `/dashboard/...`). Logo descriptor "Business+" was
+  already done (Session 36).
+- This clears the GGX Business+ deferred roadmap except #2 (file-path validator
+  adoption, blocked on real file parsing).
 
 ---
 

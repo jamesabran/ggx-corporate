@@ -101,8 +101,12 @@ add-ons read as `enabled`.
    duplicate submits). The dialog has confirm → submitting → success phases and
    refreshes the catalog. BFF-shaped contracts in place
    (`POST /accounts/:id/features/:fid/enable`, `POST /accounts/:id/module-requests`).
-9. Full GGX Business+ rebrand pass (titles, marketing copy) — logo done; routes
-   intentionally unchanged.
+9. ✅ **DONE (Session 48).** Full GGX Business+ rebrand pass — user-facing product
+   name + marketing copy moved to "GGX Business+" / "GoGo Xpress Business+" (Login
+   hero + register panel + feature bullets, public TrackingPage brand/footer,
+   Shopify install copy, financial-security email body, browser `<title>`).
+   Internal BFF/architecture comments, seed company names/filenames, and
+   package/route identifiers intentionally unchanged.
 
 ---
 
