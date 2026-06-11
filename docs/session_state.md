@@ -12,8 +12,9 @@ enablement, On-Demand service mode, Commerce stubs) is in; the **Bulk Upload →
 In-app Spreadsheet** flow is stable + polished, **Transactions recognize On-Demand
 as a distinct service type** (roadmap #5), the spreadsheet grid supports **Inventory
 product attachment** when enabled (roadmap #1), the misleading per-row **Payment
-column was removed**, and the review **summary is data-driven for spreadsheet
-batches** (roadmap #3).
+column was removed**, the review **summary is data-driven for spreadsheet batches**
+(roadmap #3), the Dashboard has a **Basic Analytics** section (roadmap #6), and
+**Inventory has full create/edit/import/export flows** (roadmap #7).
 
 - **Branch:** `master`. **Build:** green (`npm run build`). Latest work committed.
   Not pushed (per project rule — push only when explicitly asked).
@@ -25,11 +26,12 @@ batches** (roadmap #3).
   pixel-width grid with forced horizontal scroll, fee estimate. The Product/SKU cell
   is a product picker when Inventory is enabled (else free text + upsell teaser).
 
-**Next task (roadmap, next deferred items):** #6 Dashboard **Basic Analytics**
-(low-risk, presentation-only), #4 Storefront product management UI, or #7 Inventory
-create/edit/import/export. #2 (adopt `lib/bookingValidation` in the file path) stays
-blocked on real file parsing. Roadmap #5 (On-Demand), #1 (Inventory attachment), and
-#3 (data-driven spreadsheet summary) are complete.
+**Next task (roadmap, next deferred items):** #4 Storefront product management UI +
+customer-facing surface (no checkout), or #8 real activation/request flows + BFF
+wiring, or #9 full Business+ rebrand pass. #2 (adopt `lib/bookingValidation` in the
+file path) stays blocked on real file parsing. Done: #5 (On-Demand), #1 (Inventory
+attachment), #3 (data-driven summary), #6 (Dashboard Basic Analytics), #7 (Inventory
+create/edit/import/export).
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
 decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); no Inventory
@@ -40,6 +42,42 @@ deps; non-destructive; preserve Upload File behavior; commit after stable milest
 strip it after any Write. PowerShell `Get-Content`/`Set-Content` round-trips corrupt UTF-8
 (₱, em-dash) → mojibake; prefer Edit, or `sed -i` (byte-safe) for bulk line ops. See
 [[reference-powershell-utf8-roundtrip]].
+
+---
+
+## Session 45 (2026-06-12) — Dashboard Basic Analytics (#6) + Inventory CRUD/import/export (#7)
+
+Two separate commits. **Build green.**
+
+**Commit 1 — Dashboard Basic Analytics (roadmap #6).** Added a lightweight, low-risk
+analytics section to the Dashboard — distinct from the gated Advanced Data Analytics
+module (recharts + efficiency/RTS/SLA).
+- `transactionService.getBasicAnalytics(subaccountId?)`: returns `serviceTypeMix`
+  (count per Standard/Same-Day/On-Demand, all three always present) + `dailyVolume`
+  (most recent 7 active days) + `periodTotal`. Counts derived in the service layer,
+  treated as backend-provided; scoped with the same subset rule as `getDashboardStats`.
+- `Dashboard.tsx`: new "Basic Analytics" section — **Bookings by Service Type**
+  (horizontal DS bars, colors match the booking-mode accents) + **Daily Booking
+  Volume** (simple vertical bars). No chart library, no new deps. Links to full
+  Analytics.
+
+**Commit 2 — Inventory create/edit/import/export (roadmap #7).**
+- `data/inventory.ts`: `products` is now a session-mutable array; added `ProductInput`
+  + `createProduct` / `updateProduct` / `deleteProduct` / `importProducts` (new ids
+  `prod-1101+`, audit/timestamps stamped). Session-only (resets to seed on reload).
+- `inventoryService.ts`: async wrappers (`createInventoryProduct` etc.) +
+  `productsToCsv` (export) + `parseProductsCsv` (header-mapped CSV/TSV, name+sku
+  required, sensible defaults) + `CsvParseResult`.
+- `components/ProductFormDialog.tsx` (new): DS `Dialog` create/edit form (name, sku,
+  category, status, description, unit price, weight, stock, low-stock threshold,
+  L×W×H); numeric fields coerced ≥ 0; submit gated on name+sku.
+- `pages/Inventory.tsx`: header **Import / Export / Add Product**; row **Edit**
+  (pencil) + **Delete** (trash → `ConfirmDialog`); inline **Import** dialog (paste
+  CSV, live preview of count + skipped-row warnings); **Export** downloads a CSV Blob.
+  All actions gated by `inventory.*` permissions (managers: create/edit only) and
+  require a concrete scope (`scopeAccountId`), so the consolidated Main Account view
+  doesn't mutate. Stock is a managed merchant field; booking-time deduction stays
+  backend-owned. Mutations reload the scoped list.
 
 ---
 

@@ -1,27 +1,52 @@
-import { useEffect, useState } from 'react';
-import { IconPackage, IconPlus } from '@tabler/icons-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  IconPackage, IconPlus, IconPencil, IconTrash, IconUpload, IconDownload, IconInfoCircle,
+} from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
+import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 import { EnablementGate } from '../components/EnablementGate';
+import { ProductFormDialog } from '../components/ProductFormDialog';
 import { useModuleAccessContext } from '../hooks/useModuleAccess';
 import { isFeatureUsable } from '../services/featureEnablementService';
-import { getInventoryProducts, isLowStock, type InventoryProduct } from '../services/inventoryService';
+import {
+  getInventoryProducts, createInventoryProduct, updateInventoryProduct,
+  deleteInventoryProduct, importInventoryProducts, productsToCsv, parseProductsCsv,
+  isLowStock, type InventoryProduct, type ProductInput,
+} from '../services/inventoryService';
+
+/** Trigger a client-side CSV download (export is a presentation helper). */
+function downloadCsv(filename: string, content: string): void {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 /**
- * Inventory — basic product list scoped to the current account/subaccount.
- * Renders the EnablementGate when Inventory isn't usable for the scope (disabled,
- * needs setup, or role-blocked). See docs/inventory_rules.md.
- *
- * This is the foundational list/empty-state pass. Create/edit/import flows are
- * deferred (see roadmap).
+ * Inventory — product list + create / edit / delete / import / export, scoped to
+ * the current account/subaccount and gated by role permissions. Renders the
+ * EnablementGate when Inventory isn't usable for the scope. See
+ * docs/inventory_rules.md. Stock here is a managed field (merchant inventory);
+ * booking-time deduction stays a backend concern.
  */
 export function Inventory() {
   const ctx = useModuleAccessContext();
   const scopeId = ctx.scopeAccountId;
+  const can = (key: Parameters<typeof ctx.permissions.includes>[0]) => ctx.permissions.includes(key);
+  // Mutations need a concrete scope (a subaccount/standard scope, not the
+  // consolidated Main Account view).
+  const canMutate = !!scopeId;
+
   const [usable, setUsable] = useState<boolean | null>(null);
   const [products, setProducts] = useState<InventoryProduct[]>([]);
+
+  const reload = () => { if (scopeId) getInventoryProducts(scopeId).then(setProducts); };
 
   useEffect(() => {
     let active = true;
@@ -33,8 +58,49 @@ export function Inventory() {
     return () => { active = false; };
   }, [scopeId]);
 
+  // Dialog state
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<InventoryProduct | null>(null);
+  const [deleting, setDeleting] = useState<InventoryProduct | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+
+  const importPreview = useMemo(
+    () => (importText.trim() ? parseProductsCsv(importText) : null),
+    [importText],
+  );
+
   if (usable === null) return null;
   if (!usable) return <EnablementGate moduleId="inventory" />;
+
+  const openCreate = () => { setEditing(null); setFormOpen(true); };
+  const openEdit = (p: InventoryProduct) => { setEditing(p); setFormOpen(true); };
+
+  const handleSubmit = async (input: ProductInput) => {
+    if (editing) await updateInventoryProduct(editing.id, input);
+    else if (scopeId) await createInventoryProduct(scopeId, input);
+    setFormOpen(false);
+    setEditing(null);
+    reload();
+  };
+
+  const handleDelete = async () => {
+    if (deleting) await deleteInventoryProduct(deleting.id);
+    setDeleting(null);
+    reload();
+  };
+
+  const handleImport = async () => {
+    if (!scopeId || !importPreview || importPreview.products.length === 0) return;
+    await importInventoryProducts(scopeId, importPreview.products);
+    setImportText('');
+    setImportOpen(false);
+    reload();
+  };
+
+  const handleExport = () => {
+    downloadCsv(`inventory-${scopeId ?? 'products'}.csv`, productsToCsv(products));
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -45,9 +111,23 @@ export function Inventory() {
             Products available to attach to bookings and storefront listings for this account.
           </p>
         </div>
-        <Button size="sm">
-          <IconPlus className="w-4 h-4" /> Add Product
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {can('inventory.import') && canMutate && (
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <IconUpload className="w-4 h-4" /> Import
+            </Button>
+          )}
+          {can('inventory.export') && (
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={products.length === 0}>
+              <IconDownload className="w-4 h-4" /> Export
+            </Button>
+          )}
+          {can('inventory.create') && canMutate && (
+            <Button size="sm" onClick={openCreate}>
+              <IconPlus className="w-4 h-4" /> Add Product
+            </Button>
+          )}
+        </div>
       </div>
 
       {products.length === 0 ? (
@@ -60,9 +140,11 @@ export function Inventory() {
             <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
               Add your first product to start attaching items to bulk bookings and storefront listings.
             </p>
-            <div className="flex justify-center mt-6">
-              <Button><IconPlus className="w-4 h-4" /> Add Product</Button>
-            </div>
+            {can('inventory.create') && canMutate && (
+              <div className="flex justify-center mt-6">
+                <Button onClick={openCreate}><IconPlus className="w-4 h-4" /> Add Product</Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -76,6 +158,9 @@ export function Inventory() {
                 <TableHead>Unit Price</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Status</TableHead>
+                {(can('inventory.edit') || can('inventory.delete')) && canMutate && (
+                  <TableHead className="text-right">Actions</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -96,12 +181,104 @@ export function Inventory() {
                       {p.status === 'active' ? 'Active' : 'Inactive'}
                     </Badge>
                   </TableCell>
+                  {(can('inventory.edit') || can('inventory.delete')) && canMutate && (
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        {can('inventory.edit') && (
+                          <button
+                            onClick={() => openEdit(p)}
+                            title="Edit product"
+                            aria-label={`Edit ${p.name}`}
+                            className="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                          >
+                            <IconPencil className="w-4 h-4" />
+                          </button>
+                        )}
+                        {can('inventory.delete') && (
+                          <button
+                            onClick={() => setDeleting(p)}
+                            title="Delete product"
+                            aria-label={`Delete ${p.name}`}
+                            className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                          >
+                            <IconTrash className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </Card>
       )}
+
+      {/* Create / edit dialog — keyed so the form resets per open. */}
+      {formOpen && (
+        <ProductFormDialog
+          key={editing?.id ?? 'new'}
+          open={formOpen}
+          mode={editing ? 'edit' : 'create'}
+          product={editing ?? undefined}
+          onClose={() => { setFormOpen(false); setEditing(null); }}
+          onSubmit={handleSubmit}
+        />
+      )}
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={handleDelete}
+        title="Delete product?"
+        description={deleting ? `"${deleting.name}" (${deleting.sku}) will be removed from this account's inventory.` : ''}
+        confirmLabel="Delete"
+        variant="destructive"
+      />
+
+      {/* Import dialog */}
+      <Dialog open={importOpen} onClose={() => setImportOpen(false)} title="Import products" size="lg">
+        <p className="text-sm text-gray-500 mb-3">
+          Paste CSV or tab-separated rows. The first line is a header; <strong>name</strong> and
+          <strong> sku</strong> are required. Optional columns: category, description, unitPrice, weight,
+          length, width, height, stockQuantity, lowStockThreshold, status.
+        </p>
+        <textarea
+          value={importText}
+          onChange={(e) => setImportText(e.target.value)}
+          rows={7}
+          placeholder={'name,sku,category,unitPrice,stockQuantity,status\nDesk Lamp,LAMP-001,Home,750,40,active'}
+          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        />
+        {importPreview && (
+          <div className="mt-3 rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5 text-sm">
+            <p className="text-gray-700">
+              <span className="font-semibold text-gray-900">{importPreview.products.length}</span> product
+              {importPreview.products.length === 1 ? '' : 's'} ready to import.
+            </p>
+            {importPreview.errors.length > 0 && (
+              <ul className="mt-1.5 space-y-0.5">
+                {importPreview.errors.map((err, i) => (
+                  <li key={i} className="text-xs text-amber-700 flex items-start gap-1">
+                    <IconInfoCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />{err}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        <div className="flex gap-2.5 justify-end pt-4 mt-3 border-t border-gray-100">
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(false)}>Cancel</Button>
+          <Button
+            size="sm"
+            disabled={!importPreview || importPreview.products.length === 0}
+            onClick={handleImport}
+          >
+            Import {importPreview && importPreview.products.length > 0 ? `${importPreview.products.length} ` : ''}products
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

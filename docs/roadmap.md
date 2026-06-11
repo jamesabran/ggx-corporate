@@ -78,7 +78,14 @@ add-ons read as `enabled`.
    aggregate `getBasicAnalytics` (counts/groupings treated as backend-provided,
    scoped like `getDashboardStats`). Simple DS bars, no chart lib. Distinct from
    the gated Advanced Data Analytics module (efficiency/RTS/SLA).
-7. Inventory create/edit/import/export flows.
+7. ✅ **DONE (Session 45).** Inventory create/edit/import/export flows — service
+   mutations (`createInventoryProduct` / `updateInventoryProduct` /
+   `deleteInventoryProduct` / `importInventoryProducts`) over a session-mutable
+   store; `ProductFormDialog` for add/edit, delete via `ConfirmDialog`, CSV
+   paste-import (header-mapped) + CSV export download. Actions gated by
+   `inventory.*` permissions (managers get create/edit, not delete/import/export)
+   and require a concrete scope. Stock is a managed field here; booking-time
+   deduction stays backend-owned.
 8. Real activation/request flows (replace the mock acknowledge dialog) + BFF wiring.
 9. Full GGX Business+ rebrand pass (titles, marketing copy) — logo done; routes
    intentionally unchanged.

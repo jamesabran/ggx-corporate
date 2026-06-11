@@ -38,8 +38,25 @@ export interface InventoryProduct {
   updatedAt: string;
 }
 
+/** Editable product fields (everything except id/scope/audit/timestamps). */
+export interface ProductInput {
+  name: string;
+  sku: string;
+  description: string;
+  category: string;
+  unitPrice: number;
+  weight: number;
+  dimensions: ProductDimensions;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  status: ProductStatus;
+}
+
 // Demo seed — products owned by Acme Luzon (the scope with Inventory enabled).
-const products: InventoryProduct[] = [
+// Mutable session store: create/edit/delete/import operate on this array for the
+// tab session (resets to the seed on reload). Authoritative stock + persistence
+// are backend concerns. See docs/inventory_rules.md.
+let products: InventoryProduct[] = [
   {
     id: 'prod-1001', scopeAccountId: 'acme-luzon',
     name: 'Premium Coffee Beans 1kg', sku: 'COF-1KG-001',
@@ -80,4 +97,61 @@ export function getProductsForScope(scopeId: string | undefined): InventoryProdu
 
 export function getProductById(id: string): InventoryProduct | undefined {
   return products.find((p) => p.id === id);
+}
+
+// ─── Mutations (session-only; backend-owned in production) ──────────────────────
+
+let productSeq = 1100; // seed uses prod-1001..1003; new ids start above that.
+const nextProductId = (): string => `prod-${++productSeq}`;
+const nowIso = (): string => new Date().toISOString();
+
+/** Create a product owned by a scope. Returns the created record. */
+export function createProduct(
+  scopeAccountId: string,
+  input: ProductInput,
+  actor = 'Current User',
+): InventoryProduct {
+  const ts = nowIso();
+  const product: InventoryProduct = {
+    id: nextProductId(),
+    scopeAccountId,
+    ...input,
+    createdBy: actor,
+    updatedBy: actor,
+    createdAt: ts,
+    updatedAt: ts,
+  };
+  products = [product, ...products];
+  return product;
+}
+
+/** Patch an existing product's editable fields. Returns the updated record. */
+export function updateProduct(
+  id: string,
+  patch: Partial<ProductInput>,
+  actor = 'Current User',
+): InventoryProduct | undefined {
+  let updated: InventoryProduct | undefined;
+  products = products.map((p) => {
+    if (p.id !== id) return p;
+    updated = { ...p, ...patch, updatedBy: actor, updatedAt: nowIso() };
+    return updated;
+  });
+  return updated;
+}
+
+/** Remove a product. Returns true when a record was removed. */
+export function deleteProduct(id: string): boolean {
+  const before = products.length;
+  products = products.filter((p) => p.id !== id);
+  return products.length < before;
+}
+
+/** Bulk-create products for a scope (import). Returns the created records. */
+export function importProducts(
+  scopeAccountId: string,
+  inputs: ProductInput[],
+  actor = 'Current User',
+): InventoryProduct[] {
+  return inputs.map((input) => createProduct(scopeAccountId, input, actor));
 }
