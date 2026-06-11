@@ -13,7 +13,7 @@ import { Dialog } from '../components/ui/Dialog';
 import { PaymentMethodTabs, type SelectedPaymentMethod } from '../components/PaymentMethodTabs';
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
 import { isBillingAccount } from '../services/paymentService';
-import { getBulkUploadById } from '../services/bulkUploadService';
+import { getBulkUploadById, getSpreadsheetBatchRows, type SpreadsheetBatchRow } from '../services/bulkUploadService';
 import { RECEPTACLE_SIZES } from '../data/bulkTemplate';
 import { LocationCascadeCells } from '../components/LocationCascadeCells';
 import { useSubAccounts } from '../contexts/SubAccountContext';
@@ -310,6 +310,9 @@ export function BulkUploadSummary() {
   // File path is unchanged (source absent/'file').
   const [isSpreadsheet, setIsSpreadsheet] = useState(false);
   const [validBaseCount, setValidBaseCount] = useState(TOTAL_VALID_INITIAL);
+  // Actual rows entered in the in-app spreadsheet (data-driven review). Empty
+  // after a hard reload (session-only handoff) → falls back to a count note.
+  const [spreadsheetRows, setSpreadsheetRows] = useState<SpreadsheetBatchRow[]>([]);
   useEffect(() => {
     let active = true;
     getBulkUploadById(id ?? '')
@@ -319,6 +322,7 @@ export function BulkUploadSummary() {
         if (record.source === 'spreadsheet') {
           setIsSpreadsheet(true);
           setValidBaseCount(record.validRows);
+          setSpreadsheetRows(getSpreadsheetBatchRows(record.id));
         }
       })
       .catch(() => { /* keep fallback date */ });
@@ -473,6 +477,46 @@ export function BulkUploadSummary() {
                   View all {totalValidCount} in transactions page
                 </p>
               )}
+            </>
+          ) : spreadsheetRows.length > 0 ? (
+            <>
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Recipient</TableHead>
+                      <TableHead>Mobile</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Product</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Declared value</TableHead>
+                      <TableHead>Parcel size</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {spreadsheetRows.map((row, i) => {
+                      const declared = Number(row.declaredValue);
+                      return (
+                        <TableRow key={i}>
+                          <TableCell className="font-medium text-gray-900">{row.recipientName || '—'}</TableCell>
+                          <TableCell className="text-gray-600">{row.recipientMobile || '—'}</TableCell>
+                          <TableCell className="text-gray-600">{row.location || '—'}</TableCell>
+                          <TableCell className="text-gray-600">{row.product}</TableCell>
+                          <TableCell className="text-right text-gray-900">{row.quantity || '—'}</TableCell>
+                          <TableCell className="text-right text-gray-900">
+                            {row.declaredValue && !Number.isNaN(declared) ? peso(declared) : '—'}
+                          </TableCell>
+                          <TableCell className="text-gray-600">{row.parcelSize || '—'}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
+                Showing {spreadsheetRows.length} {spreadsheetRows.length === 1 ? 'row' : 'rows'} entered in the in-app
+                spreadsheet. Confirm the booking details below to complete booking.
+              </p>
             </>
           ) : (
             <p className="text-sm text-gray-500">

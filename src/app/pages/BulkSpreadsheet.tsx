@@ -16,7 +16,8 @@ import { attachmentSubtotal } from '../lib/bookingValidation';
 import { isBillingAccount } from '../services/paymentService';
 import { getInventoryProducts, type InventoryProduct } from '../services/inventoryService';
 import {
-  addUpload, generateUploadId, createUploadRecord,
+  addUpload, generateUploadId, createUploadRecord, setSpreadsheetBatchRows,
+  type SpreadsheetBatchRow,
 } from '../services/bulkUploadService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -111,6 +112,24 @@ export function BulkSpreadsheet() {
   const handleContinue = () => {
     if (validCount === 0) return;
     const id = generateUploadId();
+    // Capture the entered valid rows so the review/summary renders the ACTUAL
+    // rows (data-driven), not just a count. Session-only handoff.
+    const snapshotRows: SpreadsheetBatchRow[] = grid.validRows.map((r) => {
+      const product = r.products?.length
+        ? `${r.products[0].name}${r.products.length > 1 ? ` +${r.products.length - 1} more` : ''}`
+        : (r.productSku.trim() || '—');
+      return {
+        recipientName: r.recipientName.trim(),
+        recipientMobile: r.recipientMobile.trim(),
+        address: r.address.trim(),
+        location: [r.barangay, r.city, r.province].map((s) => s.trim()).filter(Boolean).join(', '),
+        product,
+        quantity: r.quantity.trim(),
+        declaredValue: r.declaredValue.trim(),
+        parcelSize: r.parcelSize.trim(),
+      };
+    });
+    setSpreadsheetBatchRows(id, snapshotRows);
     const base = createUploadRecord(id, 'Spreadsheet entry', uploadMode, firstMile, 'needs-review', uploadAccount);
     addUpload({
       ...base,

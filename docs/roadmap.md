@@ -62,8 +62,11 @@ add-ons read as `enabled`.
    exists (parse → validateRows). The summary's template-specific correction
    validator (COD cap, duplicate Reference-ID, pouch size) is intentionally
    retained — unify only without losing that coverage.
-3. Make the shared summary fully data-driven for spreadsheet batches (render the
-   actual booked rows, not just the count) + pass the entered rows through.
+3. ✅ **DONE (Session 44).** The shared review/summary is data-driven for
+   spreadsheet batches — the entered valid rows are captured at submit
+   (session-only `setSpreadsheetBatchRows`) and the summary renders the actual
+   rows (recipient / mobile / location / product / qty / declared value / parcel
+   size) instead of a count note. Falls back to the count note on a hard reload.
 4. Storefront product management UI + customer-facing surface (no checkout yet).
 5. ✅ **DONE (Session 42).** Transactions filter recognizes **On-Demand** as a
    distinct service type — added a `serviceType` field (Standard / Same-Day /

@@ -61,6 +61,40 @@ export interface UploadNotificationEvent {
 
 export const PENDING_NOTIFICATIONS: UploadNotificationEvent[] = [];
 
+/**
+ * Display snapshot of a single booked row from the in-app spreadsheet, captured
+ * at submit so the review/summary screen can render the ACTUAL rows (not just a
+ * count). Kept lean (display strings only) and session-only — not persisted to
+ * localStorage. On a hard reload the summary falls back to a count note.
+ */
+export interface SpreadsheetBatchRow {
+  recipientName: string;
+  recipientMobile: string;
+  address: string;
+  /** "Barangay, City, Province" composed from the cascade cells. */
+  location: string;
+  /** Product summary (primary + "+N more") or free-text Product/SKU. */
+  product: string;
+  /** Total item quantity for the row. */
+  quantity: string;
+  /** Raw declared value string (formatted for display by the summary). */
+  declaredValue: string;
+  parcelSize: string;
+}
+
+// Session-only map of batchId → captured spreadsheet rows (not persisted).
+const SPREADSHEET_BATCH_ROWS: Record<string, SpreadsheetBatchRow[]> = {};
+
+/** Store the booked spreadsheet rows for a batch (in-session handoff to summary). */
+export function setSpreadsheetBatchRows(batchId: string, rows: SpreadsheetBatchRow[]): void {
+  SPREADSHEET_BATCH_ROWS[batchId] = rows;
+}
+
+/** Return the captured spreadsheet rows for a batch (empty if none / after reload). */
+export function getSpreadsheetBatchRows(batchId: string): SpreadsheetBatchRow[] {
+  return SPREADSHEET_BATCH_ROWS[batchId] ?? [];
+}
+
 // Recent uploads persist across reloads (lightweight continuity). The derived
 // upload-event notifications (PENDING_NOTIFICATIONS) remain session-only.
 const SESSION_UPLOADS: UploadRecord[] = loadState<UploadRecord[]>('recentUploads', []);

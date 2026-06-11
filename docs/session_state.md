@@ -10,8 +10,10 @@
 **Stage:** GGX Business+ modular platform. Foundation (Account Add-ons, feature
 enablement, On-Demand service mode, Commerce stubs) is in; the **Bulk Upload →
 In-app Spreadsheet** flow is stable + polished, **Transactions recognize On-Demand
-as a distinct service type** (roadmap #5), and the spreadsheet grid now supports
-**Inventory product attachment** when Inventory is enabled (roadmap #1).
+as a distinct service type** (roadmap #5), the spreadsheet grid supports **Inventory
+product attachment** when enabled (roadmap #1), the misleading per-row **Payment
+column was removed**, and the review **summary is data-driven for spreadsheet
+batches** (roadmap #3).
 
 - **Branch:** `master`. **Build:** green (`npm run build`). Latest work committed.
   Not pushed (per project rule — push only when explicitly asked).
@@ -23,10 +25,11 @@ as a distinct service type** (roadmap #5), and the spreadsheet grid now supports
   pixel-width grid with forced horizontal scroll, fee estimate. The Product/SKU cell
   is a product picker when Inventory is enabled (else free text + upsell teaser).
 
-**Next task (roadmap, next deferred items):** #2 adopt `lib/bookingValidation` in the
-uploaded-file path (once real file parsing exists), #3 make the shared summary fully
-data-driven for spreadsheet batches, or #6 Dashboard **Basic Analytics** (low-risk).
-Roadmap #5 (Transactions On-Demand) and #1 (Inventory attachment) are complete.
+**Next task (roadmap, next deferred items):** #6 Dashboard **Basic Analytics**
+(low-risk, presentation-only), #4 Storefront product management UI, or #7 Inventory
+create/edit/import/export. #2 (adopt `lib/bookingValidation` in the file path) stays
+blocked on real file parsing. Roadmap #5 (On-Demand), #1 (Inventory attachment), and
+#3 (data-driven spreadsheet summary) are complete.
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
 decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); no Inventory
@@ -37,6 +40,38 @@ deps; non-destructive; preserve Upload File behavior; commit after stable milest
 strip it after any Write. PowerShell `Get-Content`/`Set-Content` round-trips corrupt UTF-8
 (₱, em-dash) → mojibake; prefer Edit, or `sed -i` (byte-safe) for bulk line ops. See
 [[reference-powershell-utf8-roundtrip]].
+
+---
+
+## Session 44 (2026-06-12) — Spreadsheet payment-column removal + data-driven summary (roadmap #3)
+
+Two separate commits. **Build green.**
+
+**Commit 1 — remove the misleading per-row Payment column.** Shipping-fee payment is
+already chosen once for the batch under Confirm booking details, so a row-level
+Payment (COD/Prepaid/Billing) column was confusing. Removed `paymentMethod` from the
+spreadsheet schema: dropped the `BOOKING_COLUMNS` entry, the `PAYMENT_METHODS` const,
+the `paymentMethod` field in `BookingField`/`makeEmptyRow`, and its validation block
+(`lib/bookingValidation.ts`). The grid renders columns generically so no grid edit was
+needed. Added a comment noting FUTURE alignment with the Bulk Upload template's
+item/payment fields (COD amount, declared value, line-item protection) — **not**
+implemented. **Upload File path untouched** (it uses its own template validator, not
+`BOOKING_COLUMNS`). Did NOT rename to "Collection type" (not a product label). Doc:
+`spreadsheet_booking_rules.md` grid columns updated.
+
+**Commit 2 — data-driven spreadsheet summary (roadmap #3).** The review/summary now
+renders the ACTUAL entered rows for spreadsheet batches instead of a count note.
+- `data/bulkUploads.ts`: new `SpreadsheetBatchRow` display-snapshot type + a
+  **session-only** map (`setSpreadsheetBatchRows` / `getSpreadsheetBatchRows`) — not
+  persisted (kept lean; large row sets shouldn't hit localStorage).
+- `bulkUploadService.ts`: re-exports the type + helpers.
+- `BulkSpreadsheet.tsx`: on Continue, maps `grid.validRows` → snapshot rows
+  (recipient/mobile/address/location/product/qty/declared/parcel; product = primary
+  name + "+N more" when attached, else free-text) and stores them under the batch id.
+- `BulkUploadSummary.tsx`: for `source==='spreadsheet'`, loads the rows and renders a
+  DS `Table` (Recipient / Mobile / Location / Product / Qty / Declared value / Parcel
+  size). Falls back to the existing count note after a hard reload (rows are
+  session-only). Upload File path's mock valid/error tables unchanged.
 
 ---
 

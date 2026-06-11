@@ -18,12 +18,15 @@ import {
   updateUploadStatus,
   generateUploadId,
   createUploadRecord,
+  setSpreadsheetBatchRows,
+  getSpreadsheetBatchRows,
   type UploadRecord,
   type UploadStatus,
   type UploadAccount,
+  type SpreadsheetBatchRow,
 } from '../data/bulkUploads';
 
-export type { UploadRecord, UploadStatus, UploadAccount };
+export type { UploadRecord, UploadStatus, UploadAccount, SpreadsheetBatchRow };
 
 export interface BulkUploadFilters {
   subaccountId?: string;
@@ -119,4 +122,7 @@ export async function getBulkUploadsBySubaccountId(
 }
 
 // Re-export write helpers so consumers don't import data layer directly.
-export { addUpload, updateUploadStatus, generateUploadId, createUploadRecord };
+export {
+  addUpload, updateUploadStatus, generateUploadId, createUploadRecord,
+  setSpreadsheetBatchRows, getSpreadsheetBatchRows,
+};
