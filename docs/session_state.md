@@ -5,6 +5,36 @@
 
 ---
 
+## ▶ Current state (resume here) — updated 2026-06-12
+
+**Stage:** GGX Business+ modular platform. Foundation (Account Add-ons, feature
+enablement, On-Demand service mode, Commerce stubs) is in; recent work has been the
+**Bulk Upload → In-app Spreadsheet** flow (now stable + polished).
+
+- **Branch:** `master`. **Build:** green (`npm run build`). **Last commit:** `7d9c131`.
+  Not pushed (per project rule — push only when explicitly asked).
+- **Working tree:** clean except `.claude/settings.local.json` (local config, leave it).
+- **Where things stand:** Upload File + In-app Spreadsheet feed one Bulk Booking flow;
+  spreadsheet is a step page (`/dashboard/bulk-uploader/spreadsheet`, no sidebar item),
+  page-level service mode (Standard / Same-Day / On-Demand-when-enabled), shared
+  `lib/bookingValidation`, GGX location cascade (shared `LocationCascadeCells`),
+  pixel-width grid with forced horizontal scroll, fee estimate, Inventory upsell teaser.
+
+**Next task (roadmap #5):** Transactions filter to recognize **On-Demand** as a distinct
+service type — will need a `serviceType` field on the transactions model + a filter option.
+
+**Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
+decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); no Inventory
+product attachment yet; no stock deduction/reservation; GGX SHADCN components first; no new
+deps; non-destructive; preserve Upload File behavior; commit after stable milestones, don't push.
+
+**Tooling gotchas (this environment):** the Write tool appends a stray `</content>` line —
+strip it after any Write. PowerShell `Get-Content`/`Set-Content` round-trips corrupt UTF-8
+(₱, em-dash) → mojibake; prefer Edit, or `sed -i` (byte-safe) for bulk line ops. See
+[[reference-powershell-utf8-roundtrip]].
+
+---
+
 ## Session 41 (2026-06-12) — Spreadsheet scroll fix + LocationCascadeCells dedupe
 
 Two focused, non-destructive commits. **Build green.**
