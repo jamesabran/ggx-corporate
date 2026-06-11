@@ -5,6 +5,20 @@
 
 ---
 
+## Session 38 (2026-06-12) — Bulk Upload spreadsheet entry UX (secondary path + focused page)
+
+Replaced the heavy Upload File / Type in Spreadsheet selector with a lightweight secondary path, and moved spreadsheet entry to its own focused step. **Build green; one commit.** No inventory attachment (deferred).
+
+- **`pages/BulkUploader.tsx`:** removed the big input-method selector card + the `inputMethod` branching → back to the single upload/drop flow (2-column layout restored, behavior intact). Added a secondary link inside the upload card under the drop area: **"No file ready? Use our in-app spreadsheet"** → navigates to `/dashboard/bulk-uploader/spreadsheet`. **Deduped Download Template** — kept the page-level header button; the in-card helper now shows only the column/location hints (removed the duplicate button + "Need the template?" row). Removed `handleSpreadsheetBook` + grid imports.
+- **New `pages/BulkSpreadsheet.tsx`** (route `/dashboard/bulk-uploader/spreadsheet`, **no sidebar item**): title "Bulk Upload" + subtitle; delivery-mode toggle; sender/pickup + first-mile/schedule cards; the grid; and a **Confirm Booking Details** section (booking summary with row counts/valid/errors, PaymentMethodTabs, estimated fees, CTA "Continue to Review"). CTA books valid rows via the same `createUploadRecord`/`addUpload` pipeline (`source:'spreadsheet'`) → shared summary.
+- **`components/SpreadsheetBookingGrid.tsx` refactor:** now intake-only — reports live state via `onValidationChange` (page owns counts/fees/CTA; removed the internal "Book" button). **"Add row" moved to the bottom-left** below the grid. Province/City/Barangay now use the **GGX location cascade** (see below), with red borders on required-empty. Paste-from-sheets + per-row validation highlighting retained.
+- **New `components/LocationCascadeCells.tsx`:** extracted the province→city→barangay cascade (was inline in `BulkUploadSummary`) into a shared component with a `compact` mode + `errors` flags, backed by the existing `lib/locationApi`. Used by the grid. **Note:** `BulkUploadSummary` still has its own local copy (left untouched to avoid regression) — dedupe is a follow-up.
+- **New `lib/bookingFees.ts`:** clearly-labeled frontend fee **estimate** (size + service surcharge) with a pending state when inputs are incomplete; never blocks typing. Final fees remain backend-owned.
+- **Validation:** spreadsheet uses the shared `lib/bookingValidation`, validating as the user types. Upload File path + its template-specific summary correction validator unchanged.
+- **Out of scope (untouched):** inventory attachment/stock, Storefront, Account Add-ons IA, Integrations IA. No new sidebar items, no new deps.
+
+---
+
 ## Session 37 (2026-06-11) — Stabilize Bulk Booking input methods (one flow, shared context)
 
 Made Upload File + Type in Spreadsheet behave like two intakes feeding ONE Bulk Booking flow. **Build green; one commit.** No inventory attachment (deferred).

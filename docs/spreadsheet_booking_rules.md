@@ -10,17 +10,31 @@
 2. **Type in Spreadsheet** (new in-app editable grid).
 
 Both are **input methods feeding one Bulk Booking flow** — not separate flows:
-- The shared booking context (sender/pickup, first-mile & schedule, payment,
-  delivery mode) renders for **both** methods on the Bulk Upload page.
+- **Upload File is the default** on the Bulk Upload page (the upload/drop flow).
+  The spreadsheet is a **secondary path**, surfaced as a lightweight link inside
+  the upload card — "No file ready? Use our in-app spreadsheet" — NOT a large
+  competing card/button and NOT a sidebar item.
+- The link opens a **focused entry step** (`/dashboard/bulk-uploader/spreadsheet`,
+  page title "Bulk Upload") that composes the existing booking context
+  (sender/pickup, first-mile & schedule, delivery mode, payment) with the grid and
+  a **Confirm Booking Details** section (row counts, valid/error counts, estimated
+  fees, CTA). It must not look like a separate product.
 - Both produce the same `UploadRecord` and proceed to the same review/summary
   route. The record carries a `source: 'file' | 'spreadsheet'` tag so the summary
   can adapt (spreadsheet batches are pre-validated in-grid, so the summary skips
   the file-style error-correction table and uses the real valid-row count).
 - The spreadsheet path uses the shared validator `lib/bookingValidation`
-  (`validateRows`). The uploaded-file path keeps its template-specific
-  correction validator (COD cap, duplicate Reference-ID, pouch size) until real
-  file parsing lands — at which point it should adopt `validateRows` **without
-  removing** that richer coverage. Neither path forks the spreadsheet validator.
+  (`validateRows`), validating as the user types. The uploaded-file path keeps its
+  template-specific correction validator (COD cap, duplicate Reference-ID, pouch
+  size) until real file parsing lands — at which point it should adopt
+  `validateRows` **without removing** that richer coverage.
+- **Location fields** use the GGX-supported location cascade (`lib/locationApi`
+  via the shared `components/LocationCascadeCells`, `compact` mode) — never
+  free-text-only.
+- **"Add row"** sits at the **bottom-left** below the grid.
+- **Fees** are a labeled frontend **estimate** (`lib/bookingFees`) that updates as
+  fields complete, with a pending state when inputs are incomplete; it never
+  blocks typing and is not the source of truth (final fees are backend-owned).
 
 ## Spreadsheet capabilities
 

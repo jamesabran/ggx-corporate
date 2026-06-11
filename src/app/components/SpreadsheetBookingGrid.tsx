@@ -1,40 +1,57 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { IconPlus, IconCopy, IconTrash, IconAlertCircle, IconCircleCheck } from '@tabler/icons-react';
 import { Button } from './ui/Button';
-import { Badge } from './ui/Badge';
 import { cn } from '../lib/utils';
+import { LocationCascadeCells } from './LocationCascadeCells';
 import {
   BOOKING_COLUMNS, SERVICE_TYPE_OPTIONS, makeEmptyRow, validateRows,
-  type BookingRow, type BookingField,
+  type BookingRow, type BookingField, type RowsValidationResult,
 } from '../lib/bookingValidation';
+
+export interface GridValidationState extends RowsValidationResult {
+  rows: BookingRow[];
+}
 
 /**
  * "Type in Spreadsheet" editable grid — an INPUT METHOD inside Bulk Booking
- * (not a separate module). Reuses the shared booking validation pipeline
- * (lib/bookingValidation) so it applies the same rules as the uploaded-file path.
+ * (not a separate module). Reuses the shared validation pipeline
+ * (lib/bookingValidation) so it applies the same rules as the uploaded-file path,
+ * and the GGX-supported location cascade for province/city/barangay.
  *
- * Supports: add / duplicate / delete row, paste from Excel/Google Sheets, inline
- * validation with error highlighting, and separating valid from invalid rows
- * before booking. Inventory product attachment + fee/stock computation are a
- * following pass (see docs/spreadsheet_booking_rules.md) — not wired here.
+ * The grid is intake-only: it reports its live validation state via
+ * `onValidationChange` so the page can show counts, fee estimates, and own the
+ * final review/confirm CTA. "Add row" sits at the bottom-left (where the user
+ * naturally reaches the end of entered rows). Inventory product attachment +
+ * stock validation are a following pass (see docs/spreadsheet_booking_rules.md).
  */
 export function SpreadsheetBookingGrid({
-  onBook,
+  onValidationChange,
 }: {
-  onBook?: (rows: BookingRow[]) => void;
+  onValidationChange?: (state: GridValidationState) => void;
 }) {
   const nextId = useRef(4);
   const [rows, setRows] = useState<BookingRow[]>(() => [
     makeEmptyRow('row-1'), makeEmptyRow('row-2'), makeEmptyRow('row-3'),
   ]);
 
-  const { validations, validRows, invalidRows, emptyCount } = useMemo(() => validateRows(rows), [rows]);
+  const result = useMemo(() => validateRows(rows), [rows]);
+  const { validations, validRows, invalidRows, emptyCount } = result;
+
+  // Report live validation state upward (page shows counts/fees + owns the CTA).
+  // Intentionally excludes onValidationChange from deps to avoid a re-render loop
+  // if the parent passes an inline callback — it only fires when data changes.
+  useEffect(() => {
+    onValidationChange?.({ ...result, rows });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, rows]);
 
   const genId = () => `row-${nextId.current++}`;
 
-  const updateCell = (rowId: string, field: BookingField, value: string) => {
+  const updateCell = (rowId: string, field: BookingField, value: string) =>
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)));
-  };
+
+  const updateRowFields = (rowId: string, partial: Partial<BookingRow>) =>
+    setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, ...partial } : r)));
 
   const addRow = () => setRows((prev) => [...prev, makeEmptyRow(genId())]);
 
@@ -53,10 +70,9 @@ export function SpreadsheetBookingGrid({
   // focused cell, creating rows as needed.
   const handlePaste = (e: React.ClipboardEvent, rowIndex: number, colIndex: number) => {
     const text = e.clipboardData.getData('text/plain');
-    if (!text || (!text.includes('\t') && !text.includes('\n'))) return; // single value → default paste
+    if (!text || (!text.includes('\t') && !text.includes('\n'))) return;
     e.preventDefault();
     const matrix = text.replace(/\r/g, '').replace(/\n$/, '').split('\n').map((line) => line.split('\t'));
-
     setRows((prev) => {
       const next = prev.map((r) => ({ ...r }));
       matrix.forEach((cells, r) => {
@@ -71,24 +87,8 @@ export function SpreadsheetBookingGrid({
     });
   };
 
-  const nonEmpty = validRows.length + invalidRows.length;
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={addRow}>
-            <IconPlus className="w-4 h-4" /> Add row
-          </Button>
-          <span className="text-xs text-gray-500">Paste rows directly from Excel or Google Sheets.</span>
-        </div>
-        <div className="flex items-center gap-2 text-xs">
-          <Badge variant="success">{validRows.length} valid</Badge>
-          <Badge variant={invalidRows.length > 0 ? 'danger' : 'default'}>{invalidRows.length} need fixing</Badge>
-          {emptyCount > 0 && <span className="text-gray-400">{emptyCount} empty</span>}
-        </div>
-      </div>
-
+    <div className="space-y-3">
       <div className="overflow-x-auto border border-gray-200 rounded-xl">
         <table className="border-collapse text-xs">
           <thead>
@@ -110,6 +110,27 @@ export function SpreadsheetBookingGrid({
                 <tr key={row.id} className="border-b border-gray-100 last:border-0">
                   <td className="sticky left-0 z-10 bg-white px-2 py-1 text-center text-gray-400">{rIdx + 1}</td>
                   {BOOKING_COLUMNS.map((col, cIdx) => {
+                    // Province/City/Barangay render as the GGX location cascade
+                    // (3 cells) at the province column; skip the other two.
+                    if (col.key === 'city' || col.key === 'barangay') return null;
+                    if (col.key === 'province') {
+                      return (
+                        <LocationCascadeCells
+                          key="location"
+                          compact
+                          province={row.province}
+                          city={row.city}
+                          barangay={row.barangay}
+                          onChange={(p, c, b) => updateRowFields(row.id, { province: p, city: c, barangay: b })}
+                          errors={{
+                            province: !!v?.errors.province,
+                            city: !!v?.errors.city,
+                            barangay: !!v?.errors.barangay,
+                          }}
+                        />
+                      );
+                    }
+
                     const err = v?.errors[col.key];
                     const common = cn(
                       'w-full h-8 px-2 rounded border bg-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500',
@@ -163,17 +184,15 @@ export function SpreadsheetBookingGrid({
         </table>
       </div>
 
+      {/* Add row sits at the bottom-left, where the user reaches the end of rows. */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-xs text-gray-500">
-          {invalidRows.length > 0
-            ? `${invalidRows.length} row${invalidRows.length === 1 ? '' : 's'} need correction and will be kept for editing. Only valid rows are booked.`
-            : nonEmpty > 0
-              ? 'All filled rows are valid.'
-              : 'Add or paste rows to get started.'}
-        </p>
-        <Button disabled={validRows.length === 0} onClick={() => onBook?.(validRows)}>
-          Book {validRows.length} valid row{validRows.length === 1 ? '' : 's'}
+        <Button variant="outline" size="sm" onClick={addRow}>
+          <IconPlus className="w-4 h-4" /> Add row
         </Button>
+        <span className="text-xs text-gray-500">
+          Tip: paste rows directly from Excel or Google Sheets. {validRows.length} valid · {invalidRows.length} need fixing
+          {emptyCount > 0 ? ` · ${emptyCount} empty` : ''}
+        </span>
       </div>
     </div>
   );

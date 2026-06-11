@@ -6,6 +6,7 @@ import { DashboardWrapper } from './pages/DashboardWrapper';
 import { Transactions } from './pages/Transactions';
 import { TransactionDetails } from './pages/TransactionDetails';
 import { BulkUploader } from './pages/BulkUploader';
+import { BulkSpreadsheet } from './pages/BulkSpreadsheet';
 import { BulkUploadSummary } from './pages/BulkUploadSummary';
 // Code-split the recharts-heavy analytics page into its own chunk (keeps the
 // main bundle smaller; resolves the long-standing bundle-size warning).
@@ -71,6 +72,8 @@ export const router = createBrowserRouter([
       { path: 'operations-requests', Component: OperationsRequests },
       { path: 'operations-requests/:id', Component: OpsRequestDetail },
       { path: 'bulk-uploader', Component: BulkUploader },
+      // In-app spreadsheet entry — a focused step within Bulk Booking (no sidebar item).
+      { path: 'bulk-uploader/spreadsheet', Component: BulkSpreadsheet },
       { path: 'bulk-uploader/summary/:id', Component: BulkUploadSummary },
       { path: 'bulk-upload-summary', Component: BulkUploadSummary },
       {
