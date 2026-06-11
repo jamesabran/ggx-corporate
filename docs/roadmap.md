@@ -44,9 +44,18 @@ item) with sender/schedule/mode context, GGX location cascade in the grid (share
 `LocationCascadeCells`), bottom-left Add row, live fee estimate (`lib/bookingFees`),
 and a Confirm Booking Details section. Deduped the Download Template CTA.
 
+**Done (Session 39):** promoted the spreadsheet CTA to a primary button; moved
+service type to a **page-level** selector (Standard / Same-Day / **On-Demand** when
+enabled for the scope) and removed the per-row Service type + Notes columns; widened
+Product / SKU for a future multi-product summary; added an Inventory upsell teaser
+(hidden once Inventory is enabled). Fixed `resolveModuleAccess` so feature-enabled
+add-ons read as `enabled`.
+
 **Deferred (next sessions, in order):**
-1. **Inventory product attachment into spreadsheet rows** + auto-fill product
-   details + qty×price subtotal + stock validation (no draft-stage deduction).
+1. **Inventory product attachment into spreadsheet rows** — attach multiple products
+   to one row (chip + "+N more" compact summary in the wide Product/SKU cell;
+   detail in a dialog/drawer), auto-fill name/SKU/weight/price, qty×price subtotal,
+   stock validation (no draft-stage deduction). Layout + teaser already prepared.
 2. Adopt `lib/bookingValidation` in the uploaded-file path once real file parsing
    exists (parse → validateRows). The summary's template-specific correction
    validator (COD cap, duplicate Reference-ID, pouch size) is intentionally

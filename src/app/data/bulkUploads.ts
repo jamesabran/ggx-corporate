@@ -27,7 +27,7 @@ export interface UploadRecord {
   validRows: number;
   errorRows: number;
   status: UploadStatus;
-  uploadMode: 'standard' | 'same-day';
+  uploadMode: 'standard' | 'same-day' | 'on-demand';
   firstMile: 'pickup' | 'dropoff';
   /**
    * Which Bulk Booking input method produced this batch. Absent/'file' = the
@@ -113,7 +113,7 @@ export function generateUploadId(): string {
 export function createUploadRecord(
   id: string,
   fileName: string,
-  uploadMode: 'standard' | 'same-day',
+  uploadMode: 'standard' | 'same-day' | 'on-demand',
   firstMile: 'pickup' | 'dropoff',
   status: UploadStatus,
   account: UploadAccount,

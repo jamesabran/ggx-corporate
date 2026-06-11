@@ -4,7 +4,7 @@ import { Button } from './ui/Button';
 import { cn } from '../lib/utils';
 import { LocationCascadeCells } from './LocationCascadeCells';
 import {
-  BOOKING_COLUMNS, SERVICE_TYPE_OPTIONS, makeEmptyRow, validateRows,
+  BOOKING_COLUMNS, makeEmptyRow, validateRows,
   type BookingRow, type BookingField, type RowsValidationResult,
 } from '../lib/bookingValidation';
 
@@ -146,9 +146,7 @@ export function SpreadsheetBookingGrid({
                             className={common}
                           >
                             <option value="">—</option>
-                            {col.key === 'serviceType'
-                              ? SERVICE_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)
-                              : col.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                            {col.options.map((o) => <option key={o} value={o}>{o}</option>)}
                           </select>
                         ) : (
                           <input

@@ -46,11 +46,22 @@ auto-compute item totals · auto-compute declared value / subtotal · auto-compu
 delivery fees where available (fees are **backend/service-provided**, not computed
 in the frontend).
 
-## Recommended columns
+## Grid columns
 
 Recipient name · Recipient mobile · Delivery address · Province · City ·
-Barangay/District · Product / SKU · Quantity · Declared value · Parcel size /
-weight · Service type · Payment method · Notes.
+Barangay/District · Product / SKU · Quantity · Declared value · Parcel size ·
+Payment method.
+
+- **Service type is page-level, not per-row.** It's chosen once for the batch in
+  the service-mode selector (Standard / Same-Day / **On-Demand** when enabled for
+  the scope) and drives the whole spreadsheet context — do not reintroduce a
+  per-row service column.
+- **Notes** is intentionally omitted to keep the row focused on booking /
+  recipient / parcel / location / payment / product fields.
+- **Product / SKU** is a wide cell, sized for a future multi-product summary
+  (primary product name/SKU + a compact "+N more"; full selection in a
+  dialog/drawer). Manual text entry remains for now. The grid scrolls horizontally
+  rather than shrinking columns below readability.
 
 ## Product attachment (from Inventory)
 

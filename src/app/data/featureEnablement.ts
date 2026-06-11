@@ -12,7 +12,7 @@ import { MAIN_ACCOUNT_ID } from './accounts';
 /** Synthetic scope id for the non-subaccount standard-account context. */
 export const STANDARD_SCOPE_ID = 'standard-account';
 
-export type FeatureId = 'inventory' | 'storefront';
+export type FeatureId = 'inventory' | 'storefront' | 'on_demand';
 
 export interface FeatureState {
   enabled: boolean;
@@ -28,12 +28,15 @@ type ScopeId = string;
  *    enabled path and to unlock Storefront's dependency there.
  *  - Storefront is enabled (configured) for Acme Luzon, in draft publish status,
  *    to demonstrate the storefront page + publish/unpublish flow.
- *  - All other scopes have both features off (discoverable in Account Add-ons).
+ *  - On-Demand Delivery is enabled for Acme Luzon, so it appears in the Bulk
+ *    Booking service-mode selector for that scope (page-level service type).
+ *  - All other scopes have these features off (discoverable in Account Add-ons).
  */
 const seed: Record<ScopeId, Partial<Record<FeatureId, FeatureState>>> = {
   'acme-luzon': {
     inventory: { enabled: true, configured: true },
     storefront: { enabled: true, configured: true },
+    on_demand: { enabled: true, configured: true },
   },
 };
 

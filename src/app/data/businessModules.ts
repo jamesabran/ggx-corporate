@@ -108,7 +108,7 @@ export const BUSINESS_MODULES: BusinessModuleDef[] = [
     description: 'Immediate, direct pickup and delivery — not consolidated. Separate from Same-Day Delivery.',
     contractDefault: 'excluded', enabledByDefault: false, configuredByDefault: false,
     activationMode: 'approval', scopeLevel: 'subaccount', availableFor: ALL_TYPES, allowedRoles: ['admin'],
-    coverageGated: true,
+    coverageGated: true, featureId: 'on_demand',
     contractNote: 'May require contract update, pricing approval, or operations approval.',
     coverageNote: 'Validated against the delivery address service area at booking time.',
   },

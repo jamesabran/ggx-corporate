@@ -132,6 +132,11 @@ export function resolveModuleAccess(m: BusinessModuleDef, ctx: ModuleAccessConte
   const enabled = fe ? fe.enabled : m.enabledByDefault;
   const configured = fe ? fe.configured : m.configuredByDefault;
 
+  // A gated feature that is turned on for this scope is usable now, regardless of
+  // how it was originally activated (self / approval / contract). The runtime
+  // enablement flag represents the post-activation state.
+  if (fe?.enabled) return configured ? 'enabled' : 'requires_setup';
+
   if (!included) {
     switch (m.activationMode) {
       case 'self': return 'available_to_activate';

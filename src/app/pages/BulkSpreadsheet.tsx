@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   IconArrowLeft, IconMapPin, IconTruckDelivery, IconBuildingStore,
-  IconUpload, IconClock, IconCircleCheck, IconAlertCircle, IconInfoCircle,
+  IconUpload, IconClock, IconCircleCheck, IconAlertCircle, IconInfoCircle, IconBolt,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -18,9 +18,18 @@ import {
 } from '../services/bulkUploadService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useModuleAccessContext } from '../hooks/useModuleAccess';
+import { getFeatureStateSync } from '../services/featureEnablementService';
 
 const EMPTY_GRID: GridValidationState = {
   validations: {}, validRows: [], invalidRows: [], emptyCount: 0, rows: [],
+};
+
+/** Page-level service mode (drives the whole batch, not per row). */
+const MODE_LABELS: Record<'standard' | 'same-day' | 'on-demand', string> = {
+  standard: 'Standard',
+  'same-day': 'Same-Day Delivery',
+  'on-demand': 'On-Demand Delivery',
 };
 
 /**
@@ -54,7 +63,7 @@ export function BulkSpreadsheet() {
         accountType: (currentAccount === 'main' ? 'main' : 'subaccount') as 'main' | 'subaccount',
       };
 
-  const [uploadMode, setUploadMode]   = useState<'standard' | 'same-day'>('standard');
+  const [uploadMode, setUploadMode]   = useState<'standard' | 'same-day' | 'on-demand'>('standard');
   const [firstMile, setFirstMile]     = useState<'pickup' | 'dropoff'>('pickup');
   const [pickupDate, setPickupDate]   = useState('');
   const [showAddressBook, setShowAddressBook] = useState(false);
@@ -66,6 +75,14 @@ export function BulkSpreadsheet() {
   });
   const [selectedPayment, setSelectedPayment] = useState<SelectedPaymentMethod | null>(null);
   const [grid, setGrid] = useState<GridValidationState>(EMPTY_GRID);
+
+  // Feature gating for the current scope (respects module/access gating).
+  const moduleCtx = useModuleAccessContext();
+  const onDemandEnabled = getFeatureStateSync('on_demand', moduleCtx.scopeAccountId).enabled;
+  const inventoryEnabled = getFeatureStateSync('inventory', moduleCtx.scopeAccountId).enabled;
+  useEffect(() => {
+    if (uploadMode === 'on-demand' && !onDemandEnabled) setUploadMode('standard');
+  }, [onDemandEnabled, uploadMode]);
 
   const validCount = grid.validRows.length;
   const errorCount = grid.invalidRows.length;
@@ -110,7 +127,7 @@ export function BulkSpreadsheet() {
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Bulk Upload</h1>
+        <h1 className="text-3xl font-bold text-gray-900">In-app Spreadsheet</h1>
         <p className="text-gray-600 mt-1 max-w-2xl">
           Enter order details in an in-app spreadsheet, then review and confirm your booking.
         </p>
@@ -144,6 +161,20 @@ export function BulkSpreadsheet() {
                 </div>
               </div>
             </button>
+            {onDemandEnabled && (
+              <button
+                onClick={() => setUploadMode('on-demand')}
+                className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${uploadMode === 'on-demand' ? 'bg-violet-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <IconBolt className="w-5 h-5 shrink-0" />
+                  <div className="text-left">
+                    <div className="font-semibold">On-Demand Delivery</div>
+                    <div className={`text-xs ${uploadMode === 'on-demand' ? 'text-violet-100' : 'text-gray-500'}`}>Immediate, direct pickup &amp; delivery</div>
+                  </div>
+                </div>
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -240,6 +271,27 @@ export function BulkSpreadsheet() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Inventory upsell — manual product entry still works; this just offers
+              the faster path. Hidden once Inventory is enabled (attachment is a
+              following pass). Small helpful callout, not a marketing banner. */}
+          {!inventoryEnabled && (
+            <div className="mb-4 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
+              <IconInfoCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-blue-900">
+                <p>
+                  No need to type product details manually. Enable Inventory to browse products and
+                  auto-fill names, SKUs, weights, and prices.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/account-add-ons')}
+                  className="mt-1 font-medium text-blue-700 hover:text-blue-800 hover:underline cursor-pointer"
+                >
+                  View Account Add-ons
+                </button>
+              </div>
+            </div>
+          )}
           <SpreadsheetBookingGrid onValidationChange={setGrid} />
         </CardContent>
       </Card>
@@ -254,7 +306,7 @@ export function BulkSpreadsheet() {
             <div className="rounded-lg border border-gray-200 p-4 space-y-2 text-sm">
               <Detail label="Sender / Pickup" value={selectedAddress ? selectedAddress.name : 'Not selected'} />
               <Detail label="First-mile" value={firstMile === 'pickup' ? 'Pick-up' : 'Drop-off'} />
-              <Detail label="Delivery mode" value={uploadMode === 'same-day' ? 'Same-Day Delivery' : 'Standard'} />
+              <Detail label="Service type" value={MODE_LABELS[uploadMode]} />
               <div className="border-t border-gray-100 pt-2 space-y-1.5">
                 <Detail label="Total rows" value={String(totalCount)} />
                 <Detail label="Valid rows" value={String(validCount)} valueClass="text-green-700 font-medium" />

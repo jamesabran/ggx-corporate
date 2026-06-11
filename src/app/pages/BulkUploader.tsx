@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import {
   IconUpload, IconDownload, IconFileSpreadsheet, IconMapPin, IconClock,
   IconLink, IconX, IconTruckDelivery, IconBuildingStore,
-  IconPhone, IconArrowUp,
+  IconPhone, IconArrowUp, IconBolt,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -27,6 +27,15 @@ import {
 } from '../services/bulkUploadService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useModuleAccessContext } from '../hooks/useModuleAccess';
+import { getFeatureStateSync } from '../services/featureEnablementService';
+
+/** Page-level service mode (chosen for the whole batch, not per row). */
+const MODE_LABELS: Record<'standard' | 'same-day' | 'on-demand', string> = {
+  standard: 'Standard Upload',
+  'same-day': 'Same-Day Delivery',
+  'on-demand': 'On-Demand Delivery',
+};
 
 const STATUS_CONFIG = {
   processing:       { variant: 'info'    as const, label: 'Processing'      },
@@ -89,7 +98,15 @@ export function BulkUploader() {
       };
 
   const [step, setStep]             = useState<Step>('form');
-  const [uploadMode, setUploadMode] = useState<'standard' | 'same-day'>('standard');
+  const [uploadMode, setUploadMode] = useState<'standard' | 'same-day' | 'on-demand'>('standard');
+
+  // On-Demand Delivery appears in the service-mode selector only when it's
+  // enabled for the current account/context (respects module/access gating).
+  const moduleCtx = useModuleAccessContext();
+  const onDemandEnabled = getFeatureStateSync('on_demand', moduleCtx.scopeAccountId).enabled;
+  useEffect(() => {
+    if (uploadMode === 'on-demand' && !onDemandEnabled) setUploadMode('standard');
+  }, [onDemandEnabled, uploadMode]);
   const [firstMile, setFirstMile]   = useState<'pickup' | 'dropoff'>('pickup');
   const [pickupDate, setPickupDate] = useState('');
   const [showDropoffs, setShowDropoffs] = useState(false);
@@ -231,7 +248,7 @@ export function BulkUploader() {
     );
   }
 
-  const accentText = uploadMode === 'same-day' ? 'text-orange-700' : 'text-blue-700';
+  const accentText = uploadMode === 'same-day' ? 'text-orange-700' : uploadMode === 'on-demand' ? 'text-violet-700' : 'text-blue-700';
 
   // Suppress TypeScript "unused" warning — sessionTick drives re-render only.
   void sessionTick;
@@ -279,6 +296,20 @@ export function BulkUploader() {
                 </div>
               </div>
             </button>
+            {onDemandEnabled && (
+              <button
+                onClick={() => setUploadMode('on-demand')}
+                className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${uploadMode === 'on-demand' ? 'bg-violet-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <IconBolt className="w-5 h-5 shrink-0" />
+                  <div className="text-left">
+                    <div className="font-semibold">On-Demand Delivery</div>
+                    <div className={`text-xs ${uploadMode === 'on-demand' ? 'text-violet-100' : 'text-gray-500'}`}>Immediate, direct pickup &amp; delivery</div>
+                  </div>
+                </div>
+              </button>
+            )}
           </div>
           {uploadMode === 'same-day' && (
             <p className="text-xs text-orange-700 mt-2 flex items-center gap-1">
@@ -480,19 +511,18 @@ export function BulkUploader() {
                 </div>
               )}
 
-              {/* Secondary path — in-app spreadsheet entry (not a separate module) */}
-              <div className="text-center pt-1">
-                <button
-                  type="button"
-                  onClick={() => navigate('/dashboard/bulk-uploader/spreadsheet')}
-                  className="text-sm text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
-                >
-                  No file ready? Use our in-app spreadsheet
-                </button>
+              {/* Alternate path — manual entry via the in-app spreadsheet.
+                  Lives inside the Upload Orders card; still part of Bulk Booking. */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <p className="text-xs text-gray-500">No file ready? Enter your orders manually.</p>
+                <Button size="sm" className="flex-shrink-0" onClick={() => navigate('/dashboard/bulk-uploader/spreadsheet')}>
+                  <IconFileSpreadsheet className="w-4 h-4 mr-1.5" />
+                  Use our in-app spreadsheet
+                </Button>
               </div>
 
               <p className={`text-xs ${accentText}`}>
-                Mode: {uploadMode === 'same-day' ? 'Same-Day Delivery' : 'Standard Upload'} · First-mile: {firstMile === 'pickup' ? 'Pick-up' : 'Drop-off'}
+                Mode: {MODE_LABELS[uploadMode]} · First-mile: {firstMile === 'pickup' ? 'Pick-up' : 'Drop-off'}
               </p>
 
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">

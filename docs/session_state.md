@@ -5,6 +5,20 @@
 
 ---
 
+## Session 39 (2026-06-12) — In-app Spreadsheet flow refinements (CTA, page-level service mode, column trim, inventory teaser)
+
+Refined the Bulk Upload → In-app Spreadsheet UX. **Build green; one commit.** Inventory attachment still deferred (this pass only prepares the layout + teaser).
+
+- **Bulk Upload CTA promoted (`BulkUploader.tsx`):** the plain text link is now a primary **Button + IconFileSpreadsheet** ("Use our in-app spreadsheet") inside a subtle helper row in the Upload Orders card — more discoverable, still the alternate path (not a separate module).
+- **Page-level service mode + On-Demand:** the top selector now offers **Standard / Same-Day / On-Demand Delivery**, with On-Demand shown **only when enabled for the scope** (`getFeatureStateSync('on_demand', scope)`). `uploadMode` union extended to `'standard'|'same-day'|'on-demand'` (UploadRecord + createUploadRecord). On-Demand uses the fast (non-background) path; a guard resets to standard if the scope loses access. Same selector added to the spreadsheet page.
+- **Feature/access wiring:** added `on_demand` to `FeatureId` (`featureEnablement`), seeded enabled for **acme-luzon**; tied `featureId:'on_demand'` to the `on_demand_delivery` add-on; **fixed `resolveModuleAccess`** so a feature-enabled excluded module reads as `enabled`/`requires_setup` (was incorrectly showing `available_to_activate`). Side effect (intended): Inventory/Storefront/On-Demand add-on cards now show **Enabled** for acme-luzon. On-Demand has no route → its enabled card shows a disabled "Open" (it's a booking service type, not a page).
+- **Spreadsheet page (`BulkSpreadsheet.tsx`):** title → **"In-app Spreadsheet"** (subtitle + Back to Bulk Upload kept). Confirm summary "Delivery mode" → **"Service type"** using the mode label.
+- **Grid columns trimmed (`bookingValidation` + grid):** removed the per-row **Service type** column (now page-level — also removed from required validation) and the **Notes** column. **Widened Product / SKU** to `w-64` for a future multi-product summary; grid keeps horizontal scroll. Service-type select branch + `SERVICE_TYPE_OPTIONS` import removed from the grid.
+- **Inventory teaser:** small blue callout above the grid (shown only when Inventory is NOT enabled) — "Enable Inventory to browse products and auto-fill…" + "View Account Add-ons". Manual product entry unchanged. When Inventory IS enabled, no teaser (attachment prep noted for next pass).
+- **Unchanged:** Upload File flow + summary behavior; shared validation pipeline; location cascade; bottom-left Add row; fee estimate. No new sidebar item, no stock reservation, no new deps. Account Add-ons / Integrations IA untouched.
+
+---
+
 ## Session 38 (2026-06-12) — Bulk Upload spreadsheet entry UX (secondary path + focused page)
 
 Replaced the heavy Upload File / Type in Spreadsheet selector with a lightweight secondary path, and moved spreadsheet entry to its own focused step. **Build green; one commit.** No inventory attachment (deferred).
