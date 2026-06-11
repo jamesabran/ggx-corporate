@@ -11,6 +11,12 @@
 
 ## Capabilities
 
+> **Implemented (Session 46):** profile edit, Inventory product selection, and
+> persisted publish/unpublish in the dashboard Storefront page; a public
+> browse-only customer surface at **`/shop/:slug`** (no checkout). Orders remain
+> placeholders.
+
+
 - Storefront enablement (per Standard account or Subaccount scope).
 - Store profile setup: store name · description · logo/banner placeholder ·
   store URL/slug · contact information.

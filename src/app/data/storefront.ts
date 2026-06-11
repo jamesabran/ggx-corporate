@@ -36,7 +36,19 @@ export interface OrderImpact {
   activeDeliveries: number;
 }
 
+/** Editable store-profile fields (everything a merchant configures). */
+export interface StorefrontProfileInput {
+  storeName: string;
+  description: string;
+  slug: string;
+  contactEmail: string;
+  contactNumber: string;
+  deliveryOptions: ServiceTypeKey[];
+}
+
 // Demo seed — Acme Luzon has a storefront in draft (enabled, not yet published).
+// Mutable session store: profile edits / product selection / publish status persist
+// for the tab session (reset to seed on reload). Backend-owned in production.
 const profiles: Record<string, StorefrontProfile> = {
   'acme-luzon': {
     scopeAccountId: 'acme-luzon',
@@ -60,7 +72,44 @@ export function getProfileForScope(scopeId: string | undefined): StorefrontProfi
   return profiles[scopeId] ?? null;
 }
 
+/** Resolve a storefront by its public slug (customer-facing surface). */
+export function getProfileBySlug(slug: string): StorefrontProfile | null {
+  return Object.values(profiles).find((p) => p.slug === slug) ?? null;
+}
+
 export function getOrderImpactForScope(scopeId: string | undefined): OrderImpact {
   if (!scopeId) return { pendingUnpaidOrders: 0, activeDeliveries: 0 };
   return orderImpact[scopeId] ?? { pendingUnpaidOrders: 0, activeDeliveries: 0 };
+}
+
+// ─── Mutations (session-only; backend-owned in production) ──────────────────────
+
+/** Patch a scope's store profile. Returns the updated profile (or null). */
+export function updateProfile(
+  scopeId: string,
+  patch: Partial<StorefrontProfileInput>,
+): StorefrontProfile | null {
+  const current = profiles[scopeId];
+  if (!current) return null;
+  profiles[scopeId] = { ...current, ...patch };
+  return profiles[scopeId];
+}
+
+/** Replace the storefront's selected Inventory product ids. */
+export function setProductIds(scopeId: string, ids: string[]): StorefrontProfile | null {
+  const current = profiles[scopeId];
+  if (!current) return null;
+  profiles[scopeId] = { ...current, productIds: [...ids] };
+  return profiles[scopeId];
+}
+
+/** Set publish status (publish / unpublish). Never touches existing transactions. */
+export function setPublishStatus(
+  scopeId: string,
+  status: StorefrontPublishStatus,
+): StorefrontProfile | null {
+  const current = profiles[scopeId];
+  if (!current) return null;
+  profiles[scopeId] = { ...current, publishStatus: status };
+  return profiles[scopeId];
 }

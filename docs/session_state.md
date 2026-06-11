@@ -13,8 +13,10 @@ In-app Spreadsheet** flow is stable + polished, **Transactions recognize On-Dema
 as a distinct service type** (roadmap #5), the spreadsheet grid supports **Inventory
 product attachment** when enabled (roadmap #1), the misleading per-row **Payment
 column was removed**, the review **summary is data-driven for spreadsheet batches**
-(roadmap #3), the Dashboard has a **Basic Analytics** section (roadmap #6), and
-**Inventory has full create/edit/import/export flows** (roadmap #7).
+(roadmap #3), the Dashboard has a **Basic Analytics** section (roadmap #6),
+**Inventory has full create/edit/import/export flows** (roadmap #7), and
+**Storefront has product management + a public `/shop/:slug` surface** (roadmap #4,
+no checkout).
 
 - **Branch:** `master`. **Build:** green (`npm run build`). Latest work committed.
   Not pushed (per project rule — push only when explicitly asked).
@@ -26,12 +28,13 @@ column was removed**, the review **summary is data-driven for spreadsheet batche
   pixel-width grid with forced horizontal scroll, fee estimate. The Product/SKU cell
   is a product picker when Inventory is enabled (else free text + upsell teaser).
 
-**Next task (roadmap, next deferred items):** #4 Storefront product management UI +
-customer-facing surface (no checkout), or #8 real activation/request flows + BFF
-wiring, or #9 full Business+ rebrand pass. #2 (adopt `lib/bookingValidation` in the
-file path) stays blocked on real file parsing. Done: #5 (On-Demand), #1 (Inventory
-attachment), #3 (data-driven summary), #6 (Dashboard Basic Analytics), #7 (Inventory
-create/edit/import/export).
+**Next task (roadmap, next deferred items):** #8 real activation/request flows +
+BFF wiring (replace the mock acknowledge dialog), or #9 full Business+ rebrand pass
+(titles/marketing copy; logo already done; routes intentionally unchanged). #2
+(adopt `lib/bookingValidation` in the file path) stays blocked on real file parsing.
+Done: #5 (On-Demand), #1 (Inventory attachment), #3 (data-driven summary), #6
+(Dashboard Basic Analytics), #7 (Inventory CRUD/import/export), #4 (Storefront
+management + public `/shop/:slug`).
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
 decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); no Inventory
@@ -42,6 +45,38 @@ deps; non-destructive; preserve Upload File behavior; commit after stable milest
 strip it after any Write. PowerShell `Get-Content`/`Set-Content` round-trips corrupt UTF-8
 (₱, em-dash) → mojibake; prefer Edit, or `sed -i` (byte-safe) for bulk line ops. See
 [[reference-powershell-utf8-roundtrip]].
+
+---
+
+## Session 46 (2026-06-12) — Storefront product management + public surface (roadmap #4)
+
+One commit. **Build green.** No checkout (deferred per spec).
+
+- **Data (`data/storefront.ts`):** `profiles` is now a session-mutable store; added
+  `StorefrontProfileInput`, `getProfileBySlug`, and mutations `updateProfile` /
+  `setProductIds` / `setPublishStatus` (publish/unpublish never touches existing
+  transactions). **`data/inventory.ts`:** `getProductsByIds` (order-preserving).
+- **Services:** `storefrontService` gained `getStorefrontProfileBySlug` +
+  `updateStorefrontProfile` / `setStorefrontProducts` / `setStorefrontStatus`;
+  `inventoryService` gained `getInventoryProductsByIds`.
+- **Management UI (`pages/Storefront.tsx`):** Edit profile
+  (`StorefrontProfileDialog` — name/description/slug+slugify/contact/delivery-option
+  chips) and Manage products (`StorefrontProductsDialog` — search + checkbox select
+  from scope inventory; inactive products locked). Added a **Listed products**
+  card (resolved from `productIds`), a **View storefront** link (`/shop/:slug`,
+  new tab), and persisted publish/unpublish. All write actions gated by
+  `storefront.configure` / `storefront.manageProducts` / `storefront.publish` /
+  `storefront.unpublish` + a concrete scope (managers, who only have view/viewOrders,
+  see read-only).
+- **Customer-facing surface (`pages/StorefrontPreview.tsx`, route `/shop/:slug`):**
+  public, no auth, no dashboard chrome. Resolves the store by slug, renders header
+  (name/description/contact/delivery badges) + an active-product catalog grid with
+  stock badges and a **disabled "Checkout coming soon"** button — **no checkout**.
+  Unpublished stores show a preview banner (page doubles as the merchant preview);
+  an unknown slug shows "Store not available."
+- **New files:** `components/StorefrontProfileDialog.tsx`,
+  `components/StorefrontProductsDialog.tsx`, `pages/StorefrontPreview.tsx`. Route
+  added in `routes.tsx` alongside the existing public `/track` routes.
 
 ---
 

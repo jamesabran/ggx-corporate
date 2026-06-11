@@ -40,6 +40,7 @@ import { Inventory } from './pages/Inventory';
 import { Storefront } from './pages/Storefront';
 import { ProtectedRoute, AdminRoute } from './components/RouteGuards';
 import { TrackingPage } from './pages/TrackingPage';
+import { StorefrontPreview } from './pages/StorefrontPreview';
 
 export const router = createBrowserRouter([
   {
@@ -53,6 +54,11 @@ export const router = createBrowserRouter([
   {
     path: '/track/:trackingNumber',
     Component: TrackingPage,
+  },
+  {
+    // Public customer-facing storefront (browse-only; no checkout yet).
+    path: '/shop/:slug',
+    Component: StorefrontPreview,
   },
   {
     path: '/dashboard',

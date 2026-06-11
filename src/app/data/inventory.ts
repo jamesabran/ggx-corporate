@@ -99,6 +99,13 @@ export function getProductById(id: string): InventoryProduct | undefined {
   return products.find((p) => p.id === id);
 }
 
+/** Resolve products by id, preserving the given id order (unknown ids skipped). */
+export function getProductsByIds(ids: string[]): InventoryProduct[] {
+  return ids
+    .map((id) => products.find((p) => p.id === id))
+    .filter((p): p is InventoryProduct => !!p);
+}
+
 // ─── Mutations (session-only; backend-owned in production) ──────────────────────
 
 let productSeq = 1100; // seed uses prod-1001..1003; new ids start above that.

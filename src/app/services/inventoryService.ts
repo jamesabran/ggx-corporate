@@ -17,6 +17,7 @@
 import {
   getProductsForScope,
   getProductById,
+  getProductsByIds,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -37,6 +38,11 @@ export async function getInventoryProducts(scopeId: string | undefined): Promise
 /** Return a single product by id (or null). */
 export async function getInventoryProduct(id: string): Promise<InventoryProduct | null> {
   return getProductById(id) ?? null;
+}
+
+/** Resolve products by id list (used by the storefront listing). */
+export async function getInventoryProductsByIds(ids: string[]): Promise<InventoryProduct[]> {
+  return getProductsByIds(ids);
 }
 
 /** Create a product in the given scope. */

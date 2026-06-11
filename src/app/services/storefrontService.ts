@@ -14,13 +14,18 @@
 
 import {
   getProfileForScope,
+  getProfileBySlug,
   getOrderImpactForScope,
+  updateProfile,
+  setProductIds,
+  setPublishStatus,
   type StorefrontProfile,
+  type StorefrontProfileInput,
   type StorefrontPublishStatus,
   type OrderImpact,
 } from '../data/storefront';
 
-export type { StorefrontProfile, StorefrontPublishStatus, OrderImpact };
+export type { StorefrontProfile, StorefrontProfileInput, StorefrontPublishStatus, OrderImpact };
 
 export const STOREFRONT_PUBLISH_META: Record<StorefrontPublishStatus, {
   label: string;
@@ -43,7 +48,40 @@ export async function getStorefrontStatus(scopeId: string | undefined): Promise<
   return getProfileForScope(scopeId)?.publishStatus ?? null;
 }
 
+/** Resolve a published/draft storefront by public slug (customer-facing surface). */
+export async function getStorefrontProfileBySlug(slug: string): Promise<StorefrontProfile | null> {
+  return getProfileBySlug(slug);
+}
+
 /** Pending-transaction impact for the unpublish warning. */
 export async function getPendingOrderImpact(scopeId: string | undefined): Promise<OrderImpact> {
   return getOrderImpactForScope(scopeId);
+}
+
+// ─── Mutations ─────────────────────────────────────────────────────────────────
+// Publish/unpublish never auto-cancels existing transactions (the impact is only
+// presented). All mutations are session-only here; backend-owned in production.
+
+/** Update the store profile (name/description/slug/contact/delivery options). */
+export async function updateStorefrontProfile(
+  scopeId: string,
+  patch: Partial<StorefrontProfileInput>,
+): Promise<StorefrontProfile | null> {
+  return updateProfile(scopeId, patch);
+}
+
+/** Replace the storefront's selected Inventory product ids. */
+export async function setStorefrontProducts(
+  scopeId: string,
+  ids: string[],
+): Promise<StorefrontProfile | null> {
+  return setProductIds(scopeId, ids);
+}
+
+/** Set publish status (publish / unpublish). */
+export async function setStorefrontStatus(
+  scopeId: string,
+  status: StorefrontPublishStatus,
+): Promise<StorefrontProfile | null> {
+  return setPublishStatus(scopeId, status);
 }

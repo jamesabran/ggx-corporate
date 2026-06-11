@@ -1,0 +1,158 @@
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router';
+import {
+  IconBuildingStore, IconMail, IconPhone, IconShoppingCartOff, IconEyeCog, IconPackage,
+} from '@tabler/icons-react';
+import { Card, CardContent } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { getStorefrontProfileBySlug, type StorefrontProfile } from '../services/storefrontService';
+import { getInventoryProductsByIds, isLowStock, type InventoryProduct } from '../services/inventoryService';
+import { getServiceTypeLabel } from '../data/serviceTypes';
+
+const peso = (n: number) =>
+  `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * Public customer-facing storefront at /shop/:slug. Renders the store profile,
+ * delivery options, and the listed (active) inventory products as a browse-only
+ * catalog. There is NO checkout yet — ordering is a placeholder (see
+ * docs/storefront_rules.md). When the store isn't published, a preview banner is
+ * shown (this same page doubles as the merchant's preview).
+ */
+export function StorefrontPreview() {
+  const { slug } = useParams();
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<StorefrontProfile | null>(null);
+  const [products, setProducts] = useState<InventoryProduct[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    getStorefrontProfileBySlug(slug ?? '')
+      .then(async (p) => {
+        if (!active) return;
+        setProfile(p);
+        if (p) {
+          const items = await getInventoryProductsByIds(p.productIds);
+          if (active) setProducts(items.filter((it) => it.status === 'active'));
+        }
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [slug]);
+
+  if (loading) return null;
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <IconBuildingStore className="w-7 h-7 text-gray-400" />
+          </div>
+          <h1 className="text-lg font-semibold text-gray-900">Store not available</h1>
+          <p className="text-sm text-gray-500 mt-1">This storefront link is invalid or no longer active.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isPublished = profile.publishStatus === 'published';
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {!isPublished && (
+        <div className="bg-amber-50 border-b border-amber-200">
+          <div className="max-w-5xl mx-auto px-6 py-2.5 flex items-center gap-2 text-sm text-amber-800">
+            <IconEyeCog className="w-4 h-4 flex-shrink-0" />
+            Preview — this storefront is not published yet. Customers can't see it.
+          </div>
+        </div>
+      )}
+
+      {/* Store header */}
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center flex-shrink-0">
+              <IconBuildingStore className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold text-gray-900">{profile.storeName}</h1>
+              <p className="text-gray-600 mt-1 max-w-2xl">{profile.description}</p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-sm text-gray-500">
+                <span className="inline-flex items-center gap-1.5"><IconMail className="w-4 h-4" />{profile.contactEmail}</span>
+                <span className="inline-flex items-center gap-1.5"><IconPhone className="w-4 h-4" />{profile.contactNumber}</span>
+              </div>
+              {profile.deliveryOptions.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wide mr-1">Delivery</span>
+                  {profile.deliveryOptions.map((o) => (
+                    <Badge key={o} variant="outline">{getServiceTypeLabel(o)}</Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Product catalog */}
+      <main className="max-w-5xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-gray-900">Products</h2>
+          <span className="text-sm text-gray-400">{products.length} item{products.length === 1 ? '' : 's'}</span>
+        </div>
+
+        {products.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <IconPackage className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">No products are listed in this store yet.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {products.map((p) => {
+              const outOfStock = p.stockQuantity <= 0;
+              return (
+                <Card key={p.id} className="flex flex-col overflow-hidden">
+                  <div className="h-32 bg-gray-100 flex items-center justify-center">
+                    <IconPackage className="w-10 h-10 text-gray-300" />
+                  </div>
+                  <CardContent className="p-4 flex-1 flex flex-col">
+                    <p className="text-xs text-gray-400">{p.category}</p>
+                    <p className="text-sm font-semibold text-gray-900 mt-0.5 leading-snug">{p.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {outOfStock
+                        ? <Badge variant="danger">Out of stock</Badge>
+                        : isLowStock(p)
+                          ? <Badge variant="warning">Low stock</Badge>
+                          : <Badge variant="success">In stock</Badge>}
+                    </div>
+                    <div className="mt-auto pt-3">
+                      <p className="text-base font-bold text-gray-900">{peso(p.unitPrice)}</p>
+                      <button
+                        type="button"
+                        disabled
+                        title="Checkout is not available yet"
+                        className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm font-medium h-9 cursor-not-allowed"
+                      >
+                        <IconShoppingCartOff className="w-4 h-4" />
+                        Checkout coming soon
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        <p className="text-center text-xs text-gray-400 mt-8">
+          Powered by GoGo Xpress · Online ordering is coming soon to this store.
+        </p>
+      </main>
+    </div>
+  );
+}

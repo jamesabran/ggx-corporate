@@ -67,7 +67,14 @@ add-ons read as `enabled`.
    (session-only `setSpreadsheetBatchRows`) and the summary renders the actual
    rows (recipient / mobile / location / product / qty / declared value / parcel
    size) instead of a count note. Falls back to the count note on a hard reload.
-4. Storefront product management UI + customer-facing surface (no checkout yet).
+4. ✅ **DONE (Session 46).** Storefront product management UI + customer-facing
+   surface — merchant can edit the store profile (`StorefrontProfileDialog`),
+   select Inventory products (`StorefrontProductsDialog`), and publish/unpublish
+   (persisted via `setStorefrontStatus`; unpublish keeps the pending-impact
+   warning + never auto-cancels). New public browse-only page at **`/shop/:slug`**
+   (`StorefrontPreview`) renders the store + active products with a disabled
+   "Checkout coming soon" — **no checkout** built. Actions gated by `storefront.*`
+   permissions + a concrete scope.
 5. ✅ **DONE (Session 42).** Transactions filter recognizes **On-Demand** as a
    distinct service type — added a `serviceType` field (Standard / Same-Day /
    On-Demand) to the transactions model, a Service Type filter on the Transactions
