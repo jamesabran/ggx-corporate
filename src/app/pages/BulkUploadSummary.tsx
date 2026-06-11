@@ -443,10 +443,23 @@ export function BulkUploadSummary() {
   // Batch date looked up via the service facade; falls back to the mock default
   // when the batch is unknown (preserves the prior synchronous fallback).
   const [batchDate, setBatchDate] = useState('2026-05-19 10:30 AM');
+  // Source-aware review: spreadsheet batches were validated in the grid before
+  // submit, so only valid rows arrive here — use the real count and skip the mock
+  // error-correction table (which models uploaded-file parsing errors). The Upload
+  // File path is unchanged (source absent/'file').
+  const [isSpreadsheet, setIsSpreadsheet] = useState(false);
+  const [validBaseCount, setValidBaseCount] = useState(TOTAL_VALID_INITIAL);
   useEffect(() => {
     let active = true;
     getBulkUploadById(id ?? '')
-      .then((record) => { if (active && record) setBatchDate(record.uploadedAt); })
+      .then((record) => {
+        if (!active || !record) return;
+        setBatchDate(record.uploadedAt);
+        if (record.source === 'spreadsheet') {
+          setIsSpreadsheet(true);
+          setValidBaseCount(record.validRows);
+        }
+      })
       .catch(() => { /* keep fallback date */ });
     return () => { active = false; };
   }, [id]);
@@ -461,6 +474,9 @@ export function BulkUploadSummary() {
   const [fixedCount, setFixedCount] = useState(0);
   const [retried,    setRetried]    = useState(false);
 
+  // Spreadsheet batches arrive pre-validated (no mock error rows to review).
+  useEffect(() => { if (isSpreadsheet) setErrorRows([]); }, [isSpreadsheet]);
+
   // ── Booking / bottom section state ────────────────────────────────────────
   const [firstMile,     setFirstMile]     = useState<'pickup' | 'dropoff'>('pickup');
   const [pickupDate,    setPickupDate]    = useState(() => {
@@ -472,7 +488,7 @@ export function BulkUploadSummary() {
   const [showSuccess,   setShowSuccess]   = useState(false);
 
   // ── Derived values ────────────────────────────────────────────────────────
-  const totalValidCount        = TOTAL_VALID_INITIAL + fixedCount;
+  const totalValidCount        = validBaseCount + fixedCount;
   const shippingFee            = 1200; // mock flat
   const totalItemProtectionFee = parseFloat(
     errorRows.reduce((sum, row) => sum + computeItemProtectionFee(rowEdits[row.row] ?? rowToEdits(row)), 0).toFixed(2)
@@ -564,34 +580,44 @@ export function BulkUploadSummary() {
             </Button>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Recipient</TableHead>
-                  <TableHead>Item Name</TableHead>
-                  <TableHead className="text-right">Item Price</TableHead>
-                  <TableHead>Fees paid by</TableHead>
-                  <TableHead className="text-right">Fees</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {VALID_ORDERS.map((row, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-medium text-gray-900">{row.recipient}</TableCell>
-                    <TableCell className="text-gray-600">{row.itemName}</TableCell>
-                    <TableCell className="text-right text-gray-900">₱{row.itemPrice.toLocaleString()}.00</TableCell>
-                    <TableCell className="text-gray-600">{row.feesPaidBy}</TableCell>
-                    <TableCell className="text-right text-gray-900">₱{row.fees}.00</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          {!isSpreadsheet ? (
+            <>
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Recipient</TableHead>
+                      <TableHead>Item Name</TableHead>
+                      <TableHead className="text-right">Item Price</TableHead>
+                      <TableHead>Fees paid by</TableHead>
+                      <TableHead className="text-right">Fees</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {VALID_ORDERS.map((row, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-medium text-gray-900">{row.recipient}</TableCell>
+                        <TableCell className="text-gray-600">{row.itemName}</TableCell>
+                        <TableCell className="text-right text-gray-900">₱{row.itemPrice.toLocaleString()}.00</TableCell>
+                        <TableCell className="text-gray-600">{row.feesPaidBy}</TableCell>
+                        <TableCell className="text-right text-gray-900">₱{row.fees}.00</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-          {totalValidCount > VALID_ORDERS.length && (
-            <p className="text-center text-sm text-blue-600 mt-3 font-medium">
-              View all {totalValidCount} in transactions page
+              {totalValidCount > VALID_ORDERS.length && (
+                <p className="text-center text-sm text-blue-600 mt-3 font-medium">
+                  View all {totalValidCount} in transactions page
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">
+              {totalValidCount} valid {totalValidCount === 1 ? 'row' : 'rows'} from your spreadsheet
+              {totalValidCount === 1 ? ' is' : ' are'} ready to book. Confirm the booking details below to
+              complete booking — you can view them in Transactions afterwards.
             </p>
           )}
           {retried && fixedCount > 0 && (

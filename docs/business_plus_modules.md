@@ -94,8 +94,10 @@ the card — that detail lives in this doc / the add-on's own area.)
 ## Account Add-ons catalog (curated)
 
 - **Account & Scale** — **Subaccounts** (self-enable; routes to the enable flow);
-  **Consolidated Billing** (requires Subaccounts first → dependency CTA "Enable
-  Subaccounts first"; once Subaccounts is on → "Request activation").
+  **Consolidated Billing** (requires Subaccounts first → passive, disabled
+  "Requires Subaccounts" CTA until Subaccounts is enabled; once on → "Request
+  activation"). This is the `dependencyPassive` pattern: the prerequisite is
+  enabled elsewhere, so the dependency CTA is informational, not actionable.
 - **Delivery Services** — **On-Demand Delivery** only (separate from Same-Day;
   immediate, non-consolidated; approval/contract/coverage-gated → "Submit
   request"). See `service_type_rules.md`.

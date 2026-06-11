@@ -58,6 +58,12 @@ export interface BusinessModuleDef {
   allowedRoles: ModuleRole[];
   /** Module id that must be enabled first (dependency gate). */
   dependsOn?: string;
+  /**
+   * When true, an unmet dependency renders a passive, non-actionable
+   * "Requires X" CTA (the prerequisite is enabled elsewhere) instead of an
+   * actionable "Enable X first" CTA.
+   */
+  dependencyPassive?: boolean;
   /** Gated feature whose runtime enablement overrides the defaults. */
   featureId?: FeatureId;
   /** Route to navigate to for Open / Set up / Continue setup. */
@@ -92,7 +98,8 @@ export const BUSINESS_MODULES: BusinessModuleDef[] = [
     description: 'Roll up billing across subaccounts into a single statement.',
     contractDefault: 'excluded', enabledByDefault: false, configuredByDefault: false,
     activationMode: 'contract', scopeLevel: 'account', availableFor: ['main'], allowedRoles: ['admin'],
-    dependsOn: 'subaccounts', contractNote: 'Requires Subaccounts. Activation may need a contract update.',
+    dependsOn: 'subaccounts', dependencyPassive: true,
+    contractNote: 'Requires Subaccounts. Activation may need a contract update.',
   },
 
   // ── Delivery Services ─────────────────────────────────────────────────────────

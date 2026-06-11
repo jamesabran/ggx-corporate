@@ -33,12 +33,21 @@ Account Management), Business+ logo rebrand (login + header), UI-consistency pas
 selector + in-app spreadsheet grid** with the shared `lib/bookingValidation`
 pipeline (valid/invalid separation; books valid rows via the existing pipeline).
 
+**Done (Session 37):** Upload File + Type in Spreadsheet now feed ONE flow —
+shared sender/pickup/schedule/payment + mode context for both, spreadsheet carries
+the same record context (`source` tag) into the shared review/summary, which is
+now source-aware. Consolidated Billing shows a passive "Requires Subaccounts" until
+enabled.
+
 **Deferred (next sessions, in order):**
 1. **Inventory product attachment into spreadsheet rows** + auto-fill product
    details + qty×price subtotal + stock validation (no draft-stage deduction).
-2. Wire pickup/payment context into the spreadsheet path (currently file-path only).
-3. Adopt `lib/bookingValidation` in the uploaded-file path (parse → validateRows)
-   so both intakes share one validator end-to-end.
+2. Adopt `lib/bookingValidation` in the uploaded-file path once real file parsing
+   exists (parse → validateRows). The summary's template-specific correction
+   validator (COD cap, duplicate Reference-ID, pouch size) is intentionally
+   retained — unify only without losing that coverage.
+3. Make the shared summary fully data-driven for spreadsheet batches (render the
+   actual booked rows, not just the count).
 4. Storefront product management UI + customer-facing surface (no checkout yet).
 5. Transactions filter: recognize **On-Demand** as a distinct service type.
 6. Dashboard **Basic Analytics** (only if safe/low-risk; not Advanced Analytics).

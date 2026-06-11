@@ -29,6 +29,13 @@ export interface UploadRecord {
   status: UploadStatus;
   uploadMode: 'standard' | 'same-day';
   firstMile: 'pickup' | 'dropoff';
+  /**
+   * Which Bulk Booking input method produced this batch. Absent/'file' = the
+   * Upload File path (default); 'spreadsheet' = the in-app Type in Spreadsheet
+   * grid (rows already validated in-grid, so the review summary skips the mock
+   * error-correction table). Both methods feed the same review/summary flow.
+   */
+  source?: 'file' | 'spreadsheet';
   // Account scope of the uploading account/subaccount.
   accountId: string;
   accountName: string;

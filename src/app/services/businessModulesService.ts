@@ -164,6 +164,15 @@ export function resolveCta(status: ModuleAccessStatus, m: BusinessModuleDef): Mo
       return { label: 'Request activation', kind: 'request_activation', disabled: false };
     case 'requires_dependency': {
       const dep = m.dependsOn ? getModuleById(m.dependsOn) : undefined;
+      if (m.dependencyPassive) {
+        // The prerequisite is enabled elsewhere — show a passive, non-actionable
+        // "Requires X" CTA rather than routing the user into the dependency.
+        return {
+          label: dep ? `Requires ${dep.name}` : 'Requires another module',
+          kind: 'dependency',
+          disabled: true,
+        };
+      }
       return {
         label: dep ? `Enable ${dep.name} first` : 'Enable dependency first',
         kind: 'dependency',

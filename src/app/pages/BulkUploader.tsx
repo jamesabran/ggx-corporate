@@ -188,9 +188,12 @@ export function BulkUploader() {
    */
   const handleSpreadsheetBook = (validRows: BookingRow[]) => {
     const id = generateUploadId();
-    const base = createUploadRecord(id, 'Spreadsheet entry', 'standard', firstMile, 'needs-review', uploadAccount);
+    // Carry the SAME downstream context as the file path (delivery mode, first-mile,
+    // account scope) and tag the source so the shared summary can adapt.
+    const base = createUploadRecord(id, 'Spreadsheet entry', uploadMode, firstMile, 'needs-review', uploadAccount);
     addUpload({
       ...base,
+      source: 'spreadsheet',
       fileName: `Spreadsheet entry (${validRows.length} row${validRows.length === 1 ? '' : 's'})`,
       totalRows: validRows.length,
       validRows: validRows.length,
@@ -305,22 +308,7 @@ export function BulkUploader() {
         </CardContent>
       </Card>
 
-      {inputMethod === 'spreadsheet' ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Type in Spreadsheet</CardTitle>
-            <CardDescription>
-              Enter orders directly or paste rows from Excel / Google Sheets. Rows are validated inline;
-              only valid rows are booked. Pickup and payment options are configured as part of booking.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SpreadsheetBookingGrid onBook={handleSpreadsheetBook} />
-          </CardContent>
-        </Card>
-      ) : (
-      <>
-      {/* Mode toggle */}
+      {/* Mode toggle — delivery mode applies to BOTH input methods */}
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row items-stretch gap-2">
@@ -358,8 +346,11 @@ export function BulkUploader() {
         </CardContent>
       </Card>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Left column */}
+      {/* Both input methods feed the same booking flow: the shared context
+          (sender/pickup, schedule, payment) applies to either intake. Upload
+          keeps the 2-column layout; Spreadsheet stacks context + full-width grid. */}
+      <div className={inputMethod === 'upload' ? 'grid lg:grid-cols-2 gap-6' : 'space-y-6'}>
+        {/* Shared booking context */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -462,7 +453,8 @@ export function BulkUploader() {
           </Card>
         </div>
 
-        {/* Right column — upload */}
+        {/* Right column — Upload File intake */}
+        {inputMethod === 'upload' && (
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -571,9 +563,24 @@ export function BulkUploader() {
             </CardContent>
           </Card>
         </div>
+        )}
+
+        {/* Type in Spreadsheet intake — full-width grid, shares the context above */}
+        {inputMethod === 'spreadsheet' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Type in Spreadsheet</CardTitle>
+              <CardDescription>
+                Enter orders directly or paste rows from Excel / Google Sheets. Rows are validated inline
+                against the same rules as uploaded files; only valid rows are booked.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SpreadsheetBookingGrid onBook={handleSpreadsheetBook} />
+            </CardContent>
+          </Card>
+        )}
       </div>
-      </>
-      )}
 
       {/* Recent Uploads */}
       <Card>

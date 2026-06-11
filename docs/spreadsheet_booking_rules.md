@@ -9,8 +9,18 @@
 1. **Upload File** (existing CSV/XLSX flow).
 2. **Type in Spreadsheet** (new in-app editable grid).
 
-Both feed the **same** validation + error-correction pipeline (one source of
-truth for row validation). The spreadsheet path must not fork validation logic.
+Both are **input methods feeding one Bulk Booking flow** — not separate flows:
+- The shared booking context (sender/pickup, first-mile & schedule, payment,
+  delivery mode) renders for **both** methods on the Bulk Upload page.
+- Both produce the same `UploadRecord` and proceed to the same review/summary
+  route. The record carries a `source: 'file' | 'spreadsheet'` tag so the summary
+  can adapt (spreadsheet batches are pre-validated in-grid, so the summary skips
+  the file-style error-correction table and uses the real valid-row count).
+- The spreadsheet path uses the shared validator `lib/bookingValidation`
+  (`validateRows`). The uploaded-file path keeps its template-specific
+  correction validator (COD cap, duplicate Reference-ID, pouch size) until real
+  file parsing lands — at which point it should adopt `validateRows` **without
+  removing** that richer coverage. Neither path forks the spreadsheet validator.
 
 ## Spreadsheet capabilities
 

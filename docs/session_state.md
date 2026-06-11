@@ -5,6 +5,19 @@
 
 ---
 
+## Session 37 (2026-06-11) — Stabilize Bulk Booking input methods (one flow, shared context)
+
+Made Upload File + Type in Spreadsheet behave like two intakes feeding ONE Bulk Booking flow. **Build green; one commit.** No inventory attachment (deferred).
+
+- **Shared context (`pages/BulkUploader.tsx`):** the mode toggle + sender/pickup + first-mile/schedule + payment cards now render for **both** methods (previously the spreadsheet showed only the grid). Upload keeps its exact 2-column layout (`inputMethod==='upload' ? 'grid lg:grid-cols-2' : 'space-y-6'`); spreadsheet stacks the shared context then a full-width grid. No component extraction — restructured the conditional so the context is shared and only the intake swaps.
+- **Same downstream record/flow:** `handleSpreadsheetBook` now carries the real `uploadMode` + `firstMile` + account scope into `createUploadRecord` (was hardcoded 'standard') and tags `source: 'spreadsheet'`. Both methods navigate to the same `/bulk-uploader/summary/:id`.
+- **Source-aware summary (`pages/BulkUploadSummary.tsx`):** added `source?: 'file'|'spreadsheet'` to `UploadRecord` (`data/bulkUploads.ts`). When `source==='spreadsheet'` the summary uses the record's real valid count, skips the mock error-correction table (rows were validated in-grid), and shows a "ready to book" note instead of the mock sample table. **Upload File path unchanged** (source absent = file).
+- **Validator stance:** the spreadsheet uses the shared `lib/bookingValidation`. The summary's error-correction validator is **template-specific** (COD ≤ ₱50k, pouch size, Reference-ID duplicate detection, insure) — a different/richer field set than bookingValidation. Per "do not remove existing validation coverage," it was **kept intact**, not force-merged. Both intakes still converge on the same review/summary. Full unification waits on real file parsing (deferred).
+- **Consolidated Billing dependency:** added `dependencyPassive` to the module model + `resolveCta`. When Subaccounts is off, the card shows a **disabled "Requires Subaccounts"** CTA (not an actionable "Enable … first"); once Subaccounts is enabled it becomes "Request activation" (contract). Storefront→Inventory keeps the actionable "Enable Inventory first".
+- **Out of scope (untouched):** inventory attachment, Storefront, Account Add-ons IA, Integrations IA, no new routes/sidebar items, no new deps.
+
+---
+
 ## Session 36 (2026-06-11) — Account Add-ons alignment + Business+ rebrand + spreadsheet booking foundation
 
 Alignment/consistency pass on the modular model + Bulk Booking spreadsheet intake. **Two commits, build green.**
