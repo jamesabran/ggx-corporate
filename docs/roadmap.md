@@ -62,15 +62,13 @@ add-ons read as `enabled`.
    retained — unify only without losing that coverage.
 3. Make the shared summary fully data-driven for spreadsheet batches (render the
    actual booked rows, not just the count) + pass the entered rows through.
-4. Dedupe `BulkUploadSummary`'s local `LocationCascadeCells` to the shared
-   `components/LocationCascadeCells` (left untouched this pass to avoid regression).
-5. Storefront product management UI + customer-facing surface (no checkout yet).
-6. Transactions filter: recognize **On-Demand** as a distinct service type.
-7. Dashboard **Basic Analytics** (only if safe/low-risk; not Advanced Analytics).
-8. Inventory create/edit/import/export flows.
-9. Real activation/request flows (replace the mock acknowledge dialog) + BFF wiring.
-10. Full GGX Business+ rebrand pass (titles, marketing copy) — logo done; routes
-    intentionally unchanged.
+4. Storefront product management UI + customer-facing surface (no checkout yet).
+5. Transactions filter: recognize **On-Demand** as a distinct service type.
+6. Dashboard **Basic Analytics** (only if safe/low-risk; not Advanced Analytics).
+7. Inventory create/edit/import/export flows.
+8. Real activation/request flows (replace the mock acknowledge dialog) + BFF wiring.
+9. Full GGX Business+ rebrand pass (titles, marketing copy) — logo done; routes
+   intentionally unchanged.
 
 ---
 

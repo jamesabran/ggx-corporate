@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
 import {
   IconArrowLeft, IconCircleCheck, IconCircleX, IconAlertCircle,
@@ -15,7 +15,7 @@ import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
 import { isBillingAccount } from '../services/paymentService';
 import { getBulkUploadById } from '../services/bulkUploadService';
 import { RECEPTACLE_SIZES } from '../data/bulkTemplate';
-import { getAllProvinces, getAllCities, getAllDistricts, type LocationOption } from '../lib/locationApi';
+import { LocationCascadeCells } from '../components/LocationCascadeCells';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 
 // ---------------------------------------------------------------------------
@@ -67,145 +67,6 @@ function YesNoToggle({ value, onChange, error = false }: {
         );
       })}
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// LocationCascadeCells — province → city → barangay cascade rendered as THREE
-// separate table cells (returns a fragment of <td>s). Uses the non-pickup-
-// filtered API endpoints so all GGX-served delivery locations are available.
-//
-// Cascade rules: city disabled until province chosen; barangay disabled until
-// city chosen; changing a parent resets its children.
-//
-// CORS note: if the API is unreachable from the browser, the cells fall back to
-// plain text inputs automatically (documented blocker).
-// ---------------------------------------------------------------------------
-
-interface LocationCascadeCellsProps {
-  province: string;
-  city: string;
-  barangay: string;
-  onChange: (province: string, city: string, barangay: string) => void;
-}
-
-function LocationCascadeCells({ province, city, barangay, onChange }: LocationCascadeCellsProps) {
-  const [provinceId, setProvinceId] = useState<number | null>(null);
-  const [cityId,     setCityId]     = useState<number | null>(null);
-  const [provinces,  setProvinces]  = useState<LocationOption[]>([]);
-  const [cities,     setCities]     = useState<LocationOption[]>([]);
-  const [districts,  setDistricts]  = useState<LocationOption[]>([]);
-  const [loadingP,   setLoadingP]   = useState(true);
-  const [loadingC,   setLoadingC]   = useState(false);
-  const [loadingD,   setLoadingD]   = useState(false);
-  const [apiError,   setApiError]   = useState(false);
-
-  // Latest city value without making it an effect dependency (avoids refetch on edits).
-  const cityRef = useRef(city); cityRef.current = city;
-
-  // 1. Provinces on mount → pre-select matching province.
-  useEffect(() => {
-    getAllProvinces()
-      .then((data) => {
-        setProvinces(data);
-        const match = data.find((p) => p.name === province);
-        if (match) setProvinceId(match.id);
-      })
-      .catch(() => setApiError(true))
-      .finally(() => setLoadingP(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // 2. Cities when provinceId changes → pre-select city on first load only.
-  const prevProvinceIdRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (!provinceId) { setCities([]); setCityId(null); return; }
-    setLoadingC(true);
-    setCities([]);
-    const isFirstLoad = prevProvinceIdRef.current === null;
-    prevProvinceIdRef.current = provinceId;
-
-    getAllCities(provinceId)
-      .then((data) => {
-        setCities(data);
-        if (isFirstLoad) {
-          const match = data.find((c) => c.name === cityRef.current);
-          if (match) setCityId(match.id);
-        } else {
-          setCityId(null);
-        }
-      })
-      .catch(() => setApiError(true))
-      .finally(() => setLoadingC(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provinceId]);
-
-  // 3. Districts/barangays when cityId changes.
-  useEffect(() => {
-    if (!cityId) { setDistricts([]); return; }
-    setLoadingD(true);
-    setDistricts([]);
-    getAllDistricts(cityId)
-      .then(setDistricts)
-      .catch(() => setApiError(true))
-      .finally(() => setLoadingD(false));
-  }, [cityId]);
-
-  const handleProvince = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const name = e.target.value;
-    setProvinceId(provinces.find((p) => p.name === name)?.id ?? null);
-    onChange(name, '', ''); // reset city + barangay
-  };
-  const handleCity = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const name = e.target.value;
-    setCityId(cities.find((c) => c.name === name)?.id ?? null);
-    onChange(province, name, ''); // reset barangay
-  };
-  const handleBarangay = (e: React.ChangeEvent<HTMLSelectElement>) =>
-    onChange(province, city, e.target.value);
-
-  // Fallback: API unreachable (CORS / network) — plain editable text inputs.
-  if (apiError) {
-    return (
-      <>
-        <td className="px-3 py-2.5 align-top">
-          <input value={province} onChange={(e) => onChange(e.target.value, '', '')} placeholder="Province" className={`${TABLE_INPUT_BASE} border-gray-300 focus:ring-primary`} />
-          <p className="text-xs text-amber-700 mt-0.5">API offline — type manually</p>
-        </td>
-        <td className="px-3 py-2.5 align-top">
-          <input value={city} onChange={(e) => onChange(province, e.target.value, '')} placeholder="City / Municipality" className={`${TABLE_INPUT_BASE} border-gray-300 focus:ring-primary`} />
-        </td>
-        <td className="px-3 py-2.5 align-top">
-          <input value={barangay} onChange={(e) => onChange(province, city, e.target.value)} placeholder="Barangay" className={`${TABLE_INPUT_BASE} border-gray-300 focus:ring-primary`} />
-        </td>
-      </>
-    );
-  }
-
-  return (
-    <>
-      {/* Province */}
-      <td className="px-3 py-2.5 align-top">
-        <select value={province} onChange={handleProvince} disabled={loadingP} className={TABLE_SELECT_CLS}>
-          <option value="">{loadingP ? 'Loading…' : 'Select province'}</option>
-          {provinces.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
-        </select>
-      </td>
-      {/* City/Municipality */}
-      <td className="px-3 py-2.5 align-top">
-        <select value={city} onChange={handleCity} disabled={!province || loadingC} className={TABLE_SELECT_CLS}>
-          <option value="">{loadingC ? 'Loading…' : !province ? 'Select province first' : 'Select city'}</option>
-          {cities.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-        </select>
-      </td>
-      {/* Barangay */}
-      <td className="px-3 py-2.5 align-top">
-        <select value={barangay} onChange={handleBarangay} disabled={!city || loadingD} className={TABLE_SELECT_CLS}>
-          <option value="">{loadingD ? 'Loading…' : !city ? 'Select city first' : 'Select barangay'}</option>
-          {districts.map((d) => <option key={d.id} value={d.name}>{d.name}</option>)}
-        </select>
-      </td>
-    </>
   );
 }
 

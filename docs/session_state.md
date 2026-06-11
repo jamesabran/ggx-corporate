@@ -5,6 +5,15 @@
 
 ---
 
+## Session 41 (2026-06-12) — Spreadsheet scroll fix + LocationCascadeCells dedupe
+
+Two focused, non-destructive commits. **Build green.**
+
+- **Fix spreadsheet horizontal scrolling (commit `ce174fc`):** the prior `min-w-[1280px]` + Tailwind `w-*` on `<td>` still let the table compress. Switched to **pixel column widths + a `<colgroup>` + `table-fixed`**: `ColumnDef.width` is now a number (px); added `ROW_NUMBER_WIDTH` (48) + `ROW_ACTIONS_WIDTH` (80); the grid renders a colgroup and sets the table `width`/`minWidth` to the sum (~2318px) so the `overflow-x-auto` wrapper reliably scrolls. Widths: address 340, Product/SKU 300, name/mobile 180, province/city 190, barangay 200, declared 160, parcel/payment 180, qty 90. Dropdown placeholders ("Select province/city/barangay") no longer clip. `LocationCascadeCells` gained a `widthClass` prop earlier but it's now governed by the colgroup (prop left in place, unused by the grid).
+- **Dedupe `LocationCascadeCells` (next commit):** removed `BulkUploadSummary`'s ~138-line local copy of the cascade and pointed it at the shared `components/LocationCascadeCells` (non-compact mode = identical markup). Dropped the now-unused `useRef` + `lib/locationApi` imports from the summary. Closes roadmap item (dedupe). Summary behavior unchanged.
+
+---
+
 ## Session 40 (2026-06-12) — In-app Spreadsheet visual polish (CTA + grid widths)
 
 Minor visual-only polish. **Build green; one commit.** No behavior/flow changes.
