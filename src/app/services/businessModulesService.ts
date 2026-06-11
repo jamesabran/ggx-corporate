@@ -51,6 +51,8 @@ export interface ModuleAccessContext {
   permissions: PermissionKey[];
   /** Service-area coverage check result for coverage-gated modules. */
   serviceCoverageOk?: boolean;
+  /** Whether Subaccounts are enabled (drives the Subaccounts add-on + dependents). */
+  subaccountsEnabled?: boolean;
 }
 
 export type CtaKind =
@@ -102,6 +104,8 @@ const ROLE_LABELS: Record<ModuleRole, string> = { admin: 'Admin', manager: 'Mana
 
 /** Whether a module's prerequisite (dependsOn) is enabled+configured for the scope. */
 function isDependencySatisfied(depId: string, ctx: ModuleAccessContext): boolean {
+  // Subaccounts enablement is runtime state (SubAccountContext), not a feature flag.
+  if (depId === 'subaccounts') return !!ctx.subaccountsEnabled;
   const dep = getModuleById(depId);
   if (!dep) return true;
   if (dep.featureId) {
@@ -119,6 +123,9 @@ export function resolveModuleAccess(m: BusinessModuleDef, ctx: ModuleAccessConte
   if (m.comingSoon) return 'coming_soon';
   if (m.dependsOn && !isDependencySatisfied(m.dependsOn, ctx)) return 'requires_dependency';
   if (m.coverageGated && ctx.serviceCoverageOk === false) return 'not_available';
+
+  // Subaccounts is a self-enable scale feature driven by runtime SubAccount state.
+  if (m.id === 'subaccounts') return ctx.subaccountsEnabled ? 'enabled' : 'available_to_activate';
 
   const fe = m.featureId ? getFeatureStateSync(m.featureId, ctx.scopeAccountId) : undefined;
   const included = m.contractDefault === 'included';
@@ -148,7 +155,9 @@ export function resolveCta(status: ModuleAccessStatus, m: BusinessModuleDef): Mo
     case 'requires_setup':
       return { label: 'Continue setup', kind: 'continue', route: m.route, disabled: false };
     case 'available_to_activate':
-      return { label: 'Enable', kind: 'enable', disabled: false };
+      // Self-enable flows with a real workflow (e.g. Subaccounts) route directly;
+      // others (Inventory/Storefront) are handled by the page's activation flow.
+      return { label: 'Enable', kind: 'enable', route: m.activateRoute, disabled: false };
     case 'requires_approval':
       return { label: 'Submit request', kind: 'request_approval', disabled: false };
     case 'requires_contract_revision':

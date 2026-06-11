@@ -34,7 +34,7 @@ import { ClaimDetail } from './pages/ClaimDetail';
 import { SlaAlerts } from './pages/SlaAlerts';
 import { OperationsRequests } from './pages/OperationsRequests';
 import { OpsRequestDetail } from './pages/OpsRequestDetail';
-import { BusinessModules } from './pages/BusinessModules';
+import { AccountAddOns } from './pages/AccountAddOns';
 import { Inventory } from './pages/Inventory';
 import { Storefront } from './pages/Storefront';
 import { ProtectedRoute, AdminRoute } from './components/RouteGuards';
@@ -91,9 +91,9 @@ export const router = createBrowserRouter([
       { path: 'advisories', Component: ServiceAdvisories },
       { path: 'settings', Component: Settings },
 
-      // Business Modules — discovery surface (shared). Gated feature routes
+      // Account Add-ons — discovery surface (shared). Gated feature routes
       // render an EnablementGate when not usable for the current scope.
-      { path: 'business-modules', Component: BusinessModules },
+      { path: 'account-add-ons', Component: AccountAddOns },
       { path: 'inventory', Component: Inventory },
       { path: 'storefront', Component: Storefront },
 

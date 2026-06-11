@@ -9,13 +9,14 @@ import { cn } from '../lib/utils';
 import { STATUS_META, type ResolvedModule } from '../services/businessModulesService';
 
 /**
- * Status-aware Business Module card. Renders a single resolved module with its
- * access status badge, notes, availability metadata, and a status-driven CTA.
+ * Status-aware Account Add-on card. Renders a single resolved add-on with its
+ * access status badge, notes, and a status-driven CTA.
  *
  * CTA behavior:
- *  - Routed CTAs (Open / Set up / Continue setup / dependency target) navigate.
- *  - Activation CTAs (Enable / Submit request / Request activation / Contact
- *    support) call `onAction` so the page can handle the request flow.
+ *  - CTAs with a route (Open / Set up / Continue setup / dependency target /
+ *    self-enable workflow) navigate.
+ *  - Activation CTAs without a route (Enable Inventory/Storefront, Submit request,
+ *    Request activation, Contact support) call `onAction` for the request flow.
  *  - Disabled CTAs (coming soon, role-blocked activation) are non-actionable.
  *
  * Status → CTA text is owned by businessModulesService (never re-derived here).
@@ -33,10 +34,7 @@ export function ModuleCard({
 
   const handleCta = () => {
     if (cta.disabled) return;
-    if (cta.route && (cta.kind === 'open' || cta.kind === 'setup' || cta.kind === 'continue' || cta.kind === 'dependency')) {
-      navigate(cta.route);
-      return;
-    }
+    if (cta.route) { navigate(cta.route); return; }
     onAction?.(module);
   };
 
@@ -74,23 +72,13 @@ export function ModuleCard({
           )}
         </div>
 
-        <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-gray-400">Available for:</span>
-          {module.availableForLabels.map((l) => (
-            <span key={l} className="text-[11px] font-medium text-gray-600 bg-gray-100 rounded-full px-2 py-0.5">{l}</span>
-          ))}
-          <span className="text-[11px] text-gray-400 ml-1">·</span>
-          <span className="text-[11px] text-gray-400">Roles:</span>
-          <span className="text-[11px] text-gray-600">{module.allowedRoleLabels.join(' / ')}</span>
-        </div>
-
-        <div className="mt-4">
+        <div className="mt-4 pt-3 border-t border-gray-100">
           <Button
             size="sm"
             variant={ctaVariant}
             disabled={cta.disabled}
             onClick={handleCta}
-            className="w-full sm:w-auto"
+            className="w-full"
           >
             {cta.label}
           </Button>

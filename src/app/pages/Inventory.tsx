@@ -39,16 +39,11 @@ export function Inventory() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <IconPackage className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Inventory</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Products available to attach to bookings and storefront listings for this account.
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Inventory</h1>
+          <p className="text-gray-600 mt-1">
+            Products available to attach to bookings and storefront listings for this account.
+          </p>
         </div>
         <Button size="sm">
           <IconPlus className="w-4 h-4" /> Add Product

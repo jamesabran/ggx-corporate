@@ -73,9 +73,8 @@ export function Login() {
                 alt="GoGo Xpress"
                 className="h-10 w-auto"
               />
-              <div className="flex flex-col justify-center leading-tight">
-                <span className="text-base font-light text-gray-700">Corporate</span>
-                <span className="text-base font-light text-gray-700">Account</span>
+              <div className="flex items-center leading-tight">
+                <span className="italic font-light text-[24px] text-gray-700">Business+</span>
               </div>
             </div>
             {!showRegister ? (

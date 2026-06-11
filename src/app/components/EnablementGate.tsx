@@ -6,7 +6,7 @@ import { Button } from './ui/Button';
 import { useModuleAccessContext } from '../hooks/useModuleAccess';
 import { getResolvedModule, type ResolvedModule } from '../services/businessModulesService';
 
-const BUSINESS_MODULES_ROUTE = '/dashboard/business-modules';
+const ADD_ONS_ROUTE = '/dashboard/account-add-ons';
 
 /**
  * Locked state shown when a user opens a gated feature route (Inventory,
@@ -15,7 +15,7 @@ const BUSINESS_MODULES_ROUTE = '/dashboard/business-modules';
  *
  * Never exposes feature data, and never lets a role-blocked user activate a
  * global module (the CTA mirrors the module card's blocked state). Activation
- * CTAs route to Business Modules where the request flow lives.
+ * CTAs route to Account Add-ons where the request flow lives.
  *
  * See docs/feature_enablement_rules.md.
  */
@@ -40,17 +40,17 @@ export function EnablementGate({ moduleId }: { moduleId: string }) {
   const handleCta = () => {
     if (cta.disabled) return;
     if (cta.route) { navigate(cta.route); return; }
-    // Activation/request CTAs are handled on the Business Modules page.
-    navigate(BUSINESS_MODULES_ROUTE);
+    // Activation/request CTAs are handled on the Account Add-ons page.
+    navigate(ADD_ONS_ROUTE);
   };
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <button
-        onClick={() => navigate(BUSINESS_MODULES_ROUTE)}
+        onClick={() => navigate(ADD_ONS_ROUTE)}
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4 cursor-pointer transition-colors"
       >
-        <IconChevronLeft className="w-4 h-4" /> Business Modules
+        <IconChevronLeft className="w-4 h-4" /> Account Add-ons
       </button>
       <Card>
         <CardContent className="py-12 px-6 text-center">

@@ -217,9 +217,11 @@ export function RootLayout() {
     ? mainAccountNavigation
     : subaccountNavigation;
 
-  // Progressive reveal: optional Business Modules surface for everyone, plus a
-  // Commerce group that appears only when Inventory/Storefront are enabled for
-  // the current scope (docs/business_plus_modules.md → Navigation).
+  // Progressive reveal (docs/business_plus_modules.md → Navigation):
+  //  - "Account Add-ons" lives in the Account Management group (discovery surface).
+  //  - A Commerce group appears only when Inventory/Storefront are enabled for the
+  //    current scope. Enabled add-ons get their own sidebar page; others stay in
+  //    Account Add-ons only.
   const moduleCtx = useModuleAccessContext();
   const inventoryEnabled = getFeatureStateSync('inventory', moduleCtx.scopeAccountId).enabled;
   const storefrontEnabled = getFeatureStateSync('storefront', moduleCtx.scopeAccountId).enabled;
@@ -228,18 +230,29 @@ export function RootLayout() {
     ...(storefrontEnabled ? [{ name: 'Storefront', href: '/dashboard/storefront', icon: IconBuildingStore }] : []),
   ];
 
+  const addOnsChild: NavChild = { name: 'Account Add-ons', href: '/dashboard/account-add-ons', icon: IconApps };
+
   const finalNavigation: NavItem[] = [];
+  let addOnsInjected = false;
   for (const item of navigation) {
-    finalNavigation.push(item);
+    if (item.type === 'group' && item.name === 'Account Management') {
+      finalNavigation.push(grp(item.name, [...(item.children ?? []), addOnsChild]));
+      addOnsInjected = true;
+    } else {
+      finalNavigation.push(item);
+    }
     if (item.type === 'group' && item.name === 'Operations' && commerceChildren.length > 0) {
       finalNavigation.push(grp('Commerce', commerceChildren));
     }
   }
-  // Business Modules sits just above the System group (or at the end).
-  const businessModulesItem: NavItem = { name: 'Business Modules', href: '/dashboard/business-modules', icon: IconApps };
-  const systemIdx = finalNavigation.findIndex((i) => i.type === 'group' && i.name === 'System');
-  if (systemIdx >= 0) finalNavigation.splice(systemIdx, 0, businessModulesItem);
-  else finalNavigation.push(businessModulesItem);
+  // Managers have no Account Management group — add a minimal one (just Add-ons)
+  // just above the System group so the discovery surface is always reachable.
+  if (!addOnsInjected) {
+    const systemIdx = finalNavigation.findIndex((i) => i.type === 'group' && i.name === 'System');
+    const acctGroup = grp('Account Management', [addOnsChild]);
+    if (systemIdx >= 0) finalNavigation.splice(systemIdx, 0, acctGroup);
+    else finalNavigation.push(acctGroup);
+  }
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -379,9 +392,8 @@ export function RootLayout() {
             alt="GoGo Xpress"
             className="h-7 w-auto"
           />
-          <div className="flex flex-col leading-none ml-0.5">
-            <span className="text-[11px] font-normal text-gray-500 tracking-wide">Corporate</span>
-            <span className="text-[11px] font-normal text-gray-500 tracking-wide">Account</span>
+          <div className="flex items-center leading-none ml-0.5">
+            <span className="italic font-light text-[16px] text-gray-500 tracking-wide">Business+</span>
           </div>
           <button
             onClick={() => setMobileMenuOpen(false)}

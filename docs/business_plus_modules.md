@@ -69,52 +69,61 @@ access status.
 The single source of truth for status → CTA is
 `businessModulesService.resolveCta()`. UI must not re-derive CTA text.
 
-## Business Modules page
+## Account Add-ons page (user-facing label)
 
-- **Recommended name:** Business Modules.
-- **Intro copy:** "Add tools to GGX Business+ based on your contract, operations,
-  and business needs. Some modules can be enabled instantly, while others may
-  require approval or contract updates."
-- Shows **all** offerings in a controlled way — it does not hide future platform
-  direction. Locked/future modules live here, not in the main sidebar.
+- **User-facing name:** **Account Add-ons** (route `/dashboard/account-add-ons`).
+  Lives in the **Account Management** sidebar group.
+- **Intro copy:** "Add optional capabilities to your account. Some add-ons may
+  require setup, approval, service coverage, or contract updates."
+- **Curated, not a full catalog.** Account Add-ons shows ONLY capabilities that
+  are optional, gated, requestable, contract-based, require setup/approval/
+  dependencies, or aren't fully available yet. **Do not** list default / always-
+  available features. Enabled add-ons still appear here with `enabled` status +
+  an Open/Manage CTA; their work area is a dedicated sidebar page (revealed once
+  enabled) or lives inside the relevant existing workflow (e.g. On-Demand becomes
+  a booking/delivery service type, not its own page).
+- Categories shown as catalog sections with a clear divider between them; cards
+  laid out up to 4 per row.
 
 ### Module card fields
 
 module name · category · short description · status · contract/access note ·
-dependency note · primary CTA · secondary CTA (optional) · available-for
-(Standard / Main / Subaccount) · allowed roles (Admin / Manager) · service
-coverage note (when applicable).
+dependency note · primary CTA. (The "available for / roles" line was removed from
+the card — that detail lives in this doc / the add-on's own area.)
 
-## Module categories & offerings
+## Account Add-ons catalog (curated)
 
-- **A. Core Workspace** (default/included): Dashboard, Transactions, Bulk Booking,
-  Address Book, Support Tickets, Settings, **Basic Analytics** (part of Dashboard,
-  not the advanced Data Analytics module).
-- **B. Advanced Analytics** — the current Data Analytics module / its expanded
-  form. May be included by default or contract-gated as advanced.
-- **C. Delivery Services** — Standard Delivery, Same-Day Delivery, **On-Demand
-  Delivery** (separate type — see `service_type_rules.md`), Special Pickup
-  Support, High-Volume Fulfillment.
-- **D. Commerce** — Inventory, Storefront, Storefront Orders, Product-linked
-  Booking, Storefront Publishing (see `commerce_rules.md`).
-- **E. Scale** — Subaccounts, Users & Permissions, Account Switcher, Consolidated
-  Billing, Branch/Brand Management.
-- **F. Integrations** — API Integration, Developer Credentials, Webhooks, External
-  Store Integration, Order Import. Keep integration language generic (avoid
-  Shopify-specific wording unless the existing page already requires it).
-- **G. Booking Tools** — Bulk Booking with two input methods: Upload File and
-  Type in Spreadsheet (the spreadsheet is an *input method*, not a separate
-  module — see `spreadsheet_booking_rules.md`).
+- **Account & Scale** — **Subaccounts** (self-enable; routes to the enable flow);
+  **Consolidated Billing** (requires Subaccounts first → dependency CTA "Enable
+  Subaccounts first"; once Subaccounts is on → "Request activation").
+- **Delivery Services** — **On-Demand Delivery** only (separate from Same-Day;
+  immediate, non-consolidated; approval/contract/coverage-gated → "Submit
+  request"). See `service_type_rules.md`.
+- **Commerce** — **Inventory** (self-enable); **Storefront** (requires Inventory
+  first; publish/unpublish anytime). See `commerce_rules.md`.
+- **Advanced** — **Advanced Data Analytics** (dedicated analytics workspace,
+  distinct from dashboard Basic Analytics); **Custom Reports** (beyond fixed Basic
+  Reports templates).
+
+**Not in Add-ons** (always-available or covered elsewhere): Same-Day Delivery,
+High-Volume Pickup, Special Pickup Support, Shopify, API Integration, Webhooks
+(comes with API Integration), External Store Integration (overlaps Shopify/API),
+Product-linked Booking (comes with Inventory), Branch/Brand Management (overlaps
+Subaccounts for now), and all default Core Workspace / Booking Tools features.
+
+**Integrations** (Shopify, API Integration) stay in their **own sidebar group**,
+not in Add-ons.
 
 ## Navigation / progressive reveal
 
-- Keep the sidebar focused on **active/included + configured** modules.
-- **Business Modules** is the discovery surface for everything else.
-- Optional modules appear in the sidebar only after they are enabled (or included
-  and configured). Locked modules stay in Business Modules.
-- Extend the current IA safely before forcing the larger proposed IA. The current
-  groups (Operations / Analytics & Reports / Finance / Account Management /
-  Integrations / System) are extended, not rebuilt.
+- Keep the sidebar focused on **active/included + configured** features.
+- **Account Add-ons** (under Account Management) is the discovery surface.
+- Optional add-ons appear in the sidebar only after they are enabled (e.g.
+  **Commerce** group with Inventory/Storefront), while remaining listed in Account
+  Add-ons as `enabled`.
+- Extend the current IA safely before forcing a larger one. Current groups
+  (Operations / Analytics & Reports / Finance / Account Management / Integrations /
+  System) are extended, not rebuilt.
 
 ## Account / subaccount rules (summary)
 

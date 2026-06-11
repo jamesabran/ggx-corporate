@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { IconApps } from '@tabler/icons-react';
 import { Dialog } from '../components/ui/Dialog';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
@@ -12,15 +11,16 @@ import {
 } from '../services/businessModulesService';
 
 /**
- * Business Modules — the discovery surface for GGX Business+ offerings. Shows all
- * modules in a controlled way (the full platform direction stays visible), with a
- * status-aware CTA per module resolved by businessModulesService.
+ * Account Add-ons — the discovery surface for OPTIONAL account capabilities.
+ * Only shows add-ons that are gated, requestable, contract-based, require
+ * setup/approval/dependencies, or aren't fully available yet (default/always-on
+ * features are not listed). Status + CTA are resolved by businessModulesService.
  *
- * Activation/request CTAs are acknowledged via a mock dialog — there is no real
- * activation backend yet. Routed CTAs (Open / Set up / Continue setup /
- * dependency) navigate to the relevant page.
+ * Activation/request CTAs without a real workflow are acknowledged via a mock
+ * dialog (no activation backend yet). Routed CTAs (Open / Set up / dependency /
+ * self-enable workflow) navigate.
  */
-export function BusinessModules() {
+export function AccountAddOns() {
   const ctx = useModuleAccessContext();
   const [groups, setGroups] = useState<{ category: ModuleCategory; label: string; modules: ResolvedModule[] }[]>([]);
   const [filter, setFilter] = useState<'all' | 'active' | 'available' | 'locked'>('all');
@@ -37,7 +37,6 @@ export function BusinessModules() {
     const match = (m: ResolvedModule) => {
       if (filter === 'active') return m.status === 'enabled' || m.status === 'requires_setup' || m.status === 'included';
       if (filter === 'available') return m.status === 'available_to_activate';
-      // locked
       return ['requires_approval', 'requires_contract_revision', 'requires_dependency', 'not_available', 'coming_soon'].includes(m.status);
     };
     return groups
@@ -48,21 +47,16 @@ export function BusinessModules() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <IconApps className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Business Modules</h1>
-            <p className="text-sm text-gray-500 mt-1 max-w-2xl">
-              Add tools to GGX Business+ based on your contract, operations, and business needs.
-              Some modules can be enabled instantly, while others may require approval or contract updates.
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Account Add-ons</h1>
+          <p className="text-gray-600 mt-1 max-w-2xl">
+            Add optional capabilities to your account. Some add-ons may require setup, approval,
+            service coverage, or contract updates.
+          </p>
         </div>
         <div className="w-44">
           <Select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
-            <option value="all">All modules</option>
+            <option value="all">All add-ons</option>
             <option value="active">Active &amp; included</option>
             <option value="available">Available to enable</option>
             <option value="locked">Locked &amp; upcoming</option>
@@ -70,10 +64,10 @@ export function BusinessModules() {
         </div>
       </div>
 
-      {filteredGroups.map((group) => (
-        <section key={group.category}>
+      {filteredGroups.map((group, i) => (
+        <section key={group.category} className={i > 0 ? 'pt-6 border-t border-gray-200' : undefined}>
           <h2 className="text-sm font-semibold text-gray-900 mb-3">{group.label}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {group.modules.map((m) => (
               <ModuleCard key={m.def.id} module={m} onAction={setActioned} />
             ))}
@@ -82,7 +76,7 @@ export function BusinessModules() {
       ))}
 
       {filteredGroups.length === 0 && (
-        <p className="text-sm text-gray-500 text-center py-12">No modules match this filter.</p>
+        <p className="text-sm text-gray-500 text-center py-12">No add-ons match this filter.</p>
       )}
 
       <Dialog

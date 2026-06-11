@@ -44,6 +44,7 @@ export function useModuleAccessContext(): ModuleAccessContext {
       // Coverage is validated at booking time against the delivery address; the
       // catalog view does not pre-fail coverage-gated modules.
       serviceCoverageOk: undefined,
+      subaccountsEnabled: subAccountsEnabled,
     };
   }, [user?.role, subAccountsEnabled, isMainAccountView, scopeAccountId]);
 }

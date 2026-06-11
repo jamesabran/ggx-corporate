@@ -28,7 +28,7 @@ type ScopeId = string;
  *    enabled path and to unlock Storefront's dependency there.
  *  - Storefront is enabled (configured) for Acme Luzon, in draft publish status,
  *    to demonstrate the storefront page + publish/unpublish flow.
- *  - All other scopes have both features off (discoverable in Business Modules).
+ *  - All other scopes have both features off (discoverable in Account Add-ons).
  */
 const seed: Record<ScopeId, Partial<Record<FeatureId, FeatureState>>> = {
   'acme-luzon': {

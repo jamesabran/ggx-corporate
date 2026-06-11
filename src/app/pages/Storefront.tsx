@@ -65,16 +65,11 @@ export function Storefront() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-            <IconBuildingStore className="w-5 h-5 text-emerald-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Storefront</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              A simple storefront built from your inventory products.
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Storefront</h1>
+          <p className="text-gray-600 mt-1">
+            A simple storefront built from your inventory products.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={meta.variant}>{meta.label}</Badge>

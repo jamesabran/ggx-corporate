@@ -6,6 +6,22 @@
 - **Compose existing primitives before creating new components.** A new layout is usually a composition of `Card`, `Button`, `Badge`, `Table`, `Dialog`, `Input`, `Select`, and utility classes — not a new component.
 - **Avoid duplicate components.** Before creating anything new, check `src/app/components/ui/` and `src/app/components/` for existing implementations.
 
+## Tabs
+
+- The **default tab pattern** is the DS segmented tablist: `Tabs` / `TabsList` /
+  `TabsTrigger` (`src/app/components/ui/Tabs.tsx`) — the same pill-style tablist
+  used on Shopify and API Integration. Use it for any in-page tabbed navigation
+  (e.g. Notifications) instead of bespoke underline/border-bottom tab bars.
+- For many tabs, allow wrapping (`TabsList` `h-auto flex-wrap`) rather than
+  inventing a new scroll/underline treatment.
+
+## New-page header pattern
+
+- Match existing pages: an `h1` (`text-3xl font-bold text-gray-900`) + an optional
+  one-line subtitle (`text-gray-600 mt-1`), with actions on the right only when
+  applicable. **Do not** put an icon chip beside the page title — existing pages
+  don't, and new modules should feel like the current app, not a new direction.
+
 ## Creating new components
 
 - New reusable custom components **must** be added to the shared component library (`src/app/components/` or `src/app/components/ui/`), not defined only inside a page or feature folder.
