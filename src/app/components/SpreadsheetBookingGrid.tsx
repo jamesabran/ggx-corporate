@@ -4,9 +4,13 @@ import { Button } from './ui/Button';
 import { cn } from '../lib/utils';
 import { LocationCascadeCells } from './LocationCascadeCells';
 import {
-  BOOKING_COLUMNS, makeEmptyRow, validateRows,
+  BOOKING_COLUMNS, ROW_NUMBER_WIDTH, ROW_ACTIONS_WIDTH, makeEmptyRow, validateRows,
   type BookingRow, type BookingField, type RowsValidationResult,
 } from '../lib/bookingValidation';
+
+/** Total fixed table width (px) — forces horizontal scroll on narrow viewports. */
+const TABLE_WIDTH =
+  ROW_NUMBER_WIDTH + ROW_ACTIONS_WIDTH + BOOKING_COLUMNS.reduce((sum, c) => sum + c.width, 0);
 
 export interface GridValidationState extends RowsValidationResult {
   rows: BookingRow[];
@@ -90,16 +94,21 @@ export function SpreadsheetBookingGrid({
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto border border-gray-200 rounded-xl">
-        <table className="border-collapse text-xs min-w-[1280px]">
+        <table className="border-collapse text-xs table-fixed" style={{ width: TABLE_WIDTH, minWidth: TABLE_WIDTH }}>
+          <colgroup>
+            <col style={{ width: ROW_NUMBER_WIDTH }} />
+            {BOOKING_COLUMNS.map((col) => <col key={col.key} style={{ width: col.width }} />)}
+            <col style={{ width: ROW_ACTIONS_WIDTH }} />
+          </colgroup>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="sticky left-0 z-10 bg-gray-50 px-2 py-2 w-10 text-gray-400 font-medium text-center">#</th>
+              <th className="sticky left-0 z-10 bg-gray-50 px-2 py-2 text-gray-400 font-medium text-center">#</th>
               {BOOKING_COLUMNS.map((col) => (
-                <th key={col.key} className={cn('px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap', col.width)}>
+                <th key={col.key} className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">
                   {col.label}{col.required && <span className="text-red-500"> *</span>}
                 </th>
               ))}
-              <th className="px-2 py-2 w-16 text-center text-gray-400 font-medium">Row</th>
+              <th className="px-2 py-2 text-center text-gray-400 font-medium">Row</th>
             </tr>
           </thead>
           <tbody>
@@ -118,7 +127,6 @@ export function SpreadsheetBookingGrid({
                         <LocationCascadeCells
                           key="location"
                           compact
-                          widthClass="w-40"
                           province={row.province}
                           city={row.city}
                           barangay={row.barangay}
@@ -138,7 +146,7 @@ export function SpreadsheetBookingGrid({
                       err ? 'border-red-400 ring-1 ring-red-300' : 'border-gray-200',
                     );
                     return (
-                      <td key={col.key} className={cn('px-1 py-1 align-top', col.width)} title={err}>
+                      <td key={col.key} className="px-1 py-1 align-top" title={err}>
                         {col.options ? (
                           <select
                             value={row[col.key]}

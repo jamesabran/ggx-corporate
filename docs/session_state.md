@@ -10,7 +10,7 @@
 Minor visual-only polish. **Build green; one commit.** No behavior/flow changes.
 
 - **Bulk Upload CTA row (`BulkUploader.tsx`):** the manual-entry helper text + "Use our in-app spreadsheet" button now read as one **centered** group (`items-center justify-center gap-3`, removed `justify-between`); button bumped from `sm` to default size for prominence. Still inside the Upload Orders card, not banner-like.
-- **Grid readability (`bookingValidation` widths + `SpreadsheetBookingGrid` + `LocationCascadeCells`):** widened columns (address `w-72`, mobile/province/city/barangay `w-40`, parcel/payment `w-40`, declared `w-36`, qty `w-24`; Product/SKU stays `w-64`); table now has `min-w-[1280px]` so the wrapper scrolls horizontally instead of compressing. Added a `widthClass` prop to `LocationCascadeCells` (passed `w-40`) so province/city dropdown labels ("Select province", "Select city") no longer clip. Add row + tip stay bottom-left below the grid.
+- **Grid readability (`bookingValidation` widths + `SpreadsheetBookingGrid` + `LocationCascadeCells`):** moved to **pixel column widths + a `<colgroup>` + `table-fixed`** (revised in Session 41 — Tailwind `w-*` on `<td>` only hinted and the table still compressed). `ColumnDef.width` is now a number (px); total table width ~2318px with `minWidth` set + `overflow-x-auto` wrapper → the table reliably overflows horizontally. Add row + tip stay bottom-left below the grid.
 - **Unchanged:** page title "In-app Spreadsheet", page-level service mode, removed Service type/Notes columns, inventory teaser, shared validation, Upload File behavior.
 
 ---

@@ -40,8 +40,9 @@ export interface ColumnDef {
   required: boolean;
   /** Fixed option set (renders a select); omitted = free text. */
   options?: readonly string[];
-  /** Suggested column width class. */
-  width?: string;
+  /** Fixed column width in px. The grid uses a <colgroup> + table-fixed so these
+   *  are authoritative and the table overflows horizontally instead of shrinking. */
+  width: number;
 }
 
 export const PAYMENT_METHODS = ['COD', 'Prepaid', 'Billing'] as const;
@@ -53,20 +54,24 @@ export const SERVICE_TYPE_OPTIONS: { value: ServiceTypeKey; label: string }[] =
 // like "Select province") have breathing room. The grid forces horizontal scroll
 // rather than compressing columns (see SpreadsheetBookingGrid).
 export const BOOKING_COLUMNS: ColumnDef[] = [
-  { key: 'recipientName',  label: 'Recipient name',   required: true,  width: 'w-44' },
-  { key: 'recipientMobile',label: 'Recipient mobile', required: true,  width: 'w-40' },
-  { key: 'address',        label: 'Delivery address', required: true,  width: 'w-72' },
-  { key: 'province',       label: 'Province',         required: true,  width: 'w-40' },
-  { key: 'city',           label: 'City',             required: true,  width: 'w-40' },
-  { key: 'barangay',       label: 'Barangay',         required: true,  width: 'w-40' },
+  { key: 'recipientName',  label: 'Recipient name',   required: true,  width: 180 },
+  { key: 'recipientMobile',label: 'Recipient mobile', required: true,  width: 180 },
+  { key: 'address',        label: 'Delivery address', required: true,  width: 340 },
+  { key: 'province',       label: 'Province',         required: true,  width: 190 },
+  { key: 'city',           label: 'City',             required: true,  width: 190 },
+  { key: 'barangay',       label: 'Barangay',         required: true,  width: 200 },
   // Product / SKU is intentionally wide to support a future multi-product
   // summary (chip + "+N more") once Inventory attachment lands. Manual entry now.
-  { key: 'productSku',     label: 'Product / SKU',    required: false, width: 'w-64' },
-  { key: 'quantity',       label: 'Qty',              required: true,  width: 'w-24' },
-  { key: 'declaredValue',  label: 'Declared value',   required: false, width: 'w-36' },
-  { key: 'parcelSize',     label: 'Parcel size',      required: false, width: 'w-40', options: RECEPTACLE_SIZES },
-  { key: 'paymentMethod',  label: 'Payment',          required: true,  width: 'w-40', options: PAYMENT_METHODS },
+  { key: 'productSku',     label: 'Product / SKU',    required: false, width: 300 },
+  { key: 'quantity',       label: 'Qty',              required: true,  width: 90 },
+  { key: 'declaredValue',  label: 'Declared value',   required: false, width: 160 },
+  { key: 'parcelSize',     label: 'Parcel size',      required: false, width: 180, options: RECEPTACLE_SIZES },
+  { key: 'paymentMethod',  label: 'Payment',          required: true,  width: 180, options: PAYMENT_METHODS },
 ];
+
+/** Fixed widths (px) for the grid's row-number and row-actions columns. */
+export const ROW_NUMBER_WIDTH = 48;
+export const ROW_ACTIONS_WIDTH = 80;
 // Service type is chosen at the page/flow level (Standard / Same-Day / On-Demand),
 // not per row, so it is NOT a grid column. Notes were removed to keep the row
 // focused on booking/recipient/parcel/location/payment/product fields.
