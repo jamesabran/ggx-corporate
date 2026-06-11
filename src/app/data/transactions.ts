@@ -4,6 +4,8 @@
 // that clicking a row resolves to the matching record (looked up by tracking
 // number via the `:id` route param).
 
+import { getServiceTypeLabel, type ServiceTypeKey } from './serviceTypes';
+
 export type TransactionStatus =
   | 'delivered'
   | 'in-transit'
@@ -14,6 +16,26 @@ export type TransactionStatus =
 
 /** Where a transaction originated. Drives the Shopify "- Shopify" tag. */
 export type TransactionSource = 'manual' | 'bulk_upload' | 'api' | 'shopify';
+
+/**
+ * Delivery service type for a transaction. A subset of the Business+ service
+ * types (the bookable delivery tiers) — fulfillment-only types are excluded.
+ * On-Demand is a DISTINCT type (never merged with Same-Day). See
+ * docs/service_type_rules.md.
+ */
+export type DeliveryServiceType = Extract<ServiceTypeKey, 'standard' | 'same_day' | 'on_demand'>;
+
+/** Short labels for the Type column badge + Service Type filter options. */
+export const SERVICE_TYPE_SHORT_LABEL: Record<DeliveryServiceType, string> = {
+  standard: 'Standard',
+  same_day: 'Same-Day',
+  on_demand: 'On-Demand',
+};
+
+/** Full service-type label (re-exported via serviceTypes) for detail views. */
+export function serviceTypeLabel(key: DeliveryServiceType): string {
+  return getServiceTypeLabel(key);
+}
 
 export const statusConfig: Record<TransactionStatus, { variant: 'success' | 'info' | 'warning' | 'danger' | 'pending' | 'default'; label: string }> = {
   delivered: { variant: 'success', label: 'Delivered' },
@@ -66,6 +88,8 @@ export interface Transaction {
   trackingNumber: string;
   destination: string;
   type: 'Express' | 'Standard';
+  /** Bookable delivery service type (Standard / Same-Day / On-Demand). */
+  serviceType: DeliveryServiceType;
   status: TransactionStatus;
   date: string;
   subaccount: string;
@@ -154,6 +178,8 @@ interface RowSeed {
   date: string;
   subaccount: string;
   codAmount: number;
+  /** Bookable delivery service type. Omit to default to 'standard'. */
+  serviceType?: DeliveryServiceType;
   /** Origin channel. Omit to derive: 'bulk_upload' when a batch is present, else 'manual'. */
   source?: TransactionSource;
   /** Shopify store display name (source === 'shopify' rows). */
@@ -165,36 +191,36 @@ interface RowSeed {
 
 const rows: RowSeed[] = [
   // ── Shopify-sourced orders (booked via the GGX Shopify plugin) ───────────────
-  { tracking: 'GGX-2026-90021', recipient: 'Liza Mendoza', destination: 'Quezon City, Metro Manila', contactNumber: '+63 917 220 3344', recipientAddress: 'Blk 7 Lot 12, Visayas Ave, Quezon City, Metro Manila', status: 'in-transit', type: 'Standard', date: '2026-05-31', subaccount: 'Acme Luzon', codAmount: 1850, source: 'shopify', shopifyStoreName: 'Acme Luzon Online' },
+  { tracking: 'GGX-2026-90021', recipient: 'Liza Mendoza', destination: 'Quezon City, Metro Manila', contactNumber: '+63 917 220 3344', recipientAddress: 'Blk 7 Lot 12, Visayas Ave, Quezon City, Metro Manila', status: 'in-transit', type: 'Standard', date: '2026-05-31', subaccount: 'Acme Luzon', codAmount: 1850, serviceType: 'on_demand', source: 'shopify', shopifyStoreName: 'Acme Luzon Online' },
   { tracking: 'GGX-2026-90020', recipient: 'Marco Villanueva', destination: 'Makati City, Metro Manila', contactNumber: '+63 918 330 4455', recipientAddress: 'Unit 802, Salcedo Park Twr, Makati City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-31', subaccount: 'Acme Corporation', codAmount: 3200, source: 'shopify', shopifyStoreName: 'Acme Corporation Store' },
   { tracking: 'GGX-2026-90019', recipient: 'Carla Santos', destination: 'Pasig City, Metro Manila', contactNumber: '+63 919 441 5566', recipientAddress: 'The Grove, Capitol Commons, Pasig City, Metro Manila', status: 'pending', type: 'Standard', date: '2026-05-30', subaccount: 'Acme Luzon', codAmount: 990, source: 'shopify', shopifyStoreName: 'Acme Luzon Online' },
   { tracking: 'GGX-2026-90018', recipient: 'Tonette Reyes', destination: 'Taguig City, Metro Manila', contactNumber: '+63 917 552 6677', recipientAddress: 'Two Serendra, BGC, Taguig City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-30', subaccount: 'Acme Corporation', codAmount: 2450, source: 'shopify', shopifyStoreName: 'Acme Corporation Store' },
   // ── May 31 (today) ───────────────────────────────────────────────────────────
   { tracking: 'GGX-2026-90010', recipient: 'Nexus Retail Group', destination: 'Makati City, Metro Manila', contactNumber: '+63 917 211 0011', recipientAddress: 'Ayala Mall, Glorietta 5, Makati City, Metro Manila', status: 'pending', type: 'Express', date: '2026-05-31', subaccount: 'Acme Corporation', codAmount: 32000, batch: { batchId: 'UPLOAD-2026-05-31-001', fileName: 'may31_express_orders.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 247, delivered: 5, inProgress: 240, failed: 2 } }},
   { tracking: 'GGX-2026-90009', recipient: 'Meridian Health Corp.', destination: 'Quezon City, Metro Manila', contactNumber: '+63 918 322 0022', recipientAddress: 'Trinoma Mall, North EDSA, Quezon City, Metro Manila', status: 'in-transit', type: 'Express', date: '2026-05-31', subaccount: 'Acme Luzon', codAmount: 18750, batch: { batchId: 'UPLOAD-2026-05-31-002', fileName: 'may31_luzon_am.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 184, delivered: 12, inProgress: 170, failed: 2 } } },
-  { tracking: 'GGX-2026-90008', recipient: 'Horizon Publishing Co.', destination: 'Pasig City, Metro Manila', contactNumber: '+63 919 433 0033', recipientAddress: 'Robinsons Galleria, Ortigas, Pasig City, Metro Manila', status: 'failed', type: 'Standard', date: '2026-05-31', subaccount: 'Acme Corporation', codAmount: 9400 },
+  { tracking: 'GGX-2026-90008', recipient: 'Horizon Publishing Co.', destination: 'Pasig City, Metro Manila', contactNumber: '+63 919 433 0033', recipientAddress: 'Robinsons Galleria, Ortigas, Pasig City, Metro Manila', status: 'failed', type: 'Standard', date: '2026-05-31', subaccount: 'Acme Corporation', codAmount: 9400, serviceType: 'on_demand' },
   // ── May 30 ───────────────────────────────────────────────────────────────────
   { tracking: 'GGX-2026-90007', recipient: 'PeakSoft Technologies', destination: 'Taguig City, Metro Manila', contactNumber: '+63 917 544 0044', recipientAddress: 'One Bonifacio High Street, BGC, Taguig City', status: 'delivered', type: 'Express', date: '2026-05-30', subaccount: 'Acme Corporation', codAmount: 27500, batch: { batchId: 'UPLOAD-2026-05-30-001', fileName: 'may30_corporate.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 312, delivered: 298, inProgress: 11, failed: 3 } } },
   { tracking: 'GGX-2026-90006', recipient: 'Citadel Finance Group', destination: 'Mandaluyong City, Metro Manila', contactNumber: '+63 918 655 0055', recipientAddress: 'Shaw Boulevard, Mandaluyong City, Metro Manila', status: 'failed', type: 'Express', date: '2026-05-30', subaccount: 'Acme Luzon', codAmount: 43200, batch: { batchId: 'UPLOAD-2026-05-30-002', fileName: 'may30_priority.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 67, delivered: 58, inProgress: 3, failed: 6 } } },
-  { tracking: 'GGX-2026-90005', recipient: 'Aurora Wellness Studio', destination: 'Paranaque City, Metro Manila', contactNumber: '+63 919 766 0066', recipientAddress: 'SM Seaside, Paranaque City, Metro Manila', status: 'returned', type: 'Standard', date: '2026-05-30', subaccount: 'Acme Corporation', codAmount: 6800 },
+  { tracking: 'GGX-2026-90005', recipient: 'Aurora Wellness Studio', destination: 'Paranaque City, Metro Manila', contactNumber: '+63 919 766 0066', recipientAddress: 'SM Seaside, Paranaque City, Metro Manila', status: 'returned', type: 'Standard', date: '2026-05-30', subaccount: 'Acme Corporation', codAmount: 6800, serviceType: 'same_day' },
   { tracking: 'GGX-2026-90004', recipient: 'Vertex Logistics Corp.', destination: 'Iloilo City, Iloilo', contactNumber: '+63 917 877 0077', recipientAddress: 'Megaworld Iloilo Business Park, Mandurriao, Iloilo City', status: 'in-transit', type: 'Standard', date: '2026-05-30', subaccount: 'Acme Corporation', codAmount: 11600, batch: { batchId: 'UPLOAD-2026-05-30-001', fileName: 'may30_corporate.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation' } },
   // ── May 29 ───────────────────────────────────────────────────────────────────
-  { tracking: 'GGX-2026-90003', recipient: 'Solano Medical Supply', destination: 'Cebu City, Cebu', contactNumber: '+63 918 988 0088', recipientAddress: 'Ayala Center Cebu, Archbishop Reyes Ave, Cebu City', status: 'failed', type: 'Express', date: '2026-05-29', subaccount: 'Acme Luzon', codAmount: 55000 },
-  { tracking: 'GGX-2026-90002', recipient: 'Pinnacle Realty Inc.', destination: 'Cagayan de Oro City, Misamis Oriental', contactNumber: '+63 919 099 0099', recipientAddress: 'Limketkai Mall, Cagayan de Oro City', status: 'in-transit', type: 'Standard', date: '2026-05-29', subaccount: 'Acme Corporation', codAmount: 14200 },
+  { tracking: 'GGX-2026-90003', recipient: 'Solano Medical Supply', destination: 'Cebu City, Cebu', contactNumber: '+63 918 988 0088', recipientAddress: 'Ayala Center Cebu, Archbishop Reyes Ave, Cebu City', status: 'failed', type: 'Express', date: '2026-05-29', subaccount: 'Acme Luzon', codAmount: 55000, serviceType: 'on_demand' },
+  { tracking: 'GGX-2026-90002', recipient: 'Pinnacle Realty Inc.', destination: 'Cagayan de Oro City, Misamis Oriental', contactNumber: '+63 919 099 0099', recipientAddress: 'Limketkai Mall, Cagayan de Oro City', status: 'in-transit', type: 'Standard', date: '2026-05-29', subaccount: 'Acme Corporation', codAmount: 14200, serviceType: 'same_day' },
   { tracking: 'GGX-2026-90001', recipient: 'Bluewave E-Commerce', destination: 'Davao City, Davao del Sur', contactNumber: '+63 917 110 1100', recipientAddress: 'SM City Davao, JP Laurel Ave, Davao City', status: 'picked-up', type: 'Express', date: '2026-05-29', subaccount: 'Acme Corporation', codAmount: 38900, batch: { batchId: 'UPLOAD-2026-05-29-001', fileName: 'may29_vismin.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 205, delivered: 150, inProgress: 52, failed: 3 } } },
   // ── May 18–15 (existing) ──────────────────────────────────────────────────────
   { tracking: 'GGX-2024-89240', recipient: 'TechStart Solutions', destination: 'Makati City, Metro Manila', contactNumber: '+63 917 987 6543', recipientAddress: 'Unit 1203, Salcedo Tower, Makati City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-18', subaccount: 'Acme Corporation', codAmount: 14500, batch: { batchId: 'UPLOAD-2026-05-18-003', fileName: 'daily_orders_batch3.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 198, delivered: 189, inProgress: 5, failed: 4 } } },
-  { tracking: 'GGX-2024-89239', recipient: 'Innovation Labs Inc.', destination: 'Cebu City, Cebu', contactNumber: '+63 918 222 1010', recipientAddress: 'IT Park, Lahug, Cebu City, Cebu', status: 'in-transit', type: 'Standard', date: '2026-05-18', subaccount: 'Acme Luzon', codAmount: 8900, batch: { batchId: 'UPLOAD-2026-05-18-002', fileName: 'weekend_deliveries.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 156, delivered: 148, inProgress: 6, failed: 2 } }},
+  { tracking: 'GGX-2024-89239', recipient: 'Innovation Labs Inc.', destination: 'Cebu City, Cebu', contactNumber: '+63 918 222 1010', recipientAddress: 'IT Park, Lahug, Cebu City, Cebu', status: 'in-transit', type: 'Standard', date: '2026-05-18', subaccount: 'Acme Luzon', codAmount: 8900, serviceType: 'same_day', batch: { batchId: 'UPLOAD-2026-05-18-002', fileName: 'weekend_deliveries.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 156, delivered: 148, inProgress: 6, failed: 2 } }},
   { tracking: 'GGX-2024-89238', recipient: 'Global Enterprises', destination: 'Davao City, Davao', contactNumber: '+63 919 333 2020', recipientAddress: 'Km 5, JP Laurel Ave, Davao City, Davao', status: 'picked-up', type: 'Express', date: '2026-05-17', subaccount: 'Acme Corporation', codAmount: 21000, batch: { batchId: 'UPLOAD-2026-05-17-001', fileName: 'may17_morning.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 423, delivered: 410, inProgress: 9, failed: 4 } } },
   { tracking: 'GGX-2024-89237', recipient: 'Summit Technologies', destination: 'Quezon City, Metro Manila', contactNumber: '+63 917 444 3030', recipientAddress: 'Eastwood City, Bagumbayan, Quezon City, Metro Manila', status: 'pending', type: 'Standard', date: '2026-05-17', subaccount: 'Acme Corporation', codAmount: 5600, batch: { batchId: 'UPLOAD-2026-05-17-001', fileName: 'may17_morning.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation' } },
   { tracking: 'GGX-2024-89236', recipient: 'Metro Solutions Inc.', destination: 'Pasig City, Metro Manila', contactNumber: '+63 918 555 4040', recipientAddress: 'Ortigas Center, San Antonio, Pasig City, Metro Manila', status: 'failed', type: 'Express', date: '2026-05-17', subaccount: 'Acme Luzon', codAmount: 12300, batch: { batchId: 'UPLOAD-2026-05-17-002', fileName: 'luzon_daily.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 76, delivered: 64, inProgress: 4, failed: 8 } } },
-  { tracking: 'GGX-2024-89235', recipient: 'Digital Ventures Co.', destination: 'Taguig City, Metro Manila', contactNumber: '+63 919 666 5050', recipientAddress: 'BGC, Fort Bonifacio, Taguig City, Metro Manila', status: 'delivered', type: 'Standard', date: '2026-05-16', subaccount: 'Acme Corporation', codAmount: 7400 },
+  { tracking: 'GGX-2024-89235', recipient: 'Digital Ventures Co.', destination: 'Taguig City, Metro Manila', contactNumber: '+63 919 666 5050', recipientAddress: 'BGC, Fort Bonifacio, Taguig City, Metro Manila', status: 'delivered', type: 'Standard', date: '2026-05-16', subaccount: 'Acme Corporation', codAmount: 7400, serviceType: 'same_day' },
   { tracking: 'GGX-2024-89234', recipient: 'Tech Solutions Inc.', destination: 'Mandaluyong City, Metro Manila', contactNumber: '+63 917 777 6060', recipientAddress: 'Greenfield District, Mandaluyong City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-16', subaccount: 'Acme Luzon', codAmount: 9800, batch: { batchId: 'UPLOAD-2026-05-18-001', fileName: 'morning_batch.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 134, delivered: 128, inProgress: 3, failed: 3 } } },
   { tracking: 'GGX-2024-89233', recipient: 'Global Innovations Ltd.', destination: 'Caloocan City, Metro Manila', contactNumber: '+63 918 888 7070', recipientAddress: 'Grace Park, Caloocan City, Metro Manila', status: 'in-transit', type: 'Standard', date: '2026-05-16', subaccount: 'Acme Corporation', codAmount: 6200 },
-  { tracking: 'GGX-2024-89232', recipient: 'Acme Corporation', destination: 'Santa Rosa, Laguna', contactNumber: '+63 919 999 8080', recipientAddress: 'Nuvali, Santa Rosa, Laguna', status: 'picked-up', type: 'Express', date: '2026-05-15', subaccount: 'Acme Luzon', codAmount: 17600 },
+  { tracking: 'GGX-2024-89232', recipient: 'Acme Corporation', destination: 'Santa Rosa, Laguna', contactNumber: '+63 919 999 8080', recipientAddress: 'Nuvali, Santa Rosa, Laguna', status: 'picked-up', type: 'Express', date: '2026-05-15', subaccount: 'Acme Luzon', codAmount: 17600, serviceType: 'on_demand' },
   { tracking: 'GGX-2024-89231', recipient: 'Summit Partners', destination: 'Bacoor, Cavite', contactNumber: '+63 917 101 9090', recipientAddress: 'Molino Boulevard, Bacoor, Cavite', status: 'returned', type: 'Standard', date: '2026-05-15', subaccount: 'Acme Corporation', codAmount: 4300 },
   // ── May 14–12 (older, SLA-notable) ───────────────────────────────────────────
-  { tracking: 'GGX-2024-89230', recipient: 'Castillo & Partners Law', destination: 'Makati City, Metro Manila', contactNumber: '+63 918 202 1212', recipientAddress: 'RCBC Plaza, Ayala Avenue, Makati City', status: 'failed', type: 'Express', date: '2026-05-14', subaccount: 'Acme Corporation', codAmount: 19500 },
+  { tracking: 'GGX-2024-89230', recipient: 'Castillo & Partners Law', destination: 'Makati City, Metro Manila', contactNumber: '+63 918 202 1212', recipientAddress: 'RCBC Plaza, Ayala Avenue, Makati City', status: 'failed', type: 'Express', date: '2026-05-14', subaccount: 'Acme Corporation', codAmount: 19500, serviceType: 'on_demand' },
   { tracking: 'GGX-2024-89229', recipient: 'IronForge Manufacturing', destination: 'Batangas City, Batangas', contactNumber: '+63 919 313 2323', recipientAddress: 'Batangas City Industrial Estate, Batangas City', status: 'returned', type: 'Express', date: '2026-05-14', subaccount: 'Acme Luzon', codAmount: 72000, batch: { batchId: 'UPLOAD-2026-05-14-001', fileName: 'may14_southern.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 112, delivered: 95, inProgress: 6, failed: 11 } } },
   { tracking: 'GGX-2024-89228', recipient: 'Lumen Digital Agency', destination: 'Pasay City, Metro Manila', contactNumber: '+63 917 424 3434', recipientAddress: 'Mall of Asia Complex, Pasay City, Metro Manila', status: 'delivered', type: 'Standard', date: '2026-05-13', subaccount: 'Acme Corporation', codAmount: 8100 },
   { tracking: 'GGX-2024-89227', recipient: 'Cascade Food Corp.', destination: 'San Fernando, Pampanga', contactNumber: '+63 918 535 4545', recipientAddress: 'SM City Pampanga, San Fernando, Pampanga', status: 'failed', type: 'Standard', date: '2026-05-13', subaccount: 'Acme Corporation', codAmount: 15600, batch: { batchId: 'UPLOAD-2026-05-13-001', fileName: 'may13_central_luzon.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 89, delivered: 80, inProgress: 2, failed: 7 } }},
@@ -205,6 +231,7 @@ export const transactions: Transaction[] = rows.map((r) => ({
   trackingNumber: r.tracking,
   destination: r.destination,
   type: r.type,
+  serviceType: r.serviceType ?? 'standard',
   status: r.status,
   date: r.date,
   subaccount: r.subaccount,
@@ -233,6 +260,7 @@ export interface TransactionSummary {
   destination: string;
   status: TransactionStatus;
   type: string;
+  serviceType: DeliveryServiceType;
   date: string;
   subaccount: string;
   source: TransactionSource;
@@ -245,6 +273,7 @@ export const deliveries: TransactionSummary[] = transactions.map((t) => ({
   destination: t.destination,
   status: t.status,
   type: t.type,
+  serviceType: t.serviceType,
   date: t.date,
   subaccount: t.subaccount,
   source: t.source,

@@ -63,7 +63,11 @@ add-ons read as `enabled`.
 3. Make the shared summary fully data-driven for spreadsheet batches (render the
    actual booked rows, not just the count) + pass the entered rows through.
 4. Storefront product management UI + customer-facing surface (no checkout yet).
-5. Transactions filter: recognize **On-Demand** as a distinct service type.
+5. ✅ **DONE (Session 42).** Transactions filter recognizes **On-Demand** as a
+   distinct service type — added a `serviceType` field (Standard / Same-Day /
+   On-Demand) to the transactions model, a Service Type filter on the Transactions
+   page, a distinguishing badge in the Type column, and the service type in the
+   detail header. The legacy Express/Standard `type` column is unchanged.
 6. Dashboard **Basic Analytics** (only if safe/low-risk; not Advanced Analytics).
 7. Inventory create/edit/import/export flows.
 8. Real activation/request flows (replace the mock acknowledge dialog) + BFF wiring.

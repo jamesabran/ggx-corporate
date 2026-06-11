@@ -8,10 +8,11 @@
 ## ▶ Current state (resume here) — updated 2026-06-12
 
 **Stage:** GGX Business+ modular platform. Foundation (Account Add-ons, feature
-enablement, On-Demand service mode, Commerce stubs) is in; recent work has been the
-**Bulk Upload → In-app Spreadsheet** flow (now stable + polished).
+enablement, On-Demand service mode, Commerce stubs) is in; the **Bulk Upload →
+In-app Spreadsheet** flow is stable + polished, and **Transactions now recognize
+On-Demand as a distinct service type** (roadmap #5 done).
 
-- **Branch:** `master`. **Build:** green (`npm run build`). **Last commit:** `7d9c131`.
+- **Branch:** `master`. **Build:** green (`npm run build`). Latest work committed.
   Not pushed (per project rule — push only when explicitly asked).
 - **Working tree:** clean except `.claude/settings.local.json` (local config, leave it).
 - **Where things stand:** Upload File + In-app Spreadsheet feed one Bulk Booking flow;
@@ -20,8 +21,9 @@ enablement, On-Demand service mode, Commerce stubs) is in; recent work has been 
   `lib/bookingValidation`, GGX location cascade (shared `LocationCascadeCells`),
   pixel-width grid with forced horizontal scroll, fee estimate, Inventory upsell teaser.
 
-**Next task (roadmap #5):** Transactions filter to recognize **On-Demand** as a distinct
-service type — will need a `serviceType` field on the transactions model + a filter option.
+**Next task (roadmap, next deferred items):** #6 Dashboard **Basic Analytics**
+(only if safe/low-risk; not Advanced Analytics), or #1 Inventory product attachment
+into spreadsheet rows. Roadmap #5 (Transactions On-Demand service type) is complete.
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
 decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); no Inventory
@@ -32,6 +34,34 @@ deps; non-destructive; preserve Upload File behavior; commit after stable milest
 strip it after any Write. PowerShell `Get-Content`/`Set-Content` round-trips corrupt UTF-8
 (₱, em-dash) → mojibake; prefer Edit, or `sed -i` (byte-safe) for bulk line ops. See
 [[reference-powershell-utf8-roundtrip]].
+
+---
+
+## Session 42 (2026-06-12) — Transactions: On-Demand as a distinct service type (roadmap #5)
+
+One focused, non-destructive commit. **Build green.** Closes roadmap deferred item #5.
+
+- **Model (`data/transactions.ts`):** added a `serviceType` field — new
+  `DeliveryServiceType = 'standard' | 'same_day' | 'on_demand'` (a subset of the
+  Business+ `ServiceTypeKey`; fulfillment-only types excluded). Added
+  `SERVICE_TYPE_SHORT_LABEL` (Standard / Same-Day / On-Demand) + `serviceTypeLabel()`
+  (full label via `serviceTypes`). `RowSeed.serviceType` is optional → mapper defaults
+  to `'standard'`. Seeded a realistic mix: **5 On-Demand** (manual/shopify single rows,
+  not consolidated — incl. 1 Shopify Luzon row at the top of the list) + **4 Same-Day**;
+  the rest Standard. The legacy `type` (Express/Standard) column is untouched.
+- **Service (`transactionService.ts`):** re-exported `DeliveryServiceType`,
+  `serviceTypeLabel`, `SERVICE_TYPE_SHORT_LABEL`; added `serviceType` to
+  `TransactionFilters` + the filter pass in `getTransactions`.
+- **Transactions page:** new **Service Type** Select (All / Standard / Same-Day /
+  On-Demand) added to the filter toolbar; `serviceTypeFilter` state + filter predicate.
+  New `TypeCell` renders the Express/Standard text plus a **distinguishing badge** for
+  non-standard tiers (Same-Day = `info`/blue, On-Demand = `pending`/orange) — used in
+  both the flat list and the By-Batch expanded list. Standard shows no badge (keeps the
+  table clean).
+- **Detail page (`TransactionDetails.tsx`):** added `Service Type: <full label>` to the
+  header sub-line (next to Created).
+- **Unchanged:** Express/Standard Type column + its filter, batch view, scoping, all
+  other behavior. No new deps, no new routes/sidebar items.
 
 ---
 

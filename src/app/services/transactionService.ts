@@ -58,17 +58,27 @@ import {
   statusConfig,
   getTransactionByTracking,
   subaccountDisplayLabel,
+  serviceTypeLabel,
+  SERVICE_TYPE_SHORT_LABEL,
   type Transaction,
   type TransactionSummary,
   type TransactionStatus,
   type TransactionSource,
   type TransactionBatch,
+  type DeliveryServiceType,
 } from '../data/transactions';
 import { getAccountIdByName } from '../data/accounts';
 import { getSettlement } from '../data/earnings';
 import type { SettlementTransaction } from '../data/earnings';
 
-export type { Transaction, TransactionSummary, TransactionStatus, TransactionSource, TransactionBatch };
+export type { Transaction, TransactionSummary, TransactionStatus, TransactionSource, TransactionBatch, DeliveryServiceType };
+
+/**
+ * Service-type display helpers (re-exported for UI consumers). `serviceTypeLabel`
+ * gives the full label; `SERVICE_TYPE_SHORT_LABEL` the compact form used in the
+ * Type badge + Service Type filter options.
+ */
+export { serviceTypeLabel, SERVICE_TYPE_SHORT_LABEL };
 
 /**
  * Subaccount column display label (re-exported for UI consumers). Shopify-sourced
@@ -94,6 +104,8 @@ type StatusVariant = 'success' | 'info' | 'warning' | 'danger' | 'pending' | 'de
 export interface TransactionFilters {
   status?: TransactionStatus | 'all';
   type?: string;
+  /** Delivery service type (Standard / Same-Day / On-Demand). */
+  serviceType?: DeliveryServiceType | 'all';
   /** Subaccount display name (legacy; prefer `subaccountId` once migration is complete). */
   subaccountName?: string;
   /** Canonical subaccount id. If provided, takes precedence over `subaccountName`. */
@@ -108,13 +120,16 @@ export async function getTransactions(
   let result = [...deliveries];
   if (!filters) return result;
 
-  const { status, type, subaccountName, subaccountId, search } = filters;
+  const { status, type, serviceType, subaccountName, subaccountId, search } = filters;
 
   if (status && status !== 'all') {
     result = result.filter((t) => t.status === status);
   }
   if (type && type !== 'all') {
     result = result.filter((t) => t.type.toLowerCase() === type.toLowerCase());
+  }
+  if (serviceType && serviceType !== 'all') {
+    result = result.filter((t) => t.serviceType === serviceType);
   }
   if (subaccountId && subaccountId !== 'all' && subaccountId !== 'main') {
     // Match via batch.accountId or the subaccount-name→id bridge, so manual and

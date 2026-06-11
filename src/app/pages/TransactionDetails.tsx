@@ -15,6 +15,7 @@ import {
   getTransactionById,
   getTransactionTotals,
   statusConfig,
+  serviceTypeLabel,
   type Transaction,
 } from '../services/transactionService';
 import {
@@ -150,7 +151,11 @@ export function TransactionDetails() {
             </p>
             <Badge variant={status.variant}>{status.label}</Badge>
           </div>
-          <p className="text-sm text-gray-500 mt-1">Created: {transaction.createdAt}</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Created: {transaction.createdAt}
+            <span className="mx-2 text-gray-300">·</span>
+            Service Type: <span className="font-medium text-gray-600">{serviceTypeLabel(transaction.serviceType)}</span>
+          </p>
         </div>
       </div>
 

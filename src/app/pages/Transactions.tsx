@@ -22,9 +22,30 @@ import {
   getTransactionBatches,
   statusConfig,
   subaccountDisplayLabel,
+  SERVICE_TYPE_SHORT_LABEL,
   type TransactionSummary,
   type TransactionBatchGroup,
+  type DeliveryServiceType,
 } from '../services/transactionService';
+
+// Service types other than Standard get a small badge in the Type column so
+// On-Demand (and Same-Day) read as distinct at a glance.
+const SERVICE_TYPE_BADGE: Record<DeliveryServiceType, { variant: 'info' | 'pending'; label: string } | null> = {
+  standard: null,
+  same_day: { variant: 'info', label: SERVICE_TYPE_SHORT_LABEL.same_day },
+  on_demand: { variant: 'pending', label: SERVICE_TYPE_SHORT_LABEL.on_demand },
+};
+
+/** Type cell: delivery type text + a service-type badge for non-standard tiers. */
+function TypeCell({ type, serviceType }: { type: string; serviceType: DeliveryServiceType }) {
+  const badge = SERVICE_TYPE_BADGE[serviceType];
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="text-sm text-gray-600">{type}</span>
+      {badge && <Badge variant={badge.variant}>{badge.label}</Badge>}
+    </span>
+  );
+}
 
 // ─── component ──────────────────────────────────────────────────────────────
 
@@ -42,6 +63,7 @@ export function Transactions() {
   // "All Transactions" filter state
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
   const [subaccountFilter, setSubaccountFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -86,8 +108,9 @@ export function Transactions() {
       d.destination.toLowerCase().includes(q);
     const statusOk = statusFilter === 'all' || d.status === statusFilter;
     const typeOk   = typeFilter === 'all'   || d.type.toLowerCase() === typeFilter;
+    const serviceOk = serviceTypeFilter === 'all' || d.serviceType === serviceTypeFilter;
     const subOk    = subaccountFilter === 'all' || d.subaccount === subaccountFilter;
-    return searchOk && statusOk && typeOk && subOk;
+    return searchOk && statusOk && typeOk && serviceOk && subOk;
   });
 
   return (
@@ -154,11 +177,19 @@ export function Transactions() {
                   <option value="returned">Returned</option>
                 </Select>
               </div>
-              <div className="w-full sm:w-[160px] flex-shrink-0">
+              <div className="w-full sm:w-[150px] flex-shrink-0">
                 <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
                   <option value="all">All Types</option>
                   <option value="express">Express</option>
                   <option value="standard">Standard</option>
+                </Select>
+              </div>
+              <div className="w-full sm:w-[170px] flex-shrink-0">
+                <Select value={serviceTypeFilter} onChange={(e) => setServiceTypeFilter(e.target.value)}>
+                  <option value="all">All Service Types</option>
+                  <option value="standard">{SERVICE_TYPE_SHORT_LABEL.standard}</option>
+                  <option value="same_day">{SERVICE_TYPE_SHORT_LABEL.same_day}</option>
+                  <option value="on_demand">{SERVICE_TYPE_SHORT_LABEL.on_demand}</option>
                 </Select>
               </div>
             </div>
@@ -201,7 +232,7 @@ export function Transactions() {
                       </TableCell>
                     )}
                     <TableCell>
-                      <span className="text-sm text-gray-600">{delivery.type}</span>
+                      <TypeCell type={delivery.type} serviceType={delivery.serviceType} />
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusConfig[delivery.status].variant}>
@@ -371,7 +402,7 @@ export function Transactions() {
                             <TableCell>{tx.recipient}</TableCell>
                             <TableCell>{tx.destination}</TableCell>
                             <TableCell>
-                              <span className="text-sm text-gray-600">{tx.type}</span>
+                              <TypeCell type={tx.type} serviceType={tx.serviceType} />
                             </TableCell>
                             <TableCell>
                               <Badge variant={statusConfig[tx.status].variant}>
