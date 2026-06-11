@@ -12,7 +12,9 @@ import { AddressBook, type Address } from '../components/AddressBook';
 import { PaymentMethodTabs, type SelectedPaymentMethod } from '../components/PaymentMethodTabs';
 import { SpreadsheetBookingGrid, type GridValidationState } from '../components/SpreadsheetBookingGrid';
 import { estimateFees } from '../lib/bookingFees';
+import { attachmentSubtotal } from '../lib/bookingValidation';
 import { isBillingAccount } from '../services/paymentService';
+import { getInventoryProducts, type InventoryProduct } from '../services/inventoryService';
 import {
   addUpload, generateUploadId, createUploadRecord,
 } from '../services/bulkUploadService';
@@ -84,11 +86,27 @@ export function BulkSpreadsheet() {
     if (uploadMode === 'on-demand' && !onDemandEnabled) setUploadMode('standard');
   }, [onDemandEnabled, uploadMode]);
 
+  // Load the scope's inventory products when Inventory is enabled (drives the
+  // grid's product attachment + live stock validation).
+  const [products, setProducts] = useState<InventoryProduct[]>([]);
+  useEffect(() => {
+    if (!inventoryEnabled) { setProducts([]); return; }
+    let active = true;
+    getInventoryProducts(moduleCtx.scopeAccountId)
+      .then((list) => { if (active) setProducts(list); })
+      .catch(() => { if (active) setProducts([]); });
+    return () => { active = false; };
+  }, [inventoryEnabled, moduleCtx.scopeAccountId]);
+
   const validCount = grid.validRows.length;
   const errorCount = grid.invalidRows.length;
   const totalCount = validCount + errorCount;
   const fees = estimateFees(grid.validRows);
   const peso = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // Merchandise rollup from inventory-attached products on valid rows.
+  const attachedRowCount = grid.validRows.filter((r) => r.products?.length).length;
+  const merchandiseSubtotal = grid.validRows.reduce((sum, r) => sum + attachmentSubtotal(r.products ?? []), 0);
 
   const handleContinue = () => {
     if (validCount === 0) return;
@@ -292,7 +310,11 @@ export function BulkSpreadsheet() {
               </div>
             </div>
           )}
-          <SpreadsheetBookingGrid onValidationChange={setGrid} />
+          <SpreadsheetBookingGrid
+            onValidationChange={setGrid}
+            inventoryEnabled={inventoryEnabled}
+            products={products}
+          />
         </CardContent>
       </Card>
 
@@ -312,6 +334,12 @@ export function BulkSpreadsheet() {
                 <Detail label="Valid rows" value={String(validCount)} valueClass="text-green-700 font-medium" />
                 <Detail label="Rows with errors" value={String(errorCount)} valueClass={errorCount > 0 ? 'text-red-700 font-medium' : 'text-gray-500'} />
               </div>
+              {inventoryEnabled && attachedRowCount > 0 && (
+                <div className="border-t border-gray-100 pt-2 space-y-1.5">
+                  <Detail label="Rows with products" value={String(attachedRowCount)} />
+                  <Detail label="Merchandise subtotal" value={peso(merchandiseSubtotal)} valueClass="text-gray-900 font-medium" />
+                </div>
+              )}
             </div>
           </div>
 

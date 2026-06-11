@@ -3,10 +3,14 @@ import { IconPlus, IconCopy, IconTrash, IconAlertCircle, IconCircleCheck } from 
 import { Button } from './ui/Button';
 import { cn } from '../lib/utils';
 import { LocationCascadeCells } from './LocationCascadeCells';
+import { ProductAttachDialog } from './ProductAttachDialog';
 import {
   BOOKING_COLUMNS, ROW_NUMBER_WIDTH, ROW_ACTIONS_WIDTH, makeEmptyRow, validateRows,
+  attachmentSubtotal, attachmentTotalQty,
   type BookingRow, type BookingField, type RowsValidationResult,
+  type AttachedProduct, type ProductAvailability,
 } from '../lib/bookingValidation';
+import type { InventoryProduct } from '../services/inventoryService';
 
 /** Total fixed table width (px) — forces horizontal scroll on narrow viewports. */
 const TABLE_WIDTH =
@@ -25,20 +29,43 @@ export interface GridValidationState extends RowsValidationResult {
  * The grid is intake-only: it reports its live validation state via
  * `onValidationChange` so the page can show counts, fee estimates, and own the
  * final review/confirm CTA. "Add row" sits at the bottom-left (where the user
- * naturally reaches the end of entered rows). Inventory product attachment +
- * stock validation are a following pass (see docs/spreadsheet_booking_rules.md).
+ * naturally reaches the end of entered rows).
+ *
+ * When Inventory is enabled for the scope (`inventoryEnabled` + `products`), the
+ * Product / SKU cell becomes a product picker: attach one or more products per
+ * row (compact "chip + N more" summary), which auto-fills Qty (total items) and
+ * Declared value (subtotal) and re-validates stock live — no draft-stage
+ * deduction. See docs/spreadsheet_booking_rules.md + docs/inventory_rules.md.
  */
 export function SpreadsheetBookingGrid({
   onValidationChange,
+  inventoryEnabled = false,
+  products = [],
 }: {
   onValidationChange?: (state: GridValidationState) => void;
+  /** When true, the Product / SKU cell attaches Inventory products (vs free text). */
+  inventoryEnabled?: boolean;
+  /** Scope's inventory products (used for attachment + live stock validation). */
+  products?: InventoryProduct[];
 }) {
   const nextId = useRef(4);
   const [rows, setRows] = useState<BookingRow[]>(() => [
     makeEmptyRow('row-1'), makeEmptyRow('row-2'), makeEmptyRow('row-3'),
   ]);
+  // Row whose product picker is open (null = closed).
+  const [attachRowId, setAttachRowId] = useState<string | null>(null);
 
-  const result = useMemo(() => validateRows(rows), [rows]);
+  // Live availability index for attached-product validation (stock + status).
+  const productIndex = useMemo(() => {
+    const m = new Map<string, ProductAvailability>();
+    for (const p of products) m.set(p.id, { stockQuantity: p.stockQuantity, status: p.status });
+    return m;
+  }, [products]);
+
+  const result = useMemo(
+    () => validateRows(rows, inventoryEnabled ? productIndex : undefined),
+    [rows, inventoryEnabled, productIndex],
+  );
   const { validations, validRows, invalidRows, emptyCount } = result;
 
   // Report live validation state upward (page shows counts/fees + owns the CTA).
@@ -56,6 +83,24 @@ export function SpreadsheetBookingGrid({
 
   const updateRowFields = (rowId: string, partial: Partial<BookingRow>) =>
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, ...partial } : r)));
+
+  // Attach products to a row: Qty (total items) + Declared value (subtotal) are
+  // derived from the selection and locked; clearing it restores manual entry.
+  const setRowProducts = (rowId: string, attached: AttachedProduct[]) =>
+    setRows((prev) => prev.map((r) => {
+      if (r.id !== rowId) return r;
+      if (attached.length === 0) {
+        const next = { ...r, quantity: '', declaredValue: '' };
+        delete next.products;
+        return next;
+      }
+      return {
+        ...r,
+        products: attached,
+        quantity: String(attachmentTotalQty(attached)),
+        declaredValue: String(attachmentSubtotal(attached)),
+      };
+    }));
 
   const addRow = () => setRows((prev) => [...prev, makeEmptyRow(genId())]);
 
@@ -141,12 +186,57 @@ export function SpreadsheetBookingGrid({
                     }
 
                     const err = v?.errors[col.key];
+
+                    // Product / SKU: attach Inventory products when enabled,
+                    // otherwise the existing free-text cell.
+                    if (col.key === 'productSku' && inventoryEnabled) {
+                      const attached = row.products ?? [];
+                      return (
+                        <td key={col.key} className="px-1 py-1 align-top" title={err}>
+                          <button
+                            type="button"
+                            onClick={() => setAttachRowId(row.id)}
+                            className={cn(
+                              'w-full min-h-8 px-2 py-1 rounded border bg-white text-left text-xs flex items-center gap-1.5 hover:bg-gray-50 cursor-pointer',
+                              err ? 'border-red-400 ring-1 ring-red-300' : 'border-gray-200',
+                            )}
+                          >
+                            {attached.length === 0 ? (
+                              <span className="text-gray-400 flex items-center gap-1">
+                                <IconPlus className="w-3.5 h-3.5" /> Attach products
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1.5 min-w-0">
+                                <span className="inline-block rounded bg-blue-50 text-blue-700 px-1.5 py-0.5 truncate max-w-[160px]">
+                                  {attached[0].name}
+                                </span>
+                                {attached.length > 1 && (
+                                  <span className="text-gray-500 whitespace-nowrap">+{attached.length - 1} more</span>
+                                )}
+                              </span>
+                            )}
+                          </button>
+                          {err && <p className="text-[10px] leading-tight text-red-600 mt-0.5">{err}</p>}
+                        </td>
+                      );
+                    }
+
+                    // Qty + Declared value are derived (and locked) once products
+                    // are attached to the row.
+                    const derived =
+                      inventoryEnabled && !!row.products?.length &&
+                      (col.key === 'quantity' || col.key === 'declaredValue');
                     const common = cn(
                       'w-full h-8 px-2 rounded border bg-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500',
                       err ? 'border-red-400 ring-1 ring-red-300' : 'border-gray-200',
+                      derived && 'bg-gray-50 text-gray-500 cursor-not-allowed',
                     );
                     return (
-                      <td key={col.key} className="px-1 py-1 align-top" title={err}>
+                      <td
+                        key={col.key}
+                        className="px-1 py-1 align-top"
+                        title={derived ? 'Set by attached products' : err}
+                      >
                         {col.options ? (
                           <select
                             value={row[col.key]}
@@ -161,6 +251,7 @@ export function SpreadsheetBookingGrid({
                           <input
                             type="text"
                             value={row[col.key]}
+                            disabled={derived}
                             onChange={(e) => updateCell(row.id, col.key, e.target.value)}
                             onPaste={(e) => handlePaste(e, rIdx, cIdx)}
                             className={common}
@@ -197,10 +288,20 @@ export function SpreadsheetBookingGrid({
           <IconPlus className="w-4 h-4" /> Add row
         </Button>
         <span className="text-xs text-gray-500">
-          Tip: paste rows directly from Excel or Google Sheets. {validRows.length} valid · {invalidRows.length} need fixing
+          Tip: {inventoryEnabled ? 'attach products from Inventory or ' : ''}paste rows directly from Excel or Google Sheets. {validRows.length} valid · {invalidRows.length} need fixing
           {emptyCount > 0 ? ` · ${emptyCount} empty` : ''}
         </span>
       </div>
+
+      {inventoryEnabled && attachRowId && (
+        <ProductAttachDialog
+          open
+          onClose={() => setAttachRowId(null)}
+          products={products}
+          initial={rows.find((r) => r.id === attachRowId)?.products ?? []}
+          onConfirm={(sel) => { setRowProducts(attachRowId, sel); setAttachRowId(null); }}
+        />
+      )}
     </div>
   );
 }

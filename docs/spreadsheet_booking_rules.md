@@ -58,22 +58,31 @@ Payment method.
   per-row service column.
 - **Notes** is intentionally omitted to keep the row focused on booking /
   recipient / parcel / location / payment / product fields.
-- **Product / SKU** is a wide cell, sized for a future multi-product summary
-  (primary product name/SKU + a compact "+N more"; full selection in a
-  dialog/drawer). Manual text entry remains for now. The grid scrolls horizontally
-  rather than shrinking columns below readability.
+- **Product / SKU** is a wide cell. When **Inventory is enabled for the scope** it
+  becomes a product picker: the cell shows a compact summary (primary product name
+  + "+N more") and opens a dialog (`components/ProductAttachDialog`) to attach one
+  or more products with per-product quantities. Attaching auto-fills **Qty** (total
+  items) and **Declared value** (subtotal) — both locked while products are
+  attached. When Inventory is **not** enabled, the cell stays free text. The grid
+  scrolls horizontally rather than shrinking columns below readability.
 
-## Product attachment (from Inventory)
+## Product attachment (from Inventory) — IMPLEMENTED (Session 43)
 
 When a product is attached from inventory:
-- Auto-fill product name / SKU.
-- Auto-fill weight / dimensions if available.
-- Auto-fill unit price or declared value.
-- Multiply by quantity → compute subtotal.
-- Validate stock availability.
-- **Do not deduct stock** until successful booking/order confirmation.
+- Auto-fill product name / SKU (snapshot stored on the row's `products[]`).
+- Carry weight on the snapshot (no weight column to fill; reserved for fees later).
+- Unit price drives the row subtotal → **Declared value** auto-fills with the
+  qty×price subtotal; **Qty** auto-fills with the total item count.
+- Multiply by quantity → compute subtotal (`attachmentSubtotal` in
+  `lib/bookingValidation`).
+- Validate stock availability live (`validateRows(rows, productIndex)`): unknown
+  id → "no longer available", `inactive` → unresolved, qty > stock → insufficient
+  stock. The picker also clamps each quantity to available stock.
+- **Do not deduct stock** at draft stage — deduction is a backend operation on
+  confirmed booking/order.
 
-Only products available within the **current account scope** can be attached.
+Only products within the **current account scope** can be attached (the page loads
+`getInventoryProducts(scopeAccountId)` and passes them to the grid).
 
 ## Validation & edge cases
 

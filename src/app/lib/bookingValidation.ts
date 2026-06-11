@@ -29,9 +29,41 @@ export type BookingField =
   | 'paymentMethod'
   | 'notes';
 
+/**
+ * A product attached to a booking row from Inventory. Carries a snapshot of the
+ * product (name/sku/price/weight) for display + payload; stock and status are
+ * re-validated live against the current scope's products (see `validateRow`).
+ */
+export interface AttachedProduct {
+  productId: string;
+  name: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  weight?: number;
+}
+
+/** Live availability for an attached product (looked up by productId). */
+export interface ProductAvailability {
+  stockQuantity: number;
+  status: 'active' | 'inactive';
+}
+
 export interface BookingRow extends Record<BookingField, string> {
   /** Stable client id for the grid (not part of the booking payload). */
   id: string;
+  /** Products attached from Inventory (optional; manual entry leaves this empty). */
+  products?: AttachedProduct[];
+}
+
+/** Sum of unitPrice × quantity across attached products (item subtotal). */
+export function attachmentSubtotal(products: AttachedProduct[] = []): number {
+  return products.reduce((sum, p) => sum + p.unitPrice * p.quantity, 0);
+}
+
+/** Total item count across attached products. */
+export function attachmentTotalQty(products: AttachedProduct[] = []): number {
+  return products.reduce((sum, p) => sum + p.quantity, 0);
 }
 
 export interface ColumnDef {
@@ -96,11 +128,24 @@ export function makeEmptyRow(id: string): BookingRow {
 }
 
 function isRowBlank(row: BookingRow): boolean {
+  if (row.products && row.products.length > 0) return false;
   return BOOKING_COLUMNS.every((c) => !row[c.key]?.trim());
 }
 
-/** Validate a single row (format + completeness only). */
-export function validateRow(row: BookingRow): RowValidation {
+/**
+ * Validate a single row (format + completeness only).
+ *
+ * When `productIndex` is supplied (the in-grid path, where the scope's products
+ * are known), attached products are re-validated live: an unknown id flags a
+ * deleted reference, `inactive` status flags an unresolved product, and a
+ * quantity above available stock flags insufficient stock. No stock is deducted
+ * here — deduction is a backend operation on confirmed booking. See
+ * docs/inventory_rules.md.
+ */
+export function validateRow(
+  row: BookingRow,
+  productIndex?: Map<string, ProductAvailability>,
+): RowValidation {
   const errors: Partial<Record<BookingField, string>> = {};
 
   if (isRowBlank(row)) {
@@ -134,6 +179,25 @@ export function validateRow(row: BookingRow): RowValidation {
     errors.paymentMethod = 'Unsupported payment method';
   }
 
+  // Attached-product stock / status / reference checks (live, no deduction).
+  if (row.products && row.products.length > 0) {
+    for (const ap of row.products) {
+      const avail = productIndex?.get(ap.productId);
+      if (productIndex && !avail) {
+        errors.productSku = `${ap.name} is no longer available — remove or replace it`;
+        break;
+      }
+      if (avail && avail.status === 'inactive') {
+        errors.productSku = `${ap.name} is inactive — remove or replace it`;
+        break;
+      }
+      if (avail && ap.quantity > avail.stockQuantity) {
+        errors.productSku = `Only ${avail.stockQuantity} of ${ap.name} in stock`;
+        break;
+      }
+    }
+  }
+
   return { rowId: row.id, errors, isValid: Object.keys(errors).length === 0, isEmpty: false };
 }
 
@@ -148,14 +212,17 @@ export interface RowsValidationResult {
 }
 
 /** Validate all rows, separating valid from invalid (blank rows ignored). */
-export function validateRows(rows: BookingRow[]): RowsValidationResult {
+export function validateRows(
+  rows: BookingRow[],
+  productIndex?: Map<string, ProductAvailability>,
+): RowsValidationResult {
   const validations: Record<string, RowValidation> = {};
   const validRows: BookingRow[] = [];
   const invalidRows: BookingRow[] = [];
   let emptyCount = 0;
 
   for (const row of rows) {
-    const v = validateRow(row);
+    const v = validateRow(row, productIndex);
     validations[row.id] = v;
     if (v.isEmpty) emptyCount += 1;
     else if (v.isValid) validRows.push(row);

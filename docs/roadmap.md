@@ -52,10 +52,12 @@ Product / SKU for a future multi-product summary; added an Inventory upsell teas
 add-ons read as `enabled`.
 
 **Deferred (next sessions, in order):**
-1. **Inventory product attachment into spreadsheet rows** — attach multiple products
-   to one row (chip + "+N more" compact summary in the wide Product/SKU cell;
-   detail in a dialog/drawer), auto-fill name/SKU/weight/price, qty×price subtotal,
-   stock validation (no draft-stage deduction). Layout + teaser already prepared.
+1. ✅ **DONE (Session 43).** Inventory product attachment into spreadsheet rows —
+   when Inventory is enabled for the scope, the Product/SKU cell opens a picker
+   (`ProductAttachDialog`) to attach multiple products with per-product quantities
+   (chip + "+N more" summary), auto-fills Qty (total items) + Declared value
+   (subtotal), and validates stock live (clamp + inactive/deleted/over-stock
+   flags) with no draft-stage deduction.
 2. Adopt `lib/bookingValidation` in the uploaded-file path once real file parsing
    exists (parse → validateRows). The summary's template-specific correction
    validator (COD cap, duplicate Reference-ID, pouch size) is intentionally

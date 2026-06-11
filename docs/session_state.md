@@ -9,8 +9,9 @@
 
 **Stage:** GGX Business+ modular platform. Foundation (Account Add-ons, feature
 enablement, On-Demand service mode, Commerce stubs) is in; the **Bulk Upload →
-In-app Spreadsheet** flow is stable + polished, and **Transactions now recognize
-On-Demand as a distinct service type** (roadmap #5 done).
+In-app Spreadsheet** flow is stable + polished, **Transactions recognize On-Demand
+as a distinct service type** (roadmap #5), and the spreadsheet grid now supports
+**Inventory product attachment** when Inventory is enabled (roadmap #1).
 
 - **Branch:** `master`. **Build:** green (`npm run build`). Latest work committed.
   Not pushed (per project rule — push only when explicitly asked).
@@ -19,11 +20,13 @@ On-Demand as a distinct service type** (roadmap #5 done).
   spreadsheet is a step page (`/dashboard/bulk-uploader/spreadsheet`, no sidebar item),
   page-level service mode (Standard / Same-Day / On-Demand-when-enabled), shared
   `lib/bookingValidation`, GGX location cascade (shared `LocationCascadeCells`),
-  pixel-width grid with forced horizontal scroll, fee estimate, Inventory upsell teaser.
+  pixel-width grid with forced horizontal scroll, fee estimate. The Product/SKU cell
+  is a product picker when Inventory is enabled (else free text + upsell teaser).
 
-**Next task (roadmap, next deferred items):** #6 Dashboard **Basic Analytics**
-(only if safe/low-risk; not Advanced Analytics), or #1 Inventory product attachment
-into spreadsheet rows. Roadmap #5 (Transactions On-Demand service type) is complete.
+**Next task (roadmap, next deferred items):** #2 adopt `lib/bookingValidation` in the
+uploaded-file path (once real file parsing exists), #3 make the shared summary fully
+data-driven for spreadsheet batches, or #6 Dashboard **Basic Analytics** (low-risk).
+Roadmap #5 (Transactions On-Demand) and #1 (Inventory attachment) are complete.
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
 decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); no Inventory
@@ -34,6 +37,43 @@ deps; non-destructive; preserve Upload File behavior; commit after stable milest
 strip it after any Write. PowerShell `Get-Content`/`Set-Content` round-trips corrupt UTF-8
 (₱, em-dash) → mojibake; prefer Edit, or `sed -i` (byte-safe) for bulk line ops. See
 [[reference-powershell-utf8-roundtrip]].
+
+---
+
+## Session 43 (2026-06-12) — Inventory product attachment into spreadsheet rows (roadmap #1)
+
+One focused, non-destructive commit. **Build green.** Closes roadmap deferred item #1.
+Free-text product entry is preserved when Inventory is NOT enabled — purely additive.
+
+- **Model/validation (`lib/bookingValidation.ts`):** added `AttachedProduct`
+  (productId/name/sku/quantity/unitPrice/weight snapshot) + `ProductAvailability`;
+  `BookingRow.products?` carries the attachment. Helpers `attachmentSubtotal` /
+  `attachmentTotalQty`. `validateRow`/`validateRows` take an optional
+  `productIndex: Map<id, {stockQuantity,status}>`; when supplied (in-grid path),
+  attached products are re-validated live → `productSku` error for
+  deleted/inactive/over-stock (no deduction). `isRowBlank` treats a row with
+  products as non-blank. File path calls `validateRows(rows)` (no index) → unchanged.
+- **Picker (`components/ProductAttachDialog.tsx`, new):** reuses DS `Dialog` (lg) +
+  `SearchInput` + `Badge`. Lists scope products with search, stock badges
+  (in-stock / low / out / inactive), a per-product qty stepper **clamped to stock**;
+  inactive/out-of-stock are shown but locked. Footer shows product/item counts +
+  subtotal; confirm returns `AttachedProduct[]` (or clears).
+- **Grid (`SpreadsheetBookingGrid.tsx`):** new `inventoryEnabled` + `products` props.
+  Builds the availability index and passes it to `validateRows`. When enabled, the
+  Product/SKU cell becomes a button showing the **chip + "+N more"** summary that
+  opens the picker; attaching sets `row.products` and **derives + locks** Qty (total
+  items) and Declared value (subtotal). When disabled, the original free-text cell
+  is unchanged.
+- **Page (`BulkSpreadsheet.tsx`):** loads `getInventoryProducts(scopeAccountId)`
+  when Inventory is enabled and passes `inventoryEnabled` + `products` to the grid.
+  Booking summary gains a **Rows with products / Merchandise subtotal** rollup (only
+  when inventory-enabled and ≥1 attached row). Upsell teaser still shows only when
+  Inventory is disabled.
+- **Scope/demo:** products are seeded for **acme-luzon** (Inventory enabled), incl.
+  a low-stock (Tumbler, 38) and an inactive/zero-stock item (Canvas Tote) to exercise
+  the picker states. Stock deduction stays backend-only.
+- **Unchanged:** Upload File flow + summary, location cascade, fee estimate, page-level
+  service mode, no new deps, no new routes/sidebar items.
 
 ---
 
