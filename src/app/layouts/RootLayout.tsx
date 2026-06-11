@@ -31,6 +31,7 @@ import {
   IconActivityHeartbeat,
   IconClipboardList,
   IconBuildingStore,
+  IconApps,
 } from '@tabler/icons-react';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { cn } from '../lib/utils';
@@ -38,6 +39,8 @@ import { Button } from '../components/ui/Button';
 import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useModuleAccessContext } from '../hooks/useModuleAccess';
+import { getFeatureStateSync } from '../services/featureEnablementService';
 import {
   useNotificationViewer, CATEGORY_META,
 } from '../data/notifications';
@@ -214,6 +217,30 @@ export function RootLayout() {
     ? mainAccountNavigation
     : subaccountNavigation;
 
+  // Progressive reveal: optional Business Modules surface for everyone, plus a
+  // Commerce group that appears only when Inventory/Storefront are enabled for
+  // the current scope (docs/business_plus_modules.md → Navigation).
+  const moduleCtx = useModuleAccessContext();
+  const inventoryEnabled = getFeatureStateSync('inventory', moduleCtx.scopeAccountId).enabled;
+  const storefrontEnabled = getFeatureStateSync('storefront', moduleCtx.scopeAccountId).enabled;
+  const commerceChildren: NavChild[] = [
+    ...(inventoryEnabled ? [{ name: 'Inventory', href: '/dashboard/inventory', icon: IconPackage }] : []),
+    ...(storefrontEnabled ? [{ name: 'Storefront', href: '/dashboard/storefront', icon: IconBuildingStore }] : []),
+  ];
+
+  const finalNavigation: NavItem[] = [];
+  for (const item of navigation) {
+    finalNavigation.push(item);
+    if (item.type === 'group' && item.name === 'Operations' && commerceChildren.length > 0) {
+      finalNavigation.push(grp('Commerce', commerceChildren));
+    }
+  }
+  // Business Modules sits just above the System group (or at the end).
+  const businessModulesItem: NavItem = { name: 'Business Modules', href: '/dashboard/business-modules', icon: IconApps };
+  const systemIdx = finalNavigation.findIndex((i) => i.type === 'group' && i.name === 'System');
+  if (systemIdx >= 0) finalNavigation.splice(systemIdx, 0, businessModulesItem);
+  else finalNavigation.push(businessModulesItem);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -365,7 +392,7 @@ export function RootLayout() {
         </div>
 
         <nav className="flex-1 px-3 py-3 overflow-y-auto">
-          {navigation.map((item) => {
+          {finalNavigation.map((item) => {
             if (item.type === 'group' && item.children) {
               return (
                 <div key={item.name} className="mb-1">

@@ -34,6 +34,9 @@ import { ClaimDetail } from './pages/ClaimDetail';
 import { SlaAlerts } from './pages/SlaAlerts';
 import { OperationsRequests } from './pages/OperationsRequests';
 import { OpsRequestDetail } from './pages/OpsRequestDetail';
+import { BusinessModules } from './pages/BusinessModules';
+import { Inventory } from './pages/Inventory';
+import { Storefront } from './pages/Storefront';
 import { ProtectedRoute, AdminRoute } from './components/RouteGuards';
 import { TrackingPage } from './pages/TrackingPage';
 
@@ -87,6 +90,12 @@ export const router = createBrowserRouter([
       { path: 'notifications', Component: Notifications },
       { path: 'advisories', Component: ServiceAdvisories },
       { path: 'settings', Component: Settings },
+
+      // Business Modules — discovery surface (shared). Gated feature routes
+      // render an EnablementGate when not usable for the current scope.
+      { path: 'business-modules', Component: BusinessModules },
+      { path: 'inventory', Component: Inventory },
+      { path: 'storefront', Component: Storefront },
 
       // Shared: subaccount settings (Managers can view their own subaccount's settings)
       { path: 'subaccounts/:id/settings', Component: SubAccountSettings },

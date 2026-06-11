@@ -9,6 +9,38 @@
 
 ---
 
+## GGX Business+ — Modular Platform (new stage, in progress)
+
+The product is evolving from GGX Corporate into **GGX Business+**, a modular
+business logistics + commerce platform. Master spec: `docs/business_plus_modules.md`
+(+ `contract_module_rules.md`, `feature_enablement_rules.md`, `service_type_rules.md`,
+`commerce_rules.md`, `inventory_rules.md`, `storefront_rules.md`,
+`spreadsheet_booking_rules.md`).
+
+**Foundation delivered (Session 35):**
+- Service types (Standard / Same-Day / **On-Demand** as distinct types).
+- Module catalog + contract/access **status** model + status-aware **CTA** logic
+  (`businessModulesService`, single source of truth).
+- Feature enablement model (Inventory / Storefront) + permission keys.
+- Mock services: businessModules, featureEnablement, inventory, storefront.
+- **Business Modules** discovery page + status-aware `ModuleCard`.
+- `EnablementGate` locked states; basic **Inventory** and **Storefront** routes.
+- Progressive-reveal sidebar: Business Modules entry + Commerce group when enabled.
+
+**Deferred (next sessions, in order):**
+1. Storefront product management UI + customer-facing surface (no checkout yet).
+2. Bulk Booking **input-method selector** (Upload File / Type in Spreadsheet).
+3. In-app **spreadsheet booking grid** reusing upload validation; then product
+   attachment from inventory + stock validation (no draft-stage deduction).
+4. Transactions filter: recognize **On-Demand** as a distinct service type.
+5. Dashboard **Basic Analytics** (only if safe/low-risk; not Advanced Analytics).
+6. Inventory create/edit/import/export flows.
+7. Real activation/request flows (replace the mock acknowledge dialog) + BFF wiring.
+8. Full GGX Business+ rebrand pass (sidebar logo label, titles) — currently
+   docs + conceptual labels only.
+
+---
+
 ## Polish pass priority order (after active priority)
 
 1. Responsive / small-screen layout fixes

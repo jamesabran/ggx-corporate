@@ -1,5 +1,15 @@
 # Account Model — GGX Corporate
 
+> **GGX Business+ note:** the platform is evolving into a modular model where
+> capabilities (Inventory, Storefront, On-Demand, Advanced Analytics, …) are gated
+> by contract, account type, role, coverage, approval, setup, and dependencies.
+> Module access status + CTA are resolved in `businessModulesService` using the
+> account/role/scope context built by `useModuleAccessContext`. The account-type
+> mapping is: no subaccounts → `standard`; Main Account view → `main`; drilled-in
+> subaccount or Manager → `subaccount`. All module/inventory/storefront records
+> stay scoped per the rules below. See `docs/business_plus_modules.md` and
+> `docs/contract_module_rules.md`.
+
 ## Terminology
 
 - Use **"Subaccount"** (one word, capital S). Never "sub-account" or "sub account."

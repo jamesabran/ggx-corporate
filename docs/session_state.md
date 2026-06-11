@@ -5,6 +5,22 @@
 
 ---
 
+## Session 35 (2026-06-11) — GGX Business+ modular platform: foundation (docs + model + Business Modules page)
+
+Kicked off the GGX Business+ modular-platform stage. **Foundation only; build green (`npm run build`).** Heavier UI deferred (see roadmap).
+
+- **Docs (new):** `business_plus_modules.md` (master), `contract_module_rules.md`, `feature_enablement_rules.md`, `service_type_rules.md`, `commerce_rules.md`, `inventory_rules.md`, `storefront_rules.md`, `spreadsheet_booking_rules.md`. **Updated:** `account_model.md`, `product_rules.md`, `roadmap.md` (new "GGX Business+" stage + deferred list).
+- **Service types** (`data/serviceTypes.ts`): Standard / Same-Day / **On-Demand** as DISTINCT types (+ special_pickup, high_volume). On-Demand never merged with Same-Day.
+- **Module model:** `data/businessModules.ts` (catalog: 7 categories, ~22 modules with contract default / activation mode / scope level / availableFor / allowedRoles / dependsOn / featureId / route / comingSoon). `services/businessModulesService.ts` is the **single source of truth** for access STATUS (9 statuses) + CTA — `resolveModuleAccess` + `resolveCta` + `getModuleCatalog(ctx)`. Manager activation of account-level modules is blocked (`modules.activate`/`modules.request` perms).
+- **Feature enablement:** `data/featureEnablement.ts` + `services/featureEnablementService.ts` — per-scope enabled/configured; seeded so **Acme Luzon** has Inventory + Storefront enabled+configured (demo). `data/permissions.ts` — inventory.*/storefront.*/service.onDemand.use/modules.* keys + `resolvePermissions(role)`.
+- **Hook:** `hooks/useModuleAccess.ts` → `useModuleAccessContext()` builds the access context (accountType from subaccount state, role, effective scope id incl. `STANDARD_SCOPE_ID`, permissions).
+- **UI:** `components/ModuleCard.tsx` (status badge + notes + availableFor/roles + status-aware CTA), `components/EnablementGate.tsx` (locked route state), `pages/BusinessModules.tsx` (discovery page + filter + mock activate/request dialog). Basic `pages/Inventory.tsx` (scoped product list/empty + gate) and `pages/Storefront.tsx` (profile + publish/unpublish confirm w/ pending-order warning + gate).
+- **Routes:** added `/dashboard/business-modules`, `/dashboard/inventory`, `/dashboard/storefront` (shared, gated by EnablementGate). **Sidebar (`RootLayout.tsx`):** Business Modules entry above System for all variants; **Commerce** group (Inventory/Storefront) revealed only when enabled for the current scope (progressive reveal). Inventory/Storefront services scope products to the resolved account/subaccount.
+- **GOTCHA (this session):** a `Get-Content`/`Set-Content` cleanup pass round-tripped UTF-8 source through Windows-1252 → mojibake (`₱`→`â‚±`, em-dash, box-drawing). Fixed by re-encoding (read UTF-8 → write CP1252 bytes restores original UTF-8). Avoid PowerShell round-trips on UTF-8 source; prefer Edit/Write.
+- **Not changed yet (deferred, roadmap order):** spreadsheet booking input + grid, product attachment, Transactions On-Demand filter, Dashboard Basic Analytics, Inventory create/edit/import, real activation flows, full rebrand. **No existing functionality removed; no routes renamed; no new deps.**
+
+---
+
 ## Session 34 (2026-06-10) — API Integration enabled + scoped for subaccount Managers
 
 Enabled API Integration for Managers assigned to a subaccount, scoped to their subaccount only. **Code committed (`ae57f51`, build green) + Figma manager sidebar variant updated.**
