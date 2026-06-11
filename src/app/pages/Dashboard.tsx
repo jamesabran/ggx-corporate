@@ -27,7 +27,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { IconContainer } from '../components/IconContainer';
 // Recent transactions come through the transactionService facade. SLA alerts
 // remain on their data module (service migration out of scope for this pass).
-import { getRecentTransactions, getDashboardStats, statusConfig, type TransactionSummary, type DashboardStats } from '../services/transactionService';
+import { getRecentTransactions, getDashboardStats, getBasicAnalytics, statusConfig, type TransactionSummary, type DashboardStats, type BasicAnalytics } from '../services/transactionService';
 import { getSlaAlertsList, SLA_TYPE_META, SLA_STATUS_META, type SlaAlert } from '../services/slaService';
 
 const quickActions = [
@@ -39,6 +39,13 @@ const quickActions = [
 
 // `updated` is a Dashboard-only relative-time label (presentation-only).
 const recentUpdatedLabels = ['2 hrs ago', '4 hrs ago', '6 hrs ago', '8 hrs ago', '12 hrs ago'];
+
+// Bar colors per delivery service type (match the booking mode selector accents).
+const SERVICE_TYPE_BAR: Record<string, string> = {
+  standard: 'bg-blue-500',
+  same_day: 'bg-orange-500',
+  on_demand: 'bg-violet-500',
+};
 
 const earningsRows = [
   { label: 'Earnings Disbursed', amount: '₱184,320', meta: 'Transferred to your account', icon: IconCircleCheck, iconColor: 'text-emerald-500' },
@@ -68,6 +75,17 @@ export function Dashboard() {
     let cancelled = false;
     getDashboardStats(currentAccount !== 'main' ? currentAccount : undefined)
       .then((s) => { if (!cancelled) setDashStats(s); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [currentAccount]);
+
+  // Basic Analytics (service-type mix + daily volume), scoped like dashStats.
+  // Aggregates come from the service layer (treated as backend-provided).
+  const [basic, setBasic] = useState<BasicAnalytics | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getBasicAnalytics(currentAccount !== 'main' ? currentAccount : undefined)
+      .then((b) => { if (!cancelled) setBasic(b); })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [currentAccount]);
@@ -374,6 +392,89 @@ export function Dashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* ── Basic Analytics ── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Basic Analytics</p>
+          <Link to="/dashboard/analytics">
+            <Button variant="ghost" size="sm" className="h-8 px-2.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 cursor-pointer gap-1.5 -mr-1">
+              Full analytics
+              <IconArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {/* Bookings by service type */}
+          <Card className="flex flex-col">
+            <CardHeader className="px-6 pt-5 pb-0">
+              <CardTitle className="text-base font-semibold text-gray-900">Bookings by Service Type</CardTitle>
+            </CardHeader>
+            <CardContent className="px-6 pt-4 pb-5 flex-1">
+              {(() => {
+                const mix = basic?.serviceTypeMix ?? [];
+                const total = basic?.periodTotal ?? 0;
+                const max = Math.max(1, ...mix.map((m) => m.count));
+                return (
+                  <div className="space-y-4">
+                    {mix.map((m) => (
+                      <div key={m.key}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-sm text-gray-700">{m.label}</span>
+                          <span className="text-sm font-semibold text-gray-900 tabular-nums">
+                            {m.count}
+                            <span className="text-gray-400 font-normal ml-1">
+                              ({total > 0 ? Math.round((m.count / total) * 100) : 0}%)
+                            </span>
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${SERVICE_TYPE_BAR[m.key] ?? 'bg-gray-400'}`}
+                            style={{ width: `${(m.count / max) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <p className="text-xs text-gray-400 pt-1">
+                      Based on {total} booking{total === 1 ? '' : 's'} in the current sample.
+                    </p>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
+          {/* Daily booking volume */}
+          <Card className="flex flex-col">
+            <CardHeader className="px-6 pt-5 pb-0">
+              <CardTitle className="text-base font-semibold text-gray-900">Daily Booking Volume</CardTitle>
+            </CardHeader>
+            <CardContent className="px-6 pt-4 pb-5 flex-1 flex flex-col">
+              {(() => {
+                const days = basic?.dailyVolume ?? [];
+                if (days.length === 0) {
+                  return <p className="text-sm text-gray-400">No booking activity in this period.</p>;
+                }
+                const max = Math.max(1, ...days.map((d) => d.count));
+                return (
+                  <div className="flex-1 flex items-end justify-between gap-2">
+                    {days.map((d) => (
+                      <div key={d.date} className="flex-1 flex flex-col items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-700 tabular-nums">{d.count}</span>
+                        <div className="w-full bg-blue-50 rounded-md flex items-end" style={{ height: 96 }}>
+                          <div className="w-full bg-blue-500 rounded-md" style={{ height: `${(d.count / max) * 100}%` }} />
+                        </div>
+                        <span className="text-[11px] text-gray-400 tabular-nums">{d.date.slice(5)}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

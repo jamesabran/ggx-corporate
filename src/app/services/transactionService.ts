@@ -235,6 +235,55 @@ export async function getDashboardStats(subaccountId?: string): Promise<Dashboar
   return { byStatus, total, successRate, totalCod };
 }
 
+// ─── Basic analytics (Dashboard) ───────────────────────────────────────────────
+//
+// Lightweight, presentation-only aggregates for the Dashboard's "Basic Analytics"
+// section — distinct from the gated Advanced Data Analytics module (which owns
+// efficiency / RTS / SLA metrics). Counts and groupings are derived here and
+// treated as BACKEND-PROVIDED, consistent with getDashboardStats; the frontend is
+// not the source of truth for business math.
+
+export interface BasicAnalytics {
+  /** Booking count per delivery service type (Standard / Same-Day / On-Demand). */
+  serviceTypeMix: { key: DeliveryServiceType; label: string; count: number }[];
+  /** Daily booking volume for the most recent active days (oldest → newest). */
+  dailyVolume: { date: string; count: number }[];
+  /** Total bookings in the active sample. */
+  periodTotal: number;
+}
+
+/** How many recent active days the dashboard volume mini-chart shows. */
+const BASIC_ANALYTICS_DAYS = 7;
+
+/**
+ * Return lightweight booking analytics for the Dashboard, optionally scoped to a
+ * subaccount (same subset rule as getDashboardStats). Service-type mix always
+ * lists all three delivery tiers (zero included) so the chart is stable.
+ */
+export async function getBasicAnalytics(subaccountId?: string): Promise<BasicAnalytics> {
+  const subset = subaccountId && subaccountId !== 'main'
+    ? transactions.filter(
+        (t) => t.batch?.accountId === subaccountId || t.subaccount === subaccountId
+      )
+    : transactions;
+
+  const order: DeliveryServiceType[] = ['standard', 'same_day', 'on_demand'];
+  const counts: Record<DeliveryServiceType, number> = { standard: 0, same_day: 0, on_demand: 0 };
+  for (const t of subset) counts[t.serviceType] = (counts[t.serviceType] ?? 0) + 1;
+  const serviceTypeMix = order.map((key) => ({
+    key, label: SERVICE_TYPE_SHORT_LABEL[key], count: counts[key],
+  }));
+
+  const byDate = new Map<string, number>();
+  for (const t of subset) byDate.set(t.date, (byDate.get(t.date) ?? 0) + 1);
+  const dailyVolume = Array.from(byDate.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .slice(-BASIC_ANALYTICS_DAYS)
+    .map(([date, count]) => ({ date, count }));
+
+  return { serviceTypeMix, dailyVolume, periodTotal: subset.length };
+}
+
 // ─── Batch grouping ──────────────────────────────────────────────────────────
 //
 // The "By Batch" view groups bulk-upload-origin transactions. In production the

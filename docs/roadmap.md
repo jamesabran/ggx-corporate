@@ -73,7 +73,11 @@ add-ons read as `enabled`.
    On-Demand) to the transactions model, a Service Type filter on the Transactions
    page, a distinguishing badge in the Type column, and the service type in the
    detail header. The legacy Express/Standard `type` column is unchanged.
-6. Dashboard **Basic Analytics** (only if safe/low-risk; not Advanced Analytics).
+6. ✅ **DONE (Session 45).** Dashboard **Basic Analytics** — a lightweight section
+   (Bookings by Service Type + Daily Booking Volume) backed by a service-layer
+   aggregate `getBasicAnalytics` (counts/groupings treated as backend-provided,
+   scoped like `getDashboardStats`). Simple DS bars, no chart lib. Distinct from
+   the gated Advanced Data Analytics module (efficiency/RTS/SLA).
 7. Inventory create/edit/import/export flows.
 8. Real activation/request flows (replace the mock acknowledge dialog) + BFF wiring.
 9. Full GGX Business+ rebrand pass (titles, marketing copy) — logo done; routes
