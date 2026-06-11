@@ -5,6 +5,27 @@
 
 ---
 
+## Session 36 (2026-06-11) — Account Add-ons alignment + Business+ rebrand + spreadsheet booking foundation
+
+Alignment/consistency pass on the modular model + Bulk Booking spreadsheet intake. **Two commits, build green.**
+
+**Milestone 1 — `53dd859` (alignment + rename):**
+- **Rebrand:** login + sidebar logo descriptor "Corporate Account" → **"Business+"** (italic, font-light/300; 24px login, 16px header). Marketing prose + routes left for the full rebrand pass.
+- **Business Modules → Account Add-ons:** route `/dashboard/account-add-ons`, page `pages/AccountAddOns.tsx` (renamed), **moved under the Account Management sidebar group** (managers get a minimal Account Management group). Removed the old top-level entry.
+- **Curated catalog** (`data/businessModules.ts`): only OPTIONAL/gated capabilities now — categories Account & Scale (Subaccounts, Consolidated Billing[dep: Subaccounts]), Delivery Services (On-Demand only), Commerce (Inventory, Storefront[dep: Inventory]), Advanced (Advanced Data Analytics, Custom Reports). Dropped always-available/overlapping items (Same-Day, Special Pickup, High-Volume, Shopify, API, Webhooks, External Store, Product-linked Booking, Branch/Brand, all Core/Booking defaults). **Integrations stays its own sidebar group.**
+- **Service logic:** `ModuleAccessContext.subaccountsEnabled` drives the Subaccounts add-on (runtime SubAccount state) + Consolidated Billing dependency; self-enable add-ons with a real flow route via `activateRoute` (Subaccounts → enable flow). Contract/approval CTAs stay "Request activation"/"Submit request".
+- **UI consistency:** `ModuleCard` now 4-up grid, dropped the "available for/roles" footer, single CTA. Removed icon chips beside H1 on Account Add-ons/Inventory/Storefront (match `text-3xl font-bold` + subtitle). **Notifications** converted to the DS segmented `Tabs` (Shopify/API pattern). Documented Tabs + header conventions in `design_system_rules.md`; updated `business_plus_modules.md`.
+
+**Milestone 2 — Bulk Booking spreadsheet intake (this commit):**
+- **`lib/bookingValidation.ts`** — shared validation pipeline (BookingRow + 13 columns + `validateRows` separating valid/invalid; blank rows ignored; format/completeness only — fees/coverage/stock stay backend). Intended for reuse by the file path too.
+- **`components/SpreadsheetBookingGrid.tsx`** — editable grid: add/duplicate/delete row, **paste from Excel/Sheets** (TSV → cells, auto-creates rows), inline validation + error highlighting, valid/invalid counts, "Book N valid rows".
+- **`pages/BulkUploader.tsx`** — added the **Upload File / Type in Spreadsheet** input-method selector. Upload path unchanged; spreadsheet path books valid rows via the existing `createUploadRecord`/`addUpload` pipeline (counts overridden) → navigates to summary.
+- **Deferred (roadmap):** inventory product attachment + subtotal/stock validation, pickup/payment wiring for the spreadsheet path, adopting the validator in the file path.
+
+**Reminder:** the Write tool still appends a stray `</content>` line + a PowerShell round-trip mangles UTF-8 — see [[reference-powershell-utf8-roundtrip]]. Prefer Edit; strip the tag after any Write.
+
+---
+
 ## Session 35 (2026-06-11) — GGX Business+ modular platform: foundation (docs + model + Business Modules page)
 
 Kicked off the GGX Business+ modular-platform stage. **Foundation only; build green (`npm run build`).** Heavier UI deferred (see roadmap).

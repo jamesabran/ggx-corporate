@@ -14,6 +14,8 @@ import { Dialog } from '../components/ui/Dialog';
 import { AddressBook, type Address } from '../components/AddressBook';
 import { PaymentMethodTabs } from '../components/PaymentMethodTabs';
 import { BulkColumnMapper } from '../components/BulkColumnMapper';
+import { SpreadsheetBookingGrid } from '../components/SpreadsheetBookingGrid';
+import type { BookingRow } from '../lib/bookingValidation';
 import { downloadBulkTemplate, BULK_TEMPLATE_COLUMNS } from '../data/bulkTemplate';
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
 import { isBillingAccount } from '../services/paymentService';
@@ -89,6 +91,7 @@ export function BulkUploader() {
       };
 
   const [step, setStep]             = useState<Step>('form');
+  const [inputMethod, setInputMethod] = useState<'upload' | 'spreadsheet'>('upload');
   const [uploadMode, setUploadMode] = useState<'standard' | 'same-day'>('standard');
   const [firstMile, setFirstMile]   = useState<'pickup' | 'dropoff'>('pickup');
   const [pickupDate, setPickupDate] = useState('');
@@ -177,6 +180,25 @@ export function BulkUploader() {
     proceedToProcessing(id, fileName);
   };
 
+  /**
+   * Book the valid rows entered via the in-app spreadsheet. Reuses the same
+   * upload-record pipeline as the file path (createUploadRecord + addUpload),
+   * then navigates to the batch summary. Only valid rows are booked; invalid
+   * rows stay in the grid for correction.
+   */
+  const handleSpreadsheetBook = (validRows: BookingRow[]) => {
+    const id = generateUploadId();
+    const base = createUploadRecord(id, 'Spreadsheet entry', 'standard', firstMile, 'needs-review', uploadAccount);
+    addUpload({
+      ...base,
+      fileName: `Spreadsheet entry (${validRows.length} row${validRows.length === 1 ? '' : 's'})`,
+      totalRows: validRows.length,
+      validRows: validRows.length,
+      errorRows: 0,
+    });
+    navigate(`/dashboard/bulk-uploader/summary/${id}`);
+  };
+
   const handleBackgroundAck = () => {
     setStep('form');
     setSelectedFile(null);
@@ -250,6 +272,54 @@ export function BulkUploader() {
         </Button>
       </div>
 
+      {/* Input method — Upload File vs Type in Spreadsheet (an input method
+          inside Bulk Booking, not a separate module) */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row items-stretch gap-2">
+            <button
+              onClick={() => setInputMethod('upload')}
+              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${inputMethod === 'upload' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <IconUpload className="w-5 h-5 shrink-0" />
+                <div className="text-left">
+                  <div className="font-semibold">Upload File</div>
+                  <div className={`text-xs ${inputMethod === 'upload' ? 'text-blue-100' : 'text-gray-500'}`}>Upload a filled-in template or paste a sheet link</div>
+                </div>
+              </div>
+            </button>
+            <button
+              onClick={() => setInputMethod('spreadsheet')}
+              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${inputMethod === 'spreadsheet' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <IconFileSpreadsheet className="w-5 h-5 shrink-0" />
+                <div className="text-left">
+                  <div className="font-semibold">Type in Spreadsheet</div>
+                  <div className={`text-xs ${inputMethod === 'spreadsheet' ? 'text-blue-100' : 'text-gray-500'}`}>Enter or paste orders into an in-app grid</div>
+                </div>
+              </div>
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {inputMethod === 'spreadsheet' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Type in Spreadsheet</CardTitle>
+            <CardDescription>
+              Enter orders directly or paste rows from Excel / Google Sheets. Rows are validated inline;
+              only valid rows are booked. Pickup and payment options are configured as part of booking.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SpreadsheetBookingGrid onBook={handleSpreadsheetBook} />
+          </CardContent>
+        </Card>
+      ) : (
+      <>
       {/* Mode toggle */}
       <Card>
         <CardContent className="p-6">
@@ -502,6 +572,8 @@ export function BulkUploader() {
           </Card>
         </div>
       </div>
+      </>
+      )}
 
       {/* Recent Uploads */}
       <Card>

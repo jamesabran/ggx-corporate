@@ -27,17 +27,25 @@ business logistics + commerce platform. Master spec: `docs/business_plus_modules
 - `EnablementGate` locked states; basic **Inventory** and **Storefront** routes.
 - Progressive-reveal sidebar: Business Modules entry + Commerce group when enabled.
 
+**Done (Session 36):** renamed to **Account Add-ons** (curated catalog, under
+Account Management), Business+ logo rebrand (login + header), UI-consistency pass
+(no icon-by-H1, DS Tabs on Notifications), and the Bulk Booking **input-method
+selector + in-app spreadsheet grid** with the shared `lib/bookingValidation`
+pipeline (valid/invalid separation; books valid rows via the existing pipeline).
+
 **Deferred (next sessions, in order):**
-1. Storefront product management UI + customer-facing surface (no checkout yet).
-2. Bulk Booking **input-method selector** (Upload File / Type in Spreadsheet).
-3. In-app **spreadsheet booking grid** reusing upload validation; then product
-   attachment from inventory + stock validation (no draft-stage deduction).
-4. Transactions filter: recognize **On-Demand** as a distinct service type.
-5. Dashboard **Basic Analytics** (only if safe/low-risk; not Advanced Analytics).
-6. Inventory create/edit/import/export flows.
-7. Real activation/request flows (replace the mock acknowledge dialog) + BFF wiring.
-8. Full GGX Business+ rebrand pass (sidebar logo label, titles) — currently
-   docs + conceptual labels only.
+1. **Inventory product attachment into spreadsheet rows** + auto-fill product
+   details + qty×price subtotal + stock validation (no draft-stage deduction).
+2. Wire pickup/payment context into the spreadsheet path (currently file-path only).
+3. Adopt `lib/bookingValidation` in the uploaded-file path (parse → validateRows)
+   so both intakes share one validator end-to-end.
+4. Storefront product management UI + customer-facing surface (no checkout yet).
+5. Transactions filter: recognize **On-Demand** as a distinct service type.
+6. Dashboard **Basic Analytics** (only if safe/low-risk; not Advanced Analytics).
+7. Inventory create/edit/import/export flows.
+8. Real activation/request flows (replace the mock acknowledge dialog) + BFF wiring.
+9. Full GGX Business+ rebrand pass (titles, marketing copy) — logo done; routes
+   intentionally unchanged.
 
 ---
 
