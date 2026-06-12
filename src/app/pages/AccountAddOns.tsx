@@ -12,6 +12,7 @@ import {
   type ResolvedModule,
 } from '../services/businessModulesService';
 import { activateModule, type ActivationOutcome } from '../services/moduleActivationService';
+import { approveModuleRequest } from '../data/moduleRequests';
 
 type Phase = 'confirm' | 'submitting' | 'done';
 
@@ -33,6 +34,7 @@ export function AccountAddOns() {
   const [actioned, setActioned] = useState<ResolvedModule | null>(null);
   const [phase, setPhase] = useState<Phase>('confirm');
   const [outcome, setOutcome] = useState<ActivationOutcome | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const reload = useCallback(() => {
     getModuleCatalog(ctx).then(setGroups);
@@ -63,6 +65,15 @@ export function AccountAddOns() {
     setOutcome(result);
     setPhase('done');
     reload(); // refresh statuses/CTAs (enabled / request submitted)
+  };
+
+  // Demo-only: simulate the GGX account team approving a pending request. Flips
+  // the request to approved (catalog → enabled/available), toasts, and refreshes.
+  const handleSimulateApproval = (m: ResolvedModule) => {
+    approveModuleRequest(ctx.scopeAccountId, m.def.id);
+    setToast(`${m.def.name} approved by your GGX account team — it's now active.`);
+    reload();
+    window.setTimeout(() => setToast(null), 4000);
   };
 
   const filteredGroups = useMemo(() => {
@@ -102,7 +113,12 @@ export function AccountAddOns() {
           <h2 className="text-sm font-semibold text-gray-900 mb-3">{group.label}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {group.modules.map((m) => (
-              <ModuleCard key={m.def.id} module={m} onAction={openAction} />
+              <ModuleCard
+                key={m.def.id}
+                module={m}
+                onAction={openAction}
+                onSimulateApproval={handleSimulateApproval}
+              />
             ))}
           </div>
         </section>
@@ -157,6 +173,16 @@ export function AccountAddOns() {
           </>
         )}
       </Dialog>
+
+      {/* Demo approval toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[70] max-w-sm">
+          <div className="flex items-start gap-2.5 rounded-xl bg-gray-900 text-white shadow-xl px-4 py-3">
+            <IconCircleCheck className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm">{toast}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

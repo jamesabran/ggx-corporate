@@ -98,7 +98,7 @@ export const BUSINESS_MODULES: BusinessModuleDef[] = [
     description: 'Roll up billing across subaccounts into a single statement.',
     contractDefault: 'excluded', enabledByDefault: false, configuredByDefault: false,
     activationMode: 'contract', scopeLevel: 'account', availableFor: ['main'], allowedRoles: ['admin'],
-    dependsOn: 'subaccounts', dependencyPassive: true,
+    dependsOn: 'subaccounts', dependencyPassive: true, route: '/dashboard/billing',
     contractNote: 'Requires Subaccounts. Activation may need a contract update.',
   },
 

@@ -7,7 +7,7 @@
  */
 
 export type ModuleRequestKind = 'request_approval' | 'request_activation';
-export type ModuleRequestStatus = 'in_review';
+export type ModuleRequestStatus = 'in_review' | 'approved';
 
 export interface ModuleRequest {
   moduleId: string;
@@ -44,4 +44,15 @@ export function submitModuleRequest(
   };
   requests[key(scopeId, moduleId)] = req;
   return req;
+}
+
+/**
+ * Demo-only: simulate the GGX account team approving a submitted request. Flips
+ * the request to `approved`, which the module catalog reads as enabled/available.
+ */
+export function approveModuleRequest(scopeId: string | undefined, moduleId: string): ModuleRequest | undefined {
+  const existing = requests[key(scopeId, moduleId)];
+  if (!existing) return undefined;
+  existing.status = 'approved';
+  return existing;
 }

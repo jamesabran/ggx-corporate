@@ -1,7 +1,21 @@
 import { useNavigate } from 'react-router';
 import {
   IconInfoCircle, IconLock, IconMapPin, IconAlertTriangle, IconClockHour4,
+  IconUsersGroup, IconFileInvoice, IconBolt, IconPackages, IconBuildingStore,
+  IconChartHistogram, IconReportAnalytics, IconApps,
 } from '@tabler/icons-react';
+
+// One scannable icon per add-on (existing icon library only). Subtle chip — it
+// aids scanning without dominating the card.
+const MODULE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
+  subaccounts: IconUsersGroup,
+  consolidated_billing: IconFileInvoice,
+  on_demand_delivery: IconBolt,
+  inventory: IconPackages,
+  storefront: IconBuildingStore,
+  advanced_analytics: IconChartHistogram,
+  custom_reports: IconReportAnalytics,
+};
 import { Card, CardContent } from './ui/Card';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
@@ -24,13 +38,17 @@ import { STATUS_META, type ResolvedModule } from '../services/businessModulesSer
 export function ModuleCard({
   module,
   onAction,
+  onSimulateApproval,
 }: {
   module: ResolvedModule;
   onAction?: (module: ResolvedModule) => void;
+  /** Demo-only: simulate GGX approving a pending request (shown while pending). */
+  onSimulateApproval?: (module: ResolvedModule) => void;
 }) {
   const navigate = useNavigate();
   const { def, status, cta } = module;
   const statusMeta = STATUS_META[status];
+  const ModuleIcon = MODULE_ICON[def.id] ?? IconApps;
 
   const handleCta = () => {
     if (cta.disabled) return;
@@ -46,11 +64,16 @@ export function ModuleCard({
     <Card className={cn('flex flex-col', status === 'not_available' && 'opacity-75')}>
       <CardContent className="p-5 flex flex-col flex-1">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-              {module.categoryLabel}
-            </p>
-            <h3 className="text-sm font-semibold text-gray-900 mt-0.5 leading-snug">{def.name}</h3>
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
+              <ModuleIcon className="w-[18px] h-[18px] text-gray-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                {module.categoryLabel}
+              </p>
+              <h3 className="text-sm font-semibold text-gray-900 mt-0.5 leading-snug">{def.name}</h3>
+            </div>
           </div>
           <Badge variant={statusMeta.variant} className="flex-shrink-0">{statusMeta.label}</Badge>
         </div>
@@ -72,6 +95,15 @@ export function ModuleCard({
           )}
           {module.requestPending && module.requestNote && (
             <Note icon={IconClockHour4} className="text-blue-600">{module.requestNote}</Note>
+          )}
+          {module.requestPending && onSimulateApproval && (
+            <button
+              type="button"
+              onClick={() => onSimulateApproval(module)}
+              className="ml-5 text-xs font-medium text-violet-600 hover:text-violet-700 hover:underline cursor-pointer"
+            >
+              Demo: simulate GGX approval
+            </button>
           )}
         </div>
 

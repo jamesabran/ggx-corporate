@@ -125,6 +125,10 @@ export function resolveModuleAccess(m: BusinessModuleDef, ctx: ModuleAccessConte
   if (m.dependsOn && !isDependencySatisfied(m.dependsOn, ctx)) return 'requires_dependency';
   if (m.coverageGated && ctx.serviceCoverageOk === false) return 'not_available';
 
+  // An approved activation/approval request makes the add-on usable (demo: this is
+  // flipped by the "simulate GGX approval" action; in production the BFF returns it).
+  if (getModuleRequest(ctx.scopeAccountId, m.id)?.status === 'approved') return 'enabled';
+
   // Subaccounts is a self-enable scale feature driven by runtime SubAccount state.
   if (m.id === 'subaccounts') return ctx.subaccountsEnabled ? 'enabled' : 'available_to_activate';
 
@@ -240,7 +244,7 @@ function buildResolved(m: BusinessModuleDef, ctx: ModuleAccessContext): Resolved
   let requestNote: string | undefined;
   if (!activationBlocked && (cta.kind === 'request_approval' || cta.kind === 'request_activation')) {
     const existing = getModuleRequest(ctx.scopeAccountId, m.id);
-    if (existing) {
+    if (existing && existing.status === 'in_review') {
       requestPending = true;
       requestNote = 'Request submitted — your GGX account team is reviewing it.';
       cta.label = 'Request submitted';
