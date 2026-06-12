@@ -208,12 +208,18 @@ Pre-implementation checklist:
 - Analytics totals and business-critical metrics must come from service/backend contracts — not page-level frontend computations.
 - Wrong scoping actively misrepresents subaccount performance to stakeholders — treat this as high priority within the polish pass.
 
-### 4. Storefront future improvements
+### 4. Storefront/Product Checkout future work
 
-- **Cart persistence across sessions** — current cart state is component-local; a returning buyer loses their cart on reload. Future: localStorage or session-cookie cart.
-- **Checkout address via API** — buyer address collection at checkout requires a real address-validation API (province/city/barangay cascade). Until then, the checkout form is a UX stub only.
+Storefront/Product Checkout maturity: current demo supports single-product checkout only. Future work includes a multi-product cart before checkout, checkout address mapping through the shared locations API cascade (province/city/district/barangay), cart persistence after the cart flow exists, and production hardening such as backend stock deduction/reservation.
 
-Both items are blocked on backend integration / external API availability and are explicitly deferred.
+Specific deferred items:
+
+- **Multi-product cart before checkout** — a cart step is needed before single-session checkout. This is the main deferred feature.
+- **Checkout address via shared locations API cascade** — product checkout address fields should reuse the shared province/city/barangay cascade used elsewhere in the app, not a free-text stub.
+- **Cart persistence** — after the cart flow exists, persist cart state across sessions. This is a later cart maturity item, not the main deferred feature.
+- **Backend stock deduction/reservation** — stock deduction at order placement remains backend future work.
+
+Product checkout should remain described as demo-level until these items are implemented. All items are blocked on backend integration and are explicitly deferred.
 
 ### Old §4 — Bulk upload / batch transactions UX cleanup ✅ DONE (2026-06-10)
 
@@ -283,6 +289,21 @@ Pickup support: Subaccount, related batch ID or upload session (optional), picku
 
 **Priority:** Future feature — after the current cleanup/polish pass unless stakeholders specifically prioritize operational request workflows.
 
+### Deferred: Bulk Upload fee computation
+
+Fee breakdown needs the following updates in a future pass:
+
+- Remove **Fuel Surcharge** from the fee breakdown display.
+- Add **Item Protection** fee with the label "Item Protection".
+  - Formula: `itemProtection = max(declaredValue - 500, 0) * 0.01`
+- Declared Value remains editable (already implemented in Session 52).
+- Future pass should update the fee summary, fee validation, and relevant mock computation helpers (e.g. `lib/bookingFees.ts`).
+- Do not implement Item Protection or fee computation changes without also updating the fee summary and validation.
+
+### Deferred: In-app spreadsheet booking completion
+
+Allow spreadsheet-created orders to be confirmed directly on the spreadsheet page using its existing Confirm Booking Details, booking summary, payment option, and fees sections. Avoid routing users to a separate Review details page for this flow. The spreadsheet page already has these elements and should become the complete confirmation flow.
+
 ---
 
 ## Architecture / service layer
@@ -298,6 +319,7 @@ Pickup support: Subaccount, related batch ID or upload session (optional), picku
 - Ensure no business-critical math is owned by the frontend after integration.
 - Before implementing Data Analytics scoping: confirm `dataAnalyticsService` contract supports account/subaccount context params.
 - Before implementing Operations Requests: establish `operationsRequestService` contract first.
+- **This is the final roadmap item.** New roadmap items go above this section, not after. Start only when GGX Business+ moves from demo/mock state into a real production implementation.
 
 ### Figma alignment
 - New reusable components added to code should be reflected in the Figma Design System file.
