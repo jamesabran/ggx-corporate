@@ -296,20 +296,22 @@ export function BulkUploader() {
                 </div>
               </div>
             </button>
-            {onDemandEnabled && (
-              <button
-                onClick={() => setUploadMode('on-demand')}
-                className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${uploadMode === 'on-demand' ? 'bg-violet-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <IconBolt className="w-5 h-5 shrink-0" />
-                  <div className="text-left">
-                    <div className="font-semibold">On-Demand Delivery</div>
-                    <div className={`text-xs ${uploadMode === 'on-demand' ? 'text-violet-100' : 'text-gray-500'}`}>Immediate, direct pickup &amp; delivery</div>
+            {/* On-Demand stays visible as an upsell when not enabled (disabled). */}
+            <button
+              onClick={() => onDemandEnabled && setUploadMode('on-demand')}
+              disabled={!onDemandEnabled}
+              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${uploadMode === 'on-demand' ? 'bg-violet-600 text-white shadow-md' : onDemandEnabled ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <IconBolt className="w-5 h-5 shrink-0" />
+                <div className="text-left">
+                  <div className="font-semibold">On-Demand Delivery</div>
+                  <div className={`text-xs ${uploadMode === 'on-demand' ? 'text-violet-100' : 'text-gray-500'}`}>
+                    {onDemandEnabled ? 'Immediate, direct pickup & delivery' : 'Enable On-Demand Delivery for urgent Metro Manila bookings.'}
                   </div>
                 </div>
-              </button>
-            )}
+              </div>
+            </button>
           </div>
           {uploadMode === 'same-day' && (
             <p className="text-xs text-orange-700 mt-2 flex items-center gap-1">
@@ -317,6 +319,10 @@ export function BulkUploader() {
               Same-day uploads process in the background. You can continue using the app and review the results from Recent Uploads once done.
             </p>
           )}
+          <p className="text-xs text-gray-500 mt-2 flex items-start gap-1">
+            <IconMapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            Same-Day and On-Demand deliveries are currently available for Metro Manila locations only.
+          </p>
         </CardContent>
       </Card>
 

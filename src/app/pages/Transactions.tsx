@@ -28,18 +28,19 @@ import {
   type DeliveryServiceType,
 } from '../services/transactionService';
 
-// Each booking has exactly ONE service type (Standard / Same-Day / On-Demand) —
-// never a secondary tag under Express/Standard. One badge per row, colored by type.
-const SERVICE_TYPE_BADGE: Record<DeliveryServiceType, { variant: 'default' | 'info' | 'pending'; label: string }> = {
-  standard:  { variant: 'default', label: SERVICE_TYPE_SHORT_LABEL.standard },
-  same_day:  { variant: 'info',    label: SERVICE_TYPE_SHORT_LABEL.same_day },
-  on_demand: { variant: 'pending', label: SERVICE_TYPE_SHORT_LABEL.on_demand },
+// Each booking has exactly ONE service type. Badge colors align with the Bulk
+// Upload service types — Standard = blue, Same-Day = orange, On-Demand = purple —
+// using subtle -100/-800 tones consistent with the other transaction badges.
+const SERVICE_TYPE_BADGE: Record<DeliveryServiceType, { className: string; label: string }> = {
+  standard:  { className: 'bg-blue-100 text-blue-800',     label: SERVICE_TYPE_SHORT_LABEL.standard },
+  same_day:  { className: 'bg-orange-100 text-orange-800', label: SERVICE_TYPE_SHORT_LABEL.same_day },
+  on_demand: { className: 'bg-violet-100 text-violet-800', label: SERVICE_TYPE_SHORT_LABEL.on_demand },
 };
 
 /** Service-type cell: a single badge — exactly one service type per row. */
 function ServiceTypeCell({ serviceType }: { serviceType: DeliveryServiceType }) {
   const badge = SERVICE_TYPE_BADGE[serviceType];
-  return <Badge variant={badge.variant}>{badge.label}</Badge>;
+  return <Badge className={badge.className}>{badge.label}</Badge>;
 }
 
 // ─── component ──────────────────────────────────────────────────────────────

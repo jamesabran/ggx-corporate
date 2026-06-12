@@ -156,9 +156,20 @@ function isRowBlank(row: BookingRow): boolean {
  * here — deduction is a backend operation on confirmed booking. See
  * docs/inventory_rules.md.
  */
+/** Same-Day / On-Demand are Metro Manila-only at booking time. */
+export function isMetroManila(province: string): boolean {
+  return /metro manila|ncr|national capital/i.test(province);
+}
+
+export interface RowValidationOptions {
+  /** When true, non-Metro-Manila provinces are flagged (Same-Day / On-Demand). */
+  metroOnly?: boolean;
+}
+
 export function validateRow(
   row: BookingRow,
   productIndex?: Map<string, ProductAvailability>,
+  opts?: RowValidationOptions,
 ): RowValidation {
   const errors: Partial<Record<BookingField, string>> = {};
 
@@ -168,6 +179,11 @@ export function validateRow(
 
   for (const field of REQUIRED_FIELDS) {
     if (!row[field]?.trim()) errors[field] = 'Required';
+  }
+
+  // Same-Day / On-Demand service area: Metro Manila only.
+  if (opts?.metroOnly && row.province.trim() && !isMetroManila(row.province)) {
+    errors.province = 'Same-Day / On-Demand: Metro Manila only';
   }
 
   const mobile = row.recipientMobile.trim();
@@ -234,6 +250,7 @@ export interface RowsValidationResult {
 export function validateRows(
   rows: BookingRow[],
   productIndex?: Map<string, ProductAvailability>,
+  opts?: RowValidationOptions,
 ): RowsValidationResult {
   const validations: Record<string, RowValidation> = {};
   const validRows: BookingRow[] = [];
@@ -241,7 +258,7 @@ export function validateRows(
   let emptyCount = 0;
 
   for (const row of rows) {
-    const v = validateRow(row, productIndex);
+    const v = validateRow(row, productIndex, opts);
     validations[row.id] = v;
     if (v.isEmpty) emptyCount += 1;
     else if (v.isValid) validRows.push(row);

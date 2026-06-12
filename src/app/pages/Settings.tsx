@@ -31,6 +31,10 @@ export function Settings() {
   const [savedAccount, setSavedAccount] = useState(false);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savedPrefs, setSavedPrefs] = useState(false);
+  // Notification preferences as toggles (local demo state).
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
+    delivery: true, billing: true, weekly: true, marketing: false,
+  });
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: '', next: '', confirm: '' });
   const [passwordSaved, setPasswordSaved] = useState(false);
@@ -189,16 +193,27 @@ export function Settings() {
           </CardHeader>
           <CardContent className="space-y-4">
             {[
-              { id: 'delivery', label: 'Delivery status updates', checked: true },
-              { id: 'billing', label: 'Billing and invoice notifications', checked: true },
-              { id: 'weekly', label: 'Weekly summary reports', checked: true },
-              { id: 'marketing', label: 'Marketing and promotional emails', checked: false },
-            ].map((item) => (
-              <label key={item.id} className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" defaultChecked={item.checked} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600" />
-                <span className="text-sm text-gray-700">{item.label}</span>
-              </label>
-            ))}
+              { id: 'delivery', label: 'Delivery status updates' },
+              { id: 'billing', label: 'Billing and invoice notifications' },
+              { id: 'weekly', label: 'Weekly summary reports' },
+              { id: 'marketing', label: 'Marketing and promotional emails' },
+            ].map((item) => {
+              const on = notifPrefs[item.id];
+              return (
+                <div key={item.id} className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-gray-700">{item.label}</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={on}
+                    onClick={() => setNotifPrefs((p) => ({ ...p, [item.id]: !p[item.id] }))}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${on ? 'bg-blue-600' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+              );
+            })}
             <div className="pt-4">
               <Button onClick={handleSavePrefs} disabled={savingPrefs}>
                 {savingPrefs ? (

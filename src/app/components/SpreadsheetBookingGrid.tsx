@@ -41,12 +41,15 @@ export function SpreadsheetBookingGrid({
   onValidationChange,
   inventoryEnabled = false,
   products = [],
+  metroOnly = false,
 }: {
   onValidationChange?: (state: GridValidationState) => void;
   /** When true, the Product / SKU cell attaches Inventory products (vs free text). */
   inventoryEnabled?: boolean;
   /** Scope's inventory products (used for attachment + live stock validation). */
   products?: InventoryProduct[];
+  /** When true (Same-Day / On-Demand), non-Metro-Manila provinces are flagged. */
+  metroOnly?: boolean;
 }) {
   const nextId = useRef(4);
   const [rows, setRows] = useState<BookingRow[]>(() => [
@@ -63,8 +66,8 @@ export function SpreadsheetBookingGrid({
   }, [products]);
 
   const result = useMemo(
-    () => validateRows(rows, inventoryEnabled ? productIndex : undefined),
-    [rows, inventoryEnabled, productIndex],
+    () => validateRows(rows, inventoryEnabled ? productIndex : undefined, { metroOnly }),
+    [rows, inventoryEnabled, productIndex, metroOnly],
   );
   const { validations, validRows, invalidRows, emptyCount } = result;
 
