@@ -45,7 +45,7 @@ export function BuyerCheckout() {
 
   const qty = Math.max(1, Number(form.qty) || 1);
   const total = product ? product.unitPrice * qty : 0;
-  const outOfStock = !!product && (product.status !== 'active' || product.stockQuantity <= 0);
+  const outOfStock = !!product && (product.status !== 'active' || (!product.unlimitedStock && product.stockQuantity <= 0));
   const canOrder = useMemo(
     () => !outOfStock && form.name.trim() && form.mobile.trim() && form.street.trim()
       && form.province.trim() && form.city.trim() && form.barangay.trim(),
@@ -156,7 +156,8 @@ export function BuyerCheckout() {
               <div className="w-28">
                 <Field label="Quantity">
                   <Input
-                    type="number" min={1} max={product.stockQuantity || undefined}
+                    type="number" min={1}
+                    max={product.unlimitedStock ? undefined : (product.stockQuantity || undefined)}
                     value={form.qty}
                     onChange={(e) => set('qty', e.target.value)}
                   />

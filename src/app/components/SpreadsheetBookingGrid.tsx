@@ -58,7 +58,7 @@ export function SpreadsheetBookingGrid({
   // Live availability index for attached-product validation (stock + status).
   const productIndex = useMemo(() => {
     const m = new Map<string, ProductAvailability>();
-    for (const p of products) m.set(p.id, { stockQuantity: p.stockQuantity, status: p.status });
+    for (const p of products) m.set(p.id, { stockQuantity: p.unlimitedStock ? Infinity : p.stockQuantity, status: p.status });
     return m;
   }, [products]);
 

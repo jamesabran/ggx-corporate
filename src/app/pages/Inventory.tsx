@@ -189,9 +189,13 @@ export function Inventory() {
                   <TableCell className="text-gray-500">{p.category}</TableCell>
                   <TableCell className="text-gray-700">₱{p.unitPrice.toLocaleString()}</TableCell>
                   <TableCell>
-                    <span className="text-gray-700">{p.stockQuantity}</span>
-                    {isLowStock(p) && (
-                      <Badge variant="warning" className="ml-2">Low</Badge>
+                    {p.unlimitedStock ? (
+                      <span className="text-gray-700">Unlimited</span>
+                    ) : (
+                      <>
+                        <span className="text-gray-700">{p.stockQuantity}</span>
+                        {isLowStock(p) && <Badge variant="warning" className="ml-2">Low</Badge>}
+                      </>
                     )}
                   </TableCell>
                   <TableCell>

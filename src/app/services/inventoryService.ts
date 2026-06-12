@@ -19,6 +19,7 @@ import {
   getProductById,
   getProductsByIds,
   productCover,
+  PRODUCT_CATEGORIES,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -30,7 +31,7 @@ import {
 } from '../data/inventory';
 
 export type { InventoryProduct, ProductStatus, ProductDimensions, ProductInput };
-export { productCover };
+export { productCover, PRODUCT_CATEGORIES };
 
 /** Return inventory products for a scope (subaccount/account). */
 export async function getInventoryProducts(scopeId: string | undefined): Promise<InventoryProduct[]> {
@@ -76,9 +77,9 @@ export async function importInventoryProducts(
   return importProducts(scopeId, inputs);
 }
 
-/** True when stock is at/under the low-stock threshold (presentation helper). */
+/** True when stock is at/under the low-stock threshold (unlimited is never low). */
 export function isLowStock(p: InventoryProduct): boolean {
-  return p.stockQuantity <= p.lowStockThreshold;
+  return !p.unlimitedStock && p.stockQuantity <= p.lowStockThreshold;
 }
 
 // ─── CSV import / export (presentation helpers) ────────────────────────────────
@@ -164,6 +165,7 @@ export function parseProductsCsv(text: string): CsvParseResult {
       dimensions: { length: num(iL), width: num(iW), height: num(iH) },
       stockQuantity: num(iStock),
       lowStockThreshold: num(iLow, 10),
+      unlimitedStock: false,
       images: [],
       status: statusRaw === 'inactive' ? 'inactive' : 'active',
     });

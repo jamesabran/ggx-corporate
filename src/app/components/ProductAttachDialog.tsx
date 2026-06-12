@@ -11,13 +11,17 @@ import { attachmentSubtotal, attachmentTotalQty, type AttachedProduct } from '..
 const peso = (n: number) =>
   `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-/** Selectable = active and has stock. Inactive / out-of-stock are shown but locked. */
+/** Effective stock cap for clamping (unlimited products use a high ceiling). */
+const stockCap = (p: InventoryProduct): number => (p.unlimitedStock ? 9999 : p.stockQuantity);
+
+/** Selectable = active and has stock (unlimited always has stock). */
 function isSelectable(p: InventoryProduct): boolean {
-  return p.status === 'active' && p.stockQuantity > 0;
+  return p.status === 'active' && (p.unlimitedStock || p.stockQuantity > 0);
 }
 
 function stockBadge(p: InventoryProduct) {
   if (p.status === 'inactive') return <Badge variant="default">Inactive</Badge>;
+  if (p.unlimitedStock) return <Badge variant="success">In stock</Badge>;
   if (p.stockQuantity === 0) return <Badge variant="danger">Out of stock</Badge>;
   if (isLowStock(p)) return <Badge variant="warning">Low · {p.stockQuantity} left</Badge>;
   return <Badge variant="success">{p.stockQuantity} in stock</Badge>;
@@ -63,7 +67,7 @@ export function ProductAttachDialog({
   );
 
   const setQuantity = (p: InventoryProduct, next: number) => {
-    const clamped = Math.max(0, Math.min(next, p.stockQuantity));
+    const clamped = Math.max(0, Math.min(next, stockCap(p)));
     setQty((prev) => {
       const copy = { ...prev };
       if (clamped <= 0) delete copy[p.id];
@@ -156,7 +160,7 @@ export function ProductAttachDialog({
                   />
                   <button
                     type="button"
-                    disabled={!selectable || current >= p.stockQuantity}
+                    disabled={!selectable || current >= stockCap(p)}
                     onClick={() => setQuantity(p, current + 1)}
                     className="w-7 h-7 rounded border border-gray-200 text-gray-500 flex items-center justify-center hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     aria-label={`Increase ${p.name}`}

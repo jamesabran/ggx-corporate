@@ -5,7 +5,7 @@ import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { cn } from '../lib/utils';
-import type { InventoryProduct, ProductInput, ProductStatus } from '../services/inventoryService';
+import { PRODUCT_CATEGORIES, type InventoryProduct, type ProductInput, type ProductStatus } from '../services/inventoryService';
 
 interface FormState {
   name: string;
@@ -19,6 +19,7 @@ interface FormState {
   height: string;
   stockQuantity: string;
   lowStockThreshold: string;
+  unlimited: boolean;
   status: ProductStatus;
 }
 
@@ -26,7 +27,7 @@ function blankForm(): FormState {
   return {
     name: '', sku: '', category: '', description: '',
     unitPrice: '', weight: '', length: '', width: '', height: '',
-    stockQuantity: '', lowStockThreshold: '10', status: 'active',
+    stockQuantity: '', lowStockThreshold: '10', unlimited: false, status: 'active',
   };
 }
 
@@ -36,7 +37,7 @@ function productToForm(p: InventoryProduct): FormState {
     unitPrice: String(p.unitPrice), weight: String(p.weight),
     length: String(p.dimensions.length), width: String(p.dimensions.width), height: String(p.dimensions.height),
     stockQuantity: String(p.stockQuantity), lowStockThreshold: String(p.lowStockThreshold),
-    status: p.status,
+    unlimited: p.unlimitedStock, status: p.status,
   };
 }
 
@@ -117,6 +118,7 @@ export function ProductFormDialog({
       dimensions: { length: num(form.length), width: num(form.width), height: num(form.height) },
       stockQuantity: num(form.stockQuantity),
       lowStockThreshold: num(form.lowStockThreshold),
+      unlimitedStock: form.unlimited,
       images,
       coverImage: cover ?? images[0],
       status: form.status,
@@ -132,12 +134,18 @@ export function ProductFormDialog({
             <Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Premium Coffee Beans 1kg" />
           </div>
           <div>
-            <Label required>SKU</Label>
-            <Input value={form.sku} onChange={(e) => set('sku', e.target.value)} placeholder="e.g. COF-1KG-001" />
+            <Label>SKU</Label>
+            <Input value={form.sku} onChange={(e) => set('sku', e.target.value)} placeholder="Optional — e.g. COF-1KG-001" />
           </div>
           <div>
             <Label>Category</Label>
-            <Input value={form.category} onChange={(e) => set('category', e.target.value)} placeholder="e.g. Food & Beverage" />
+            <Select value={form.category} onChange={(e) => set('category', e.target.value)}>
+              <option value="">Select a category</option>
+              {!PRODUCT_CATEGORIES.includes(form.category as (typeof PRODUCT_CATEGORIES)[number]) && form.category && (
+                <option value={form.category}>{form.category}</option>
+              )}
+              {PRODUCT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </Select>
           </div>
           <div>
             <Label>Status</Label>
@@ -159,31 +167,51 @@ export function ProductFormDialog({
           />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div>
-            <Label>Unit price (₱)</Label>
-            <Input type="number" min={0} value={form.unitPrice} onChange={(e) => set('unitPrice', e.target.value)} placeholder="0" />
+        {/* Pricing & stock */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <Label>Pricing &amp; stock</Label>
+            <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+              <input type="checkbox" checked={form.unlimited} onChange={(e) => setForm((p) => ({ ...p, unlimited: e.target.checked }))} className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+              Unlimited stock
+            </label>
           </div>
-          <div>
-            <Label>Weight (kg)</Label>
-            <Input type="number" min={0} step="0.01" value={form.weight} onChange={(e) => set('weight', e.target.value)} placeholder="0" />
-          </div>
-          <div>
-            <Label>Stock qty</Label>
-            <Input type="number" min={0} value={form.stockQuantity} onChange={(e) => set('stockQuantity', e.target.value)} placeholder="0" />
-          </div>
-          <div>
-            <Label>Low-stock at</Label>
-            <Input type="number" min={0} value={form.lowStockThreshold} onChange={(e) => set('lowStockThreshold', e.target.value)} placeholder="10" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <Label>Unit price (₱)</Label>
+              <Input type="number" min={0} value={form.unitPrice} onChange={(e) => set('unitPrice', e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <Label>Stock qty</Label>
+              <Input
+                type="number" min={0}
+                value={form.unlimited ? '' : form.stockQuantity}
+                disabled={form.unlimited}
+                onChange={(e) => set('stockQuantity', e.target.value)}
+                placeholder={form.unlimited ? 'Unlimited' : '0'}
+              />
+            </div>
+            <div>
+              <Label>Low-stock at</Label>
+              <Input
+                type="number" min={0}
+                value={form.unlimited ? '' : form.lowStockThreshold}
+                disabled={form.unlimited}
+                onChange={(e) => set('lowStockThreshold', e.target.value)}
+                placeholder={form.unlimited ? '—' : '10'}
+              />
+            </div>
           </div>
         </div>
 
+        {/* Weight + dimensions (weight first) */}
         <div>
-          <Label>Dimensions L × W × H (cm)</Label>
-          <div className="grid grid-cols-3 gap-3">
-            <Input type="number" min={0} value={form.length} onChange={(e) => set('length', e.target.value)} placeholder="L" />
-            <Input type="number" min={0} value={form.width} onChange={(e) => set('width', e.target.value)} placeholder="W" />
-            <Input type="number" min={0} value={form.height} onChange={(e) => set('height', e.target.value)} placeholder="H" />
+          <Label>Weight &amp; dimensions</Label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Input type="number" min={0} step="0.01" value={form.weight} onChange={(e) => set('weight', e.target.value)} placeholder="Weight (kg)" />
+            <Input type="number" min={0} value={form.length} onChange={(e) => set('length', e.target.value)} placeholder="L (cm)" />
+            <Input type="number" min={0} value={form.width} onChange={(e) => set('width', e.target.value)} placeholder="W (cm)" />
+            <Input type="number" min={0} value={form.height} onChange={(e) => set('height', e.target.value)} placeholder="H (cm)" />
           </div>
         </div>
 
