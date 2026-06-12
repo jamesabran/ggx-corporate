@@ -132,7 +132,7 @@ export function Reports() {
         </div>
         {customReportsEnabled ? (
           <Link to="/dashboard/reports/custom" className="flex-shrink-0">
-            <Button variant="outline" size="sm">
+            <Button>
               <IconReportAnalytics className="w-4 h-4" /> Custom Reports
             </Button>
           </Link>

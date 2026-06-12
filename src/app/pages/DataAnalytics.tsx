@@ -248,7 +248,7 @@ export function DataAnalytics() {
               <option value="on_demand">On-Demand</option>
             </Select>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExport} className="self-end">
+          <Button onClick={handleExport} className="self-end">
             <IconDownload className="w-4 h-4" /> Export CSV
           </Button>
         </div>

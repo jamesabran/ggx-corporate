@@ -444,7 +444,7 @@ function InstallCallout() {
               Connect your Shopify store to GGX Business+ so pickup requests from Shopify can be
               booked through GoGo Xpress and monitored from this account.
             </p>
-            <InstallPluginButton variant="outline" className="bg-white" />
+            <InstallPluginButton />
           </div>
         </div>
       </CardContent>
@@ -571,7 +571,7 @@ export function Shopify() {
             Connect a Shopify store and book orders for pickup through GoGo Xpress.
           </p>
         </div>
-        <InstallPluginButton variant="outline" />
+        <InstallPluginButton />
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
