@@ -7,24 +7,24 @@
 
 ## ▶ Current state (resume here) — updated 2026-06-12
 
-**Stage:** GGX Business+ demo quality pass complete (Session 51). Build green, not pushed.
+**Stage:** GGX Business+ Session 52 fixes applied. Build green, not pushed.
 
-- **Branch:** `master`. **Build:** green. Latest commit: `8687d62` (roadmap docs). Not pushed.
+- **Branch:** `master`. **Build:** green. Latest commit: `4ba521b` (roadmap docs). Not pushed.
 - **Working tree:** clean except `.claude/settings.local.json` (local config, leave it).
-- **Where things stand:** Full demo quality pass complete:
-  - Bulk Upload: On-Demand button navigates to Add-ons (dashed teaser) when not enabled;
-    collectible amount auto-syncs from declaredValue unless manually edited (dirty-flag pattern).
-  - ProductFormDialog: SKU optional (name-only suffices).
-  - businessModulesService: resolvedType upcasts admin → 'main' for account-scope modules
-    regardless of subaccountsEnabled; managers see no not_available account-scope modules.
-  - Reports: Custom Reports button is an Add-ons teaser when addon not enabled.
-  - Bell refresh: pushNotification dispatches ggx:notification-push; RootLayout listens.
-  - BasicAnalytics: date preset tabs (7d/30d/This Month) + service type filter; KPI cards respond.
-  - DataAnalytics: addon gate (locked upgrade CTA); custom date range; Export CSV;
-    subaccount comparison table (main view); service type + region filters.
+- **Where things stand:** Session 52 fixes:
+  - Bulk Upload On-Demand gated CTA: copy updated to 'Immediate, direct pickup & delivery - Enable in Add-ons'.
+  - SpreadsheetBookingGrid: Declared Value is no longer locked when products are attached — editable,
+    pre-filled from product subtotal. Collectible Amount still syncs from subtotal on attachment;
+    does NOT re-sync from manually-edited declared value when products are attached.
+  - Reports/Custom Reports: verified correct — uses `isAddonEnabledForAccount('custom_reports', MAIN_SCOPE)`
+    from addonsService; button becomes active after approval via notification flow. No code change needed.
+  - DataAnalytics/Advanced Analytics: verified correct — uses `isAddonEnabledForAccount('advanced_analytics', MAIN_SCOPE)`
+    from addonsService; gate lifted after approval via notification flow. No code change needed.
+  - Roadmap updated: Storefront/Checkout maturity, Bulk Upload fee computation (Item Protection formula),
+    In-app spreadsheet booking completion, and BFF/fetch as final item all recorded.
 
 **Next task:** backend integration (auth → transactions + claims → everything else).
-Done: all 13 demo quality pass tasks.
+Done: all Session 51 + Session 52 fixes.
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
 decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); Inventory
