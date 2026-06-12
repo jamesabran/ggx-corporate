@@ -7,22 +7,10 @@
 
 ## ▶ Current state (resume here) — updated 2026-06-12
 
-**Stage:** GGX Business+ modular platform. Foundation (Account Add-ons, feature
-enablement, On-Demand service mode, Commerce stubs) is in; the **Bulk Upload →
-In-app Spreadsheet** flow is stable + polished, **Transactions recognize On-Demand
-as a distinct service type** (roadmap #5), the spreadsheet grid supports **Inventory
-product attachment** when enabled (roadmap #1), the misleading per-row **Payment
-column was removed**, the review **summary is data-driven for spreadsheet batches**
-(roadmap #3), the Dashboard has a **Basic Analytics** section (roadmap #6),
-**Inventory has full create/edit/import/export flows** (roadmap #7), and
-**Storefront has product management + a public `/shop/:slug` surface** (roadmap #4,
-no checkout), **Account Add-ons run real activation/request flows** (roadmap #8),
-and the **user-facing rebrand to GGX Business+** is complete (roadmap #9). **All
-GGX Business+ deferred items are now done except #2** (adopt `lib/bookingValidation`
-in the file path), which stays blocked on real file parsing.
+**Stage:** GGX Business+ modular platform — all features complete. Add-on state
+now persists to localStorage. Approval flows via Notifications (not card demo links).
 
-- **Branch:** `master`. **Build:** green (`npm run build`). Latest work committed.
-  Not pushed (per project rule — push only when explicitly asked).
+- **Branch:** `master`. **Build:** green. Latest commit: `7e604f3`. Not pushed.
 - **Working tree:** clean except `.claude/settings.local.json` (local config, leave it).
 - **Where things stand:** Upload File + In-app Spreadsheet feed one Bulk Booking flow;
   spreadsheet is a step page (`/dashboard/bulk-uploader/spreadsheet`, no sidebar item),
@@ -30,12 +18,15 @@ in the file path), which stays blocked on real file parsing.
   `lib/bookingValidation`, GGX location cascade (shared `LocationCascadeCells`),
   pixel-width grid with forced horizontal scroll, fee estimate. The Product/SKU cell
   is a product picker when Inventory is enabled (else free text + upsell teaser).
+  Account Add-ons: self-enable add-ons (Inventory/Storefront/On-Demand) flip
+  immediately; contract add-ons (Advanced Analytics, Custom Reports, Consolidated
+  Billing) push a Notification with an "Approve" button — approval flows from the
+  Notifications page. All state persisted to localStorage.
 
-**Next task:** the GGX Business+ deferred list is cleared except **#2** (adopt
-`lib/bookingValidation` in the uploaded-file path) — still blocked on real file
-parsing; revisit when a parser lands. Otherwise the next major stage is **backend
-integration** (swap mock service bodies for BFF `fetch()` calls; dependency order
-auth → transactions + claims → everything else — see roadmap "Backend integration").
+**Next task:** #2 (adopt `lib/bookingValidation` in the uploaded-file path) stays
+blocked on real file parsing. The next major stage is **backend integration** (swap
+mock service bodies for BFF `fetch()` calls; dependency order: auth → transactions +
+claims → everything else — see roadmap "Backend integration").
 Done: #5, #1, #3, #6, #7, #4, #8, #9.
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
@@ -47,6 +38,34 @@ deps; non-destructive; preserve Upload File behavior; commit after stable milest
 strip it after any Write. PowerShell `Get-Content`/`Set-Content` round-trips corrupt UTF-8
 (₱, em-dash) → mojibake; prefer Edit, or `sed -i` (byte-safe) for bulk line ops. See
 [[reference-powershell-utf8-roundtrip]].
+
+---
+
+## Session 50 (2026-06-12) — Add-on state refactor: persistent store + Notifications approval
+
+One commit (`7e604f3`). **Build green.** Replaces `moduleRequests` + `moduleActivationService`
+with a unified, localStorage-persisted add-on system.
+
+- **`data/addonState.ts`** (new): per-account addon status store (`enabled`/`requested`/`approved`),
+  persisted via `loadState`/`saveState` so enablement survives refresh.
+- **`services/addonsService.ts`** (new): unified entry point — `enableAddon`/`disableAddon`
+  (syncs both addonState + featureEnablement for featureId add-ons); `requestAddon` (stores +
+  pushes a Notification with `meta.addon = { moduleId, accountId }` for in-notification approval);
+  `approveAddon` (enables + pushes a confirmation notification).
+- **`data/featureEnablement.ts`**: now persists to localStorage; added `getScopesWithFeature` for
+  Main Account targeting UI.
+- **`data/businessModules.ts`**: Advanced Analytics changed to `excluded`/contract (no longer
+  enabled-by-default); added `ASSIGNABLE_ADDON_IDS` / `isAssignableAddon`.
+- **`services/businessModulesService.ts`**: `resolveModuleAccess` reads `addonState` (not old
+  `moduleRequests`); unified `requires_approval` + `requires_contract_revision` → single
+  `request_activation` CTA; new `effectiveAccountId(ctx)` helper; removed `dependencyPassive`
+  branching (dependency CTAs are always disabled/non-actionable).
+- **`pages/AccountAddOns.tsx`**: wired to `addonsService`; removed `onSimulateApproval` / demo
+  toast (approval now flows from Notifications).
+- **`pages/Notifications.tsx`**: `NotificationRow` renders an "Approve" button when
+  `n.meta?.addon` is present — calls `approveAddon` and reloads the list.
+- **`components/ModuleCard.tsx`**: removed `onSimulateApproval` prop.
+- **Deleted:** `data/moduleRequests.ts`, `services/moduleActivationService.ts`.
 
 ---
 
