@@ -101,6 +101,7 @@ interface ErrorRowData {
   pouchSize: string;
   cod: string;               // 'Yes' | 'No' — editable
   codAmount: string;
+  declaredValue: string;
   insureFull: string;        // 'Yes' | 'No' | '' — editable
   recipientPaysFees: string; // 'Yes' | 'No' — editable
   referenceId: string;
@@ -115,7 +116,7 @@ const INITIAL_ERROR_ROWS: ErrorRowData[] = [
     recipientName: 'Jen Ramos', mobileNumber: '', streetAddress: '123 Penarubia St.',
     province: 'Metro Manila', cityMunicipality: 'Mandaluyong City', barangay: 'Malamig', landmarks: '–',
     itemName: 'UNO FLIP! Double Sided Card', pouchSize: '', cod: 'No', codAmount: '',
-    insureFull: '', recipientPaysFees: 'No', referenceId: '',
+    declaredValue: '', insureFull: '', recipientPaysFees: 'No', referenceId: '',
   },
   {
     row: 4,
@@ -123,7 +124,7 @@ const INITIAL_ERROR_ROWS: ErrorRowData[] = [
     recipientName: 'Rome Jans', mobileNumber: '+639101234567', streetAddress: '2287 Allegro Center, Chinatown',
     province: 'Metro Manila', cityMunicipality: 'Makati City', barangay: 'Bel-Air', landmarks: '–',
     itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SUPERSIZED', cod: 'Yes', codAmount: '75000',
-    insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-004',
+    declaredValue: '75000', insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-004',
   },
   {
     row: 5,
@@ -131,7 +132,7 @@ const INITIAL_ERROR_ROWS: ErrorRowData[] = [
     recipientName: 'Rome Jans', mobileNumber: '+639101234567', streetAddress: '2287 Allegro Center, Chinatown',
     province: 'Metro Manila', cityMunicipality: 'Makati City', barangay: 'Bel-Air', landmarks: '–',
     itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SMALL', cod: 'Yes', codAmount: '500',
-    insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-005',
+    declaredValue: '500', insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-005',
   },
   {
     row: 6,
@@ -139,14 +140,14 @@ const INITIAL_ERROR_ROWS: ErrorRowData[] = [
     recipientName: 'Rome Jans', mobileNumber: '+639101234567', streetAddress: '2287 Allegro Center, Chinatown',
     province: 'Metro Manila', cityMunicipality: 'Makati City', barangay: 'Bel-Air', landmarks: '–',
     itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SMALL', cod: 'Yes', codAmount: '500',
-    insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-005',
+    declaredValue: '500', insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-005',
   },
 ];
 
 type EditableField =
   | 'recipientName' | 'mobileNumber' | 'streetAddress'
   | 'province' | 'cityMunicipality' | 'barangay' | 'landmarks'
-  | 'itemName' | 'pouchSize' | 'cod' | 'codAmount'
+  | 'itemName' | 'pouchSize' | 'cod' | 'codAmount' | 'declaredValue'
   | 'insureFull' | 'recipientPaysFees' | 'referenceId';
 
 type RowEdits = Record<EditableField, string>;
@@ -164,6 +165,7 @@ function rowToEdits(row: ErrorRowData): RowEdits {
     pouchSize:         row.pouchSize,
     cod:               row.cod,
     codAmount:         row.codAmount,
+    declaredValue:     row.declaredValue,
     insureFull:        row.insureFull,
     recipientPaysFees: row.recipientPaysFees,
     referenceId:       row.referenceId,
@@ -172,16 +174,15 @@ function rowToEdits(row: ErrorRowData): RowEdits {
 
 /**
  * Item Protection Fee.
- * If insured for full value, the full COD amount is covered in case of loss/
- * damage and a fee applies on the value above the free ₱500 tier:
- *   Fee = (COD Amount − 500) × 0.01   (only when Insure = Yes and COD > 500)
+ * If insured for full value, a fee applies on the declared value above the
+ * free ₱500 tier: Fee = (Declared Value − 500) × 0.01
  * Otherwise the free ₱500 coverage applies and the fee is ₱0.
  */
 function computeItemProtectionFee(edits: RowEdits): number {
   if (edits.insureFull !== 'Yes') return 0;
-  const cod = parseFloat(edits.codAmount.replace(/[^0-9.]/g, '')) || 0;
-  if (cod <= 500) return 0;
-  return parseFloat(((cod - 500) * 0.01).toFixed(2));
+  const declared = parseFloat(edits.declaredValue.replace(/[^0-9.]/g, '')) || 0;
+  if (declared <= 500) return 0;
+  return parseFloat(((declared - 500) * 0.01).toFixed(2));
 }
 
 /**
@@ -358,8 +359,7 @@ export function BulkUploadSummary() {
   const totalItemProtectionFee = parseFloat(
     errorRows.reduce((sum, row) => sum + computeItemProtectionFee(rowEdits[row.row] ?? rowToEdits(row)), 0).toFixed(2)
   );
-  const fuelSurcharge = 500;
-  const totalFees     = shippingFee + totalItemProtectionFee + fuelSurcharge;
+  const totalFees = shippingFee + totalItemProtectionFee;
 
   const formatDate = (iso: string) => {
     if (!iso) return 'Tomorrow';
@@ -577,10 +577,11 @@ export function BulkUploadSummary() {
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">Pouch/box size</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[110px]">COD?</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[130px]">COD Amount</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[130px]">Declared Value</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">Insure full item value? <span className="text-red-500">*</span></th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[145px]">
                       Item Protection Fee
-                      <span className="font-normal text-gray-400 block text-xs leading-tight">(COD − ₱500) × 1%</span>
+                      <span className="font-normal text-gray-400 block text-xs leading-tight">(Declared − ₱500) × 1%</span>
                     </th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">Recipient Pays Fees</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[140px]">Reference ID</th>
@@ -670,6 +671,11 @@ export function BulkUploadSummary() {
                         <td className="px-3 py-2.5">
                           <ErrInput value={edits.codAmount} onChange={(v) => updateEdit(row.row, 'codAmount', v)} error={fe('codAmount')} placeholder="0.00" />
                           {fe('codAmount') && <p className="text-xs text-red-600 mt-0.5">Exceeds ₱50,000 limit</p>}
+                        </td>
+
+                        {/* Declared Value */}
+                        <td className="px-3 py-2.5">
+                          <ErrInput value={edits.declaredValue} onChange={(v) => updateEdit(row.row, 'declaredValue', v)} error={false} placeholder="0.00" />
                         </td>
 
                         {/* Insure full item value? — editable Yes/No (required) */}
@@ -845,10 +851,6 @@ export function BulkUploadSummary() {
                   <span className={totalItemProtectionFee > 0 ? 'text-gray-900' : 'text-gray-400'}>
                     {peso(totalItemProtectionFee)}
                   </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Fuel Surcharge</span>
-                  <span className="text-gray-900">₱{fuelSurcharge}.00</span>
                 </div>
               </div>
               <div className="border-t border-gray-200 pt-2 flex justify-between font-semibold">

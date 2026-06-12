@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router';
+import { useParams, Link, useNavigate } from 'react-router';
 import {
-  IconBuildingStore, IconMail, IconPhone, IconShoppingCart, IconEyeCog, IconPackage,
+  IconBuildingStore, IconMail, IconPhone, IconShoppingCart, IconEyeCog, IconPackage, IconCheck,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { getStorefrontProfileBySlug, type StorefrontProfile } from '../services/storefrontService';
 import { getInventoryProductsByIds, isLowStock, productCover, type InventoryProduct } from '../services/inventoryService';
 import { getServiceTypeLabel } from '../data/serviceTypes';
+import { addToCart, useCartItems } from '../lib/cartStore';
 
 const peso = (n: number) =>
   `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -21,9 +22,14 @@ const peso = (n: number) =>
  */
 export function StorefrontPreview() {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<StorefrontProfile | null>(null);
   const [products, setProducts] = useState<InventoryProduct[]>([]);
+  const cartItems = useCartItems();
+  const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+  // Track which product was just added (resets after 2s for per-card feedback).
+  const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -73,6 +79,22 @@ export function StorefrontPreview() {
       {/* Store header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-6 py-8">
+          {/* Cart button — top-right of the header area */}
+          {cartCount > 0 && (
+            <div className="flex justify-end mb-4">
+              <button
+                type="button"
+                onClick={() => navigate(`/shop/${slug}/cart`)}
+                className="relative inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <IconShoppingCart className="w-4 h-4" />
+                View cart
+                <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                  {cartCount}
+                </span>
+              </button>
+            </div>
+          )}
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center flex-shrink-0">
               <IconBuildingStore className="w-7 h-7 text-white" />
@@ -142,14 +164,36 @@ export function StorefrontPreview() {
                         >
                           Out of stock
                         </button>
+                      ) : justAddedId === p.id ? (
+                        <button
+                          type="button" disabled
+                          className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-green-600 text-white text-sm font-medium h-9 cursor-default"
+                        >
+                          <IconCheck className="w-4 h-4" />
+                          Added!
+                        </button>
                       ) : (
-                        <Link
-                          to={`/buy/${p.id}`}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            addToCart({
+                              productId: p.id,
+                              quantity: 1,
+                              productSnapshot: {
+                                name: p.name,
+                                unitPrice: p.unitPrice,
+                                images: p.images,
+                                category: p.category,
+                              },
+                            });
+                            setJustAddedId(p.id);
+                            setTimeout(() => setJustAddedId(null), 2000);
+                          }}
                           className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium h-9 transition-colors"
                         >
                           <IconShoppingCart className="w-4 h-4" />
-                          Order now (COD)
-                        </Link>
+                          Add to cart
+                        </button>
                       )}
                     </div>
                   </CardContent>

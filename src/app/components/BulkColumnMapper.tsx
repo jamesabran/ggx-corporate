@@ -18,6 +18,7 @@ const GGX_FIELDS = [
   { key: 'pouchSize',         label: 'Pouch/box size',             required: false },
   { key: 'cod',               label: 'Cash on delivery (COD)',     required: false },
   { key: 'codAmount',         label: 'COD Amount',                 required: false },
+  { key: 'declaredValue',     label: 'Declared Value',             required: false },
   { key: 'itemProtection',    label: 'Item Protection',            required: false },
   { key: 'recipientPaysFees', label: 'Recipient pays fees',        required: false },
   { key: 'promoCode',         label: 'Promo code',                 required: false },

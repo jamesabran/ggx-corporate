@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import {
   IconArrowLeft, IconMapPin, IconTruckDelivery, IconBuildingStore,
   IconUpload, IconClock, IconCircleCheck, IconAlertCircle, IconInfoCircle, IconBolt,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
+import { Dialog } from '../components/ui/Dialog';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
@@ -109,11 +110,16 @@ export function BulkSpreadsheet() {
   const attachedRowCount = grid.validRows.filter((r) => r.products?.length).length;
   const merchandiseSubtotal = grid.validRows.reduce((sum, r) => sum + attachmentSubtotal(r.products ?? []), 0);
 
-  const handleContinue = () => {
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const formatDate = (iso: string) => {
+    if (!iso) return 'Tomorrow';
+    return new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const handleComplete = () => {
     if (validCount === 0) return;
     const id = generateUploadId();
-    // Capture the entered valid rows so the review/summary renders the ACTUAL
-    // rows (data-driven), not just a count. Session-only handoff.
     const snapshotRows: SpreadsheetBatchRow[] = grid.validRows.map((r) => {
       const product = r.products?.length
         ? `${r.products[0].name}${r.products.length > 1 ? ` +${r.products.length - 1} more` : ''}`
@@ -130,7 +136,7 @@ export function BulkSpreadsheet() {
       };
     });
     setSpreadsheetBatchRows(id, snapshotRows);
-    const base = createUploadRecord(id, 'Spreadsheet entry', uploadMode, firstMile, 'needs-review', uploadAccount);
+    const base = createUploadRecord(id, 'Spreadsheet entry', uploadMode, firstMile, 'completed', uploadAccount);
     addUpload({
       ...base,
       source: 'spreadsheet',
@@ -139,7 +145,7 @@ export function BulkSpreadsheet() {
       validRows: validCount,
       errorRows: 0,
     });
-    navigate(`/dashboard/bulk-uploader/summary/${id}`);
+    setShowSuccess(true);
   };
 
   if (showAddressBook) {
@@ -410,25 +416,73 @@ export function BulkSpreadsheet() {
                 {selectedPayment ? '' : 'Select a payment method. '}Final fees are confirmed at booking.
               </p>
             </div>
-            <Button className="w-full" disabled={validCount === 0} onClick={handleContinue}>
-              Continue to Review
+            <Button className="w-full" disabled={validCount === 0} onClick={handleComplete}>
+              Complete Booking
             </Button>
             {validCount === 0 ? (
               <p className="text-xs text-red-600 flex items-center gap-1">
                 <IconAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                Add at least one valid row to continue.
+                Add at least one valid row to complete booking.
               </p>
             ) : (
               <p className="text-xs text-gray-500 flex items-center gap-1">
                 <IconCircleCheck className="w-3.5 h-3.5 flex-shrink-0 text-green-600" />
-                {validCount} valid row{validCount === 1 ? '' : 's'} ready to review.
+                {validCount} valid row{validCount === 1 ? '' : 's'} ready to book.
               </p>
             )}
           </div>
         </div>
       </div>
+
+      {/* Booking success dialog */}
+      {showSuccess && (
+        <Dialog open={showSuccess} onClose={() => {}} size="sm">
+          <div className="flex flex-col items-center text-center gap-4 p-2">
+            <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+              <IconCircleCheck className="w-8 h-8 text-green-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Booking confirmed</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                {validCount} parcel{validCount === 1 ? '' : 's'} booked via {MODE_LABELS[uploadMode]}.
+              </p>
+            </div>
+            <div className="w-full rounded-lg border border-gray-200 p-4 space-y-2 text-sm text-left">
+              <Detail label="Service" value={MODE_LABELS[uploadMode]} />
+              <Detail label="First-mile" value={firstMile === 'pickup' ? `Pick-up on ${formatDate(pickupDate)}` : 'Drop-off'} />
+              <Detail label="Estimated fees" value={fees.computedRows > 0 ? peso(fees.total) : '—'} />
+              <Detail label="Payment" value={paymentCopy(selectedPayment, billingAvailable)} />
+            </div>
+            <p className="text-xs text-gray-500">
+              Your booking has been added to Bulk Upload history. You can track shipments from the Transactions page.
+            </p>
+            <div className="flex flex-col gap-2 w-full">
+              <Button className="w-full" onClick={() => navigate('/dashboard/bulk-uploader')}>
+                Upload Another Batch
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => navigate('/dashboard/transactions')}>
+                View in Transactions
+              </Button>
+              <Link to="/dashboard" className="text-sm text-blue-600 hover:text-blue-800 mt-1">
+                Go to Home
+              </Link>
+            </div>
+          </div>
+        </Dialog>
+      )}
     </div>
   );
+}
+
+function paymentCopy(method: SelectedPaymentMethod | null, billingAvailable: boolean): string {
+  if (!method) return billingAvailable ? 'To be invoiced after service' : 'To be paid on pick-up';
+  switch (method.type) {
+    case 'billing':  return 'To be invoiced after service';
+    case 'cash':     return method.cashOption === 'deduct' ? 'Deducted from COD collections' : 'To be paid on pick-up';
+    case 'ewallet':  return `Payment completed — prepaid via ${method.wallet}`;
+    case 'card':     return 'Payment completed — prepaid via card';
+    case 'banking':  return method.bank ? `Payment completed — prepaid via ${method.bank}` : 'Payment completed — prepaid via online banking';
+  }
 }
 
 function Detail({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {

@@ -210,16 +210,17 @@ Pre-implementation checklist:
 
 ### 4. Storefront/Product Checkout future work
 
-Storefront/Product Checkout maturity: current demo supports single-product checkout only. Future work includes a multi-product cart before checkout, checkout address mapping through the shared locations API cascade (province/city/district/barangay), cart persistence after the cart flow exists, and production hardening such as backend stock deduction/reservation.
+**Done (Session 52):**
+- ✅ **Multi-product cart** — session-only cart (`lib/cartStore.ts`, module-level pub/sub, `useCartItems` hook). StorefrontPreview has "Add to cart" buttons + cart count badge. CartReview at `/shop/:slug/cart` for quantity adjustment. CartCheckout at `/checkout` for multi-product COD placement.
+- ✅ **Checkout address via shared locations API cascade** — `LocationCascadeFields` component (form-friendly, fragment of labeled divs) replaces free-text province/city/barangay in `BuyerCheckout` and `CartCheckout`. Shared component added to the component library.
 
-Specific deferred items:
+**Remaining deferred items:**
+- **Cart persistence** — cart is session-only (module-level state; cleared on page refresh). Persist to `localStorage` or a backend session once the order API exists.
+- **Real order placement API** — checkout currently completes in-page with no backend call. Needs `POST /orders` integration.
+- **Backend stock deduction/reservation** — stock deduction at order placement is backend-owned; frontend shows optimistic state only.
+- **Authoritative final fee/payment contracts** — COD amount, shipping fees, and payment terms must come from the backend at order placement, not be estimated client-side.
 
-- **Multi-product cart before checkout** — a cart step is needed before single-session checkout. This is the main deferred feature.
-- **Checkout address via shared locations API cascade** — product checkout address fields should reuse the shared province/city/barangay cascade used elsewhere in the app, not a free-text stub.
-- **Cart persistence** — after the cart flow exists, persist cart state across sessions. This is a later cart maturity item, not the main deferred feature.
-- **Backend stock deduction/reservation** — stock deduction at order placement remains backend future work.
-
-Product checkout should remain described as demo-level until these items are implemented. All items are blocked on backend integration and are explicitly deferred.
+All remaining items are blocked on backend integration and are explicitly deferred.
 
 ### Old §4 — Bulk upload / batch transactions UX cleanup ✅ DONE (2026-06-10)
 

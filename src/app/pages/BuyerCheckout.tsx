@@ -7,6 +7,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
+import { LocationCascadeFields } from '../components/LocationCascadeFields';
 import { getInventoryProduct, productCover, type InventoryProduct } from '../services/inventoryService';
 
 const peso = (n: number) =>
@@ -149,9 +150,12 @@ export function BuyerCheckout() {
               <Field label="Mobile number"><Input value={form.mobile} onChange={(e) => set('mobile', e.target.value)} placeholder="+63 9xx xxx xxxx" /></Field>
               <Field label="Street address"><Input value={form.street} onChange={(e) => set('street', e.target.value)} placeholder="House/unit, street" /></Field>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Field label="Province"><Input value={form.province} onChange={(e) => set('province', e.target.value)} /></Field>
-                <Field label="City / Municipality"><Input value={form.city} onChange={(e) => set('city', e.target.value)} /></Field>
-                <Field label="Barangay"><Input value={form.barangay} onChange={(e) => set('barangay', e.target.value)} /></Field>
+                <LocationCascadeFields
+                  province={form.province}
+                  city={form.city}
+                  barangay={form.barangay}
+                  onChange={(p, c, b) => setForm((prev) => ({ ...prev, province: p, city: c, barangay: b }))}
+                />
               </div>
               <div className="w-28">
                 <Field label="Quantity">

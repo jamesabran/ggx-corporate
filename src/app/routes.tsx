@@ -44,6 +44,8 @@ import { ProtectedRoute, AdminRoute } from './components/RouteGuards';
 import { TrackingPage } from './pages/TrackingPage';
 import { StorefrontPreview } from './pages/StorefrontPreview';
 import { BuyerCheckout } from './pages/BuyerCheckout';
+import { CartReview } from './pages/CartReview';
+import { CartCheckout } from './pages/CartCheckout';
 
 export const router = createBrowserRouter([
   {
@@ -59,12 +61,22 @@ export const router = createBrowserRouter([
     Component: TrackingPage,
   },
   {
-    // Public customer-facing storefront (browse products → buyer checkout).
+    // Public customer-facing storefront (browse products → add to cart).
     path: '/shop/:slug',
     Component: StorefrontPreview,
   },
   {
-    // Public buyer checkout for a single product (COD-only demo).
+    // Cart review for a storefront session (adjust quantities → checkout).
+    path: '/shop/:slug/cart',
+    Component: CartReview,
+  },
+  {
+    // Multi-product COD checkout (session cart).
+    path: '/checkout',
+    Component: CartCheckout,
+  },
+  {
+    // Legacy single-product checkout (backward compat with Inventory share links).
     path: '/buy/:productId',
     Component: BuyerCheckout,
   },
