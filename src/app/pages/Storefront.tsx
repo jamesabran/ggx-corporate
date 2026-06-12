@@ -89,7 +89,27 @@ export function Storefront() {
 
   if (usable === null) return null;
   if (!usable) return <EnablementGate moduleId="storefront" />;
-  if (!profile) return null;
+  // profile can be null in the main-account consolidated view (scopeId=undefined):
+  // storefront is a subaccount-level module and profiles are scoped per-subaccount.
+  if (!profile) {
+    return (
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Storefront</h1>
+          <p className="text-gray-600 mt-1">A simple storefront built from your inventory products.</p>
+        </div>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+            <IconBuildingStore className="w-7 h-7 text-gray-400" />
+          </div>
+          <p className="text-sm font-medium text-gray-700">Switch to a subaccount to manage its storefront</p>
+          <p className="text-sm text-gray-500 mt-1 max-w-sm">
+            Storefronts are configured per subaccount. Select a subaccount from the switcher above to view or manage its storefront.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const meta = STOREFRONT_PUBLISH_META[status];
   const isPublished = status === 'published';

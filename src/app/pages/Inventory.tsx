@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import {
-  IconPackage, IconPlus, IconPencil, IconTrash, IconUpload, IconDownload, IconInfoCircle, IconShare2,
+  IconPackage, IconPlus, IconPencil, IconTrash, IconUpload, IconDownload, IconInfoCircle, IconShare2, IconBuildingStore,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -10,7 +11,7 @@ import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 import { EnablementGate } from '../components/EnablementGate';
 import { ProductFormDialog } from '../components/ProductFormDialog';
 import { useModuleAccessContext } from '../hooks/useModuleAccess';
-import { isFeatureUsable } from '../services/featureEnablementService';
+import { isFeatureUsable, getFeatureStateSync } from '../services/featureEnablementService';
 import {
   getInventoryProducts, createInventoryProduct, updateInventoryProduct,
   deleteInventoryProduct, importInventoryProducts, productsToCsv, parseProductsCsv,
@@ -36,6 +37,7 @@ function downloadCsv(filename: string, content: string): void {
  * booking-time deduction stays a backend concern.
  */
 export function Inventory() {
+  const navigate = useNavigate();
   const ctx = useModuleAccessContext();
   const scopeId = ctx.scopeAccountId;
   const can = (key: Parameters<typeof ctx.permissions.includes>[0]) => ctx.permissions.includes(key);
@@ -122,22 +124,25 @@ export function Inventory() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {can('inventory.import') && canMutate && (
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
               <IconUpload className="w-4 h-4" /> Import
             </Button>
           )}
           {can('inventory.export') && (
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={products.length === 0}>
+            <Button variant="outline" onClick={handleExport} disabled={products.length === 0}>
               <IconDownload className="w-4 h-4" /> Export
             </Button>
           )}
           {can('inventory.create') && canMutate && (
-            <Button size="sm" onClick={openCreate}>
+            <Button onClick={openCreate}>
               <IconPlus className="w-4 h-4" /> Add Product
             </Button>
           )}
         </div>
       </div>
+
+      {/* Storefront upsell — compact banner, never louder than the Add Product CTA */}
+      <StorefrontUpsell scopeId={scopeId} navigate={navigate} />
 
       {products.length === 0 ? (
         <Card>
@@ -320,6 +325,62 @@ export function Inventory() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function StorefrontUpsell({
+  scopeId,
+  navigate,
+}: {
+  scopeId: string | undefined;
+  navigate: (path: string) => void;
+}) {
+  const sf = getFeatureStateSync('storefront', scopeId);
+  if (sf.enabled && sf.configured) {
+    // Already set up — compact link to manage.
+    return (
+      <div className="flex items-center gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm">
+        <IconBuildingStore className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <span className="text-gray-600 flex-1">Your inventory products can be published to your storefront.</span>
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard/storefront')}
+          className="font-medium text-blue-600 hover:text-blue-800 hover:underline whitespace-nowrap"
+        >
+          Manage storefront →
+        </button>
+      </div>
+    );
+  }
+  if (sf.enabled) {
+    // Enabled but not yet configured.
+    return (
+      <div className="flex items-center gap-2.5 rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-sm">
+        <IconBuildingStore className="w-4 h-4 text-blue-500 flex-shrink-0" />
+        <span className="text-blue-900 flex-1">Storefront is enabled — finish setup to list your inventory products publicly.</span>
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard/storefront')}
+          className="font-medium text-blue-700 hover:text-blue-800 hover:underline whitespace-nowrap"
+        >
+          Set up storefront →
+        </button>
+      </div>
+    );
+  }
+  // Not enabled — teaser.
+  return (
+    <div className="flex items-center gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm">
+      <IconBuildingStore className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      <span className="text-gray-600 flex-1">Publish your inventory to a customer-facing storefront with Cash on Delivery.</span>
+      <button
+        type="button"
+        onClick={() => navigate('/dashboard/account-add-ons')}
+        className="font-medium text-blue-600 hover:text-blue-800 hover:underline whitespace-nowrap"
+      >
+        Enable Storefront →
+      </button>
     </div>
   );
 }

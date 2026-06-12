@@ -103,7 +103,10 @@ export function BulkSpreadsheet() {
   const validCount = grid.validRows.length;
   const errorCount = grid.invalidRows.length;
   const totalCount = validCount + errorCount;
-  const fees = estimateFees(grid.validRows);
+  // Inject the page-level service mode into each row so estimateRowFee can
+  // compute the service surcharge (per-row serviceType was removed in Session 39).
+  const serviceTypeKey = uploadMode === 'same-day' ? 'same_day' : uploadMode === 'on-demand' ? 'on_demand' : 'standard';
+  const fees = estimateFees(grid.validRows.map((r) => ({ ...r, serviceType: serviceTypeKey as 'standard' | 'same_day' | 'on_demand' })));
   const peso = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // Merchandise rollup from inventory-attached products on valid rows.
@@ -409,7 +412,7 @@ export function BulkSpreadsheet() {
               {fees.pendingRows > 0 && (
                 <p className="text-xs text-gray-500 flex items-start gap-1">
                   <IconInfoCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  {fees.pendingRows} row{fees.pendingRows === 1 ? '' : 's'} pending — add parcel size and service type to estimate.
+                  {fees.pendingRows} row{fees.pendingRows === 1 ? '' : 's'} pending — add parcel size to estimate.
                 </p>
               )}
               <p className="text-xs text-gray-400">
