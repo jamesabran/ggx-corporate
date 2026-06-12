@@ -13,13 +13,14 @@ import { StorefrontProductsDialog } from '../components/StorefrontProductsDialog
 import { useModuleAccessContext } from '../hooks/useModuleAccess';
 import { isFeatureUsable } from '../services/featureEnablementService';
 import {
-  getStorefrontProfile, getPendingOrderImpact,
+  getStorefrontProfile, ensureStorefrontProfile, getPendingOrderImpact,
   updateStorefrontProfile, setStorefrontProducts, setStorefrontStatus,
   STOREFRONT_PUBLISH_META, UNPUBLISH_MESSAGE,
   type StorefrontProfile, type StorefrontPublishStatus, type OrderImpact, type StorefrontProfileInput,
 } from '../services/storefrontService';
 import { getInventoryProducts, getInventoryProductsByIds, isLowStock, type InventoryProduct } from '../services/inventoryService';
 import { getServiceTypeLabel } from '../data/serviceTypes';
+import { getAccountNameById } from '../data/accounts';
 
 const peso = (n: number) =>
   `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -68,10 +69,17 @@ export function Storefront() {
         getStorefrontProfile(scopeId),
         getPendingOrderImpact(scopeId),
         getInventoryProducts(scopeId),
-      ]).then(([p, imp, inv]) => {
+      ]).then(async ([p, imp, inv]) => {
         if (!active) return;
-        setProfile(p);
-        if (p) { setStatus(p.publishStatus); refreshListed(p); }
+        // Usable but no profile yet (e.g. a standard account that just enabled
+        // Storefront) → create a default draft so the page isn't blank.
+        let prof = p;
+        if (!prof && scopeId) {
+          prof = await ensureStorefrontProfile(scopeId, getAccountNameById(scopeId) ?? 'My Store');
+        }
+        if (!active) return;
+        setProfile(prof);
+        if (prof) { setStatus(prof.publishStatus); refreshListed(prof); }
         setImpact(imp);
         setInventory(inv);
       });

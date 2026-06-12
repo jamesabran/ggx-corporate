@@ -15,6 +15,7 @@
 import {
   getProfileForScope,
   getProfileBySlug,
+  ensureProfileForScope,
   getOrderImpactForScope,
   updateProfile,
   setProductIds,
@@ -51,6 +52,11 @@ export async function getStorefrontStatus(scopeId: string | undefined): Promise<
 /** Resolve a published/draft storefront by public slug (customer-facing surface). */
 export async function getStorefrontProfileBySlug(slug: string): Promise<StorefrontProfile | null> {
   return getProfileBySlug(slug);
+}
+
+/** Return the scope's storefront, creating a default draft if none exists. */
+export async function ensureStorefrontProfile(scopeId: string, storeName: string): Promise<StorefrontProfile> {
+  return ensureProfileForScope(scopeId, storeName);
 }
 
 /** Pending-transaction impact for the unpublish warning. */

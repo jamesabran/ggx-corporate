@@ -77,6 +77,32 @@ export function getProfileBySlug(slug: string): StorefrontProfile | null {
   return Object.values(profiles).find((p) => p.slug === slug) ?? null;
 }
 
+const slugify = (v: string) =>
+  v.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'store';
+
+/**
+ * Return the scope's storefront, creating a default draft profile if none exists
+ * (so an enabled-but-unconfigured storefront isn't blank). Works for standard
+ * accounts and subaccounts alike.
+ */
+export function ensureProfileForScope(scopeId: string, storeName: string): StorefrontProfile {
+  const existing = profiles[scopeId];
+  if (existing) return existing;
+  const created: StorefrontProfile = {
+    scopeAccountId: scopeId,
+    storeName: storeName || 'My Store',
+    description: 'Tell customers about your store and the products you offer.',
+    slug: slugify(storeName || scopeId),
+    contactEmail: '',
+    contactNumber: '',
+    deliveryOptions: ['standard'],
+    publishStatus: 'draft',
+    productIds: [],
+  };
+  profiles[scopeId] = created;
+  return created;
+}
+
 export function getOrderImpactForScope(scopeId: string | undefined): OrderImpact {
   if (!scopeId) return { pendingUnpaidOrders: 0, activeDeliveries: 0 };
   return orderImpact[scopeId] ?? { pendingUnpaidOrders: 0, activeDeliveries: 0 };
