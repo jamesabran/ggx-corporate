@@ -246,30 +246,63 @@ export async function getDashboardStats(subaccountId?: string): Promise<Dashboar
 export interface BasicAnalytics {
   /** Booking count per delivery service type (Standard / Same-Day / On-Demand). */
   serviceTypeMix: { key: DeliveryServiceType; label: string; count: number }[];
-  /** Daily booking volume for the most recent active days (oldest → newest). */
+  /** Daily booking volume for the active period (oldest → newest). */
   dailyVolume: { date: string; count: number }[];
-  /** Total bookings in the active sample. */
+  /** Total bookings in the active period. */
   periodTotal: number;
+  /** Status breakdown for the active period (drives filter-responsive KPI cards). */
+  byStatus: Record<TransactionStatus, number>;
+  /** Total COD for the active period. */
+  totalCod: number;
+  /** Delivery success rate for the active period (0–100, one decimal). */
+  successRate: number;
 }
 
-/** How many recent active days the dashboard volume mini-chart shows. */
-const BASIC_ANALYTICS_DAYS = 7;
-
 /**
- * Return lightweight booking analytics for the Dashboard, optionally scoped to a
- * subaccount (same subset rule as getDashboardStats). Service-type mix always
- * lists all three delivery tiers (zero included) so the chart is stable.
+ * Return lightweight booking analytics, optionally scoped to a subaccount and/or
+ * filtered by a rolling day window and service type. Service-type mix always lists
+ * all three delivery tiers (zero included) so charts are stable across filter changes.
+ *
+ * `days` is a rolling window relative to the most recent date in the scoped dataset
+ * (mock anchor) — not a wall-clock window — so presets show meaningful deltas even
+ * when the seed data pre-dates today.
  */
-export async function getBasicAnalytics(subaccountId?: string): Promise<BasicAnalytics> {
-  const subset = subaccountId && subaccountId !== 'main'
+export async function getBasicAnalytics(
+  subaccountId?: string,
+  options: { days?: number; serviceType?: DeliveryServiceType | 'all' } = {},
+): Promise<BasicAnalytics> {
+  const base = subaccountId && subaccountId !== 'main'
     ? transactions.filter(
         (t) => t.batch?.accountId === subaccountId || t.subaccount === subaccountId
       )
     : transactions;
 
+  // Rolling window: anchor on the most recent date in the dataset so presets
+  // produce visible differences even when seed data pre-dates today.
+  let subset = base;
+  if (options.days) {
+    const sorted = base.map((t) => t.date).sort();
+    const anchor = sorted[sorted.length - 1];
+    if (anchor) {
+      const anchorMs = new Date(anchor).getTime();
+      const cutoffMs = anchorMs - (options.days - 1) * 86_400_000;
+      const cutoff = new Date(cutoffMs).toISOString().slice(0, 10);
+      subset = base.filter((t) => t.date >= cutoff);
+    }
+  }
+  if (options.serviceType && options.serviceType !== 'all') {
+    subset = subset.filter((t) => t.serviceType === options.serviceType);
+  }
+
   const order: DeliveryServiceType[] = ['standard', 'same_day', 'on_demand'];
   const counts: Record<DeliveryServiceType, number> = { standard: 0, same_day: 0, on_demand: 0 };
-  for (const t of subset) counts[t.serviceType] = (counts[t.serviceType] ?? 0) + 1;
+  const byStatus = { delivered: 0, 'in-transit': 0, 'picked-up': 0, pending: 0, failed: 0, returned: 0 } as Record<TransactionStatus, number>;
+  let totalCod = 0;
+  for (const t of subset) {
+    counts[t.serviceType] = (counts[t.serviceType] ?? 0) + 1;
+    byStatus[t.status] = (byStatus[t.status] ?? 0) + 1;
+    totalCod += t.payment.codAmount;
+  }
   const serviceTypeMix = order.map((key) => ({
     key, label: SERVICE_TYPE_SHORT_LABEL[key], count: counts[key],
   }));
@@ -278,10 +311,11 @@ export async function getBasicAnalytics(subaccountId?: string): Promise<BasicAna
   for (const t of subset) byDate.set(t.date, (byDate.get(t.date) ?? 0) + 1);
   const dailyVolume = Array.from(byDate.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .slice(-BASIC_ANALYTICS_DAYS)
     .map(([date, count]) => ({ date, count }));
 
-  return { serviceTypeMix, dailyVolume, periodTotal: subset.length };
+  const periodTotal = subset.length;
+  const successRate = periodTotal > 0 ? Math.round((byStatus.delivered / periodTotal) * 1000) / 10 : 0;
+  return { serviceTypeMix, dailyVolume, periodTotal, byStatus, totalCod, successRate };
 }
 
 // ─── Batch grouping ──────────────────────────────────────────────────────────

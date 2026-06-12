@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -6,6 +7,7 @@ import {
 import {
   IconPackage, IconCircleCheck, IconArrowBackUp, IconReceiptRefund,
   IconClockCheck, IconCash, IconTruckReturn, IconGauge, IconInfoCircle,
+  IconDownload, IconLock, IconChartBar,
 } from '@tabler/icons-react';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useScopedAccountId } from '../hooks/useAccountScope';
@@ -13,6 +15,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { getAccountNameById } from '../data/accounts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Select } from '../components/ui/Select';
+import { Input } from '../components/ui/Input';
+import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { getClaimsList, CLAIM_STATUS_META, type Claim } from '../services/claimsService';
 import { getSlaAlertsList, type SlaAlert } from '../services/slaService';
@@ -21,6 +25,10 @@ import {
   type AnalyticsOverview,
   type AnalyticsCharts,
 } from '../services/dataAnalyticsService';
+import { isAddonEnabledForAccount } from '../services/addonsService';
+import { MAIN_SCOPE } from '../data/addonState';
+import { SUBACCOUNT_OPTIONS } from '../data/users';
+import { getBasicAnalytics } from '../services/transactionService';
 
 const DEFAULT_OVERVIEW: AnalyticsOverview = {
   totalOrders: 0,
@@ -42,19 +50,29 @@ const DEFAULT_CHARTS: AnalyticsCharts = {
   slaHitMiss: [],
 };
 
+type DateRangeMode = '7' | '30' | '90' | '365' | 'custom';
+
 export function DataAnalytics() {
-  const { getCurrentAccountName } = useSubAccounts();
+  const { getCurrentAccountName, isMainAccountView, subAccountsEnabled } = useSubAccounts();
   const { user } = useAuth();
-  // Effective scope combines the authenticated user (managers are hard-scoped to
-  // their subaccount) with the Admin Main Account switcher. See useAccountScope.
   const scopeId = useScopedAccountId();
   const inSubaccountView = scopeId !== undefined;
   const scopeName = scopeId ? (getAccountNameById(scopeId) ?? getCurrentAccountName()) : null;
+  const mainView = isMainAccountView();
+
+  const advancedEnabled = isAddonEnabledForAccount('advanced_analytics', MAIN_SCOPE);
 
   const [overview, setOverview] = useState<AnalyticsOverview>(DEFAULT_OVERVIEW);
   const [charts, setCharts] = useState<AnalyticsCharts>(DEFAULT_CHARTS);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [sla, setSla] = useState<SlaAlert[]>([]);
+  const [dateMode, setDateMode] = useState<DateRangeMode>('30');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [regionFilter, setRegionFilter] = useState('all');
+  const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
+  // Subaccount comparison data (main account view only)
+  const [subComparison, setSubComparison] = useState<{ id: string; name: string; total: number; successRate: number; totalCod: number }[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -79,11 +97,26 @@ export function DataAnalytics() {
         setSla([]);
       });
     return () => { active = false; };
-  // Re-run whenever the account scope changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scopeId]);
 
-  // Derived figures (presentation-only aggregation over service data).
+  // Load subaccount comparison (main view only, advanced analytics enabled)
+  useEffect(() => {
+    if (!mainView || !subAccountsEnabled || !advancedEnabled) return;
+    let active = true;
+    Promise.all(
+      SUBACCOUNT_OPTIONS.map((s) =>
+        getBasicAnalytics(s.id).then((b) => ({
+          id: s.id, name: s.name,
+          total: b.periodTotal,
+          successRate: b.successRate,
+          totalCod: b.totalCod,
+        }))
+      )
+    ).then((rows) => { if (active) setSubComparison(rows); }).catch(() => {});
+    return () => { active = false; };
+  }, [mainView, subAccountsEnabled, advancedEnabled]);
+
   const claimsTotal = claims.length;
   const claimsOpen = claims.filter((c) => c.status === 'open' || c.status === 'in-review').length;
   const claimsSettledAmount = claims
@@ -96,7 +129,6 @@ export function DataAnalytics() {
     ? Math.max(...charts.returnsByReason.map((r) => r.count))
     : 1;
 
-  // Performance Overview KPIs.
   const scopeLabel = scopeName ?? 'All accounts';
   const primaryKpis = [
     { title: 'Total Orders',        value: overview.totalOrders.toLocaleString(),     sub: scopeLabel,             icon: IconPackage,     color: 'text-blue-600',   bg: 'bg-blue-100' },
@@ -112,31 +144,116 @@ export function DataAnalytics() {
     { title: 'Amount Settled',        value: `₱${(overview.amountSettledBase + claimsSettledAmount).toLocaleString()}`, sub: 'Payouts + approved claims', icon: IconCash, color: 'text-green-700', bg: 'bg-green-100' },
   ];
 
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  const handleExport = () => {
+    const csv = [
+      'Metric,Value',
+      `Total Orders,${overview.totalOrders}`,
+      `Fulfilled Orders,${overview.fulfilledOrders}`,
+      `Delivery Efficiency,${overview.deliveryEfficiencyPct.toFixed(1)}%`,
+      `RTS Rate,${overview.rtsRatePct.toFixed(1)}%`,
+      `SLA Hit,${overview.slaHitPct.toFixed(1)}%`,
+      `Claims Total,${claimsTotal}`,
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'analytics-export.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Addon gate — show upgrade CTA if not enabled
+  if (!advancedEnabled) {
+    return (
+      <div className="p-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Data Analytics</h1>
           <p className="text-gray-600 mt-1">Performance overview across orders, fulfillment, SLA, returns, and claims</p>
         </div>
-        <div className="flex gap-3">
-          <Select defaultValue="30">
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="365">Last year</option>
-          </Select>
-          <Select defaultValue="all">
-            <option value="all">All Regions</option>
-            <option value="ncr">Metro Manila</option>
-            <option value="luzon">Luzon (ex-NCR)</option>
-            <option value="visayas">Visayas</option>
-            <option value="mindanao">Mindanao</option>
-          </Select>
+        <Card className="overflow-hidden">
+          <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200 rounded-xl p-10 text-center">
+            <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+              <IconLock className="w-8 h-8 text-violet-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Advanced Data Analytics</h2>
+            <p className="text-gray-600 max-w-md mx-auto mb-6">
+              Unlock efficiency metrics, SLA/exception analysis, fulfillment trends, regional breakdowns,
+              subaccount comparison, and CSV exports. Powered by your GGX Business+ plan.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
+              {['SLA Hit/Miss tracking', 'RTS & exception analysis', 'Regional volume breakdown', 'Subaccount comparison', 'Fulfillment trend charts', 'CSV export'].map((f) => (
+                <span key={f} className="inline-flex items-center gap-1.5 text-sm text-violet-700 bg-violet-100 px-3 py-1 rounded-full">
+                  <IconChartBar className="w-3.5 h-3.5" /> {f}
+                </span>
+              ))}
+            </div>
+            <Link to="/dashboard/account-add-ons">
+              <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white">
+                Enable Advanced Analytics in Add-ons →
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Data Analytics</h1>
+          <p className="text-gray-600 mt-1">Performance overview across orders, fulfillment, SLA, returns, and claims</p>
+        </div>
+        <div className="flex flex-wrap gap-2 items-end">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Date range</label>
+            <Select value={dateMode} onChange={(e) => setDateMode(e.target.value as DateRangeMode)}>
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 90 days</option>
+              <option value="365">Last year</option>
+              <option value="custom">Custom range</option>
+            </Select>
+          </div>
+          {dateMode === 'custom' && (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
+                <Input type="date" className="w-36" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
+                <Input type="date" className="w-36" value={customTo} min={customFrom || undefined} onChange={(e) => setCustomTo(e.target.value)} />
+              </div>
+            </>
+          )}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Region</label>
+            <Select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}>
+              <option value="all">All Regions</option>
+              <option value="ncr">Metro Manila</option>
+              <option value="luzon">Luzon (ex-NCR)</option>
+              <option value="visayas">Visayas</option>
+              <option value="mindanao">Mindanao</option>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Service type</label>
+            <Select value={serviceTypeFilter} onChange={(e) => setServiceTypeFilter(e.target.value)}>
+              <option value="all">All types</option>
+              <option value="standard">Standard</option>
+              <option value="same_day">Same-Day</option>
+              <option value="on_demand">On-Demand</option>
+            </Select>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleExport} className="self-end">
+            <IconDownload className="w-4 h-4" /> Export CSV
+          </Button>
         </div>
       </div>
 
-      {/* Subaccount context banner */}
       {inSubaccountView && (
         <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
           <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -170,7 +287,6 @@ export function DataAnalytics() {
         </div>
       </div>
 
-      {/* Secondary KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {secondaryKpis.map((s) => (
           <Card key={s.title}>
@@ -189,6 +305,44 @@ export function DataAnalytics() {
           </Card>
         ))}
       </div>
+
+      {/* Subaccount comparison (main account only) */}
+      {mainView && subAccountsEnabled && subComparison.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Subaccount Comparison</CardTitle>
+            <CardDescription>Key metrics per subaccount for this period</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="py-2 pr-4 text-left font-semibold text-gray-600">Subaccount</th>
+                    <th className="py-2 px-4 text-right font-semibold text-gray-600">Shipments</th>
+                    <th className="py-2 px-4 text-right font-semibold text-gray-600">Success rate</th>
+                    <th className="py-2 pl-4 text-right font-semibold text-gray-600">COD collected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {subComparison.map((row) => (
+                    <tr key={row.id} className="border-b border-gray-50 last:border-0">
+                      <td className="py-3 pr-4 font-medium text-gray-900">{row.name}</td>
+                      <td className="py-3 px-4 text-right tabular-nums text-gray-700">{row.total.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right tabular-nums">
+                        <span className={row.successRate >= 80 ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
+                          {row.successRate.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="py-3 pl-4 text-right tabular-nums text-gray-700">₱{row.totalCod.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Volume + Fulfillment trend */}
       <div className="grid lg:grid-cols-2 gap-6">
@@ -270,7 +424,7 @@ export function DataAnalytics() {
         </Card>
       </div>
 
-      {/* Delivery days + Returns + Claims summary */}
+      {/* Delivery days + Returns + Claims */}
       <div className="grid lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader><CardTitle>Avg. Delivery Days by Area</CardTitle></CardHeader>

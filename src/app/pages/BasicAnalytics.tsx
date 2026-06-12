@@ -3,44 +3,63 @@ import { Link } from 'react-router';
 import { IconArrowRight, IconChartHistogram } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Select } from '../components/ui/Select';
 import { useScopedAccountId } from '../hooks/useAccountScope';
 import { getAccountNameById } from '../data/accounts';
 import {
-  getDashboardStats, getBasicAnalytics,
-  type DashboardStats, type BasicAnalytics as BasicAnalyticsData,
+  getBasicAnalytics,
+  type BasicAnalytics as BasicAnalyticsData,
+  type DeliveryServiceType,
 } from '../services/transactionService';
 
 const SERVICE_TYPE_BAR: Record<string, string> = {
   standard: 'bg-blue-500', same_day: 'bg-orange-500', on_demand: 'bg-violet-500',
 };
 
+type DatePreset = 'last7' | 'last30' | 'this_month';
+
+const DATE_PRESETS: { value: DatePreset; label: string; days: number }[] = [
+  { value: 'last7',      label: '7 days',     days: 7 },
+  { value: 'last30',     label: '30 days',    days: 30 },
+  { value: 'this_month', label: 'This month', days: new Date().getDate() },
+];
+
+const SERVICE_TYPE_OPTIONS: { value: DeliveryServiceType | 'all'; label: string }[] = [
+  { value: 'all',       label: 'All service types' },
+  { value: 'standard',  label: 'Standard' },
+  { value: 'same_day',  label: 'Same-Day' },
+  { value: 'on_demand', label: 'On-Demand' },
+];
+
 /**
- * Basic Data Analytics — a lightweight, always-available analytics page (the
- * standalone counterpart to the Dashboard's Basic Analytics section). Distinct
- * from the gated Advanced Data Analytics workspace. Aggregates come from the
- * service layer (treated as backend-provided), scoped to the viewer.
+ * Basic Data Analytics — lightweight, always-available analytics page. Distinct
+ * from the gated Advanced Data Analytics workspace. Date preset tabs and service
+ * type filter both wire through to the service layer so data actually changes.
  */
 export function BasicAnalytics() {
   const scopeId = useScopedAccountId();
   const scopeName = scopeId ? getAccountNameById(scopeId) : null;
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [preset, setPreset] = useState<DatePreset>('last7');
+  const [serviceType, setServiceType] = useState<DeliveryServiceType | 'all'>('all');
   const [basic, setBasic] = useState<BasicAnalyticsData | null>(null);
 
   useEffect(() => {
     let active = true;
-    getDashboardStats(scopeId).then((s) => { if (active) setStats(s); }).catch(() => {});
-    getBasicAnalytics(scopeId).then((b) => { if (active) setBasic(b); }).catch(() => {});
+    const days = DATE_PRESETS.find((p) => p.value === preset)?.days ?? 7;
+    getBasicAnalytics(scopeId, { days, serviceType: serviceType === 'all' ? undefined : serviceType })
+      .then((b) => { if (active) setBasic(b); })
+      .catch(() => {});
     return () => { active = false; };
-  }, [scopeId]);
+  }, [scopeId, preset, serviceType]);
 
+  const periodTotal = basic?.periodTotal ?? 0;
   const kpis = [
-    { label: 'Total shipments', value: stats ? stats.total.toLocaleString() : '—' },
-    { label: 'Delivered', value: stats ? stats.byStatus.delivered.toLocaleString() : '—' },
-    { label: 'Success rate', value: stats ? `${stats.successRate}%` : '—' },
-    { label: 'COD collected', value: stats ? `₱${stats.totalCod.toLocaleString()}` : '—' },
+    { label: 'Total shipments', value: basic ? periodTotal.toLocaleString() : '—' },
+    { label: 'Delivered', value: basic ? (basic.byStatus.delivered ?? 0).toLocaleString() : '—' },
+    { label: 'Success rate', value: basic ? `${basic.successRate}%` : '—' },
+    { label: 'COD collected', value: basic ? `₱${basic.totalCod.toLocaleString()}` : '—' },
   ];
   const mix = basic?.serviceTypeMix ?? [];
-  const total = basic?.periodTotal ?? 0;
   const maxMix = Math.max(1, ...mix.map((m) => m.count));
   const days = basic?.dailyVolume ?? [];
   const maxDay = Math.max(1, ...days.map((d) => d.count));
@@ -59,6 +78,32 @@ export function BasicAnalytics() {
             <IconChartHistogram className="w-4 h-4" /> Open Advanced Analytics
           </Button>
         </Link>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+          {DATE_PRESETS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setPreset(p.value)}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                preset === p.value
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <div className="w-48">
+          <Select value={serviceType} onChange={(e) => setServiceType(e.target.value as DeliveryServiceType | 'all')}>
+            {SERVICE_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
@@ -81,7 +126,7 @@ export function BasicAnalytics() {
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-sm text-gray-700">{m.label}</span>
                   <span className="text-sm font-semibold text-gray-900 tabular-nums">
-                    {m.count}<span className="text-gray-400 font-normal ml-1">({total > 0 ? Math.round((m.count / total) * 100) : 0}%)</span>
+                    {m.count}<span className="text-gray-400 font-normal ml-1">({periodTotal > 0 ? Math.round((m.count / periodTotal) * 100) : 0}%)</span>
                   </span>
                 </div>
                 <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
