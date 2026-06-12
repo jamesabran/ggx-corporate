@@ -91,7 +91,9 @@ export function SpreadsheetBookingGrid({
       setRows((prev) => prev.map((r) => {
         if (r.id !== rowId) return r;
         const next: BookingRow = { ...r, declaredValue: value };
-        if (!codDirtyRows.current.has(rowId)) next.codAmount = value;
+        // When products are attached, codAmount tracks the subtotal (set by
+        // setRowProducts), not the manually-edited declared value.
+        if (!codDirtyRows.current.has(rowId) && !r.products?.length) next.codAmount = value;
         return next;
       }));
     } else {
@@ -248,11 +250,11 @@ export function SpreadsheetBookingGrid({
                       );
                     }
 
-                    // Qty + Declared value are derived (and locked) once products
-                    // are attached to the row.
+                    // Qty is derived (locked) when products are attached.
+                    // Declared value is pre-filled from the subtotal but stays editable.
                     const derived =
                       inventoryEnabled && !!row.products?.length &&
-                      (col.key === 'quantity' || col.key === 'declaredValue');
+                      col.key === 'quantity';
                     const common = cn(
                       'w-full h-8 px-2 rounded border bg-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500',
                       err ? 'border-red-400 ring-1 ring-red-300' : 'border-gray-200',
