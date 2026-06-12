@@ -10,7 +10,7 @@
 **Stage:** GGX Business+ modular platform — all features complete. Add-on state
 now persists to localStorage. Approval flows via Notifications (not card demo links).
 
-- **Branch:** `master`. **Build:** green. Latest commit: `7e604f3`. Not pushed.
+- **Branch:** `master`. **Build:** green. Latest app commit: `7e604f3` (add-on refactor). Latest repo commit: `684fd3d` (docs sync note). Not pushed.
 - **Working tree:** clean except `.claude/settings.local.json` (local config, leave it).
 - **Where things stand:** Upload File + In-app Spreadsheet feed one Bulk Booking flow;
   spreadsheet is a step page (`/dashboard/bulk-uploader/spreadsheet`, no sidebar item),
@@ -30,9 +30,10 @@ claims → everything else — see roadmap "Backend integration").
 Done: #5, #1, #3, #6, #7, #4, #8, #9.
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
-decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); no Inventory
-product attachment yet; no stock deduction/reservation; GGX SHADCN components first; no new
-deps; non-destructive; preserve Upload File behavior; commit after stable milestones, don't push.
+decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); Inventory
+product attachment is grid-only (picker in spreadsheet when Inventory enabled) — no stock
+deduction/reservation; GGX SHADCN components first; no new deps; non-destructive; preserve
+Upload File behavior; commit after stable milestones, don't push.
 
 **Tooling gotchas (this environment):** the Write tool appends a stray `</content>` line —
 strip it after any Write. PowerShell `Get-Content`/`Set-Content` round-trips corrupt UTF-8

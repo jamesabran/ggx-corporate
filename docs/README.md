@@ -58,7 +58,7 @@ do not update them, and do not treat them as current state.
 
 | File | What it was |
 |---|---|
-| `session_state.md` | May 31 session state (superseded by root `docs/session_state.md`) |
+| `session_state.md` | May 31 session state (superseded by canonical `docs/session_state.md`) |
 | `ROADMAP.md` | May 31 roadmap (superseded by `docs/roadmap.md`) |
 | `PROJECT_HANDOFF.md` | May 31 handoff checkpoint |
 | `PROJECT_CHECKPOINT.md` | May 29 checkpoint (self-declared superseded) |
