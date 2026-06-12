@@ -208,7 +208,14 @@ Pre-implementation checklist:
 - Analytics totals and business-critical metrics must come from service/backend contracts — not page-level frontend computations.
 - Wrong scoping actively misrepresents subaccount performance to stakeholders — treat this as high priority within the polish pass.
 
-### 4. Bulk upload / batch transactions UX cleanup ✅ DONE (2026-06-10)
+### 4. Storefront future improvements
+
+- **Cart persistence across sessions** — current cart state is component-local; a returning buyer loses their cart on reload. Future: localStorage or session-cookie cart.
+- **Checkout address via API** — buyer address collection at checkout requires a real address-validation API (province/city/barangay cascade). Until then, the checkout form is a UX stub only.
+
+Both items are blocked on backend integration / external API availability and are explicitly deferred.
+
+### Old §4 — Bulk upload / batch transactions UX cleanup ✅ DONE (2026-06-10)
 
 Resolved: (1) all 7 remaining single-item batches given realistic `reportedCounts` (67–423 tx); service rollup status now derives from `reportedCounts` when present. (2) Individual-booking copy was already gone (no match on Transactions). (3) Batch list is a card-based expandable list (not the old cramped table); counts redesigned. (4) The 4 competing colored badges replaced with a compact, consistent stat group (small colored dot + value + label) for Total/Delivered/Active/Failed, desktop + mobile; expanded list now notes "Showing N of {total}". Build green.
 
