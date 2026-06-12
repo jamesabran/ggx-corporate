@@ -1,10 +1,9 @@
-# GGX Corporate — Claude Instructions
+# GGX Corporate — Codex Instructions
 
-> **Sync note:** This file and `AGENTS.md` (root) are intentionally similar.
-> `.claude/CLAUDE.md` is Claude's discovery file; `AGENTS.md` is for Codex and
-> general agents. If one changes (rules, read strategy, commit rules, response
-> format), check whether the other needs the same update. The documentation index
-> is `docs/README.md`.
+> **Sync note:** This file and `.claude/CLAUDE.md` are intentionally similar.
+> `AGENTS.md` is Codex's discovery file; `.claude/CLAUDE.md` is Claude's.
+> If one changes (rules, read strategy, commit rules, response format), check
+> whether the other needs the same update. The documentation index is `docs/README.md`.
 
 ## What this project is
 
