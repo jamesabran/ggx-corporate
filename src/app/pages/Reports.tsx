@@ -15,6 +15,7 @@ import {
   type ReportItem, type ReportType,
 } from '../services/reportsService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useAuth } from '../contexts/AuthContext';
 import { getSubaccountOptions } from '../services/userService';
 import { isAddonEnabledForAccount } from '../services/addonsService';
 import { MAIN_SCOPE } from '../data/addonState';
@@ -54,8 +55,11 @@ function resolveReportName(type: ReportType, range: DateRange): string {
 
 export function Reports() {
   const { isMainAccountView, getCurrentAccountId, subAccountsEnabled } = useSubAccounts();
+  const { user } = useAuth();
   const mainView = isMainAccountView();
-  const customReportsEnabled = isAddonEnabledForAccount('custom_reports', MAIN_SCOPE);
+  // custom_reports has allowedRoles: ['admin'] — managers must not get the active CTA
+  const customReportsEnabled =
+    user?.role !== 'manager' && isAddonEnabledForAccount('custom_reports', MAIN_SCOPE);
 
   // In subaccount view only operational (non-finance) report types are available.
   const isSubaccountView = subAccountsEnabled && !mainView;

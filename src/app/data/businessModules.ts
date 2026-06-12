@@ -155,11 +155,12 @@ export function getModuleById(id: string): BusinessModuleDef | undefined {
 }
 
 /**
- * Add-ons the Main Account assigns to specific subaccounts (per-account access),
- * vs. the Main-account-level singular add-ons (Subaccounts, Consolidated Billing).
+ * Add-ons the Main Account assigns to specific subaccounts (scopeLevel: 'subaccount').
+ * Account-level add-ons (advanced_analytics, custom_reports, consolidated_billing) are
+ * NOT here — they are account-wide and stored under MAIN_SCOPE, not per-subaccount.
  */
 export const ASSIGNABLE_ADDON_IDS = [
-  'on_demand_delivery', 'inventory', 'storefront', 'advanced_analytics', 'custom_reports',
+  'on_demand_delivery', 'inventory', 'storefront',
 ];
 export function isAssignableAddon(id: string): boolean {
   return ASSIGNABLE_ADDON_IDS.includes(id);

@@ -120,6 +120,18 @@ export function effectiveAccountId(ctx: ModuleAccessContext): string {
   return ctx.scopeAccountId ?? MAIN_SCOPE;
 }
 
+/**
+ * Account id to use for add-on state reads/writes for a specific module.
+ * Account-level modules (scopeLevel: 'account') always resolve against
+ * MAIN_SCOPE — they are account-wide and must not be keyed to a subaccount
+ * or the standard-account synthetic scope. Subaccount-scope modules use the
+ * viewer's current scope as usual.
+ */
+export function resolveAddonAccountId(m: BusinessModuleDef, ctx: ModuleAccessContext): string {
+  if (m.scopeLevel === 'account') return MAIN_SCOPE;
+  return ctx.scopeAccountId ?? MAIN_SCOPE;
+}
+
 /** Add-on enablement for an account (featureId state OR the addon store). */
 function addonEnabledFor(m: BusinessModuleDef, accountId: string): boolean {
   if (m.featureId && getFeatureStateSync(m.featureId, accountId === MAIN_SCOPE ? undefined : accountId).enabled) {
@@ -147,7 +159,7 @@ export function resolveModuleAccess(m: BusinessModuleDef, ctx: ModuleAccessConte
   // Subaccounts is a self-enable scale feature driven by runtime SubAccount state.
   if (m.id === 'subaccounts') return ctx.subaccountsEnabled ? 'enabled' : 'available_to_activate';
 
-  const accountId = effectiveAccountId(ctx);
+  const accountId = resolveAddonAccountId(m, ctx);
   if (addonEnabledFor(m, accountId)) {
     // featureId add-ons carry a configured flag → honor "requires_setup".
     if (m.featureId) {
@@ -256,7 +268,7 @@ function buildResolved(m: BusinessModuleDef, ctx: ModuleAccessContext): Resolved
   let requestPending = false;
   let requestNote: string | undefined;
   if (!activationBlocked && cta.kind === 'request_activation') {
-    if (getAddonStatus(m.id, effectiveAccountId(ctx)) === 'requested') {
+    if (getAddonStatus(m.id, resolveAddonAccountId(m, ctx)) === 'requested') {
       requestPending = true;
       requestNote = 'Request submitted — pending your GGX account team’s approval (check Notifications).';
       cta.label = 'Request submitted';

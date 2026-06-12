@@ -7,7 +7,7 @@ import { Select } from '../components/ui/Select';
 import { ModuleCard } from '../components/ModuleCard';
 import { useModuleAccessContext } from '../hooks/useModuleAccess';
 import {
-  getModuleCatalog, effectiveAccountId,
+  getModuleCatalog, resolveAddonAccountId,
   type ModuleCategory,
   type ResolvedModule,
 } from '../services/businessModulesService';
@@ -66,7 +66,7 @@ export function AccountAddOns() {
     if (!actioned) return;
     setPhase('submitting');
     const { def, cta } = actioned;
-    const accountId = effectiveAccountId(ctx);
+    const accountId = resolveAddonAccountId(actioned.def, ctx);
     await new Promise((r) => setTimeout(r, 600));
     let result: ActivationOutcome;
     if (cta.kind === 'enable') {
