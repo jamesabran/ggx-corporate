@@ -384,11 +384,23 @@ export function BulkSpreadsheet() {
             <h3 className="text-sm font-semibold text-gray-900">Estimated fees</h3>
             <div className="rounded-lg border border-gray-200 p-4 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Estimated shipping</span>
+                <span className="text-gray-600">Shipping</span>
                 <span className="text-gray-900 font-medium">
                   {fees.computedRows > 0 ? peso(fees.shipping) : '—'}
                 </span>
               </div>
+              {fees.computedRows > 0 && fees.itemProtection > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Item Protection</span>
+                  <span className="text-gray-900 font-medium">{peso(fees.itemProtection)}</span>
+                </div>
+              )}
+              {fees.computedRows > 0 && (
+                <div className="flex justify-between border-t border-gray-100 pt-2">
+                  <span className="font-medium text-gray-700">Estimated total</span>
+                  <span className="font-semibold text-gray-900">{peso(fees.total)}</span>
+                </div>
+              )}
               {fees.pendingRows > 0 && (
                 <p className="text-xs text-gray-500 flex items-start gap-1">
                   <IconInfoCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
