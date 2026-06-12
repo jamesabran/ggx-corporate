@@ -38,6 +38,8 @@ import { OpsRequestDetail } from './pages/OpsRequestDetail';
 import { AccountAddOns } from './pages/AccountAddOns';
 import { Inventory } from './pages/Inventory';
 import { Storefront } from './pages/Storefront';
+import { BasicAnalytics } from './pages/BasicAnalytics';
+import { CustomReports } from './pages/CustomReports';
 import { ProtectedRoute, AdminRoute } from './components/RouteGuards';
 import { TrackingPage } from './pages/TrackingPage';
 import { StorefrontPreview } from './pages/StorefrontPreview';
@@ -111,6 +113,10 @@ export const router = createBrowserRouter([
 
       // Shared: reports visible to Managers (scoped to operational types in subaccount view)
       { path: 'reports', Component: Reports },
+      { path: 'reports/custom', Component: CustomReports },
+      // Basic Data Analytics — standalone demo page (the gated Advanced workspace
+      // is at /analytics). Both reachable so add-on/nav actions don't dead-end.
+      { path: 'analytics/basic', Component: BasicAnalytics },
 
       // Admin-only (parent-level finance, subaccounts, users)
       { path: 'earnings',                        element: <AdminRoute><Earnings /></AdminRoute> },

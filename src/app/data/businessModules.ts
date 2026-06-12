@@ -145,6 +145,7 @@ export const BUSINESS_MODULES: BusinessModuleDef[] = [
     description: 'Choose columns, save report templates, combine module data, schedule exports, and group by subaccount. Goes beyond fixed Basic Reports templates.',
     contractDefault: 'excluded', enabledByDefault: false, configuredByDefault: false,
     activationMode: 'contract', scopeLevel: 'account', availableFor: ALL_TYPES, allowedRoles: ['admin'],
+    route: '/dashboard/reports/custom',
     contractNote: 'Activation may need a contract update.',
   },
 ];

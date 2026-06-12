@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { IconDownload, IconRefresh, IconClock, IconPlus, IconFileText, IconCalendar, IconInfoCircle, IconCircleCheck } from '@tabler/icons-react';
+import { Link } from 'react-router';
+import { IconDownload, IconRefresh, IconClock, IconPlus, IconFileText, IconCalendar, IconInfoCircle, IconCircleCheck, IconReportAnalytics } from '@tabler/icons-react';
 import { StatCard } from '../components/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -122,6 +123,11 @@ export function Reports() {
             Contextual downloads on Analytics, Billing, and Earnings pages are also available.
           </p>
         </div>
+        <Link to="/dashboard/reports/custom" className="flex-shrink-0">
+          <Button variant="outline" size="sm">
+            <IconReportAnalytics className="w-4 h-4" /> Custom Reports
+          </Button>
+        </Link>
       </div>
 
       {/* Summary cards */}
