@@ -57,6 +57,8 @@ export function SpreadsheetBookingGrid({
   ]);
   // Row whose product picker is open (null = closed).
   const [attachRowId, setAttachRowId] = useState<string | null>(null);
+  // Rows where codAmount has been manually edited — once dirty we stop auto-syncing.
+  const codDirtyRows = useRef<Set<string>>(new Set());
 
   // Live availability index for attached-product validation (stock + status).
   const productIndex = useMemo(() => {
@@ -81,28 +83,46 @@ export function SpreadsheetBookingGrid({
 
   const genId = () => `row-${nextId.current++}`;
 
-  const updateCell = (rowId: string, field: BookingField, value: string) =>
-    setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)));
+  const updateCell = (rowId: string, field: BookingField, value: string) => {
+    if (field === 'codAmount') {
+      codDirtyRows.current.add(rowId);
+      setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, codAmount: value } : r)));
+    } else if (field === 'declaredValue') {
+      setRows((prev) => prev.map((r) => {
+        if (r.id !== rowId) return r;
+        const next: BookingRow = { ...r, declaredValue: value };
+        if (!codDirtyRows.current.has(rowId)) next.codAmount = value;
+        return next;
+      }));
+    } else {
+      setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)));
+    }
+  };
 
   const updateRowFields = (rowId: string, partial: Partial<BookingRow>) =>
     setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, ...partial } : r)));
 
   // Attach products to a row: Qty (total items) + Declared value (subtotal) are
   // derived from the selection and locked; clearing it restores manual entry.
+  // codAmount syncs with the subtotal unless the user has manually edited it.
   const setRowProducts = (rowId: string, attached: AttachedProduct[]) =>
     setRows((prev) => prev.map((r) => {
       if (r.id !== rowId) return r;
       if (attached.length === 0) {
-        const next = { ...r, quantity: '', declaredValue: '' };
+        codDirtyRows.current.delete(rowId);
+        const next = { ...r, quantity: '', declaredValue: '', codAmount: '' };
         delete next.products;
         return next;
       }
-      return {
+      const subtotal = String(attachmentSubtotal(attached));
+      const next: BookingRow = {
         ...r,
         products: attached,
         quantity: String(attachmentTotalQty(attached)),
-        declaredValue: String(attachmentSubtotal(attached)),
+        declaredValue: subtotal,
       };
+      if (!codDirtyRows.current.has(rowId)) next.codAmount = subtotal;
+      return next;
     }));
 
   const addRow = () => setRows((prev) => [...prev, makeEmptyRow(genId())]);
@@ -111,12 +131,16 @@ export function SpreadsheetBookingGrid({
     setRows((prev) => {
       const idx = prev.findIndex((r) => r.id === rowId);
       if (idx === -1) return prev;
-      const copy = { ...prev[idx], id: genId() };
+      const newId = genId();
+      const copy = { ...prev[idx], id: newId };
+      if (codDirtyRows.current.has(rowId)) codDirtyRows.current.add(newId);
       return [...prev.slice(0, idx + 1), copy, ...prev.slice(idx + 1)];
     });
 
-  const deleteRow = (rowId: string) =>
+  const deleteRow = (rowId: string) => {
+    codDirtyRows.current.delete(rowId);
     setRows((prev) => (prev.length === 1 ? [makeEmptyRow(genId())] : prev.filter((r) => r.id !== rowId)));
+  };
 
   // Paste from Excel/Google Sheets: a TSV block fills cells starting at the
   // focused cell, creating rows as needed.

@@ -296,18 +296,17 @@ export function BulkUploader() {
                 </div>
               </div>
             </button>
-            {/* On-Demand stays visible as an upsell when not enabled (disabled). */}
+            {/* On-Demand: selectable when enabled, navigates to Add-ons when not. */}
             <button
-              onClick={() => onDemandEnabled && setUploadMode('on-demand')}
-              disabled={!onDemandEnabled}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${uploadMode === 'on-demand' ? 'bg-violet-600 text-white shadow-md' : onDemandEnabled ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+              onClick={() => onDemandEnabled ? setUploadMode('on-demand') : navigate('/dashboard/account-add-ons')}
+              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${uploadMode === 'on-demand' ? 'bg-violet-600 text-white shadow-md' : onDemandEnabled ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-gray-50 text-gray-400 border border-dashed border-gray-300 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700'}`}
             >
               <div className="flex items-center justify-center gap-2">
                 <IconBolt className="w-5 h-5 shrink-0" />
                 <div className="text-left">
                   <div className="font-semibold">On-Demand Delivery</div>
-                  <div className={`text-xs ${uploadMode === 'on-demand' ? 'text-violet-100' : 'text-gray-500'}`}>
-                    {onDemandEnabled ? 'Immediate, direct pickup & delivery' : 'Enable On-Demand Delivery for urgent Metro Manila bookings.'}
+                  <div className={`text-xs ${uploadMode === 'on-demand' ? 'text-violet-100' : onDemandEnabled ? 'text-gray-500' : 'text-violet-600'}`}>
+                    {onDemandEnabled ? 'Immediate, direct pickup & delivery' : 'Enable in Add-ons →'}
                   </div>
                 </div>
               </div>
