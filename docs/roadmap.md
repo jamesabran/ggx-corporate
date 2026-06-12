@@ -304,6 +304,14 @@ Fee breakdown needs the following updates in a future pass:
 
 Allow spreadsheet-created orders to be confirmed directly on the spreadsheet page using its existing Confirm Booking Details, booking summary, payment option, and fees sections. Avoid routing users to a separate Review details page for this flow. The spreadsheet page already has these elements and should become the complete confirmation flow.
 
+### Deferred: Custom Reports — saved template persistence
+
+Saved templates in Custom Reports are currently read-only presets (Weekly delivery summary, COD collections by subaccount, Failed & returned exceptions). The "Save template" button shows a brief flash but does not persist anything. Full persistence — saving a user-defined column + filter setup as a named template and recalling it across sessions — is backend-owned and deferred until the BFF integration stage.
+
+### Deferred: Custom Reports — scheduled exports
+
+The Custom Reports builder shows a note "Scheduled exports will be available in a future update." Scheduling is backend-owned (cron/job queue, delivery channel). Implement once the BFF integration stage provides the necessary scheduling endpoint.
+
 ---
 
 ## Architecture / service layer
