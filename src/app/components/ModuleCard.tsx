@@ -38,12 +38,9 @@ import { STATUS_META, type ResolvedModule } from '../services/businessModulesSer
 export function ModuleCard({
   module,
   onAction,
-  onSimulateApproval,
 }: {
   module: ResolvedModule;
   onAction?: (module: ResolvedModule) => void;
-  /** Demo-only: simulate GGX approving a pending request (shown while pending). */
-  onSimulateApproval?: (module: ResolvedModule) => void;
 }) {
   const navigate = useNavigate();
   const { def, status, cta } = module;
@@ -95,15 +92,6 @@ export function ModuleCard({
           )}
           {module.requestPending && module.requestNote && (
             <Note icon={IconClockHour4} className="text-blue-600">{module.requestNote}</Note>
-          )}
-          {module.requestPending && onSimulateApproval && (
-            <button
-              type="button"
-              onClick={() => onSimulateApproval(module)}
-              className="ml-5 text-xs font-medium text-violet-600 hover:text-violet-700 hover:underline cursor-pointer"
-            >
-              Demo: simulate GGX approval
-            </button>
           )}
         </div>
 

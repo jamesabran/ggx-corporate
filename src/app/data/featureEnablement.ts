@@ -8,6 +8,7 @@
  */
 
 import { MAIN_ACCOUNT_ID } from './accounts';
+import { loadState, saveState } from '../lib/storage';
 
 /** Synthetic scope id for the non-subaccount standard-account context. */
 export const STANDARD_SCOPE_ID = 'standard-account';
@@ -32,13 +33,20 @@ type ScopeId = string;
  *    Booking service-mode selector for that scope (page-level service type).
  *  - All other scopes have these features off (discoverable in Account Add-ons).
  */
-const seed: Record<ScopeId, Partial<Record<FeatureId, FeatureState>>> = {
+const SEED: Record<ScopeId, Partial<Record<FeatureId, FeatureState>>> = {
   'acme-luzon': {
     inventory: { enabled: true, configured: true },
     storefront: { enabled: true, configured: true },
     on_demand: { enabled: true, configured: true },
   },
 };
+
+// Persisted across refresh (localStorage key `ggx.featureEnablement`) so add-on
+// enablement survives reload; falls back to the seed.
+const STORE_KEY = 'featureEnablement';
+const seed: Record<ScopeId, Partial<Record<FeatureId, FeatureState>>> =
+  loadState<Record<ScopeId, Partial<Record<FeatureId, FeatureState>>>>(STORE_KEY, SEED);
+function persist(): void { saveState(STORE_KEY, seed); }
 
 const DEFAULT_STATE: FeatureState = { enabled: false, configured: false };
 
@@ -48,7 +56,7 @@ export function getFeatureStateForScope(featureId: FeatureId, scopeId: ScopeId |
   return seed[id]?.[featureId] ?? DEFAULT_STATE;
 }
 
-// ─── Mutations (session-only; backend-owned in production) ──────────────────────
+// ─── Mutations (persisted to localStorage; backend-owned in production) ─────────
 
 /** Set a feature's enablement state for a scope. */
 export function setFeatureStateForScope(
@@ -58,7 +66,15 @@ export function setFeatureStateForScope(
 ): FeatureState {
   const id = scopeId ?? MAIN_ACCOUNT_ID;
   seed[id] = { ...(seed[id] ?? {}), [featureId]: state };
+  persist();
   return state;
+}
+
+/** Scope ids that have a feature enabled (used by Main-account add-on targeting). */
+export function getScopesWithFeature(featureId: FeatureId): string[] {
+  return Object.entries(seed)
+    .filter(([, feats]) => feats?.[featureId]?.enabled)
+    .map(([scopeId]) => scopeId);
 }
 
 /**

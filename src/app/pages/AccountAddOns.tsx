@@ -7,12 +7,18 @@ import { Select } from '../components/ui/Select';
 import { ModuleCard } from '../components/ModuleCard';
 import { useModuleAccessContext } from '../hooks/useModuleAccess';
 import {
-  getModuleCatalog,
+  getModuleCatalog, effectiveAccountId,
   type ModuleCategory,
   type ResolvedModule,
 } from '../services/businessModulesService';
-import { activateModule, type ActivationOutcome } from '../services/moduleActivationService';
-import { approveModuleRequest } from '../data/moduleRequests';
+import { enableAddon, requestAddon } from '../services/addonsService';
+
+interface ActivationOutcome {
+  kind: 'enabled' | 'requested';
+  title: string;
+  message: string;
+  route?: string;
+}
 
 type Phase = 'confirm' | 'submitting' | 'done';
 
@@ -20,10 +26,9 @@ type Phase = 'confirm' | 'submitting' | 'done';
  * Account Add-ons — the discovery surface for OPTIONAL account capabilities.
  * Status + CTA are resolved by businessModulesService.
  *
- * Activation/request CTAs run a REAL action via moduleActivationService:
- * self-enable add-ons (Inventory/Storefront) flip feature enablement, and
- * approval/contract add-ons submit a persisted request the catalog reflects as
- * "Request submitted". Routed CTAs (Open / Set up / dependency) navigate.
+ * Self-enable add-ons (Inventory/Storefront/On-Demand) call enableAddon directly.
+ * Contract/approval add-ons call requestAddon which submits a request and pushes
+ * a Notification — approval flows from the Notifications page.
  */
 export function AccountAddOns() {
   const ctx = useModuleAccessContext();
@@ -34,7 +39,6 @@ export function AccountAddOns() {
   const [actioned, setActioned] = useState<ResolvedModule | null>(null);
   const [phase, setPhase] = useState<Phase>('confirm');
   const [outcome, setOutcome] = useState<ActivationOutcome | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
 
   const reload = useCallback(() => {
     getModuleCatalog(ctx).then(setGroups);
@@ -61,19 +65,29 @@ export function AccountAddOns() {
   const handleConfirm = async () => {
     if (!actioned) return;
     setPhase('submitting');
-    const result = await activateModule(ctx, actioned);
+    const { def, cta } = actioned;
+    const accountId = effectiveAccountId(ctx);
+    await new Promise((r) => setTimeout(r, 600));
+    let result: ActivationOutcome;
+    if (cta.kind === 'enable') {
+      enableAddon(def.id, accountId);
+      result = {
+        kind: 'enabled',
+        title: `${def.name} enabled`,
+        message: `${def.name} is now enabled for this account and ready to use.`,
+        route: def.route,
+      };
+    } else {
+      requestAddon(def.id, accountId);
+      result = {
+        kind: 'requested',
+        title: 'Request submitted',
+        message: `Your request for ${def.name} has been submitted. Your GGX account team will review it — check Notifications for updates and to confirm activation.`,
+      };
+    }
     setOutcome(result);
     setPhase('done');
-    reload(); // refresh statuses/CTAs (enabled / request submitted)
-  };
-
-  // Demo-only: simulate the GGX account team approving a pending request. Flips
-  // the request to approved (catalog → enabled/available), toasts, and refreshes.
-  const handleSimulateApproval = (m: ResolvedModule) => {
-    approveModuleRequest(ctx.scopeAccountId, m.def.id);
-    setToast(`${m.def.name} approved by your GGX account team — it's now active.`);
     reload();
-    window.setTimeout(() => setToast(null), 4000);
   };
 
   const filteredGroups = useMemo(() => {
@@ -117,7 +131,6 @@ export function AccountAddOns() {
                 key={m.def.id}
                 module={m}
                 onAction={openAction}
-                onSimulateApproval={handleSimulateApproval}
               />
             ))}
           </div>
@@ -174,15 +187,6 @@ export function AccountAddOns() {
         )}
       </Dialog>
 
-      {/* Demo approval toast */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[70] max-w-sm">
-          <div className="flex items-start gap-2.5 rounded-xl bg-gray-900 text-white shadow-xl px-4 py-3">
-            <IconCircleCheck className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm">{toast}</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -190,9 +194,7 @@ export function AccountAddOns() {
 function actionTitle(m: ResolvedModule): string {
   switch (m.cta.kind) {
     case 'enable': return `Enable ${m.def.name}`;
-    case 'request_approval': return `Request ${m.def.name}`;
     case 'request_activation': return `Request activation — ${m.def.name}`;
-    case 'contact': return `Contact support — ${m.def.name}`;
     default: return m.def.name;
   }
 }
@@ -201,12 +203,8 @@ function actionBody(m: ResolvedModule): string {
   switch (m.cta.kind) {
     case 'enable':
       return `${m.def.name} can be enabled for your account. Confirm to turn it on and start using it right away.`;
-    case 'request_approval':
-      return `${m.def.name} requires approval. Submitting will send a request to your GGX account team for review.`;
     case 'request_activation':
-      return `${m.def.name} requires a contract update. Submitting will notify your GGX account team to start activation.`;
-    case 'contact':
-      return `${m.def.name} isn't available for this account type or service area yet. Contact support to discuss options.`;
+      return `${m.def.name} may require a contract update. Submitting will send a request to your GGX account team — you'll receive a Notification when it's reviewed.`;
     default:
       return m.def.description;
   }

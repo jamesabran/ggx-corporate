@@ -55,6 +55,8 @@ export interface AppNotification {
     trackingNumber?: string;
     ticketId?: string;
     reportId?: string;
+    /** Pending add-on activation request — drives the in-notification approval. */
+    addon?: { moduleId: string; accountId: string; accountLabel?: string };
   };
 }
 

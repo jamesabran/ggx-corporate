@@ -135,10 +135,10 @@ export const BUSINESS_MODULES: BusinessModuleDef[] = [
   {
     id: 'advanced_analytics', name: 'Advanced Data Analytics', category: 'advanced',
     description: 'A dedicated analytics workspace: deeper filters, operational trends, subaccount comparisons, SLA/exception analysis, exportable views, and longer history. Distinct from dashboard Basic Analytics.',
-    contractDefault: 'included', enabledByDefault: true, configuredByDefault: true,
+    contractDefault: 'excluded', enabledByDefault: false, configuredByDefault: false,
     activationMode: 'contract', scopeLevel: 'account', availableFor: ALL_TYPES, allowedRoles: ALL_ROLES,
     route: '/dashboard/analytics',
-    contractNote: 'Included for your account. Managers see assigned subaccount data only.',
+    contractNote: 'Activation may need a contract update. Managers see assigned subaccount data only.',
   },
   {
     id: 'custom_reports', name: 'Custom Reports', category: 'advanced',
@@ -152,4 +152,15 @@ export const BUSINESS_MODULES: BusinessModuleDef[] = [
 
 export function getModuleById(id: string): BusinessModuleDef | undefined {
   return BUSINESS_MODULES.find((m) => m.id === id);
+}
+
+/**
+ * Add-ons the Main Account assigns to specific subaccounts (per-account access),
+ * vs. the Main-account-level singular add-ons (Subaccounts, Consolidated Billing).
+ */
+export const ASSIGNABLE_ADDON_IDS = [
+  'on_demand_delivery', 'inventory', 'storefront', 'advanced_analytics', 'custom_reports',
+];
+export function isAssignableAddon(id: string): boolean {
+  return ASSIGNABLE_ADDON_IDS.includes(id);
 }

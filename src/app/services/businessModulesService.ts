@@ -26,7 +26,7 @@ import {
 } from '../data/businessModules';
 import { getFeatureStateSync } from './featureEnablementService';
 import { hasPermission, type PermissionKey } from '../data/permissions';
-import { getModuleRequest } from '../data/moduleRequests';
+import { getAddonStatus, MAIN_SCOPE } from '../data/addonState';
 
 export type {
   AccountType, BusinessModuleDef, ModuleCategory, ModuleRole,
@@ -115,33 +115,49 @@ function isDependencySatisfied(depId: string, ctx: ModuleAccessContext): boolean
   return dep.contractDefault === 'included' && dep.enabledByDefault;
 }
 
+/** The account id an add-on resolves against for the viewer. */
+export function effectiveAccountId(ctx: ModuleAccessContext): string {
+  return ctx.scopeAccountId ?? MAIN_SCOPE;
+}
+
+/** Add-on enablement for an account (featureId state OR the addon store). */
+function addonEnabledFor(m: BusinessModuleDef, accountId: string): boolean {
+  if (m.featureId && getFeatureStateSync(m.featureId, accountId === MAIN_SCOPE ? undefined : accountId).enabled) {
+    return true;
+  }
+  const s = getAddonStatus(m.id, accountId);
+  return s === 'enabled' || s === 'approved';
+}
+
 /**
  * Resolve the effective access status for a module in a viewer context.
  * Order matters (first match wins) — see docs/contract_module_rules.md.
  */
 export function resolveModuleAccess(m: BusinessModuleDef, ctx: ModuleAccessContext): ModuleAccessStatus {
-  if (!m.availableFor.includes(ctx.accountType)) return 'not_available';
+  // Account-level add-ons (Subaccounts, Consolidated Billing, …) are managed at the
+  // Main Account. An admin drilled into a subaccount still resolves them against the
+  // Main Account, so they don't incorrectly read as "not available".
+  const resolvedType: AccountType =
+    m.scopeLevel === 'account' && ctx.role === 'admin' && ctx.subaccountsEnabled ? 'main' : ctx.accountType;
+  if (!m.availableFor.includes(resolvedType)) return 'not_available';
   if (m.comingSoon) return 'coming_soon';
   if (m.dependsOn && !isDependencySatisfied(m.dependsOn, ctx)) return 'requires_dependency';
   if (m.coverageGated && ctx.serviceCoverageOk === false) return 'not_available';
 
-  // An approved activation/approval request makes the add-on usable (demo: this is
-  // flipped by the "simulate GGX approval" action; in production the BFF returns it).
-  if (getModuleRequest(ctx.scopeAccountId, m.id)?.status === 'approved') return 'enabled';
-
   // Subaccounts is a self-enable scale feature driven by runtime SubAccount state.
   if (m.id === 'subaccounts') return ctx.subaccountsEnabled ? 'enabled' : 'available_to_activate';
 
-  const fe = m.featureId ? getFeatureStateSync(m.featureId, ctx.scopeAccountId) : undefined;
+  const accountId = effectiveAccountId(ctx);
+  if (addonEnabledFor(m, accountId)) {
+    // featureId add-ons carry a configured flag → honor "requires_setup".
+    if (m.featureId) {
+      const fe = getFeatureStateSync(m.featureId, ctx.scopeAccountId);
+      return fe.configured ? 'enabled' : 'requires_setup';
+    }
+    return 'enabled';
+  }
+
   const included = m.contractDefault === 'included';
-  const enabled = fe ? fe.enabled : m.enabledByDefault;
-  const configured = fe ? fe.configured : m.configuredByDefault;
-
-  // A gated feature that is turned on for this scope is usable now, regardless of
-  // how it was originally activated (self / approval / contract). The runtime
-  // enablement flag represents the post-activation state.
-  if (fe?.enabled) return configured ? 'enabled' : 'requires_setup';
-
   if (!included) {
     switch (m.activationMode) {
       case 'self': return 'available_to_activate';
@@ -150,8 +166,8 @@ export function resolveModuleAccess(m: BusinessModuleDef, ctx: ModuleAccessConte
       default: return 'not_available';
     }
   }
-  if (enabled && configured) return 'enabled';
-  if (enabled && !configured) return 'requires_setup';
+  if (m.enabledByDefault && m.configuredByDefault) return 'enabled';
+  if (m.enabledByDefault) return 'requires_setup';
   return 'included';
 }
 
@@ -165,29 +181,20 @@ export function resolveCta(status: ModuleAccessStatus, m: BusinessModuleDef): Mo
     case 'requires_setup':
       return { label: 'Continue setup', kind: 'continue', route: m.route, disabled: false };
     case 'available_to_activate':
-      // Self-enable flows with a real workflow (e.g. Subaccounts) route directly;
-      // others (Inventory/Storefront) are handled by the page's activation flow.
+      // Self-serve add-ons. Workflows with a real route (e.g. Subaccounts) route
+      // directly; others are handled by the page's activation flow.
       return { label: 'Enable', kind: 'enable', route: m.activateRoute, disabled: false };
     case 'requires_approval':
-      return { label: 'Submit request', kind: 'request_approval', disabled: false };
     case 'requires_contract_revision':
-      return { label: 'Request activation', kind: 'request_activation', disabled: false };
+      // Paid / contract-affecting add-ons use one consistent label.
+      return { label: 'Request Activation', kind: 'request_activation', disabled: false };
     case 'requires_dependency': {
+      // A prerequisite add-on is needed → non-actionable "Requires {Add-on}".
       const dep = m.dependsOn ? getModuleById(m.dependsOn) : undefined;
-      if (m.dependencyPassive) {
-        // The prerequisite is enabled elsewhere — show a passive, non-actionable
-        // "Requires X" CTA rather than routing the user into the dependency.
-        return {
-          label: dep ? `Requires ${dep.name}` : 'Requires another module',
-          kind: 'dependency',
-          disabled: true,
-        };
-      }
       return {
-        label: dep ? `Enable ${dep.name} first` : 'Enable dependency first',
+        label: dep ? `Requires ${dep.name}` : 'Requires another add-on',
         kind: 'dependency',
-        route: dep?.route,
-        disabled: false,
+        disabled: true,
       };
     }
     case 'not_available':
@@ -225,28 +232,33 @@ function buildResolved(m: BusinessModuleDef, ctx: ModuleAccessContext): Resolved
   const status = resolveModuleAccess(m, ctx);
   const cta = resolveCta(status, m);
 
-  // Managers cannot activate/request account-level (global) modules.
+  // Managers cannot activate/request account-level (contract-affecting) add-ons —
+  // those go through the Main Account.
   let activationBlocked = false;
   let blockedNote: string | undefined;
   if (ACTIVATION_CTA_KINDS.includes(cta.kind) && m.scopeLevel === 'account') {
     const needed: PermissionKey = cta.kind === 'enable' ? 'modules.activate' : 'modules.request';
     if (!hasPermission(ctx.permissions, needed)) {
       activationBlocked = true;
-      blockedNote = 'Requires an account administrator.';
+      if (cta.kind === 'request_activation') {
+        cta.label = 'Request through Main Account';
+        blockedNote = 'Contract add-ons are activated through the Main Account.';
+      } else {
+        blockedNote = 'Requires an account administrator.';
+      }
       cta.disabled = true;
     }
   }
 
-  // Reflect an already-submitted approval/contract request: the CTA becomes a
-  // non-actionable "Request submitted" so the user can't resubmit, and a note
-  // explains the pending review. Self-enable ('enable') needs no request.
+  // Reflect an already-submitted request: the CTA becomes a non-actionable
+  // "Request submitted" (no resubmit) with a pending note. Approval arrives as a
+  // Notification (see addonsService). Self-enable ('enable') needs no request.
   let requestPending = false;
   let requestNote: string | undefined;
-  if (!activationBlocked && (cta.kind === 'request_approval' || cta.kind === 'request_activation')) {
-    const existing = getModuleRequest(ctx.scopeAccountId, m.id);
-    if (existing && existing.status === 'in_review') {
+  if (!activationBlocked && cta.kind === 'request_activation') {
+    if (getAddonStatus(m.id, effectiveAccountId(ctx)) === 'requested') {
       requestPending = true;
-      requestNote = 'Request submitted — your GGX account team is reviewing it.';
+      requestNote = 'Request submitted — pending your GGX account team’s approval (check Notifications).';
       cta.label = 'Request submitted';
       cta.disabled = true;
     }
