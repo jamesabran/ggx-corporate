@@ -16,6 +16,8 @@ import {
 } from '../services/reportsService';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { getSubaccountOptions } from '../services/userService';
+import { isAddonEnabledForAccount } from '../services/addonsService';
+import { MAIN_SCOPE } from '../data/addonState';
 
 type DateRange = 'today' | 'last7' | 'last30' | 'custom';
 
@@ -53,6 +55,7 @@ function resolveReportName(type: ReportType, range: DateRange): string {
 export function Reports() {
   const { isMainAccountView, getCurrentAccountId, subAccountsEnabled } = useSubAccounts();
   const mainView = isMainAccountView();
+  const customReportsEnabled = isAddonEnabledForAccount('custom_reports', MAIN_SCOPE);
 
   // In subaccount view only operational (non-finance) report types are available.
   const isSubaccountView = subAccountsEnabled && !mainView;
@@ -123,11 +126,19 @@ export function Reports() {
             Contextual downloads on Analytics, Billing, and Earnings pages are also available.
           </p>
         </div>
-        <Link to="/dashboard/reports/custom" className="flex-shrink-0">
-          <Button variant="outline" size="sm">
-            <IconReportAnalytics className="w-4 h-4" /> Custom Reports
-          </Button>
-        </Link>
+        {customReportsEnabled ? (
+          <Link to="/dashboard/reports/custom" className="flex-shrink-0">
+            <Button variant="outline" size="sm">
+              <IconReportAnalytics className="w-4 h-4" /> Custom Reports
+            </Button>
+          </Link>
+        ) : (
+          <Link to="/dashboard/account-add-ons" className="flex-shrink-0">
+            <Button variant="outline" size="sm" className="border-dashed text-gray-400 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50">
+              <IconReportAnalytics className="w-4 h-4" /> Custom Reports — Enable in Add-ons →
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Summary cards */}

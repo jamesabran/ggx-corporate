@@ -104,7 +104,7 @@ export function ProductFormDialog({
     });
   };
 
-  const canSubmit = form.name.trim().length > 0 && form.sku.trim().length > 0;
+  const canSubmit = form.name.trim().length > 0;
 
   const handleSubmit = () => {
     if (!canSubmit) return;

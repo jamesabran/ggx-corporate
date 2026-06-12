@@ -138,7 +138,7 @@ export function resolveModuleAccess(m: BusinessModuleDef, ctx: ModuleAccessConte
   // Main Account. An admin drilled into a subaccount still resolves them against the
   // Main Account, so they don't incorrectly read as "not available".
   const resolvedType: AccountType =
-    m.scopeLevel === 'account' && ctx.role === 'admin' && ctx.subaccountsEnabled ? 'main' : ctx.accountType;
+    m.scopeLevel === 'account' && ctx.role === 'admin' ? 'main' : ctx.accountType;
   if (!m.availableFor.includes(resolvedType)) return 'not_available';
   if (m.comingSoon) return 'coming_soon';
   if (m.dependsOn && !isDependencySatisfied(m.dependsOn, ctx)) return 'requires_dependency';
@@ -297,7 +297,14 @@ export async function getModuleCatalog(
   return CATEGORY_ORDER.map((category) => ({
     category,
     label: CATEGORY_LABELS[category],
-    modules: BUSINESS_MODULES.filter((m) => m.category === category).map((m) => buildResolved(m, ctx)),
+    modules: BUSINESS_MODULES
+      .filter((m) => m.category === category)
+      .map((m) => buildResolved(m, ctx))
+      .filter((r) =>
+        // Managers have no Main Account context — hide account-scope modules
+        // that resolve to not_available rather than showing misleading "Contact support".
+        !(ctx.role === 'manager' && r.def.scopeLevel === 'account' && r.status === 'not_available')
+      ),
   })).filter((group) => group.modules.length > 0);
 }
 

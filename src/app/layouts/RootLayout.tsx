@@ -330,6 +330,17 @@ export function RootLayout() {
     return () => { cancelled = true; };
   }, [notificationViewer, location.pathname]);
 
+  // Refresh badge immediately when a notification is pushed on the same page.
+  useEffect(() => {
+    const refresh = () => {
+      getUnreadCount({ viewer: notificationViewer })
+        .then((c) => setUnreadCount(c))
+        .catch(() => {});
+    };
+    window.addEventListener('ggx:notification-push', refresh);
+    return () => window.removeEventListener('ggx:notification-push', refresh);
+  }, [notificationViewer]);
+
   const openNotifications = async () => {
     const list = await getNotifications({ viewer: notificationViewer });
     setNotifSnapshot(list.map((n) => ({ ...n })));

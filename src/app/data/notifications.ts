@@ -190,6 +190,7 @@ export function pushNotification(
   });
   if (RUNTIME_NOTIFICATIONS.length > RUNTIME_CAP) RUNTIME_NOTIFICATIONS.length = RUNTIME_CAP;
   persistRuntime();
+  window.dispatchEvent(new CustomEvent('ggx:notification-push'));
 }
 
 /** Convert a live Bulk Upload event into a unified notification. */
