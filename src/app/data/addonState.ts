@@ -49,6 +49,22 @@ const ACCOUNT_LEVEL_ADDON_IDS = ['consolidated_billing', 'advanced_analytics', '
   if (dirty) persist();
 })();
 
+// Assignable add-ons (scopeLevel: 'subaccount') must never be stored under
+// MAIN_SCOPE — they belong to a specific subaccount. Clear any stale state
+// that was incorrectly written at the main scope.
+const ASSIGNABLE_ADDON_IDS_TO_CLEAR = ['on_demand_delivery', 'inventory', 'storefront'];
+(function clearAssignableMainScopes(): void {
+  let dirty = false;
+  for (const moduleId of ASSIGNABLE_ADDON_IDS_TO_CLEAR) {
+    const entries = store.state[moduleId];
+    if (entries && MAIN_SCOPE in entries) {
+      delete entries[MAIN_SCOPE];
+      dirty = true;
+    }
+  }
+  if (dirty) persist();
+})();
+
 export function getAddonStatus(moduleId: string, accountId: string): AddonStatus | undefined {
   return store.state[moduleId]?.[accountId];
 }

@@ -11,7 +11,9 @@ import {
   type ModuleCategory,
   type ResolvedModule,
 } from '../services/businessModulesService';
-import { enableAddon, requestAddon } from '../services/addonsService';
+import { enableAddon, requestAddon, isAddonEnabledForAccount } from '../services/addonsService';
+import { isAssignableAddon } from '../data/businessModules';
+import { useSubAccounts } from '../contexts/SubAccountContext';
 
 interface ActivationOutcome {
   kind: 'enabled' | 'requested';
@@ -33,12 +35,16 @@ type Phase = 'confirm' | 'submitting' | 'done';
 export function AccountAddOns() {
   const ctx = useModuleAccessContext();
   const navigate = useNavigate();
+  const { subAccounts, setCurrentAccount } = useSubAccounts();
   const [groups, setGroups] = useState<{ category: ModuleCategory; label: string; modules: ResolvedModule[] }[]>([]);
   const [filter, setFilter] = useState<'all' | 'active' | 'available' | 'locked'>('all');
 
   const [actioned, setActioned] = useState<ResolvedModule | null>(null);
   const [phase, setPhase] = useState<Phase>('confirm');
   const [outcome, setOutcome] = useState<ActivationOutcome | null>(null);
+  // Target subaccount for assignable (subaccount-scoped) add-ons activated from
+  // the Main Account consolidated view — prevents writing enablement to MAIN_SCOPE.
+  const [targetSubaccountId, setTargetSubaccountId] = useState<string>('');
 
   const reload = useCallback(() => {
     getModuleCatalog(ctx).then(setGroups);
@@ -54,23 +60,31 @@ export function AccountAddOns() {
     setActioned(m);
     setPhase('confirm');
     setOutcome(null);
+    setTargetSubaccountId('');
   };
 
   const closeDialog = () => {
     setActioned(null);
     setPhase('confirm');
     setOutcome(null);
+    setTargetSubaccountId('');
   };
 
   const handleConfirm = async () => {
     if (!actioned) return;
     setPhase('submitting');
     const { def, cta } = actioned;
-    const accountId = resolveAddonAccountId(actioned.def, ctx);
+    // Assignable add-ons activated from the Main Account consolidated view must
+    // be written to the selected subaccount, not MAIN_SCOPE.
+    const isAssignable = isAssignableAddon(def.id) && ctx.accountType === 'main';
+    const accountId = isAssignable ? targetSubaccountId : resolveAddonAccountId(actioned.def, ctx);
     await new Promise((r) => setTimeout(r, 600));
     let result: ActivationOutcome;
     if (cta.kind === 'enable') {
       enableAddon(def.id, accountId);
+      // Switch scope to the target subaccount so RootLayout and the add-on page
+      // read the same scope immediately upon navigation.
+      if (isAssignable && accountId) setCurrentAccount(accountId);
       result = {
         kind: 'enabled',
         title: `${def.name} enabled`,
@@ -89,6 +103,15 @@ export function AccountAddOns() {
     setPhase('done');
     reload();
   };
+
+  // Whether the open dialog requires a subaccount target (assignable module, main view).
+  const needsTargetSelection = !!actioned && isAssignableAddon(actioned.def.id) && ctx.accountType === 'main';
+  // Subaccounts eligible for the targeted add-on. Storefront requires Inventory first.
+  const eligibleSubaccounts = needsTargetSelection
+    ? subAccounts.filter((sa) =>
+        actioned!.def.id !== 'storefront' || isAddonEnabledForAccount('inventory', sa.id)
+      )
+    : [];
 
   const filteredGroups = useMemo(() => {
     if (filter === 'all') return groups;
@@ -150,9 +173,34 @@ export function AccountAddOns() {
         {actioned && phase !== 'done' && (
           <>
             <p className="text-sm text-gray-600">{actionBody(actioned)}</p>
+            {needsTargetSelection && (
+              <div className="mt-4 space-y-1.5">
+                <label className="block text-xs font-medium text-gray-700">Assign to subaccount</label>
+                {eligibleSubaccounts.length === 0 ? (
+                  <p className="text-sm rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-amber-800">
+                    {actioned.def.id === 'storefront'
+                      ? 'Enable Inventory for a subaccount first — Storefront requires Inventory.'
+                      : 'No subaccounts available.'}
+                  </p>
+                ) : (
+                  <Select value={targetSubaccountId} onChange={(e) => setTargetSubaccountId(e.target.value)}>
+                    <option value="">Select a subaccount…</option>
+                    {eligibleSubaccounts.map((sa) => (
+                      <option key={sa.id} value={sa.id}>{sa.name}</option>
+                    ))}
+                  </Select>
+                )}
+              </div>
+            )}
             <div className="mt-5 flex justify-end gap-2">
               <Button variant="outline" onClick={closeDialog} disabled={phase === 'submitting'}>Cancel</Button>
-              <Button onClick={handleConfirm} disabled={phase === 'submitting'}>
+              <Button
+                onClick={handleConfirm}
+                disabled={
+                  phase === 'submitting' ||
+                  (needsTargetSelection && (!targetSubaccountId || eligibleSubaccounts.length === 0))
+                }
+              >
                 {phase === 'submitting'
                   ? <><IconLoader2 className="w-4 h-4 animate-spin" /> Submitting…</>
                   : actioned.cta.label}

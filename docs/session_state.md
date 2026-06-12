@@ -7,18 +7,21 @@
 
 ## ▶ Current state (resume here) — updated 2026-06-12
 
-**Stage:** GGX Business+ Session 52 — full 4-task batch complete. Build green, not pushed.
+**Stage:** GGX Business+ Session 54 — Storefront access fix + Inventory upsell polish. Build green, not pushed.
 
-- **Branch:** `master`. **Build:** green. Latest commit: `edb28e4`. Not pushed.
+- **Branch:** `master`. **Build:** green. Latest commit: pending. Not pushed.
 - **Working tree:** clean except `.claude/settings.local.json` (local config, leave it).
-- **Session 52 — 4-task batch delivered:**
-  1. **Bulk Upload fee computation** — Item Protection uses `max(declaredValue-500,0)*1%`, Fuel Surcharge removed, Declared Value field added to BulkColumnMapper and BulkUploadSummary error table.
-  2. **Spreadsheet booking completion** — BulkSpreadsheet books in-page (no routing to review), shows success Dialog with service/date/fee/payment summary; "Complete Booking" replaces "Continue to Review".
-  3. **Checkout address cascade** — new `LocationCascadeFields` component (form-shaped province/city/barangay cascade, DS-aligned, API-offline fallback), replaces free-text inputs in BuyerCheckout.
-  4. **Storefront multi-product cart** — session-only `lib/cartStore.ts` (pub/sub + `useCartItems`), `CartReview` at `/shop/:slug/cart`, `CartCheckout` at `/checkout` with LocationCascadeFields, StorefrontPreview updated with "Add to cart" buttons and cart count badge.
+- **Session 54 — 2-issue fix batch delivered:**
+  1. **Storefront access fix** — subaccount-scoped add-ons activated from Main Account consolidated view were writing enablement to `MAIN_SCOPE` (= `'main'`), so the Commerce nav and Storefront page disagreed on scope. Fixed at four layers:
+     - `data/addonState.ts`: startup migration clears stale `MAIN_SCOPE` entries for assignable add-ons (`inventory`, `storefront`, `on_demand_delivery`).
+     - `data/featureEnablement.ts`: startup migration clears stale `seed['main']` entries for subaccount-only features.
+     - `pages/AccountAddOns.tsx`: when enabling an assignable add-on from Main Account view, a subaccount selector is shown before confirm. For Storefront, only subaccounts with Inventory enabled are offered. The selected subaccount id is used for `enableAddon` (not `MAIN_SCOPE`). After enabling, `setCurrentAccount(targetId)` switches scope so `RootLayout` + `Storefront.tsx` read the same scope upon navigation.
+  2. **Inventory Storefront upsell polish** — `Inventory.tsx` `StorefrontUpsell()`: the "configured" and "not enabled" branches now use the same blue info-banner treatment as the middle branch (`border-blue-200 bg-blue-50`, `text-blue-500` icon, `text-blue-900` text).
+- **Deferred (roadmap):** Item Protection fee + location-based delivery rate computation — both documented in `docs/roadmap.md`. Blocked on BFF integration stage.
+- **Session 53 tasks still done:** Spreadsheet fee injection, Inventory button sizing, Inventory Storefront upsell (initial add), Storefront blank-page empty state.
 
 **Next task:** backend integration (auth → transactions + claims → everything else).
-Done: all Session 51 + Session 52 tasks.
+Done: all Session 51 + Session 52 + Session 53 + Session 54 tasks.
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
 decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); Inventory

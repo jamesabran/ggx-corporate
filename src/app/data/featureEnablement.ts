@@ -48,6 +48,24 @@ const seed: Record<ScopeId, Partial<Record<FeatureId, FeatureState>>> =
   loadState<Record<ScopeId, Partial<Record<FeatureId, FeatureState>>>>(STORE_KEY, SEED);
 function persist(): void { saveState(STORE_KEY, seed); }
 
+// Inventory, Storefront, and On-Demand are subaccount-scoped features; they
+// must never be enabled at the main account scope. Clear any stale state that
+// was incorrectly written there (e.g. from a Main Account consolidated view
+// activation before the subaccount-selector fix).
+const SUBACCOUNT_ONLY_FEATURES: FeatureId[] = ['inventory', 'storefront', 'on_demand'];
+(function clearMainScopeSubaccountFeatures(): void {
+  const mainEntry = seed[MAIN_ACCOUNT_ID];
+  if (!mainEntry) return;
+  let dirty = false;
+  for (const fid of SUBACCOUNT_ONLY_FEATURES) {
+    if (mainEntry[fid]) {
+      delete mainEntry[fid];
+      dirty = true;
+    }
+  }
+  if (dirty) persist();
+})();
+
 const DEFAULT_STATE: FeatureState = { enabled: false, configured: false };
 
 /** Resolve the effective feature state for a scope (defaults to off). */

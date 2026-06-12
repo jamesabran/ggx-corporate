@@ -301,6 +301,15 @@ Fee breakdown needs the following updates in a future pass:
 - Future pass should update the fee summary, fee validation, and relevant mock computation helpers (e.g. `lib/bookingFees.ts`).
 - Do not implement Item Protection or fee computation changes without also updating the fee summary and validation.
 
+### Deferred: Location-based delivery rate computation
+
+The in-app spreadsheet and BulkUpload fee estimate currently use flat mock surcharges. Future work:
+
+- Delivery base rates should be derived from origin–destination zone pairs (province/region-level at minimum), not a flat constant.
+- The fee computation in `lib/bookingFees.ts` is frontend-side and explicitly marked as an estimate. The authoritative fee must come from the BFF once the backend integration stage begins.
+- Implement together with the Item Protection fee update above — both require a richer `estimateFees` contract. Do not partially update one without the other.
+- This is blocked on the backend integration stage (BFF `/fees/estimate` endpoint or equivalent).
+
 ### Deferred: In-app spreadsheet booking completion
 
 Allow spreadsheet-created orders to be confirmed directly on the spreadsheet page using its existing Confirm Booking Details, booking summary, payment option, and fees sections. Avoid routing users to a separate Review details page for this flow. The spreadsheet page already has these elements and should become the complete confirmation flow.

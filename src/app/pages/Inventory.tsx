@@ -340,13 +340,13 @@ function StorefrontUpsell({
   if (sf.enabled && sf.configured) {
     // Already set up — compact link to manage.
     return (
-      <div className="flex items-center gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm">
-        <IconBuildingStore className="w-4 h-4 text-gray-400 flex-shrink-0" />
-        <span className="text-gray-600 flex-1">Your inventory products can be published to your storefront.</span>
+      <div className="flex items-center gap-2.5 rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-sm">
+        <IconBuildingStore className="w-4 h-4 text-blue-500 flex-shrink-0" />
+        <span className="text-blue-900 flex-1">Your inventory products can be published to your storefront.</span>
         <button
           type="button"
           onClick={() => navigate('/dashboard/storefront')}
-          className="font-medium text-blue-600 hover:text-blue-800 hover:underline whitespace-nowrap"
+          className="font-medium text-blue-700 hover:text-blue-800 hover:underline whitespace-nowrap"
         >
           Manage storefront →
         </button>
@@ -371,9 +371,9 @@ function StorefrontUpsell({
   }
   // Not enabled — teaser.
   return (
-    <div className="flex items-center gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm">
-      <IconBuildingStore className="w-4 h-4 text-gray-400 flex-shrink-0" />
-      <span className="text-gray-600 flex-1">Publish your inventory to a customer-facing storefront with Cash on Delivery.</span>
+    <div className="flex items-center gap-2.5 rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-sm">
+      <IconBuildingStore className="w-4 h-4 text-blue-500 flex-shrink-0" />
+      <span className="text-blue-900 flex-1">Publish your inventory to a customer-facing storefront with Cash on Delivery.</span>
       <button
         type="button"
         onClick={() => navigate('/dashboard/account-add-ons')}
