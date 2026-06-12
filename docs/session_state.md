@@ -7,27 +7,24 @@
 
 ## ▶ Current state (resume here) — updated 2026-06-12
 
-**Stage:** GGX Business+ modular platform — all features complete. Add-on state
-now persists to localStorage. Approval flows via Notifications (not card demo links).
+**Stage:** GGX Business+ demo quality pass complete (Session 51). Build green, not pushed.
 
-- **Branch:** `master`. **Build:** green. Latest app commit: `7e604f3` (add-on refactor). Latest repo commit: `684fd3d` (docs sync note). Not pushed.
+- **Branch:** `master`. **Build:** green. Latest commit: `8687d62` (roadmap docs). Not pushed.
 - **Working tree:** clean except `.claude/settings.local.json` (local config, leave it).
-- **Where things stand:** Upload File + In-app Spreadsheet feed one Bulk Booking flow;
-  spreadsheet is a step page (`/dashboard/bulk-uploader/spreadsheet`, no sidebar item),
-  page-level service mode (Standard / Same-Day / On-Demand-when-enabled), shared
-  `lib/bookingValidation`, GGX location cascade (shared `LocationCascadeCells`),
-  pixel-width grid with forced horizontal scroll, fee estimate. The Product/SKU cell
-  is a product picker when Inventory is enabled (else free text + upsell teaser).
-  Account Add-ons: self-enable add-ons (Inventory/Storefront/On-Demand) flip
-  immediately; contract add-ons (Advanced Analytics, Custom Reports, Consolidated
-  Billing) push a Notification with an "Approve" button — approval flows from the
-  Notifications page. All state persisted to localStorage.
+- **Where things stand:** Full demo quality pass complete:
+  - Bulk Upload: On-Demand button navigates to Add-ons (dashed teaser) when not enabled;
+    collectible amount auto-syncs from declaredValue unless manually edited (dirty-flag pattern).
+  - ProductFormDialog: SKU optional (name-only suffices).
+  - businessModulesService: resolvedType upcasts admin → 'main' for account-scope modules
+    regardless of subaccountsEnabled; managers see no not_available account-scope modules.
+  - Reports: Custom Reports button is an Add-ons teaser when addon not enabled.
+  - Bell refresh: pushNotification dispatches ggx:notification-push; RootLayout listens.
+  - BasicAnalytics: date preset tabs (7d/30d/This Month) + service type filter; KPI cards respond.
+  - DataAnalytics: addon gate (locked upgrade CTA); custom date range; Export CSV;
+    subaccount comparison table (main view); service type + region filters.
 
-**Next task:** #2 (adopt `lib/bookingValidation` in the uploaded-file path) stays
-blocked on real file parsing. The next major stage is **backend integration** (swap
-mock service bodies for BFF `fetch()` calls; dependency order: auth → transactions +
-claims → everything else — see roadmap "Backend integration").
-Done: #5, #1, #3, #6, #7, #4, #8, #9.
+**Next task:** backend integration (auth → transactions + claims → everything else).
+Done: all 13 demo quality pass tasks.
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
 decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); Inventory
