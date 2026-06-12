@@ -7,24 +7,18 @@
 
 ## ▶ Current state (resume here) — updated 2026-06-12
 
-**Stage:** GGX Business+ Session 52 fixes applied. Build green, not pushed.
+**Stage:** GGX Business+ Session 52 — full 4-task batch complete. Build green, not pushed.
 
-- **Branch:** `master`. **Build:** green. Latest commit: `4ba521b` (roadmap docs). Not pushed.
+- **Branch:** `master`. **Build:** green. Latest commit: `edb28e4`. Not pushed.
 - **Working tree:** clean except `.claude/settings.local.json` (local config, leave it).
-- **Where things stand:** Session 52 fixes:
-  - Bulk Upload On-Demand gated CTA: copy updated to 'Immediate, direct pickup & delivery - Enable in Add-ons'.
-  - SpreadsheetBookingGrid: Declared Value is no longer locked when products are attached — editable,
-    pre-filled from product subtotal. Collectible Amount still syncs from subtotal on attachment;
-    does NOT re-sync from manually-edited declared value when products are attached.
-  - Reports/Custom Reports: verified correct — uses `isAddonEnabledForAccount('custom_reports', MAIN_SCOPE)`
-    from addonsService; button becomes active after approval via notification flow. No code change needed.
-  - DataAnalytics/Advanced Analytics: verified correct — uses `isAddonEnabledForAccount('advanced_analytics', MAIN_SCOPE)`
-    from addonsService; gate lifted after approval via notification flow. No code change needed.
-  - Roadmap updated: Storefront/Checkout maturity, Bulk Upload fee computation (Item Protection formula),
-    In-app spreadsheet booking completion, and BFF/fetch as final item all recorded.
+- **Session 52 — 4-task batch delivered:**
+  1. **Bulk Upload fee computation** — Item Protection uses `max(declaredValue-500,0)*1%`, Fuel Surcharge removed, Declared Value field added to BulkColumnMapper and BulkUploadSummary error table.
+  2. **Spreadsheet booking completion** — BulkSpreadsheet books in-page (no routing to review), shows success Dialog with service/date/fee/payment summary; "Complete Booking" replaces "Continue to Review".
+  3. **Checkout address cascade** — new `LocationCascadeFields` component (form-shaped province/city/barangay cascade, DS-aligned, API-offline fallback), replaces free-text inputs in BuyerCheckout.
+  4. **Storefront multi-product cart** — session-only `lib/cartStore.ts` (pub/sub + `useCartItems`), `CartReview` at `/shop/:slug/cart`, `CartCheckout` at `/checkout` with LocationCascadeFields, StorefrontPreview updated with "Add to cart" buttons and cart count badge.
 
 **Next task:** backend integration (auth → transactions + claims → everything else).
-Done: all Session 51 + Session 52 fixes.
+Done: all Session 51 + Session 52 tasks.
 
 **Standing constraints (do not violate):** keep Account Add-ons + Integrations IA as
 decided; In-app Spreadsheet stays a step under Bulk Upload (no sidebar item); Inventory
