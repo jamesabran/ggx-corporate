@@ -231,7 +231,10 @@ export const transactions: Transaction[] = rows.map((r) => ({
   trackingNumber: r.tracking,
   destination: r.destination,
   type: r.type,
-  serviceType: r.serviceType ?? 'standard',
+  // Exactly one service type per booking. Rows without an explicit serviceType
+  // derive it from the legacy speed tier: the old "Express" maps to Same-Day
+  // Delivery (Express is no longer a service-type label), everything else Standard.
+  serviceType: r.serviceType ?? (r.type === 'Express' ? 'same_day' : 'standard'),
   status: r.status,
   date: r.date,
   subaccount: r.subaccount,

@@ -28,23 +28,18 @@ import {
   type DeliveryServiceType,
 } from '../services/transactionService';
 
-// Service types other than Standard get a small badge in the Type column so
-// On-Demand (and Same-Day) read as distinct at a glance.
-const SERVICE_TYPE_BADGE: Record<DeliveryServiceType, { variant: 'info' | 'pending'; label: string } | null> = {
-  standard: null,
-  same_day: { variant: 'info', label: SERVICE_TYPE_SHORT_LABEL.same_day },
+// Each booking has exactly ONE service type (Standard / Same-Day / On-Demand) —
+// never a secondary tag under Express/Standard. One badge per row, colored by type.
+const SERVICE_TYPE_BADGE: Record<DeliveryServiceType, { variant: 'default' | 'info' | 'pending'; label: string }> = {
+  standard:  { variant: 'default', label: SERVICE_TYPE_SHORT_LABEL.standard },
+  same_day:  { variant: 'info',    label: SERVICE_TYPE_SHORT_LABEL.same_day },
   on_demand: { variant: 'pending', label: SERVICE_TYPE_SHORT_LABEL.on_demand },
 };
 
-/** Type cell: delivery type text + a service-type badge for non-standard tiers. */
-function TypeCell({ type, serviceType }: { type: string; serviceType: DeliveryServiceType }) {
+/** Service-type cell: a single badge — exactly one service type per row. */
+function ServiceTypeCell({ serviceType }: { serviceType: DeliveryServiceType }) {
   const badge = SERVICE_TYPE_BADGE[serviceType];
-  return (
-    <span className="inline-flex items-center gap-2">
-      <span className="text-sm text-gray-600">{type}</span>
-      {badge && <Badge variant={badge.variant}>{badge.label}</Badge>}
-    </span>
-  );
+  return <Badge variant={badge.variant}>{badge.label}</Badge>;
 }
 
 // ─── component ──────────────────────────────────────────────────────────────
@@ -62,7 +57,6 @@ export function Transactions() {
 
   // "All Transactions" filter state
   const [statusFilter, setStatusFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
   const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
   const [subaccountFilter, setSubaccountFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,10 +101,9 @@ export function Transactions() {
       d.recipient.toLowerCase().includes(q) ||
       d.destination.toLowerCase().includes(q);
     const statusOk = statusFilter === 'all' || d.status === statusFilter;
-    const typeOk   = typeFilter === 'all'   || d.type.toLowerCase() === typeFilter;
     const serviceOk = serviceTypeFilter === 'all' || d.serviceType === serviceTypeFilter;
     const subOk    = subaccountFilter === 'all' || d.subaccount === subaccountFilter;
-    return searchOk && statusOk && typeOk && serviceOk && subOk;
+    return searchOk && statusOk && serviceOk && subOk;
   });
 
   return (
@@ -177,14 +170,7 @@ export function Transactions() {
                   <option value="returned">Returned</option>
                 </Select>
               </div>
-              <div className="w-full sm:w-[150px] flex-shrink-0">
-                <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-                  <option value="all">All Types</option>
-                  <option value="express">Express</option>
-                  <option value="standard">Standard</option>
-                </Select>
-              </div>
-              <div className="w-full sm:w-[170px] flex-shrink-0">
+              <div className="w-full sm:w-[180px] flex-shrink-0">
                 <Select value={serviceTypeFilter} onChange={(e) => setServiceTypeFilter(e.target.value)}>
                   <option value="all">All Service Types</option>
                   <option value="standard">{SERVICE_TYPE_SHORT_LABEL.standard}</option>
@@ -202,7 +188,7 @@ export function Transactions() {
                   <TableHead>Recipient</TableHead>
                   <TableHead>Destination</TableHead>
                   {mainView && <TableHead>Subaccount</TableHead>}
-                  <TableHead>Type</TableHead>
+                  <TableHead>Service Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Actions</TableHead>
@@ -232,7 +218,7 @@ export function Transactions() {
                       </TableCell>
                     )}
                     <TableCell>
-                      <TypeCell type={delivery.type} serviceType={delivery.serviceType} />
+                      <ServiceTypeCell serviceType={delivery.serviceType} />
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusConfig[delivery.status].variant}>
@@ -385,7 +371,7 @@ export function Transactions() {
                           <TableHead>Tracking Number</TableHead>
                           <TableHead>Recipient</TableHead>
                           <TableHead>Destination</TableHead>
-                          <TableHead>Type</TableHead>
+                          <TableHead>Service Type</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Date</TableHead>
                           <TableHead>Actions</TableHead>
@@ -402,7 +388,7 @@ export function Transactions() {
                             <TableCell>{tx.recipient}</TableCell>
                             <TableCell>{tx.destination}</TableCell>
                             <TableCell>
-                              <TypeCell type={tx.type} serviceType={tx.serviceType} />
+                              <ServiceTypeCell serviceType={tx.serviceType} />
                             </TableCell>
                             <TableCell>
                               <Badge variant={statusConfig[tx.status].variant}>

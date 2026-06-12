@@ -21,10 +21,16 @@ export type BookingField =
   | 'province'
   | 'city'
   | 'barangay'
+  | 'landmarks'
   | 'productSku'
   | 'quantity'
-  | 'declaredValue'
   | 'parcelSize'
+  | 'cod'
+  | 'codAmount'
+  | 'declaredValue'
+  | 'insureFull'
+  | 'recipientPaysFees'
+  | 'referenceId'
   | 'serviceType'
   | 'notes';
 
@@ -79,36 +85,41 @@ export interface ColumnDef {
 export const SERVICE_TYPE_OPTIONS: { value: ServiceTypeKey; label: string }[] =
   BOOKING_SERVICE_TYPES.map((k) => ({ value: k, label: SERVICE_TYPES[k].label }));
 
-// Column widths are sized so labels and content (incl. cascade dropdown labels
-// like "Select province") have breathing room. The grid forces horizontal scroll
+/** Yes/No option set for COD / insure / recipient-pays-fees cells. */
+export const YES_NO = ['Yes', 'No'] as const;
+
+// Columns mirror the official Bulk Upload template (data/bulkTemplate.ts) as
+// closely as practical for the demo: recipient + destination, item, receptacle
+// size, COD option + collectible amount, declared value, full-value insurance,
+// recipient-pays-fees, and reference ID. Service type is page-level (not per row);
+// shipping-fee payment is chosen once under "Confirm booking details" (no per-row
+// Payment column); Item Protection Fee is a derived display, not an input column.
+// Widths give labels + cascade dropdowns room; the grid scrolls horizontally
 // rather than compressing columns (see SpreadsheetBookingGrid).
 export const BOOKING_COLUMNS: ColumnDef[] = [
-  { key: 'recipientName',  label: 'Recipient name',   required: true,  width: 180 },
-  { key: 'recipientMobile',label: 'Recipient mobile', required: true,  width: 180 },
-  { key: 'address',        label: 'Delivery address', required: true,  width: 340 },
-  { key: 'province',       label: 'Province',         required: true,  width: 190 },
-  { key: 'city',           label: 'City',             required: true,  width: 190 },
-  { key: 'barangay',       label: 'Barangay',         required: true,  width: 200 },
-  // Product / SKU is intentionally wide to support a future multi-product
-  // summary (chip + "+N more") once Inventory attachment lands. Manual entry now.
-  { key: 'productSku',     label: 'Product / SKU',    required: false, width: 300 },
-  { key: 'quantity',       label: 'Qty',              required: true,  width: 90 },
-  { key: 'declaredValue',  label: 'Declared value',   required: false, width: 160 },
-  { key: 'parcelSize',     label: 'Parcel size',      required: false, width: 180, options: RECEPTACLE_SIZES },
+  { key: 'recipientName',    label: 'Recipient name',    required: true,  width: 180 },
+  { key: 'recipientMobile',  label: 'Contact number',    required: true,  width: 180 },
+  { key: 'address',          label: 'Street address',    required: true,  width: 300 },
+  { key: 'province',         label: 'Province',          required: true,  width: 190 },
+  { key: 'city',             label: 'City / Municipality',required: true, width: 190 },
+  { key: 'barangay',         label: 'Barangay',          required: true,  width: 200 },
+  { key: 'landmarks',        label: 'Landmarks / unit #',required: false, width: 180 },
+  { key: 'productSku',       label: 'Item name / SKU',   required: false, width: 260 },
+  { key: 'quantity',         label: 'Qty',               required: true,  width: 80 },
+  { key: 'parcelSize',       label: 'Receptacle size',   required: false, width: 170, options: RECEPTACLE_SIZES },
+  { key: 'cod',              label: 'Collect COD?',      required: false, width: 130, options: YES_NO },
+  { key: 'codAmount',        label: 'Collectible amount',required: false, width: 160 },
+  { key: 'declaredValue',    label: 'Declared value',    required: false, width: 160 },
+  { key: 'insureFull',       label: 'Insure full value?',required: false, width: 150, options: YES_NO },
+  { key: 'recipientPaysFees',label: 'Recipient pays fees?',required: false, width: 170, options: YES_NO },
+  { key: 'referenceId',      label: 'Reference ID',      required: false, width: 160 },
 ];
 
 /** Fixed widths (px) for the grid's row-number and row-actions columns. */
 export const ROW_NUMBER_WIDTH = 48;
 export const ROW_ACTIONS_WIDTH = 80;
-// Service type is chosen at the page/flow level (Standard / Same-Day / On-Demand),
-// not per row, so it is NOT a grid column. Notes were removed to keep the row
-// focused on booking/recipient/parcel/location/product fields.
-//
-// Shipping-fee payment is handled once for the batch under "Confirm booking
-// details" (account payment options), so there is NO per-row Payment column.
-// FUTURE: align this grid with the Bulk Upload template's item/payment fields
-// (e.g. COD amount, declared value, line-item protection) in a dedicated pass —
-// not implemented yet.
+/** COD collectible amount must not exceed this (template rule). */
+export const COD_MAX = 50000;
 
 const REQUIRED_FIELDS = BOOKING_COLUMNS.filter((c) => c.required).map((c) => c.key);
 
@@ -124,8 +135,9 @@ export function makeEmptyRow(id: string): BookingRow {
   return {
     id,
     recipientName: '', recipientMobile: '', address: '', province: '', city: '',
-    barangay: '', productSku: '', quantity: '', declaredValue: '', parcelSize: '',
-    serviceType: '', notes: '',
+    barangay: '', landmarks: '', productSku: '', quantity: '', parcelSize: '',
+    cod: '', codAmount: '', declaredValue: '', insureFull: '', recipientPaysFees: '',
+    referenceId: '', serviceType: '', notes: '',
   };
 }
 
@@ -171,6 +183,15 @@ export function validateRow(
   const declared = row.declaredValue.trim();
   if (declared && (Number.isNaN(Number(declared)) || Number(declared) < 0)) {
     errors.declaredValue = 'Must be a number ≥ 0';
+  }
+
+  // COD: when collecting, a valid collectible amount (≤ template cap) is required.
+  const codAmount = row.codAmount.trim();
+  if (codAmount && (Number.isNaN(Number(codAmount)) || Number(codAmount) < 0)) {
+    errors.codAmount = 'Must be a number ≥ 0';
+  } else if (row.cod === 'Yes') {
+    if (!codAmount) errors.codAmount = 'Enter the amount to collect';
+    else if (Number(codAmount) > COD_MAX) errors.codAmount = `Cannot exceed ₱${COD_MAX.toLocaleString()}`;
   }
 
   if (row.serviceType && !BOOKING_SERVICE_TYPES.includes(row.serviceType as ServiceTypeKey)) {
