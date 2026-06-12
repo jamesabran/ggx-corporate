@@ -43,6 +43,7 @@ import { CustomReports } from './pages/CustomReports';
 import { ProtectedRoute, AdminRoute } from './components/RouteGuards';
 import { TrackingPage } from './pages/TrackingPage';
 import { StorefrontPreview } from './pages/StorefrontPreview';
+import { BuyerCheckout } from './pages/BuyerCheckout';
 
 export const router = createBrowserRouter([
   {
@@ -58,9 +59,14 @@ export const router = createBrowserRouter([
     Component: TrackingPage,
   },
   {
-    // Public customer-facing storefront (browse-only; no checkout yet).
+    // Public customer-facing storefront (browse products → buyer checkout).
     path: '/shop/:slug',
     Component: StorefrontPreview,
+  },
+  {
+    // Public buyer checkout for a single product (COD-only demo).
+    path: '/buy/:productId',
+    Component: BuyerCheckout,
   },
   {
     path: '/dashboard',

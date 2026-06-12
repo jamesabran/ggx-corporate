@@ -18,6 +18,7 @@ import {
   getProductsForScope,
   getProductById,
   getProductsByIds,
+  productCover,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -29,6 +30,7 @@ import {
 } from '../data/inventory';
 
 export type { InventoryProduct, ProductStatus, ProductDimensions, ProductInput };
+export { productCover };
 
 /** Return inventory products for a scope (subaccount/account). */
 export async function getInventoryProducts(scopeId: string | undefined): Promise<InventoryProduct[]> {
@@ -162,6 +164,7 @@ export function parseProductsCsv(text: string): CsvParseResult {
       dimensions: { length: num(iL), width: num(iW), height: num(iH) },
       stockQuantity: num(iStock),
       lowStockThreshold: num(iLow, 10),
+      images: [],
       status: statusRaw === 'inactive' ? 'inactive' : 'active',
     });
   }

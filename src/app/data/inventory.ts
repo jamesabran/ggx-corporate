@@ -29,8 +29,10 @@ export interface InventoryProduct {
   dimensions: ProductDimensions;
   stockQuantity: number;
   lowStockThreshold: number;
-  /** Image placeholder reference (no real asset pipeline yet). */
-  imageUrl?: string;
+  /** Product photos (data URLs in the demo; a CDN/asset pipeline in production). */
+  images: string[];
+  /** Chosen cover photo (defaults to images[0] when unset). */
+  coverImage?: string;
   status: ProductStatus;
   createdBy: string;
   updatedBy: string;
@@ -49,7 +51,14 @@ export interface ProductInput {
   dimensions: ProductDimensions;
   stockQuantity: number;
   lowStockThreshold: number;
+  images: string[];
+  coverImage?: string;
   status: ProductStatus;
+}
+
+/** Resolve a product's cover photo (selected cover, else first image, else none). */
+export function productCover(p: { images: string[]; coverImage?: string }): string | undefined {
+  return p.coverImage ?? p.images[0];
 }
 
 // Demo seed — products owned by Acme Luzon (the scope with Inventory enabled).
@@ -63,7 +72,7 @@ let products: InventoryProduct[] = [
     description: 'Single-origin arabica beans, whole bean, 1kg resealable pack.',
     category: 'Food & Beverage', unitPrice: 850, weight: 1.05,
     dimensions: { length: 20, width: 12, height: 8 },
-    stockQuantity: 320, lowStockThreshold: 50,
+    stockQuantity: 320, lowStockThreshold: 50, images: [],
     status: 'active', createdBy: 'Rina Lopez', updatedBy: 'Rina Lopez',
     createdAt: '2026-04-02T09:00:00Z', updatedAt: '2026-06-01T14:20:00Z',
   },
@@ -73,7 +82,7 @@ let products: InventoryProduct[] = [
     description: 'Double-wall insulated stainless steel tumbler, 500ml.',
     category: 'Drinkware', unitPrice: 420, weight: 0.35,
     dimensions: { length: 9, width: 9, height: 22 },
-    stockQuantity: 38, lowStockThreshold: 40,
+    stockQuantity: 38, lowStockThreshold: 40, images: [],
     status: 'active', createdBy: 'Rina Lopez', updatedBy: 'Rina Lopez',
     createdAt: '2026-04-10T10:30:00Z', updatedAt: '2026-05-28T11:05:00Z',
   },
@@ -83,7 +92,7 @@ let products: InventoryProduct[] = [
     description: 'Heavy-duty 12oz canvas tote, natural color.',
     category: 'Bags', unitPrice: 290, weight: 0.25,
     dimensions: { length: 38, width: 42, height: 2 },
-    stockQuantity: 0, lowStockThreshold: 25,
+    stockQuantity: 0, lowStockThreshold: 25, images: [],
     status: 'inactive', createdBy: 'Rina Lopez', updatedBy: 'Rina Lopez',
     createdAt: '2026-03-18T08:15:00Z', updatedAt: '2026-05-12T16:40:00Z',
   },

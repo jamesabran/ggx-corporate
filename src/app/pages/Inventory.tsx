@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  IconPackage, IconPlus, IconPencil, IconTrash, IconUpload, IconDownload, IconInfoCircle,
+  IconPackage, IconPlus, IconPencil, IconTrash, IconUpload, IconDownload, IconInfoCircle, IconShare2,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -14,7 +14,7 @@ import { isFeatureUsable } from '../services/featureEnablementService';
 import {
   getInventoryProducts, createInventoryProduct, updateInventoryProduct,
   deleteInventoryProduct, importInventoryProducts, productsToCsv, parseProductsCsv,
-  isLowStock, type InventoryProduct, type ProductInput,
+  isLowStock, productCover, type InventoryProduct, type ProductInput,
 } from '../services/inventoryService';
 
 /** Trigger a client-side CSV download (export is a presentation helper). */
@@ -64,6 +64,15 @@ export function Inventory() {
   const [deleting, setDeleting] = useState<InventoryProduct | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState('');
+  const [toast, setToast] = useState<string | null>(null);
+
+  // Copy a product's public buyer-checkout link (shareable to customers).
+  const shareProduct = async (p: InventoryProduct) => {
+    const url = `${window.location.origin}/buy/${p.id}`;
+    try { await navigator.clipboard.writeText(url); } catch { /* clipboard may be blocked */ }
+    setToast('Checkout link copied to clipboard');
+    window.setTimeout(() => setToast(null), 3000);
+  };
 
   const importPreview = useMemo(
     () => (importText.trim() ? parseProductsCsv(importText) : null),
@@ -158,15 +167,24 @@ export function Inventory() {
                 <TableHead>Unit Price</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Status</TableHead>
-                {(can('inventory.edit') || can('inventory.delete')) && canMutate && (
-                  <TableHead className="text-right">Actions</TableHead>
-                )}
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((p) => (
+              {products.map((p) => {
+                const cover = productCover(p);
+                return (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium text-gray-900">{p.name}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                        {cover
+                          ? <img src={cover} alt="" className="w-full h-full object-cover" />
+                          : <IconPackage className="w-4 h-4 text-gray-400" />}
+                      </div>
+                      <span className="font-medium text-gray-900">{p.name}</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-gray-500">{p.sku}</TableCell>
                   <TableCell className="text-gray-500">{p.category}</TableCell>
                   <TableCell className="text-gray-700">₱{p.unitPrice.toLocaleString()}</TableCell>
@@ -181,34 +199,43 @@ export function Inventory() {
                       {p.status === 'active' ? 'Active' : 'Inactive'}
                     </Badge>
                   </TableCell>
-                  {(can('inventory.edit') || can('inventory.delete')) && canMutate && (
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        {can('inventory.edit') && (
-                          <button
-                            onClick={() => openEdit(p)}
-                            title="Edit product"
-                            aria-label={`Edit ${p.name}`}
-                            className="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                          >
-                            <IconPencil className="w-4 h-4" />
-                          </button>
-                        )}
-                        {can('inventory.delete') && (
-                          <button
-                            onClick={() => setDeleting(p)}
-                            title="Delete product"
-                            aria-label={`Delete ${p.name}`}
-                            className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                          >
-                            <IconTrash className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </TableCell>
-                  )}
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      {p.status === 'active' && (
+                        <button
+                          onClick={() => shareProduct(p)}
+                          title="Copy checkout link"
+                          aria-label={`Share ${p.name}`}
+                          className="p-1.5 rounded text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
+                        >
+                          <IconShare2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {can('inventory.edit') && canMutate && (
+                        <button
+                          onClick={() => openEdit(p)}
+                          title="Edit product"
+                          aria-label={`Edit ${p.name}`}
+                          className="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                        >
+                          <IconPencil className="w-4 h-4" />
+                        </button>
+                      )}
+                      {can('inventory.delete') && canMutate && (
+                        <button
+                          onClick={() => setDeleting(p)}
+                          title="Delete product"
+                          aria-label={`Delete ${p.name}`}
+                          className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                        >
+                          <IconTrash className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </Card>
@@ -279,6 +306,16 @@ export function Inventory() {
           </Button>
         </div>
       </Dialog>
+
+      {/* Share-link toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[70] max-w-sm">
+          <div className="flex items-start gap-2.5 rounded-xl bg-gray-900 text-white shadow-xl px-4 py-3">
+            <IconShare2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm">{toast}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

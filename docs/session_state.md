@@ -50,6 +50,41 @@ strip it after any Write. PowerShell `Get-Content`/`Set-Content` round-trips cor
 
 ---
 
+## Session 49 (2026-06-12) — Demo alignment fixes + enhancements (6 items)
+
+Five commits, all building green. Scoped feature/content fixes for the demo.
+
+1. **One service type per transaction** (`652ef4d`): Transactions show a single
+   service-type badge (Standard / Same-Day / On-Demand) — removed the Express/Standard
+   mixed model + its filter. Legacy "Express" rows derive to Same-Day in the mapper.
+2. **Spreadsheet ↔ bulk template alignment** (`652ef4d`): `BOOKING_COLUMNS` now mirror
+   the official template — landmarks, receptacle size, COD option + collectible amount
+   (≤ ₱50k cap), declared value, insure-full, recipient-pays-fees, reference ID. Added
+   the fields to `BookingField`/`makeEmptyRow` + COD validation. No per-row Payment col.
+4. **Add-on icons** (`80ad117`): each `ModuleCard` gets a scannable icon chip
+   (existing icon library, by module id).
+6. **Consolidated Billing approval demo** (`80ad117`): under a submitted request, a
+   "Demo: simulate GGX approval" link flips the request to `approved`
+   (`approveModuleRequest`), which `resolveModuleAccess` reads as `enabled`; a toast
+   confirms and the card becomes Open → `/dashboard/billing`. Request-activation
+   before-state preserved.
+5. **Subaccount demo routes** (`7150a71`): new `BasicAnalytics` (`/dashboard/analytics/basic`)
+   + `CustomReports` (`/dashboard/reports/custom`) demo pages; Custom Reports add-on now
+   routes there; a Custom Reports entry added to the Reports header. Advanced
+   (`/analytics`) + Reports (`/reports`) already existed — no dead-ends.
+3. **Inventory photos + buyer checkout** (this commit): products gained
+   `images[]` + `coverImage` with an upload UI, cover selection, and image guidance in
+   `ProductFormDialog`. New public **`/buy/:productId`** buyer checkout (COD-only demo):
+   view photos/details, enter recipient + address, place order → confirmation. Inventory
+   rows show a cover thumbnail + a Share action (copies the `/buy` link, toast);
+   Storefront `/shop/:slug` cards show covers and link to buyer checkout ("Order now (COD)").
+
+**Demo-only assumptions:** product images are data URLs held in the session store
+(reset on reload); buyer orders confirm in-page (no persistence / no payment
+integration; COD only); approval simulation + feature flags are session state.
+
+---
+
 ## Session 48 (2026-06-12) — GGX Business+ rebrand pass (roadmap #9)
 
 One commit. **Build green.** Copy-only; no behavior/route changes.

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router';
+import { useParams, Link } from 'react-router';
 import {
-  IconBuildingStore, IconMail, IconPhone, IconShoppingCartOff, IconEyeCog, IconPackage,
+  IconBuildingStore, IconMail, IconPhone, IconShoppingCart, IconEyeCog, IconPackage,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { getStorefrontProfileBySlug, type StorefrontProfile } from '../services/storefrontService';
-import { getInventoryProductsByIds, isLowStock, type InventoryProduct } from '../services/inventoryService';
+import { getInventoryProductsByIds, isLowStock, productCover, type InventoryProduct } from '../services/inventoryService';
 import { getServiceTypeLabel } from '../data/serviceTypes';
 
 const peso = (n: number) =>
@@ -115,10 +115,13 @@ export function StorefrontPreview() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {products.map((p) => {
               const outOfStock = p.stockQuantity <= 0;
+              const cover = productCover(p);
               return (
                 <Card key={p.id} className="flex flex-col overflow-hidden">
-                  <div className="h-32 bg-gray-100 flex items-center justify-center">
-                    <IconPackage className="w-10 h-10 text-gray-300" />
+                  <div className="h-36 bg-gray-100 flex items-center justify-center overflow-hidden">
+                    {cover
+                      ? <img src={cover} alt={p.name} className="w-full h-full object-cover" />
+                      : <IconPackage className="w-10 h-10 text-gray-300" />}
                   </div>
                   <CardContent className="p-4 flex-1 flex flex-col">
                     <p className="text-xs text-gray-400">{p.category}</p>
@@ -132,15 +135,22 @@ export function StorefrontPreview() {
                     </div>
                     <div className="mt-auto pt-3">
                       <p className="text-base font-bold text-gray-900">{peso(p.unitPrice)}</p>
-                      <button
-                        type="button"
-                        disabled
-                        title="Checkout is not available yet"
-                        className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm font-medium h-9 cursor-not-allowed"
-                      >
-                        <IconShoppingCartOff className="w-4 h-4" />
-                        Checkout coming soon
-                      </button>
+                      {outOfStock ? (
+                        <button
+                          type="button" disabled
+                          className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm font-medium h-9 cursor-not-allowed"
+                        >
+                          Out of stock
+                        </button>
+                      ) : (
+                        <Link
+                          to={`/buy/${p.id}`}
+                          className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium h-9 transition-colors"
+                        >
+                          <IconShoppingCart className="w-4 h-4" />
+                          Order now (COD)
+                        </Link>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -150,7 +160,7 @@ export function StorefrontPreview() {
         )}
 
         <p className="text-center text-xs text-gray-400 mt-8">
-          Powered by GoGo Xpress · Online ordering is coming soon to this store.
+          Powered by GoGo Xpress · Orders are Cash on Delivery and booked for delivery by the seller.
         </p>
       </main>
     </div>
