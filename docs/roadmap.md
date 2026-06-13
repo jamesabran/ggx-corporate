@@ -21,7 +21,6 @@ deferred production-only stage. Start it only when a BFF/backend exists.
 
 | Priority | Item | Notes |
 |---|---|---|
-| High | Responsive / small-screen layout fixes | KPI overflow, trend clipping, SLA badge wrapping, table/card badge constraints at 1024-1280px. |
 | Medium | Custom Reports saved template persistence | Backend-owned persistence for user-defined report templates. |
 | Medium | Custom Reports scheduled exports | Backend-owned scheduling and delivery channel support. |
 | Low | Figma/component alignment pass | Reflect new reusable components in the Figma DS when the component library changes materially. |
@@ -64,6 +63,10 @@ source-of-truth logic.
   remains a backend concern.
 - GGX Business+ user-facing rebrand pass is complete where documented; internal
   package/route identifiers remain stable.
+- Responsive layout QA pass is complete at 375px, 768px, 1024px, 1280px, and
+  1440px across Dashboard, SLA Alerts, Transactions, Bulk Upload, Reports, Storefront,
+  and Billing. Confirmed fixes: Reports CTA truncation on mobile, SLA Alerts header
+  stack at sub-xl widths, Billing KPI grid 2-col at 1024px.
 
 ## Guardrails
 
