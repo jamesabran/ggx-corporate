@@ -5,17 +5,13 @@
 
 ## Current State - Updated 2026-06-13
 
-- **Stage:** Documentation cleanup and Claude skill routing completed; docs-only
-  validation run, build not required.
-- **Previous app stage:** GGX Business+ Session 54 - Storefront access fix and
-  Inventory upsell polish.
+- **Stage:** Demo readiness QA pass complete. All confirmed issues fixed and pushed.
 - **Branch:** `master`.
-- **Latest app commit before docs cleanup:** `2564363`.
-- **Latest repo change:** this documentation cleanup / Claude skills commit.
-- **Build status before docs cleanup:** green.
-- **Push status:** not pushed.
+- **Latest commit:** `780ac11` — demo QA pass fixes.
+- **Build/typecheck status:** green.
+- **Push status:** pushed.
 - **Working tree note:** `.claude/settings.local.json` is local config; leave it
-  alone unless explicitly asked.
+  alone unless explicitly asked. QA scripts/dirs are gitignored locally.
 
 ## Most Recent Product Truth
 
