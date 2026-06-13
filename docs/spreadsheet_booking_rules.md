@@ -35,6 +35,8 @@ Both are **input methods feeding one Bulk Booking flow** — not separate flows:
 - **Fees** are a labeled frontend **estimate** (`lib/bookingFees`) that updates as
   fields complete, with a pending state when inputs are incomplete; it never
   blocks typing and is not the source of truth (final fees are backend-owned).
+  Item Protection and location-based delivery rates are deferred until the BFF fee
+  contract exists.
 
 ## Spreadsheet capabilities
 
@@ -42,9 +44,9 @@ Editable grid · add row · duplicate row · delete row · paste from Excel/Goog
 Sheets · inline validation · error highlighting · row-level correction · draft
 state · submit valid rows · separate valid and invalid rows before final booking ·
 attach inventory products to rows · auto-fill product details from inventory ·
-auto-compute item totals · auto-compute declared value / subtotal · auto-compute
-delivery fees where available (fees are **backend/service-provided**, not computed
-in the frontend).
+auto-compute item totals · auto-compute declared value / subtotal · display
+delivery fee estimates where available (authoritative fees are
+**backend/service-provided**, not computed in page logic).
 
 ## Grid columns
 

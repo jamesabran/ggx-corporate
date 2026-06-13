@@ -1,7 +1,7 @@
-# GGX Business+ — Business Modules Model
+# GGX Business+ — Account Add-ons Model
 
-> Master reference for the modular platform direction. Read this first for any
-> module-access, enablement, or contract-gating work. Companion docs:
+> Master reference for the modular Account Add-ons direction. Read this first for
+> any module-access, enablement, or contract-gating work. Companion docs:
 > `contract_module_rules.md`, `feature_enablement_rules.md`, `service_type_rules.md`,
 > `commerce_rules.md`, `inventory_rules.md`, `storefront_rules.md`,
 > `spreadsheet_booking_rules.md`.
@@ -13,19 +13,16 @@ business logistics and commerce operations platform serving corporate accounts,
 SMEs, sellers, brands, branches, subaccounts, inventory, storefront, delivery
 services, and integrations.
 
-**Migration stance (low-risk first):** update planning/docs and new, user-facing
-*conceptual* labels (the Business Modules page intro, module copy) to "GGX
-Business+". **Do not** do a full branding rewrite of existing routes, the sidebar
-logo, page titles, or stable strings yet — that is a separate, scheduled pass.
-The existing "Corporate Account" sidebar label and route names stay until a
-dedicated rebrand task.
+**Migration stance:** current user-facing product copy is GGX Business+ where
+documented. Stable route names, package names, and internal architecture labels
+can remain `ggx-corporate` / GGX Corporate until a dedicated technical rename.
 
 ## Core principle
 
 GGX Business+ does **not** ship every feature to every account at once. It is
-**modular**. Optional capabilities are **discoverable as offerings** but access is
-gated. A module can be visible without being usable yet — the CTA changes with
-access status.
+**modular**. Optional capabilities are discoverable in **Account Add-ons** but
+access is gated. A module can be visible without being usable yet — the CTA
+changes with access status.
 
 ## Access dimensions (all must pass for a module to be usable)
 
@@ -114,7 +111,7 @@ Product-linked Booking (comes with Inventory), Branch/Brand Management (overlaps
 Subaccounts for now), and all default Core Workspace / Booking Tools features.
 
 **Integrations** (Shopify, API Integration) stay in their **own sidebar group**,
-not in Add-ons.
+not in Account Add-ons.
 
 ## Navigation / progressive reveal
 

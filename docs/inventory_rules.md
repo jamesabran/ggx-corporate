@@ -12,7 +12,7 @@
 ## Product model (`InventoryProduct`)
 
 product name · SKU · description · category · unit price · weight · dimensions
-(L×W×H) · stock quantity · low-stock threshold · product image placeholder ·
+(L×W×H) · stock quantity · low-stock threshold · product images / cover image ·
 status (`active` / `inactive`) · account scope / subaccount ownership
 (`scopeAccountId`) · created by / updated by · timestamps.
 
@@ -31,7 +31,8 @@ status (`active` / `inactive`) · account scope / subaccount ownership
 ## Stock rules
 
 - Stock is **not** deducted while editing drafts.
-- Stock is deducted **only** after successful booking/order confirmation.
+- Stock is deducted **only** after successful backend-confirmed booking/order
+  confirmation.
 - Stock availability is validated when a product is attached to a booking row and
   again at submit.
 

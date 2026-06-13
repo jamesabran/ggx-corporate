@@ -53,22 +53,22 @@ Do not use Support Tickets as a catch-all for operational needs. Operations Requ
 ## GGX Business+ modular direction
 
 The product is becoming **GGX Business+** — a modular platform. Optional
-capabilities are **discoverable** on the **Business Modules** page but access is
+capabilities are **discoverable** on the **Account Add-ons** page but access is
 gated (contract / account type / role / coverage / approval / setup /
 dependencies). A module can be visible without being usable; its **CTA changes
 with access status** (resolved by `businessModulesService` — never re-derive CTA
 text in the UI). The sidebar shows only active/included+configured modules;
-everything else lives in Business Modules (progressive reveal). Bulk-first and
+everything else lives in Account Add-ons (progressive reveal). Bulk-first and
 the account/subaccount scoping rules still apply to every new module. Naming:
-update docs + new conceptual labels to "GGX Business+"; defer a full route/logo
-rebrand. See `docs/business_plus_modules.md`.
+current user-facing copy is GGX Business+ where documented; stable route/package
+identifiers remain unchanged. See `docs/business_plus_modules.md`.
 
 ## Sidebar IA
 
 - Group navigation items by feature context, not by alphabetical order or arrival order.
 - After modularization, optional modules (Commerce: Inventory/Storefront, …) appear
-  in the sidebar only once enabled; **Business Modules** is the discovery surface
-  and sits just above the System group.
+  in the sidebar only once enabled; **Account Add-ons** is the discovery surface
+  under Account Management.
 - Target grouping: **Operations** (Transactions, Bulk Upload, Operations Requests, Claims, SLA Alerts, Support Tickets), **Analytics & Reports** (Analytics, Reports), **Finance** (Earnings, Billing Statements, Payment Settings), **Account Management** (Subaccounts, Users & Permissions, Address Book, API Integration), **System** (Notifications, Settings).
 - Admin users see all groups. Managers see only Operations, scoped Analytics & Reports, and System.
 - Group labels should be compact and subdued (small uppercase) — not navigation links themselves.

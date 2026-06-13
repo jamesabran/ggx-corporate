@@ -1,79 +1,100 @@
-# GGX Corporate — Documentation Index
+# GGX Corporate - Documentation Index
 
-## How to use this directory
+Open only the docs needed for the current task. Compact docs and context files
+are the default; archive files are historical.
 
-Open only the docs you need for the current task. Do not load all docs by default.
-
----
-
-## Agent entry points (root)
+## Agent Entry Points
 
 | File | For |
 |---|---|
-| `AGENTS.md` | Codex and general agents |
-| `.claude/CLAUDE.md` | Claude (mirrors AGENTS.md; see sync note below) |
+| `../AGENTS.md` | Codex and general agents |
+| `../.claude/CLAUDE.md` | Claude sessions and skill routing |
 
-**Sync note:** `AGENTS.md` and `.claude/CLAUDE.md` are intentionally similar.
-`AGENTS.md` is Codex's discovery file; `.claude/CLAUDE.md` is Claude's.
-If one changes (rules, read strategy, commit rules), check whether the other needs the same update.
+`AGENTS.md` and `.claude/CLAUDE.md` are intentionally similar. If one changes,
+check whether the other needs the same update.
 
----
+## Routing Rules
 
-## Canonical current-state docs
+1. Infer task type before reading files.
+2. Claude should load only one primary skill unless the task clearly spans
+   multiple types.
+3. Load only relevant context docs.
+4. Read compact docs before source.
+5. Do not read archive docs unless resolving history or contradictions.
+
+### Short-Prompt Routing
+
+| Prompt shape | Use |
+|---|---|
+| "fix button size", "make buttons primary", "align cards", "fix spacing" | `small-ui-polish` + `docs/context/ui-components.md` |
+| "not showing", "wrong state", "broken after refresh", "scope mismatch" | `scoped-bugfix` + relevant context doc |
+| "change flow", "improve UX", "update CTA behavior" | `ux-flow-change` + relevant context doc |
+| "update docs", "fix docs contradiction" | `docs-maintenance` |
+| "add to roadmap", "save for later", "mark deferred" | `roadmap-update` |
+| "prepare handoff", "update session state" | `session-handoff` |
+
+## Compact Current Docs
 
 | File | When to read |
 |---|---|
-| `session_state.md` | Resuming prior work — current state + last commit |
-| `roadmap.md` | Planning next steps — active stage + backlog |
+| `session_state.md` | Resume/checkpoint state and latest validated commit |
+| `roadmap.md` | Active priority, backlog, and deferred production-only work |
 
-These two files are the source of truth for what has been done and what comes next.
-Update `session_state.md` at natural checkpoints during long sessions.
+## Context Docs
 
----
+| File | Topic |
+|---|---|
+| `context/current-state.md` | Current product/build state and standing constraints |
+| `context/backend-integration.md` | Service-layer/BFF integration guardrails |
+| `context/business-plus-addons.md` | Account Add-ons, access status, CTA, scope rules |
+| `context/commerce-workflows.md` | Inventory, Storefront, checkout/cart demo surfaces |
+| `context/bulk-booking.md` | Upload File, in-app spreadsheet, product attachment, fees |
+| `context/ui-components.md` | Design system, component, responsive, and Figma rules |
 
-## Rule docs (always current)
+## Detailed Rule Docs
 
 | File | Topic |
 |---|---|
 | `product_rules.md` | Product / UX decisions and constraints |
-| `account_model.md` | Account, subaccount, and permission logic |
+| `account_model.md` | Account, Subaccount, and permission logic |
 | `service_layer_rules.md` | Service layer architecture and import rules |
-| `design_system_rules.md` | Component usage, DS conventions |
-| `business_plus_modules.md` | Account Add-ons catalog master spec |
+| `design_system_rules.md` | Component usage and DS conventions |
+| `business_plus_modules.md` | Account Add-ons master spec |
 | `contract_module_rules.md` | Add-on access status and CTA logic |
 | `feature_enablement_rules.md` | Feature enablement model |
-| `service_type_rules.md` | Service type definitions (Standard/Same-Day/On-Demand) |
-| `commerce_rules.md` | Commerce platform (Inventory + Storefront) rules |
-| `inventory_rules.md` | Inventory module rules |
-| `storefront_rules.md` | Storefront module rules |
+| `service_type_rules.md` | Service type definitions |
+| `commerce_rules.md` | Commerce platform rules |
+| `inventory_rules.md` | Inventory rules |
+| `storefront_rules.md` | Storefront rules |
 | `spreadsheet_booking_rules.md` | In-app spreadsheet booking grid rules |
-| `token_pipeline.md` | Design token pipeline (tokens.json → code + Figma) |
+| `token_pipeline.md` | Design token pipeline |
 
----
+## Claude Skills
 
-## Archive (`docs/archive/`)
-
-Historical snapshots from the May 2026 build era. They are **read-only context** —
-do not update them, and do not treat them as current state.
-
-| File | What it was |
+| Skill | Use for |
 |---|---|
-| `session_state.md` | May 31 session state (superseded by canonical `docs/session_state.md`) |
-| `ROADMAP.md` | May 31 roadmap (superseded by `docs/roadmap.md`) |
-| `PROJECT_HANDOFF.md` | May 31 handoff checkpoint |
-| `PROJECT_CHECKPOINT.md` | May 29 checkpoint (self-declared superseded) |
-| `IMPLEMENTATION_LOG.md` | May 29 initial build log |
-| `MOCK_SERVICE_LAYER.md` | May 31 service layer architecture notes |
-| `GGX_CORPORATE_APP_STRUCTURE.md` | May 29 directory tree snapshot |
-| `GGX_CORPORATE_DS_CONTEXT.md` | May 29 Figma DS audit |
-| `DS_USAGE_GUIDE.md` | May 29 color token / DS usage reference |
+| `.claude/skills/scoped-bugfix/SKILL.md` | Focused bugs with known expected behavior |
+| `.claude/skills/small-ui-polish/SKILL.md` | Button, spacing, alignment, density, hover, responsive polish |
+| `.claude/skills/ux-flow-change/SKILL.md` | Approved behavior/flow, CTA state, empty/loading/error changes |
+| `.claude/skills/docs-maintenance/SKILL.md` | Markdown-only cleanup, compact docs, contradictions, archive moves |
+| `.claude/skills/roadmap-update/SKILL.md` | Active priority, backlog, deferred item updates |
+| `.claude/skills/session-handoff/SKILL.md` | Lightweight checkpoints after medium/large changes |
 
----
+## Archive
 
-## How to update docs
+`docs/archive/` contains historical snapshots and detailed logs. Do not update
+archive files except when intentionally moving old history into the archive. Do
+not treat archive docs as current state unless resolving a contradiction.
 
-- **After each session:** update `session_state.md` with what changed and the commit hash.
-- **When behavior changes:** update the relevant rule doc (not just session_state).
-- **When roadmap items complete:** update `roadmap.md` status column.
-- **Never update archive files** — they are historical records.
-- **Do not add new canonical docs to root** — root is for agent entry points only.
+Current June 2026 detailed history lives in:
+
+- `archive/session_log_2026-06.md`
+
+## Update Rules
+
+- Update `session_state.md` after medium/large work or before handoff.
+- Update `roadmap.md` only when priority/backlog/deferred status changes.
+- Update context/rule docs when behavior or product truth changes.
+- Do not update docs after tiny UI fixes unless rules, roadmap, or session state
+  changed.
+- Markdown-only tasks do not require a build.

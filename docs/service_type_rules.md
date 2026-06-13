@@ -53,5 +53,5 @@ to Same-Day.
 ## Transactions
 
 Transactions carry a `serviceType`. The Transactions filter recognizes On-Demand
-as a distinct value (deferred UI step — see roadmap). Do not collapse On-Demand
-into Same-Day in filters or summaries.
+as a distinct value. Do not collapse On-Demand into Same-Day in filters or
+summaries.

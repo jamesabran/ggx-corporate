@@ -8,8 +8,8 @@
 - **Inventory** — product records that can be attached to booking rows and
   storefront listings.
 - **Storefront** — a simple published storefront built from inventory products.
-- **Storefront Orders** — orders placed through a storefront (placeholder model
-  for now; no checkout build yet).
+- **Storefront Orders** — demo checkout/cart order flows exist client-side, while
+  production order placement remains backend-owned.
 - **Product-linked Booking** — attaching inventory products to bulk-booking rows.
 - **Storefront Publishing** — draft / published / unpublished lifecycle.
 
@@ -28,7 +28,8 @@ Inventory  ──required-by──▶  Storefront  ──required-by──▶  S
 
 - Stock is **never deducted while editing drafts** (spreadsheet drafts, storefront
   carts in progress).
-- Stock is deducted **only after successful booking/order confirmation**.
+- Stock is deducted **only after successful backend-confirmed booking/order
+  confirmation**.
 - Validate availability at attach/submit time; surface (do not silently clamp)
   qty-over-stock and inactive/deleted-product conditions.
 
@@ -42,5 +43,5 @@ Inventory  ──required-by──▶  Storefront  ──required-by──▶  S
 
 ## Safety
 
-- Do not overbuild storefront checkout yet (orders are placeholders).
-- Do not create real payment/commerce integrations.
+- Do not treat demo checkout/cart completion as real order placement.
+- Do not create real payment/commerce integrations without backend contracts.

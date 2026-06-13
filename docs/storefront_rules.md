@@ -11,16 +11,17 @@
 
 ## Capabilities
 
-> **Implemented (Session 46):** profile edit, Inventory product selection, and
-> persisted publish/unpublish in the dashboard Storefront page; a public
-> browse-only customer surface at **`/shop/:slug`** (no checkout). Orders remain
-> placeholders.
+> **Implemented:** profile edit, Inventory product selection, persisted
+> publish/unpublish, public storefront browsing at **`/shop/:slug`**, direct demo
+> product checkout, session cart, cart review, and cart checkout. Production order
+> placement remains backend-owned.
 
 
 - Storefront enablement (per Standard account or Subaccount scope).
 - Store profile setup: store name · description · logo/banner placeholder ·
   store URL/slug · contact information.
 - Product selection from Inventory.
+- Direct product demo checkout and multi-product session cart/checkout.
 - Allowed delivery options: **Standard Delivery · Same-Day Delivery · On-Demand
   Delivery** (On-Demand subject to coverage — see `service_type_rules.md`).
 - Publish status: **Draft · Published · Unpublished**.
@@ -61,6 +62,7 @@
 
 `getStorefrontProfile(scopeId)` · `getStorefrontStatus(scopeId)` ·
 `getStorefrontProducts(scopeId)` · `getPendingOrderImpact(scopeId)` (for the
-unpublish warning) · publish/unpublish actions. Orders are **placeholders** — do
-not build checkout yet. Future BFF: `GET/PUT /accounts/:id/storefront`,
-`POST /accounts/:id/storefront/publish|unpublish`.
+unpublish warning) · publish/unpublish actions. Checkout/cart flows are demo
+state until a real order API exists. Future BFF: `GET/PUT
+/accounts/:id/storefront`, `POST /accounts/:id/storefront/publish|unpublish`,
+and `POST /orders` or equivalent.
