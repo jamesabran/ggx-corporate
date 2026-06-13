@@ -29,8 +29,12 @@
   checkout, session cart, cart review, and cart checkout. Real order placement,
   cart persistence, stock deduction/reservation, and final fee/payment contracts
   remain backend-owned.
-- Item Protection fee and location-based delivery rate computation remain deferred
-  to backend/BFF integration.
+- Item Protection: the spreadsheet fee preview shows a frontend estimate
+  (`max(declaredValue − 500, 0) × 1%`) as a conditional line item when any valid
+  row has a declared value above ₱500. The booking confirmation dialog rolls it
+  into the estimated total (not broken out separately). Authoritative Item
+  Protection fee contract and location-based delivery rate computation remain
+  deferred to backend/BFF integration.
 
 ## Current Priority
 

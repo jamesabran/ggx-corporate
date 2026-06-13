@@ -38,10 +38,15 @@ Bulk Upload, not a standalone module and not a sidebar item.
 
 - Current spreadsheet/Bulk Upload fee displays are labeled estimates.
 - Final fees are backend-owned.
-- Item Protection and location-based delivery rates are deferred until a richer
-  BFF fee estimate/finalization contract exists.
-- Do not partially update fee math without updating summary, validation, and the
-  service contract together.
+- Item Protection shows as a conditional line item in the spreadsheet fee preview
+  when any valid row has a declared value above ₱500 (formula:
+  `max(declaredValue − 500, 0) × 1%`, frontend estimate only). The booking
+  confirmation dialog rolls it into the estimated total; it is not broken out
+  there.
+- Location-based delivery rates and the authoritative BFF fee contract remain
+  deferred until a richer fee estimate/finalization contract exists.
+- Do not replace the estimate with partial backend math; the authoritative fee,
+  validation, and service contract must ship together.
 
 ## Upload File Preservation
 

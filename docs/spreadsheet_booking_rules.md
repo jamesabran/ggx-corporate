@@ -35,8 +35,10 @@ Both are **input methods feeding one Bulk Booking flow** — not separate flows:
 - **Fees** are a labeled frontend **estimate** (`lib/bookingFees`) that updates as
   fields complete, with a pending state when inputs are incomplete; it never
   blocks typing and is not the source of truth (final fees are backend-owned).
-  Item Protection and location-based delivery rates are deferred until the BFF fee
-  contract exists.
+  Item Protection is shown as a conditional line item when any valid row has a
+  declared value above ₱500 (formula: `max(declaredValue − 500, 0) × 1%`,
+  frontend estimate only). Location-based delivery rates and the authoritative
+  BFF fee contract remain deferred.
 
 ## Spreadsheet capabilities
 

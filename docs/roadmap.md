@@ -39,7 +39,7 @@ source-of-truth logic.
 | Cart persistence | Current cart is session-only. Persist only via localStorage or backend session once the order contract exists. |
 | Backend stock deduction/reservation | Frontend must not own authoritative stock mutation for confirmed orders/bookings. |
 | Authoritative final checkout fee/payment contracts | COD amount, shipping fees, payment terms, and final order totals must come from backend contracts. |
-| Item Protection fee | Add with fee summary and validation together; do not partially update fee math. |
+| Item Protection fee (authoritative) | Spreadsheet shows a frontend estimate (`max(declaredValue − 500, 0) × 1%`). Final authoritative fee, BFF contract, and validation must ship together; do not replace the estimate with partial backend math. |
 | Location-based delivery rate computation | Requires richer fee estimate contract, ideally BFF `/fees/estimate` or equivalent. |
 | Uploaded-file path adoption of `lib/bookingValidation` | Wait for real file parsing; retain template-specific coverage such as COD cap, duplicate Reference ID, and pouch size. |
 
