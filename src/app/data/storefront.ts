@@ -8,6 +8,7 @@
  */
 
 import type { ServiceTypeKey } from './serviceTypes';
+import { loadState, saveState } from '../lib/storage';
 
 export type StorefrontPublishStatus = 'draft' | 'published' | 'unpublished';
 
@@ -47,9 +48,10 @@ export interface StorefrontProfileInput {
 }
 
 // Demo seed — Acme Luzon has a storefront in draft (enabled, not yet published).
-// Mutable session store: profile edits / product selection / publish status persist
-// for the tab session (reset to seed on reload). Backend-owned in production.
-const profiles: Record<string, StorefrontProfile> = {
+// Persisted to localStorage so profile edits / product selection / publish status
+// survive page refresh. Backend-owned in production.
+const STORE_KEY = 'storefrontProfiles';
+const SEED: Record<string, StorefrontProfile> = {
   'acme-luzon': {
     scopeAccountId: 'acme-luzon',
     storeName: 'Acme Luzon Shop',
@@ -62,6 +64,9 @@ const profiles: Record<string, StorefrontProfile> = {
     productIds: ['prod-1001', 'prod-1002'],
   },
 };
+const profiles: Record<string, StorefrontProfile> =
+  loadState<Record<string, StorefrontProfile>>(STORE_KEY, SEED);
+function persist(): void { saveState(STORE_KEY, profiles); }
 
 const orderImpact: Record<string, OrderImpact> = {
   'acme-luzon': { pendingUnpaidOrders: 2, activeDeliveries: 5 },
@@ -100,6 +105,7 @@ export function ensureProfileForScope(scopeId: string, storeName: string): Store
     productIds: [],
   };
   profiles[scopeId] = created;
+  persist();
   return created;
 }
 
@@ -118,6 +124,7 @@ export function updateProfile(
   const current = profiles[scopeId];
   if (!current) return null;
   profiles[scopeId] = { ...current, ...patch };
+  persist();
   return profiles[scopeId];
 }
 
@@ -126,6 +133,7 @@ export function setProductIds(scopeId: string, ids: string[]): StorefrontProfile
   const current = profiles[scopeId];
   if (!current) return null;
   profiles[scopeId] = { ...current, productIds: [...ids] };
+  persist();
   return profiles[scopeId];
 }
 
@@ -137,5 +145,6 @@ export function setPublishStatus(
   const current = profiles[scopeId];
   if (!current) return null;
   profiles[scopeId] = { ...current, publishStatus: status };
+  persist();
   return profiles[scopeId];
 }

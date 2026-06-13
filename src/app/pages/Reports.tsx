@@ -138,7 +138,7 @@ export function Reports() {
           </Link>
         ) : (
           <Link to="/dashboard/account-add-ons" className="flex-shrink-0">
-            <Button variant="outline" size="sm" className="border-dashed text-gray-400 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50">
+            <Button variant="outline" className="border-dashed text-gray-400 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50">
               <IconReportAnalytics className="w-4 h-4" /> Custom Reports — Enable in Add-ons →
             </Button>
           </Link>

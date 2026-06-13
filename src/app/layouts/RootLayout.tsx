@@ -236,7 +236,11 @@ export function RootLayout() {
   let addOnsInjected = false;
   for (const item of navigation) {
     if (item.type === 'group' && item.name === 'Account Management') {
-      finalNavigation.push(grp(item.name, [...(item.children ?? []), addOnsChild]));
+      // Hide Subaccounts nav entry until the add-on has been enabled.
+      const children = (item.children ?? []).filter(
+        (c) => subAccountsEnabled || c.name !== 'Subaccounts'
+      );
+      finalNavigation.push(grp(item.name, [...children, addOnsChild]));
       addOnsInjected = true;
     } else {
       finalNavigation.push(item);
