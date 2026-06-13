@@ -1,6 +1,13 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import { RootLayout } from './layouts/RootLayout';
+import { BasicLayout } from './layouts/BasicLayout';
+import { BasicSegmentProvider } from './contexts/BasicSegmentContext';
+import { BasicDashboard } from './pages/basic/BasicDashboard';
+import { SaveAndEarnMore } from './pages/basic/SaveAndEarnMore';
+import { HVMNudge } from './pages/basic/HVMNudge';
+import { BasicDeliver } from './pages/basic/BasicDeliver';
+import { BasicAccount } from './pages/basic/BasicAccount';
 import { Login } from './pages/Login';
 import { DashboardWrapper } from './pages/DashboardWrapper';
 import { Transactions } from './pages/Transactions';
@@ -51,6 +58,22 @@ export const router = createBrowserRouter([
   {
     path: '/',
     Component: Login,
+  },
+  {
+    // Basic / self-serve mobile demo entry. Standalone from the Business+ dashboard.
+    path: '/basic',
+    element: (
+      <BasicSegmentProvider>
+        <BasicLayout />
+      </BasicSegmentProvider>
+    ),
+    children: [
+      { index: true, Component: BasicDashboard },
+      { path: 'more',    Component: SaveAndEarnMore },
+      { path: 'qualify', Component: HVMNudge },
+      { path: 'deliver', Component: BasicDeliver },
+      { path: 'account', Component: BasicAccount },
+    ],
   },
   {
     path: '/track',
