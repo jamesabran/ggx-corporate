@@ -66,7 +66,7 @@ export function SlaAlerts() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">SLA Alerts</h1>
           <p className="text-gray-600 mt-1">Operations monitoring for delivery SLA risks and follow-ups.</p>

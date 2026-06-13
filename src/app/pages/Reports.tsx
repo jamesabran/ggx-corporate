@@ -131,15 +131,15 @@ export function Reports() {
           </p>
         </div>
         {customReportsEnabled ? (
-          <Link to="/dashboard/reports/custom" className="flex-shrink-0">
+          <Link to="/dashboard/reports/custom" className="flex-shrink-0 self-start">
             <Button>
               <IconReportAnalytics className="w-4 h-4" /> Custom Reports
             </Button>
           </Link>
         ) : (
-          <Link to="/dashboard/account-add-ons" className="flex-shrink-0">
-            <Button variant="outline" className="border-dashed text-gray-400 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50">
-              <IconReportAnalytics className="w-4 h-4" /> Custom Reports — Enable in Add-ons →
+          <Link to="/dashboard/account-add-ons" className="flex-shrink-0 self-start min-w-0">
+            <Button variant="outline" className="border-dashed text-gray-400 hover:text-violet-700 hover:border-violet-300 hover:bg-violet-50 overflow-hidden">
+              <IconReportAnalytics className="w-4 h-4 flex-shrink-0" /><span className="truncate min-w-0 flex-1">Custom Reports — Enable in Add-ons →</span>
             </Button>
           </Link>
         )}

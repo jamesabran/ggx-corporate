@@ -67,7 +67,7 @@ export function BillingStatement() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard label={summaryStats[0].label} value={summaryStats[0].value} sub={summaryStats[0].description} icon={IconCurrencyDollar} iconBg="bg-blue-50"    iconColor="text-blue-600" />
         <StatCard label={summaryStats[1].label} value={summaryStats[1].value} sub={summaryStats[1].description} icon={IconCalendar}       iconBg="bg-orange-50"  iconColor="text-orange-600" />
         <StatCard label={summaryStats[2].label} value={summaryStats[2].value} sub={summaryStats[2].description} icon={IconAlertCircle}    iconBg="bg-red-50"     iconColor="text-red-600" />
