@@ -21,8 +21,6 @@ deferred production-only stage. Start it only when a BFF/backend exists.
 
 | Priority | Item | Notes |
 |---|---|---|
-| Medium | Custom Reports saved template persistence | Backend-owned persistence for user-defined report templates. |
-| Medium | Custom Reports scheduled exports | Backend-owned scheduling and delivery channel support. |
 | Low | Figma/component alignment pass | Reflect new reusable components in the Figma DS when the component library changes materially. |
 
 ## Deferred Production-Only Items
@@ -39,6 +37,8 @@ source-of-truth logic.
 | Item Protection fee (authoritative) | Spreadsheet shows a frontend estimate (`max(declaredValue − 500, 0) × 1%`). Final authoritative fee, BFF contract, and validation must ship together; do not replace the estimate with partial backend math. |
 | Location-based delivery rate computation | Requires richer fee estimate contract, ideally BFF `/fees/estimate` or equivalent. |
 | Uploaded-file path adoption of `lib/bookingValidation` | Wait for real file parsing; retain template-specific coverage such as COD cap, duplicate Reference ID, and pouch size. |
+| Custom Reports saved template persistence | Backend-owned persistence for user-defined report templates. |
+| Custom Reports scheduled exports | Backend-owned scheduling and delivery channel support. |
 
 ## Completed Current-State Highlights
 

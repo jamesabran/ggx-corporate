@@ -5,11 +5,11 @@
 
 ## Current State - Updated 2026-06-13
 
-- **Stage:** Demo readiness QA pass complete. All confirmed issues fixed and pushed.
+- **Stage:** Custom Reports account/data consistency fix complete.
 - **Branch:** `master`.
-- **Latest commit:** `780ac11` — demo QA pass fixes.
+- **Latest commit:** `fa6dc7e` - Custom Reports account/data consistency fix.
 - **Build/typecheck status:** green.
-- **Push status:** pushed.
+- **Push status:** not verified in this docs-only update.
 - **Working tree note:** `.claude/settings.local.json` is local config; leave it
   alone unless explicitly asked. QA scripts/dirs are gitignored locally.
 
@@ -31,6 +31,15 @@
   into the estimated total (not broken out separately). Authoritative Item
   Protection fee contract and location-based delivery rate computation remain
   deferred to backend/BFF integration.
+
+- Custom Reports gating is done and the current UX flow is acceptable for now.
+  Saved templates and scheduled exports remain deferred/backend-owned.
+- Custom Reports now respects account context: the Subaccount column/filter only
+  appears for Main Account view with Subaccounts enabled; On-Demand options and
+  rows are hidden when On-Demand is not enabled for the active scope; templates
+  are sanitized so unavailable columns/options cannot be reintroduced; CSV export
+  matches applicable visible columns; and Subaccount filtering prefers canonical
+  ID filtering.
 
 ## Current Priority
 
