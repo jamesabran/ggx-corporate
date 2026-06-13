@@ -5,81 +5,87 @@ import {
   IconSparkles,
   IconUser,
   IconBell,
+  IconMenu2,
   IconChevronLeft,
+  IconReceiptTax,
 } from '@tabler/icons-react';
 import { cn } from '../lib/utils';
 
 const bottomNav = [
-  { label: 'Home',       href: '/basic',        icon: IconLayoutDashboard },
-  { label: 'Deliver',    href: '/basic/deliver', icon: IconTruck },
-  { label: 'Save & Earn', href: '/basic/more',   icon: IconSparkles },
-  { label: 'Account',    href: '/basic/account', icon: IconUser },
+  { label: 'Home',         href: '/basic',                 icon: IconLayoutDashboard },
+  { label: 'Rewards',      href: '/basic/more',            icon: IconSparkles },
+  { label: 'Ship',         href: '/basic/deliver',         icon: IconTruck },
+  { label: 'Transactions', href: '/dashboard/transactions',icon: IconReceiptTax },
+  { label: 'Account',      href: '/basic/account',         icon: IconUser },
 ];
 
 export function BasicLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const isRoot = location.pathname === '/basic' || location.pathname === '/basic/';
-  const canGoBack = !isRoot;
+  const isHome = location.pathname === '/basic' || location.pathname === '/basic/';
 
   const pageTitle = (() => {
     if (location.pathname.startsWith('/basic/more'))    return 'Save & Earn More';
-    if (location.pathname.startsWith('/basic/qualify')) return 'Business Upgrade';
+    if (location.pathname.startsWith('/basic/qualify')) return 'Business Benefits';
     if (location.pathname.startsWith('/basic/deliver')) return 'Ship Now';
     if (location.pathname.startsWith('/basic/account')) return 'Account';
     return null;
   })();
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 flex items-center h-14 px-4 gap-3 flex-shrink-0">
-        {canGoBack ? (
+    // Light blue app-shell background matching the GGX mobile app
+    <div className="flex flex-col min-h-screen bg-[#EAF2FF]">
+
+      {/* ── Top bar ── */}
+      <header className="sticky top-0 z-30 bg-[#EAF2FF] flex items-center justify-between h-14 px-4 flex-shrink-0">
+
+        {/* Left slot */}
+        {isHome ? (
           <button
-            onClick={() => navigate(-1)}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
-            aria-label="Back"
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-600 hover:bg-white/60 active:bg-white/80 transition-colors cursor-pointer"
+            aria-label="Menu"
           >
-            <IconChevronLeft className="w-5 h-5" />
+            <IconMenu2 className="w-[22px] h-[22px]" />
           </button>
         ) : (
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <img
-              src="https://gogoxpress.com/wp-content/uploads/2022/07/gogox-logo.png"
-              alt="GoGo Xpress"
-              className="h-6 w-auto flex-shrink-0"
-            />
-            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none">
-              Basic
-            </span>
-          </div>
-        )}
-
-        {pageTitle && (
-          <p className="flex-1 text-base font-semibold text-gray-900 truncate text-center">
-            {pageTitle}
-          </p>
-        )}
-
-        <div className={cn('flex items-center gap-1 ml-auto', !canGoBack && 'ml-0')}>
           <button
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer relative"
-            aria-label="Notifications"
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-600 hover:bg-white/60 active:bg-white/80 transition-colors cursor-pointer"
+            aria-label="Back"
           >
-            <IconBell className="w-[18px] h-[18px]" />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
+            <IconChevronLeft className="w-[22px] h-[22px]" />
           </button>
-        </div>
+        )}
+
+        {/* Center slot */}
+        {isHome ? (
+          <img
+            src="https://gogoxpress.com/wp-content/uploads/2022/07/gogox-logo.png"
+            alt="GoGo Xpress"
+            className="h-7 w-auto"
+          />
+        ) : (
+          <p className="text-base font-bold text-gray-900 truncate px-2">{pageTitle}</p>
+        )}
+
+        {/* Right slot */}
+        <button
+          className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-600 hover:bg-white/60 active:bg-white/80 transition-colors cursor-pointer relative"
+          aria-label="Notifications"
+        >
+          <IconBell className="w-[22px] h-[22px]" />
+          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
+        </button>
       </header>
 
-      {/* Main content — enough bottom padding for the nav bar */}
-      <main className="flex-1 pb-20">
+      {/* ── Page content ── */}
+      <main className="flex-1 pb-[72px]">
         <Outlet />
       </main>
 
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex items-stretch h-[60px] safe-area-bottom">
+      {/* ── Bottom navigation ── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex items-stretch h-[64px]">
         {bottomNav.map((item) => {
           const isActive =
             item.href === '/basic'
@@ -90,12 +96,12 @@ export function BasicLayout() {
               key={item.href}
               to={item.href}
               className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors',
-                isActive ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
+                'flex-1 flex flex-col items-center justify-center gap-1 transition-colors',
+                isActive ? 'text-blue-600' : 'text-gray-400'
               )}
             >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              <span className={cn('text-[10px] font-medium leading-none', isActive ? 'text-blue-600' : 'text-gray-400')}>
+              <item.icon className={cn('w-[22px] h-[22px] flex-shrink-0', isActive ? 'text-blue-600' : 'text-gray-400')} />
+              <span className={cn('text-[11px] font-semibold leading-none', isActive ? 'text-blue-600' : 'text-gray-400')}>
                 {item.label}
               </span>
             </Link>

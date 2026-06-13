@@ -2,217 +2,299 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
   IconPackage,
-  IconClock,
-  IconCurrencyDollar,
   IconUpload,
-  IconPlus,
-  IconTruck,
+  IconBuildingStore,
   IconArrowRight,
   IconCircleCheckFilled,
   IconHourglass,
-  IconBuildingStore,
-  IconSparkles,
-  IconChevronRight,
-  IconTrendingUp,
+  IconTruck,
+  IconTicket,
+  IconGift,
+  IconUsers,
+  IconChartBar,
+  IconBrandShopee,
+  IconClock,
 } from '@tabler/icons-react';
-import { Card, CardContent } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
-import { Button } from '../../components/ui/Button';
-import { cn } from '../../lib/utils';
 import { GrowingNudgeCard } from '../../components/basic/GrowingNudgeCard';
 import { useBasicSegment } from '../../contexts/BasicSegmentContext';
+import { cn } from '../../lib/utils';
 
-const MOCK_STATS = [
-  { label: 'This Month',   value: '48',       sub: 'shipments',  icon: IconPackage,        bg: 'bg-blue-50',    color: 'text-blue-600' },
-  { label: 'Active',       value: '7',        sub: 'in transit', icon: IconTruck,           bg: 'bg-orange-50',  color: 'text-orange-500' },
-  { label: 'COD Pending',  value: '₱4,320',   sub: 'to collect', icon: IconCurrencyDollar,  bg: 'bg-emerald-50', color: 'text-emerald-600' },
+// ── Service tiles ────────────────────────────────────────────────────────────
+
+interface ServiceTile {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconBg: string;
+  iconColor: string;
+  tileBg: string;
+  href: string;
+  badge?: string;
+}
+
+const SERVICE_TILES: ServiceTile[] = [
+  {
+    label: 'Same Day\nDelivery',
+    icon: IconClock,
+    iconBg: 'bg-orange-100',
+    iconColor: 'text-orange-500',
+    tileBg: 'bg-white',
+    href: '/basic/deliver?type=sameday',
+  },
+  {
+    label: 'Standard\nDelivery',
+    icon: IconPackage,
+    iconBg: 'bg-blue-100',
+    iconColor: 'text-blue-600',
+    tileBg: 'bg-white',
+    href: '/basic/deliver?type=standard',
+  },
+  {
+    label: 'Bulk\nUpload',
+    icon: IconUpload,
+    iconBg: 'bg-violet-100',
+    iconColor: 'text-violet-600',
+    tileBg: 'bg-white',
+    href: '/dashboard/bulk-uploader',
+  },
+  {
+    label: 'Prepaid\nPacks',
+    icon: IconGift,
+    iconBg: 'bg-emerald-100',
+    iconColor: 'text-emerald-600',
+    tileBg: 'bg-white',
+    href: '/basic/more',
+    badge: 'Save',
+  },
 ];
 
-const QUICK_ACTIONS = [
-  { label: 'Same Day',     sub: 'Delivery',       icon: IconTruck,    bg: 'bg-orange-500', href: '/basic/deliver?type=sameday' },
-  { label: 'Standard',     sub: 'Delivery',       icon: IconPackage,  bg: 'bg-blue-600',   href: '/basic/deliver?type=standard' },
-  { label: 'Bulk Upload',  sub: 'CSV / Spreadsheet', icon: IconUpload,  bg: 'bg-violet-600', href: '/dashboard/bulk-uploader' },
-  { label: 'Add Product',  sub: 'Inventory',      icon: IconPlus,     bg: 'bg-emerald-600', href: '/dashboard/inventory' },
+// ── Explore more tiles ────────────────────────────────────────────────────────
+
+interface ExploreTile {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconBg: string;
+  iconColor: string;
+  href: string;
+}
+
+const EXPLORE_TILES: ExploreTile[] = [
+  { label: 'Shopify',    icon: IconBrandShopee,   iconBg: 'bg-green-100',  iconColor: 'text-green-600',  href: '/dashboard/shopify' },
+  { label: 'Storefront', icon: IconBuildingStore,  iconBg: 'bg-teal-100',   iconColor: 'text-teal-600',   href: '/dashboard/storefront' },
+  { label: 'Rewards',    icon: IconGift,           iconBg: 'bg-pink-100',   iconColor: 'text-pink-600',   href: '/basic/more' },
+  { label: 'Referrals',  icon: IconUsers,          iconBg: 'bg-amber-100',  iconColor: 'text-amber-600',  href: '/basic/more' },
+  { label: 'Analytics',  icon: IconChartBar,       iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600', href: '/dashboard/analytics/basic' },
+  { label: 'Vouchers',   icon: IconTicket,         iconBg: 'bg-red-100',    iconColor: 'text-red-500',    href: '/basic/more' },
 ];
+
+// ── Activity stats ────────────────────────────────────────────────────────────
+
+const ACTIVITY_STATS = [
+  { value: '48',  label: 'New Orders' },
+  { value: '38',  label: 'Deliveries' },
+  { value: '93%', label: 'On-Time' },
+  { value: '3',   label: 'Returns' },
+];
+
+// ── Recent orders ─────────────────────────────────────────────────────────────
 
 const MOCK_ORDERS = [
-  { id: 'GGX-240601-001', recipient: 'Maria Santos',    status: 'in-transit', amount: '₱320',  time: '2h ago' },
-  { id: 'GGX-240531-009', recipient: 'Juan dela Cruz',  status: 'delivered',  amount: '₱150',  time: 'Yesterday' },
-  { id: 'GGX-240531-007', recipient: 'Ana Reyes',       status: 'pending',    amount: '₱780',  time: 'Yesterday' },
-  { id: 'GGX-240530-022', recipient: 'Carlo Bautista',  status: 'delivered',  amount: '₱460',  time: '2 days ago' },
+  { id: 'GGX-240601-001', recipient: 'Maria Santos',   status: 'in-transit', time: '2h ago' },
+  { id: 'GGX-240531-009', recipient: 'Juan dela Cruz', status: 'delivered',  time: 'Yesterday' },
+  { id: 'GGX-240531-007', recipient: 'Ana Reyes',      status: 'pending',    time: 'Yesterday' },
+  { id: 'GGX-240530-022', recipient: 'Carlo Bautista', status: 'delivered',  time: '2 days ago' },
 ];
 
-const STATUS_CFG: Record<string, { label: string; variant: 'info' | 'success' | 'pending' }> = {
-  'in-transit': { label: 'In Transit',  variant: 'info' },
-  'delivered':  { label: 'Delivered',   variant: 'success' },
-  'pending':    { label: 'Pending',     variant: 'pending' },
+const STATUS_CFG: Record<string, { label: string; variant: 'info' | 'success' | 'pending'; icon: React.ComponentType<{ className?: string }> }> = {
+  'in-transit': { label: 'In Transit', variant: 'info',    icon: IconTruck },
+  'delivered':  { label: 'Delivered',  variant: 'success', icon: IconCircleCheckFilled },
+  'pending':    { label: 'Pending',    variant: 'pending', icon: IconHourglass },
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function BasicDashboard() {
   const navigate = useNavigate();
   const { segment } = useBasicSegment();
   const [greeting] = useState(() => {
     const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return 'Good morning,';
+    if (h < 18) return 'Good afternoon,';
+    return 'Good evening,';
   });
 
   return (
-    <div className="space-y-0">
-      {/* Greeting header */}
-      <div className="bg-white px-4 pt-5 pb-4 border-b border-gray-100">
-        <p className="text-sm text-gray-500 leading-none">{greeting},</p>
-        <h1 className="text-xl font-bold text-gray-900 mt-0.5 leading-tight">Alex Mercado</h1>
-        <p className="text-xs text-gray-400 mt-1">GGX Basic · Seller Account</p>
+    // Extra top padding so content doesn't crowd the sticky header
+    <div className="px-4 pt-2 pb-2 space-y-5">
+
+      {/* ── Welcome ── */}
+      <div className="pt-1">
+        <p className="text-sm text-gray-500 leading-snug">{greeting}</p>
+        <h1 className="text-[26px] font-extrabold text-gray-900 leading-tight tracking-tight">
+          Alex!
+        </h1>
       </div>
 
-      {/* Stats strip */}
-      <div className="bg-white px-4 py-3 border-b border-gray-100">
-        <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-1 px-1">
-          {MOCK_STATS.map((s) => (
-            <div
-              key={s.label}
-              className={cn('flex-shrink-0 flex items-center gap-3 rounded-xl px-3 py-2.5 min-w-[130px]', s.bg)}
-            >
-              <div className={cn('w-8 h-8 rounded-lg bg-white/60 flex items-center justify-center flex-shrink-0')}>
-                <s.icon className={cn('w-4 h-4', s.color)} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-base font-bold text-gray-900 leading-none tabular-nums">{s.value}</p>
-                <p className="text-[11px] text-gray-500 leading-none mt-0.5">{s.sub}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* ── HVM nudge (Growing state) ── */}
+      {segment === 'growing' && <GrowingNudgeCard />}
 
-      {/* Growing nudge — shown when segment is growing */}
-      {segment === 'growing' && (
-        <div className="px-4 pt-4">
-          <GrowingNudgeCard compact />
-        </div>
-      )}
-
-      {/* Quick actions */}
-      <div className="px-4 pt-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Quick Actions</p>
+      {/* ── Service tiles (2 × 2) ── */}
+      <div>
         <div className="grid grid-cols-2 gap-3">
-          {QUICK_ACTIONS.map((a) => (
+          {SERVICE_TILES.map((tile) => (
             <button
-              key={a.label}
-              onClick={() => navigate(a.href)}
-              className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-3 py-3.5 text-left active:scale-[0.98] transition-transform cursor-pointer hover:shadow-sm"
+              key={tile.label}
+              onClick={() => navigate(tile.href)}
+              className={cn(
+                'relative flex flex-col items-center justify-center gap-3 rounded-2xl shadow-sm cursor-pointer',
+                'active:scale-[0.97] transition-transform',
+                tile.tileBg,
+                'py-6 px-3'
+              )}
             >
-              <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', a.bg)}>
-                <a.icon className="w-5 h-5 text-white" />
+              {/* Badge */}
+              {tile.badge && (
+                <span className="absolute top-3 right-3 text-[10px] font-bold bg-green-500 text-white rounded-full px-2 py-0.5 leading-none">
+                  {tile.badge}
+                </span>
+              )}
+
+              {/* Icon container */}
+              <div className={cn('w-16 h-16 rounded-2xl flex items-center justify-center', tile.iconBg)}>
+                <tile.icon className={cn('w-8 h-8', tile.iconColor)} />
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900 leading-snug">{a.label}</p>
-                <p className="text-xs text-gray-400 leading-snug">{a.sub}</p>
-              </div>
+
+              {/* Label */}
+              <p className="text-sm font-bold text-gray-800 text-center leading-snug whitespace-pre-line">
+                {tile.label}
+              </p>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Recent orders */}
-      <div className="px-4 pt-5">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Recent Orders</p>
-          <Link to="/dashboard/transactions" className="text-xs font-medium text-blue-600 flex items-center gap-0.5">
+      {/* ── Explore more ── */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 pt-4 pb-3">
+          <p className="text-sm font-bold text-gray-900">Explore more</p>
+          <Link to="/basic/more" className="flex items-center gap-0.5 text-sm font-semibold text-blue-600">
+            View all <IconArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {/* Horizontal scroll row */}
+        <div className="flex gap-1 overflow-x-auto scrollbar-none px-3 pb-4">
+          {EXPLORE_TILES.map((tile) => (
+            <Link
+              key={tile.label}
+              to={tile.href}
+              className="flex-shrink-0 flex flex-col items-center gap-2 w-[72px] active:opacity-70 transition-opacity"
+            >
+              <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center', tile.iconBg)}>
+                <tile.icon className={cn('w-7 h-7', tile.iconColor)} />
+              </div>
+              <span className="text-xs font-medium text-gray-600 text-center leading-snug">{tile.label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Activity ── */}
+      <div className="bg-white rounded-2xl shadow-sm px-4 pt-4 pb-4">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-bold text-gray-900">Activity for Last 7 Days</p>
+          <Link to="/dashboard/transactions" className="text-xs font-semibold text-blue-600 flex items-center gap-0.5">
+            View <IconArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {/* COD summary strip */}
+        <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-100">
+          <div>
+            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider leading-none mb-1">Deposited</p>
+            <p className="text-2xl font-extrabold text-blue-600 leading-none tabular-nums">₱18,450</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider leading-none mb-1">For Processing</p>
+            <p className="text-xl font-bold text-gray-700 leading-none tabular-nums">₱4,320</p>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-4 gap-1">
+          {ACTIVITY_STATS.map((s) => (
+            <div key={s.label} className="flex flex-col items-center gap-1">
+              <p className="text-xl font-extrabold text-gray-900 leading-none tabular-nums">{s.value}</p>
+              <p className="text-[11px] text-gray-400 font-medium text-center leading-snug">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Recent Orders ── */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <p className="text-sm font-bold text-gray-900">Recent Orders</p>
+          <Link to="/dashboard/transactions" className="text-xs font-semibold text-blue-600 flex items-center gap-0.5">
             See all <IconArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
-        <Card>
-          <CardContent className="p-0">
-            <div className="divide-y divide-gray-50">
-              {MOCK_ORDERS.map((o) => {
-                const sc = STATUS_CFG[o.status];
-                return (
-                  <button
-                    key={o.id}
-                    onClick={() => navigate(`/dashboard/transactions/${o.id}`)}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-gray-50 transition-colors cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                      {o.status === 'delivered'
-                        ? <IconCircleCheckFilled className="w-4 h-4 text-emerald-500" />
-                        : o.status === 'in-transit'
-                        ? <IconTruck className="w-4 h-4 text-blue-500" />
-                        : <IconHourglass className="w-4 h-4 text-orange-400" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate leading-snug">{o.id}</p>
-                      <p className="text-xs text-gray-500 leading-snug">{o.recipient}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <Badge variant={sc.variant} className="text-[10px] px-1.5 py-0.5 leading-none">{sc.label}</Badge>
-                      <span className="text-[11px] text-gray-400 leading-none tabular-nums">{o.time}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+
+        <div className="divide-y divide-gray-50">
+          {MOCK_ORDERS.map((o) => {
+            const sc = STATUS_CFG[o.status];
+            const StatusIcon = sc.icon;
+            return (
+              <button
+                key={o.id}
+                onClick={() => navigate(`/dashboard/transactions/${o.id}`)}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-gray-50 transition-colors cursor-pointer"
+              >
+                {/* Status icon container */}
+                <div className={cn(
+                  'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
+                  o.status === 'delivered'  ? 'bg-emerald-50' :
+                  o.status === 'in-transit' ? 'bg-blue-50' : 'bg-orange-50'
+                )}>
+                  <StatusIcon className={cn(
+                    'w-5 h-5',
+                    o.status === 'delivered'  ? 'text-emerald-500' :
+                    o.status === 'in-transit' ? 'text-blue-500' : 'text-orange-400'
+                  )} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate leading-snug">{o.id}</p>
+                  <p className="text-xs text-gray-500 leading-snug">{o.recipient}</p>
+                </div>
+
+                <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                  <Badge variant={sc.variant} className="text-[10px] px-2 py-0.5 leading-none">{sc.label}</Badge>
+                  <span className="text-[11px] text-gray-400 leading-none">{o.time}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Save & Earn promo */}
-      <div className="px-4 pt-4 pb-4">
-        <Link to="/basic/more">
-          <div className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 p-4 flex items-center gap-3 active:opacity-90 transition-opacity">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-              <IconSparkles className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white leading-snug">Save More. Earn More.</p>
-              <p className="text-xs text-blue-100 leading-snug mt-0.5">Bundles, vouchers, rewards & more</p>
-            </div>
-            <IconChevronRight className="w-5 h-5 text-blue-200 flex-shrink-0" />
-          </div>
-        </Link>
-      </div>
-
-      {/* Storefront promo */}
-      <div className="px-4 pb-4">
-        <Link to="/dashboard/storefront">
-          <div className="rounded-xl bg-white border border-gray-200 p-4 flex items-center gap-3 active:bg-gray-50 transition-colors hover:shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-              <IconBuildingStore className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 leading-snug">Your Storefront</p>
-              <p className="text-xs text-gray-500 leading-snug mt-0.5">Share your shop · Manage products</p>
-            </div>
-            <IconChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
-          </div>
-        </Link>
-      </div>
-
-      {/* Not growing yet — show the nudge entry */}
+      {/* ── Basic state: soft upgrade nudge at bottom ── */}
       {segment === 'basic' && (
-        <div className="px-4 pb-4">
-          <Card className="border-amber-200 bg-amber-50">
-            <CardContent className="p-4 flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <IconTrendingUp className="w-4 h-4 text-amber-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-amber-900 leading-snug">Keep shipping to unlock more</p>
-                <p className="text-xs text-amber-700 mt-0.5 leading-snug">
-                  Reach higher volume tiers for exclusive rates, priority support, and business benefits.
-                </p>
-                <Link to="/basic/qualify">
-                  <Button size="sm" className="mt-3 h-8 bg-amber-600 hover:bg-amber-700 text-white text-xs px-3">
-                    Learn about Business benefits
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="bg-white rounded-2xl shadow-sm px-4 py-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <IconGift className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 leading-snug">Ship more to unlock benefits</p>
+            <Link to="/basic/qualify" className="text-xs font-semibold text-blue-600 leading-snug">
+              Learn about Business pricing →
+            </Link>
+          </div>
         </div>
       )}
+
+      {/* Bottom spacer so last card isn't flush with the nav */}
+      <div className="h-1" />
     </div>
   );
 }
