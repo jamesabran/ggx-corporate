@@ -3,13 +3,13 @@
 > Lightweight resume/checkpoint file. Detailed June 2026 history was archived to
 > `docs/archive/session_log_2026-06.md`.
 
-## Current State - Updated 2026-06-13
+## Current State - Updated 2026-06-14
 
-- **Stage:** Custom Reports account/data consistency fix complete.
-- **Branch:** `master`.
-- **Latest commit:** `fa6dc7e` - Custom Reports account/data consistency fix.
-- **Build/typecheck status:** green.
-- **Push status:** not verified in this docs-only update.
+- **Stage:** Basic User mobile demo complete and pushed.
+- **Branch:** `feature/customer-segment-growth-demo` (pushed to `origin`).
+- **Latest commit:** `72ba058` - design: revise Basic User mobile home to match GGX app visual language.
+- **Build/typecheck status:** green (verified after `72ba058`).
+- **Push status:** pushed — `origin/feature/customer-segment-growth-demo` is up to date.
 - **Working tree note:** `.claude/settings.local.json` is local config; leave it
   alone unless explicitly asked. QA scripts/dirs are gitignored locally.
 
@@ -40,6 +40,25 @@
   are sanitized so unavailable columns/options cannot be reintroduced; CSV export
   matches applicable visible columns; and Subaccount filtering prefers canonical
   ID filtering.
+
+## Most Recent Feature Work — Basic User Demo
+
+- Route group `/basic` added as a standalone mobile-first demo layer (no auth
+  gate, no Business+ sidebar). Entry point: `/basic`.
+- `BasicLayout` — light blue app shell, GGX logo header (no "Basic" branding),
+  5-tab bottom nav (Home / Rewards / Ship / Transactions / Account).
+- `BasicDashboard` — GGX app-aligned: bold welcome, service tiles (2×2 large),
+  horizontal Explore-more row, activity card (COD + shipment stats), recent
+  orders below fold.
+- `GrowingNudgeCard` — promo-banner style matching GGX app carousel: gradient
+  left panel + star icon + bold text + CTA link + pagination dots.
+- `HVMNudge` page — "You may qualify for special business pricing" with benefit
+  list, 3-step process, Request review and Talk to Sales CTAs with demo success
+  states.
+- `BasicSegmentContext` — `basic | growing` demo-only state (default: `growing`
+  so nudge shows on first load). Change default in context to demo `basic` state.
+- No auth gate, no backend calls — all mock/static. Safe to remove the whole
+  `/basic` route group without touching Business+ dashboard.
 
 ## Current Priority
 
