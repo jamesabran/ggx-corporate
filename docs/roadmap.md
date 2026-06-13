@@ -22,8 +22,6 @@ deferred production-only stage. Start it only when a BFF/backend exists.
 | Priority | Item | Notes |
 |---|---|---|
 | High | Responsive / small-screen layout fixes | KPI overflow, trend clipping, SLA badge wrapping, table/card badge constraints at 1024-1280px. |
-| High | Sidebar IA cleanup | Preserve grouped Operations, Analytics & Reports, Finance, Account Management, Integrations, System. Confirm if feature additions change IA. |
-| Medium | In-app spreadsheet booking completion | Let spreadsheet-created orders confirm on the spreadsheet page instead of routing to a separate review page. Preserve Upload File behavior. |
 | Medium | Custom Reports saved template persistence | Backend-owned persistence for user-defined report templates. |
 | Medium | Custom Reports scheduled exports | Backend-owned scheduling and delivery channel support. |
 | Low | Figma/component alignment pass | Reflect new reusable components in the Figma DS when the component library changes materially. |
@@ -47,6 +45,11 @@ source-of-truth logic.
 
 - Service layer migration is complete for non-config UI consumers; intentional
   exceptions are documented in `service_layer_rules.md`.
+- Sidebar IA cleanup is complete: grouped Operations, Analytics & Reports, Finance,
+  Account Management (with Add-ons), Integrations, and System are all in place;
+  Commerce group appears conditionally when Inventory/Storefront are enabled.
+- In-app spreadsheet booking is complete: orders created from the spreadsheet
+  confirm inline (no separate review page). Upload File behavior is preserved.
 - Account Add-ons replaced the old Business Modules discovery surface.
 - Inventory, Storefront, On-Demand, Advanced Analytics, Custom Reports, and
   Consolidated Billing have module/access rules.

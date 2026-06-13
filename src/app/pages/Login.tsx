@@ -65,7 +65,7 @@ export function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
-        <div className="order-2 lg:order-1">
+        <div className="order-1 lg:order-1">
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-6">
               <img
@@ -291,7 +291,7 @@ export function Login() {
           )}
         </div>
 
-        <div className="order-1 lg:order-2">
+        <div className="order-2 lg:order-2">
           <Card className="bg-gradient-to-br from-blue-600 to-blue-700 border-blue-700">
             <CardContent className="p-8">
               <h2 className="text-2xl font-bold text-white mb-6">Your logistics command center</h2>

@@ -33,8 +33,9 @@ const peso = (n: number) =>
  *
  * Unpublish never auto-cancels existing transactions; pending unpaid orders /
  * active deliveries trigger a warning + explicit confirmation. The public
- * customer-facing surface lives at /shop/:slug (browse-only, no checkout yet).
- * See docs/storefront_rules.md.
+ * customer-facing surface lives at /shop/:slug with demo checkout, session cart,
+ * cart review, and cart checkout. Real order placement and persistence are
+ * backend-owned (deferred). See docs/storefront_rules.md.
  */
 export function Storefront() {
   const ctx = useModuleAccessContext();

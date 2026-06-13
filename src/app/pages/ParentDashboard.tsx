@@ -71,14 +71,14 @@ export function ParentDashboard() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest leading-none">{stat.title}</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-3 leading-none tracking-tight">{stat.value}</p>
+                  <p className="text-2xl xl:text-3xl font-bold text-gray-900 mt-3 leading-none tracking-tight tabular-nums truncate">{stat.value}</p>
                   {stat.trend && (
-                    <div className="flex items-center gap-1.5 mt-3">
+                    <div className="flex items-center gap-1.5 mt-3 min-w-0">
                       {stat.trend === 'up'
                         ? <IconTrendingUp className={`w-4 h-4 flex-shrink-0 ${stat.changeColor}`} />
                         : <IconTrendingDown className={`w-4 h-4 flex-shrink-0 ${stat.changeColor}`} />}
-                      <span className={`text-sm font-semibold ${stat.changeColor}`}>{stat.change}</span>
-                      <span className="text-sm text-gray-400">vs last month</span>
+                      <span className={`text-sm font-semibold flex-shrink-0 ${stat.changeColor}`}>{stat.change}</span>
+                      <span className="text-sm text-gray-400 hidden xl:inline truncate">vs last month</span>
                     </div>
                   )}
                 </div>
