@@ -109,7 +109,24 @@
       "PowerShell(git commit -m \"docs: checkpoint session 9 - Claims/SLA/Support page + Reports frame reconciled to code\" -m \"All 12 Claims/SLA/Support frames \\(1:7\\) rebuilt to code: SLA alert cards, 3 claim details, support list+detail+resolved, advisories, SLA/advisory empty states, new ticket form. Reports frame \\(1:8\\) rebuilt. Turnkey specs added for Data Analytics x2 and remaining pages.\")",
       "Bash(python -c \"import json,re; d=json.load\\(open\\(r'C:\\\\Users\\\\james\\\\.claude\\\\projects\\\\C--Users-james-Projects-GGX-Corporate\\\\26c1fb25-5e52-4163-a55b-11cd6479704b\\\\tool-results\\\\mcp-plugin_figma_figma-get_metadata-1780460300676.txt'\\)\\); t=d[0]['text']; print\\(t[:200]\\); import sys\")",
       "PowerShell(curl.exe -s -o \"$env:TEMP\\\\bulk_step1.png\" \"https://www.figma.com/api/mcp/asset/eb0fc447-95ad-41e6-a4fe-006dbce67f77\"; Write-Output \"$env:TEMP\\\\bulk_step1.png\")",
-      "PowerShell(git commit -m \"docs: session 13 - code-to-Figma parity audit Batch 1 \\(Bulk Upload Step 1: ghost Change btn + PaymentMethodTabs billing layout rebuilt + Recent Uploads reflow\\)\")"
+      "PowerShell(git commit -m \"docs: session 13 - code-to-Figma parity audit Batch 1 \\(Bulk Upload Step 1: ghost Change btn + PaymentMethodTabs billing layout rebuilt + Recent Uploads reflow\\)\")",
+      "Bash(node -e \"try{require.resolve\\('playwright'\\);console.log\\('playwright module: present'\\)}catch\\(e\\){console.log\\('playwright module: MISSING'\\)}\")",
+      "Bash(npm i *)",
+      "Bash(node _capture_tmp.mjs)",
+      "Bash(cd \"C:\\\\Users\\\\james\\\\Projects\\\\GGX Corporate\" && rm -f tmp_*.png && echo cleaned)",
+      "Bash(grep -nA8 \"borderRadius\\\\|radius\")",
+      "Bash(cp src/styles/theme.css /tmp/theme.before.css)",
+      "Bash(node scripts/build-tokens.mjs)",
+      "Bash(node -e ' *)",
+      "Bash(git show *)",
+      "Bash(rm theme.before.css)",
+      "Bash(node -e \"console.log\\('FIGMA_ACCESS_TOKEN set:', !!process.env.FIGMA_ACCESS_TOKEN\\)\")",
+      "Bash(npx figma *)",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(echo \"exit:$?\")",
+      "PowerShell(npm run *)",
+      "PowerShell(git *)"
     ]
   }
 }
