@@ -9,6 +9,9 @@ import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { useScopedAccountId } from '../hooks/useAccountScope';
 import { useSubAccounts } from '../contexts/SubAccountContext';
+import { useAuth } from '../contexts/AuthContext';
+import { isAddonEnabledForAccount, MAIN_SCOPE } from '../services/addonsService';
+import { EnablementGate } from '../components/EnablementGate';
 import {
   getTransactions, getTransactionsBySubaccountId, statusConfig,
   SERVICE_TYPE_SHORT_LABEL,
@@ -131,9 +134,15 @@ function downloadCsv(filename: string, content: string): void {
  * are backend-owned). See docs/roadmap.md for deferred items.
  */
 export function CustomReports() {
+  const { user } = useAuth();
   const scopeId = useScopedAccountId();
   const { isMainAccountView, subAccountsEnabled } = useSubAccounts();
   const isMainView = isMainAccountView();
+
+  // Gate: custom_reports is admin-only and requires contract activation.
+  // Direct URL must show the same gate as the Reports page upsell CTA.
+  const enabled = user?.role !== 'manager' && isAddonEnabledForAccount('custom_reports', MAIN_SCOPE);
+  if (!enabled) return <EnablementGate moduleId="custom_reports" />;
 
   const [allRows, setAllRows] = useState<TransactionSummary[]>([]);
   const [selected, setSelected] = useState<Set<ColKey>>(
