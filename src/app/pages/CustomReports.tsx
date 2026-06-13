@@ -8,10 +8,12 @@ import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { useScopedAccountId } from '../hooks/useAccountScope';
+import { useModuleAccessContext } from '../hooks/useModuleAccess';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
 import { isAddonEnabledForAccount, MAIN_SCOPE } from '../services/addonsService';
 import { EnablementGate } from '../components/EnablementGate';
+import { getFeatureStateSync } from '../services/featureEnablementService';
 import {
   getTransactions, getTransactionsBySubaccountId, statusConfig,
   SERVICE_TYPE_SHORT_LABEL,
@@ -51,7 +53,7 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'failed_returned', label: 'Failed & Returned' },
 ];
 
-const SERVICE_TYPE_OPTIONS: { value: DeliveryServiceType | 'all'; label: string }[] = [
+const ALL_SERVICE_TYPE_OPTIONS: { value: DeliveryServiceType | 'all'; label: string }[] = [
   { value: 'all',       label: 'All service types' },
   { value: 'standard',  label: 'Standard' },
   { value: 'same_day',  label: 'Same-Day' },
@@ -130,50 +132,100 @@ function downloadCsv(filename: string, content: string): void {
 
 /**
  * Custom Reports — report builder: configure setup → live preview → export.
- * "Save template" and "Schedule export" are deferred (persistence and scheduling
- * are backend-owned). See docs/roadmap.md for deferred items.
+ * Columns, filters, service-type options, and preview rows are scoped to the
+ * current account context (subaccount visibility, On-Demand availability).
+ * "Save template" and "Schedule export" are deferred (backend-owned).
+ * See docs/roadmap.md for deferred items.
  */
 export function CustomReports() {
   const { user } = useAuth();
+  const moduleCtx = useModuleAccessContext();
   const scopeId = useScopedAccountId();
   const { isMainAccountView, subAccountsEnabled } = useSubAccounts();
   const isMainView = isMainAccountView();
 
-  // Gate: custom_reports is admin-only and requires contract activation.
-  // Direct URL must show the same gate as the Reports page upsell CTA.
+  // Enablement and context flags — derived before hooks so sanitization effects
+  // have stable values, but the early return comes AFTER all hooks (Rules of Hooks).
   const enabled = user?.role !== 'manager' && isAddonEnabledForAccount('custom_reports', MAIN_SCOPE);
-  if (!enabled) return <EnablementGate moduleId="custom_reports" />;
+  // Subaccount column/filter are only relevant when in Main Account consolidated view.
+  const showSubaccount = isMainView && subAccountsEnabled;
+  // On-Demand availability for the current scope.
+  const onDemandEnabled = getFeatureStateSync('on_demand', moduleCtx.scopeAccountId).enabled;
 
+  // ── State (ALL hooks must precede any early return) ──────────────────────────
   const [allRows, setAllRows] = useState<TransactionSummary[]>([]);
   const [selected, setSelected] = useState<Set<ColKey>>(
     () => new Set<ColKey>(['tracking', 'recipient', 'serviceType', 'status', 'date']),
   );
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter]           = useState<StatusFilter>('all');
   const [serviceTypeFilter, setServiceTypeFilter] = useState<DeliveryServiceType | 'all'>('all');
-  const [subaccountFilter, setSubaccountFilter] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<DateRange>('last30');
+  const [subaccountFilter, setSubaccountFilter]   = useState<string>('all');
+  const [dateRange, setDateRange]                 = useState<DateRange>('last30');
   const [subaccountOptions, setSubaccountOptions] = useState<{ id: string; name: string }[]>([]);
-  const [exporting, setExporting] = useState(false);
-  const [savedFlash, setSavedFlash] = useState(false);
+  const [exporting, setExporting]                 = useState(false);
+  const [savedFlash, setSavedFlash]               = useState(false);
 
+  // Load rows — subaccount filter uses canonical ID via transactionService to
+  // avoid display-name matching; re-fetches when scope or subaccount changes.
   useEffect(() => {
+    if (!enabled) return;
     let active = true;
-    const load = scopeId ? getTransactionsBySubaccountId(scopeId) : getTransactions();
+    const load = scopeId
+      ? getTransactionsBySubaccountId(scopeId)
+      : showSubaccount && subaccountFilter !== 'all'
+        ? getTransactions({ subaccountId: subaccountFilter })
+        : getTransactions();
     load.then((list) => { if (active) setAllRows(list); }).catch(() => {});
     return () => { active = false; };
-  }, [scopeId]);
+  }, [enabled, scopeId, showSubaccount, subaccountFilter]);
 
+  // Subaccount dropdown options (main consolidated view only).
   useEffect(() => {
-    if (!isMainView || !subAccountsEnabled) return;
+    if (!showSubaccount) return;
     let active = true;
     getSubaccountOptions()
       .then((opts) => { if (active) setSubaccountOptions(opts); })
       .catch(() => {});
     return () => { active = false; };
-  }, [isMainView, subAccountsEnabled]);
+  }, [showSubaccount]);
+
+  // Sanitize column selection and subaccount filter when subaccounts become unavailable.
+  useEffect(() => {
+    if (showSubaccount) return;
+    setSelected((prev) => {
+      if (!prev.has('subaccount')) return prev;
+      const next = new Set(prev);
+      next.delete('subaccount');
+      return next;
+    });
+    setSubaccountFilter('all');
+  }, [showSubaccount]);
+
+  // Sanitize service-type filter when On-Demand becomes unavailable.
+  useEffect(() => {
+    if (!onDemandEnabled && serviceTypeFilter === 'on_demand') {
+      setServiceTypeFilter('all');
+    }
+  }, [onDemandEnabled, serviceTypeFilter]);
+
+  // Context-scoped column list — hides Subaccount when not in main+subaccounts view.
+  const availableCols = useMemo(
+    () => COLUMNS.filter((c) => c.key !== 'subaccount' || showSubaccount),
+    [showSubaccount],
+  );
+
+  // Context-scoped service-type options — omits On-Demand when not enabled.
+  const availableServiceTypeOptions = useMemo(
+    () => ALL_SERVICE_TYPE_OPTIONS.filter((o) => o.value !== 'on_demand' || onDemandEnabled),
+    [onDemandEnabled],
+  );
 
   const filteredRows = useMemo(() => {
     let result = applyDateRange(allRows, dateRange);
+    // Exclude On-Demand rows when the service type is not enabled for this scope.
+    if (!onDemandEnabled) {
+      result = result.filter((r) => r.serviceType !== 'on_demand');
+    }
     if (serviceTypeFilter !== 'all') {
       result = result.filter((r) => r.serviceType === serviceTypeFilter);
     }
@@ -182,23 +234,30 @@ export function CustomReports() {
     } else if (statusFilter !== 'all') {
       result = result.filter((r) => r.status === statusFilter);
     }
-    if (isMainView && subaccountFilter !== 'all') {
-      const name = subaccountOptions.find((o) => o.id === subaccountFilter)?.name;
-      if (name) result = result.filter((r) => r.subaccount === name);
-    }
+    // Subaccount filtering is handled at load time via getTransactions({ subaccountId })
+    // so no display-name matching is needed here.
     return result;
-  }, [allRows, dateRange, serviceTypeFilter, statusFilter, subaccountFilter, isMainView, subaccountOptions]);
+  }, [allRows, dateRange, onDemandEnabled, serviceTypeFilter, statusFilter]);
 
-  const activeCols = useMemo(() => COLUMNS.filter((c) => selected.has(c.key)), [selected]);
+  // Active columns: available in context AND checked by the user.
+  const activeCols = useMemo(
+    () => availableCols.filter((c) => selected.has(c.key)),
+    [availableCols, selected],
+  );
   const previewRows = filteredRows.slice(0, PREVIEW_LIMIT);
 
   const toggle = (key: ColKey) =>
     setSelected((prev) => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
 
   const loadTemplate = (preset: TemplatePreset) => {
-    setSelected(new Set(preset.columns));
+    // Sanitize: drop columns that aren't available in the current context.
+    const sanitized = new Set(
+      [...preset.columns].filter((k) => k !== 'subaccount' || showSubaccount),
+    );
+    setSelected(sanitized);
     setStatusFilter(preset.status);
-    setServiceTypeFilter(preset.serviceType);
+    // Sanitize: fall back to 'all' if On-Demand is not available.
+    setServiceTypeFilter(!onDemandEnabled && preset.serviceType === 'on_demand' ? 'all' : preset.serviceType);
     setDateRange(preset.dateRange);
   };
 
@@ -222,6 +281,9 @@ export function CustomReports() {
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 2000);
   };
+
+  // Early return AFTER all hooks (Rules of Hooks).
+  if (!enabled) return <EnablementGate moduleId="custom_reports" />;
 
   const noColumns = activeCols.length === 0;
   const noResults = !noColumns && filteredRows.length === 0;
@@ -274,10 +336,10 @@ export function CustomReports() {
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Service type</label>
                   <Select value={serviceTypeFilter} onChange={(e) => setServiceTypeFilter(e.target.value as DeliveryServiceType | 'all')}>
-                    {SERVICE_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    {availableServiceTypeOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </Select>
                 </div>
-                {isMainView && subAccountsEnabled && (
+                {showSubaccount && (
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Subaccount</label>
                     <Select value={subaccountFilter} onChange={(e) => setSubaccountFilter(e.target.value)}>
@@ -292,7 +354,7 @@ export function CustomReports() {
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Columns</p>
               <div className="space-y-2">
-                {COLUMNS.map((c) => (
+                {availableCols.map((c) => (
                   <label key={c.key} className="flex items-center gap-2.5 cursor-pointer">
                     <input
                       type="checkbox"
