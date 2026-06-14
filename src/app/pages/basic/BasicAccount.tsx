@@ -6,7 +6,6 @@ import {
   IconTrendingUp,
   IconShieldCheck,
   IconHeadset,
-  IconExternalLink,
   IconLogout,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -35,15 +34,15 @@ export function BasicAccount() {
       icon: IconUser,
       label: 'My Profile',
       sub: 'Name, contact, store details',
-      href: '/dashboard/settings',
+      href: '/basic/settings',
       iconBg: 'bg-blue-50',
       iconColor: 'text-blue-600',
     },
     {
       icon: IconSettings,
       label: 'Account Settings',
-      sub: 'Payment, address book, preferences',
-      href: '/dashboard/settings',
+      sub: 'Payout, address book, preferences',
+      href: '/basic/settings',
       iconBg: 'bg-gray-100',
       iconColor: 'text-gray-600',
     },
@@ -51,15 +50,15 @@ export function BasicAccount() {
       icon: IconShieldCheck,
       label: 'Security',
       sub: 'Password and login',
-      href: '/dashboard/settings',
+      href: '/basic/settings',
       iconBg: 'bg-violet-50',
       iconColor: 'text-violet-600',
     },
     {
       icon: IconHeadset,
-      label: 'Support',
-      sub: 'Tickets, advisories, help center',
-      href: '/dashboard/support-tickets',
+      label: 'Help & Support',
+      sub: 'Tickets, chat, help center',
+      href: '/basic/support',
       iconBg: 'bg-orange-50',
       iconColor: 'text-orange-500',
     },
@@ -72,14 +71,6 @@ export function BasicAccount() {
       badgeVariant: segment === 'growing' ? 'warning' : 'info',
       iconBg: 'bg-amber-50',
       iconColor: 'text-amber-600',
-    },
-    {
-      icon: IconExternalLink,
-      label: 'GGX Business+',
-      sub: 'Open the contracted HVM dashboard',
-      href: '/dashboard',
-      iconBg: 'bg-blue-50',
-      iconColor: 'text-blue-600',
     },
   ];
 
@@ -95,7 +86,7 @@ export function BasicAccount() {
             <h2 className="text-base font-bold text-gray-900 leading-snug">Alex Mercado</h2>
             <p className="text-sm text-gray-500 leading-snug">alex.mercado@shop.com</p>
             <div className="flex items-center gap-2 mt-1.5">
-              <Badge variant="info" className="text-[10px] px-1.5 py-0.5 leading-none">GGX Basic</Badge>
+              <Badge variant="info" className="text-[10px] px-1.5 py-0.5 leading-none">Basic</Badge>
               {segment === 'growing' && (
                 <Badge variant="warning" className="text-[10px] px-1.5 py-0.5 leading-none">Growing</Badge>
               )}
@@ -159,7 +150,7 @@ export function BasicAccount() {
           Log out
         </button>
         <p className="text-[11px] text-gray-400 text-center mt-3 leading-snug">
-          GGX Basic · Demo account · v1.0
+          GoGo Xpress · Basic account · Demo
         </p>
       </div>
     </div>

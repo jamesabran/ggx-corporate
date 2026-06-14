@@ -12,11 +12,11 @@ import {
 import { cn } from '../lib/utils';
 
 const bottomNav = [
-  { label: 'Home',         href: '/basic',                 icon: IconLayoutDashboard },
-  { label: 'Rewards',      href: '/basic/more',            icon: IconSparkles },
-  { label: 'Ship',         href: '/basic/deliver',         icon: IconTruck },
-  { label: 'Transactions', href: '/dashboard/transactions',icon: IconReceiptTax },
-  { label: 'Account',      href: '/basic/account',         icon: IconUser },
+  { label: 'Home',     href: '/basic',          icon: IconLayoutDashboard },
+  { label: 'Rewards',  href: '/basic/more',      icon: IconSparkles },
+  { label: 'Ship',     href: '/basic/deliver',   icon: IconTruck },
+  { label: 'Orders',   href: '/basic/orders',    icon: IconReceiptTax },
+  { label: 'Account',  href: '/basic/account',   icon: IconUser },
 ];
 
 export function BasicLayout() {
@@ -26,16 +26,27 @@ export function BasicLayout() {
   const isHome = location.pathname === '/basic' || location.pathname === '/basic/';
 
   const pageTitle = (() => {
-    if (location.pathname.startsWith('/basic/more'))    return 'Save & Earn More';
-    if (location.pathname.startsWith('/basic/qualify')) return 'Business Benefits';
-    if (location.pathname.startsWith('/basic/deliver')) return 'Ship Now';
-    if (location.pathname.startsWith('/basic/account')) return 'Account';
+    if (location.pathname.startsWith('/basic/more'))      return 'Save & Earn More';
+    if (location.pathname.startsWith('/basic/qualify'))   return 'Business Benefits';
+    if (location.pathname.startsWith('/basic/deliver'))   return 'Ship Now';
+    if (location.pathname.startsWith('/basic/account'))   return 'Account';
+    if (location.pathname.startsWith('/basic/orders'))    return 'Orders';
+    if (location.pathname.startsWith('/basic/bulk'))      return 'Bulk Upload';
+    if (location.pathname.startsWith('/basic/store'))     return 'Your Store';
+    if (location.pathname.startsWith('/basic/inventory')) return 'Inventory';
+    if (location.pathname.startsWith('/basic/earnings'))  return 'Earnings';
+    if (location.pathname.startsWith('/basic/support'))   return 'Help & Support';
+    if (location.pathname.startsWith('/basic/settings'))  return 'Settings';
+    if (location.pathname.startsWith('/basic/same-day'))  return 'Same-Day Delivery';
     return null;
   })();
 
   return (
-    // Light blue app-shell background matching the GGX mobile app
-    <div className="flex flex-col min-h-screen bg-[#EAF2FF]">
+    // Neutral page backdrop so the mobile app-shell stays a centered, phone-width
+    // frame on tablet/desktop instead of stretching edge-to-edge.
+    <div className="min-h-screen bg-slate-100">
+    {/* Light blue app-shell background matching the GGX mobile app */}
+    <div className="relative mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[#EAF2FF] shadow-sm">
 
       {/* ── Top bar ── */}
       <header className="sticky top-0 z-30 bg-[#EAF2FF] flex items-center justify-between h-14 px-4 flex-shrink-0">
@@ -84,8 +95,8 @@ export function BasicLayout() {
         <Outlet />
       </main>
 
-      {/* ── Bottom navigation ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex items-stretch h-[64px]">
+      {/* ── Bottom navigation (pinned to the phone-width frame) ── */}
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 z-30 w-full max-w-[480px] bg-white border-t border-gray-200 flex items-stretch h-[64px]">
         {bottomNav.map((item) => {
           const isActive =
             item.href === '/basic'
@@ -108,6 +119,7 @@ export function BasicLayout() {
           );
         })}
       </nav>
+    </div>
     </div>
   );
 }

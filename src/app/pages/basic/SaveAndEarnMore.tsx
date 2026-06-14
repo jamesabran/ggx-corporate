@@ -10,8 +10,6 @@ import {
   IconCurrencyDollar,
   IconStar,
   IconUsers,
-  IconShoppingCart,
-  IconChartBar,
   IconChevronRight,
   IconBrandShopee,
   IconGift,
@@ -30,14 +28,14 @@ interface FeatureTile {
 }
 
 const ALL_FEATURES: FeatureTile[] = [
-  { label: 'Same Day Delivery',  icon: IconTruck,          bg: 'bg-orange-50', color: 'text-orange-500', href: '/basic/deliver?type=sameday' },
   { label: 'Standard Delivery',  icon: IconPackage,        bg: 'bg-blue-50',   color: 'text-blue-600',   href: '/basic/deliver?type=standard' },
-  { label: 'Bulk Upload',        icon: IconUpload,         bg: 'bg-violet-50', color: 'text-violet-600', href: '/dashboard/bulk-uploader' },
-  { label: 'Add Product',        icon: IconPlus,           bg: 'bg-emerald-50',color: 'text-emerald-600',href: '/dashboard/inventory' },
-  { label: 'Storefront',         icon: IconBuildingStore,  bg: 'bg-teal-50',   color: 'text-teal-600',   href: '/dashboard/storefront' },
-  { label: 'Create Promo',       icon: IconTag,            bg: 'bg-pink-50',   color: 'text-pink-600',   href: '/dashboard/storefront' },
-  { label: 'Shopify',            icon: IconBrandShopee,    bg: 'bg-green-50',  color: 'text-green-600',  href: '/dashboard/shopify' },
-  { label: 'Analytics',          icon: IconChartBar,       bg: 'bg-indigo-50', color: 'text-indigo-600', href: '/dashboard/analytics/basic' },
+  { label: 'Bulk Upload',        icon: IconUpload,         bg: 'bg-violet-50', color: 'text-violet-600', href: '/basic/bulk' },
+  { label: 'Track Order',        icon: IconTruck,          bg: 'bg-sky-50',    color: 'text-sky-600',    href: '/track' },
+  { label: 'Add Product',        icon: IconPlus,           bg: 'bg-emerald-50',color: 'text-emerald-600',href: '/basic/inventory' },
+  { label: 'Storefront',         icon: IconBuildingStore,  bg: 'bg-teal-50',   color: 'text-teal-600',   href: '/basic/store' },
+  { label: 'Create Promo',       icon: IconTag,            bg: 'bg-pink-50',   color: 'text-pink-600',   href: '/basic/store' },
+  { label: 'Shopify',            icon: IconBrandShopee,    bg: 'bg-green-50',  color: 'text-green-600',  href: '/basic/store' },
+  { label: 'Earnings',           icon: IconCurrencyDollar, bg: 'bg-indigo-50', color: 'text-indigo-600', href: '/basic/earnings' },
 ];
 
 interface SaveEarnItem {
@@ -53,16 +51,6 @@ interface SaveEarnItem {
 
 const SAVE_ITEMS: SaveEarnItem[] = [
   {
-    label: 'Sulit Bundles',
-    sub: 'Pre-paid delivery packs at discounted rates',
-    icon: IconShoppingCart,
-    iconBg: 'bg-orange-100',
-    iconColor: 'text-orange-600',
-    href: '#',
-    tag: 'Popular',
-    tagColor: 'bg-orange-100 text-orange-700',
-  },
-  {
     label: 'Vouchers',
     sub: 'Apply voucher codes for delivery discounts',
     icon: IconTicket,
@@ -71,8 +59,16 @@ const SAVE_ITEMS: SaveEarnItem[] = [
     href: '#',
   },
   {
-    label: 'Discounted Rates',
-    sub: 'Volume-based pricing for frequent shippers',
+    label: 'Promo Codes',
+    sub: 'Create discount codes for your storefront buyers',
+    icon: IconTag,
+    iconBg: 'bg-violet-100',
+    iconColor: 'text-violet-600',
+    href: '/basic/store',
+  },
+  {
+    label: 'Volume Pricing',
+    sub: 'Frequent shippers may qualify for special rates',
     icon: IconCurrencyDollar,
     iconBg: 'bg-emerald-100',
     iconColor: 'text-emerald-600',

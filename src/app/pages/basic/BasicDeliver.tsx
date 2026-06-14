@@ -14,24 +14,26 @@ import { cn } from '../../lib/utils';
 
 const SERVICE_TYPES = [
   {
-    key: 'sameday',
-    label: 'Same Day Delivery',
-    sub: 'Delivered today, within Metro Manila',
-    icon: IconTruck,
-    bg: 'bg-orange-500',
-    highlight: true,
-    eta: 'Delivered by 10 PM today',
-    rate: 'Starting at ₱99',
-  },
-  {
     key: 'standard',
     label: 'Standard Delivery',
     sub: 'Nationwide, 1–5 business days',
     icon: IconPackage,
     bg: 'bg-blue-600',
-    highlight: false,
+    locked: false,
     eta: '1–5 business days',
     rate: 'Starting at ₱59',
+  },
+  {
+    // Same-Day is an enabled-only capability — not a default Basic service.
+    // Tapping it routes to the Business Benefits (Growing) nudge instead of booking.
+    key: 'sameday',
+    label: 'Same Day Delivery',
+    sub: 'Available to qualified accounts',
+    icon: IconTruck,
+    bg: 'bg-orange-500',
+    locked: true,
+    eta: 'Eligibility required',
+    rate: 'Talk to us',
   },
 ];
 
@@ -45,7 +47,9 @@ const FORM_FIELDS = [
 export function BasicDeliver() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const preselected = params.get('type') ?? 'sameday';
+  const requested = params.get('type') ?? 'standard';
+  // Same-Day is eligibility-gated, so it can never be the selected (bookable) type.
+  const preselected = requested === 'sameday' ? 'standard' : requested;
 
   return (
     <div className="space-y-0">
@@ -56,10 +60,16 @@ export function BasicDeliver() {
           {SERVICE_TYPES.map((s) => (
             <button
               key={s.key}
-              onClick={() => navigate(`/basic/deliver?type=${s.key}`, { replace: true })}
+              onClick={() =>
+                s.locked
+                  ? navigate('/basic/same-day')
+                  : navigate(`/basic/deliver?type=${s.key}`, { replace: true })
+              }
               className={cn(
                 'w-full flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all cursor-pointer',
-                preselected === s.key
+                s.locked
+                  ? 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                  : preselected === s.key
                   ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
                   : 'border-gray-200 bg-white hover:border-gray-300'
               )}
@@ -72,7 +82,7 @@ export function BasicDeliver() {
                 <p className="text-xs text-gray-500 leading-snug mt-0.5">{s.sub}</p>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-xs font-semibold text-gray-700">{s.rate}</p>
+                <p className={cn('text-xs font-semibold', s.locked ? 'text-blue-600' : 'text-gray-700')}>{s.rate}</p>
                 <p className="text-[11px] text-gray-400">{s.eta}</p>
               </div>
             </button>
@@ -106,7 +116,7 @@ export function BasicDeliver() {
       <div className="px-4 pt-2 pb-4 space-y-3">
         <Button
           className="w-full h-12 text-base"
-          onClick={() => navigate('/dashboard/bulk-uploader')}
+          onClick={() => navigate('/basic/orders')}
         >
           Continue to Booking
           <IconArrowRight className="w-4 h-4" />
@@ -114,7 +124,7 @@ export function BasicDeliver() {
         <p className="text-xs text-center text-gray-400">
           For bulk bookings,{' '}
           <button
-            onClick={() => navigate('/dashboard/bulk-uploader')}
+            onClick={() => navigate('/basic/bulk')}
             className="text-blue-600 underline underline-offset-2 cursor-pointer"
           >
             use Bulk Upload

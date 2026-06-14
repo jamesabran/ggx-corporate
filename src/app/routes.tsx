@@ -8,6 +8,15 @@ import { SaveAndEarnMore } from './pages/basic/SaveAndEarnMore';
 import { HVMNudge } from './pages/basic/HVMNudge';
 import { BasicDeliver } from './pages/basic/BasicDeliver';
 import { BasicAccount } from './pages/basic/BasicAccount';
+import { BasicOrders } from './pages/basic/BasicOrders';
+import { BasicOrderDetail } from './pages/basic/BasicOrderDetail';
+import { BasicBulkUpload } from './pages/basic/BasicBulkUpload';
+import { BasicStore } from './pages/basic/BasicStore';
+import { BasicInventory } from './pages/basic/BasicInventory';
+import { BasicEarnings } from './pages/basic/BasicEarnings';
+import { BasicSupport } from './pages/basic/BasicSupport';
+import { BasicSettings } from './pages/basic/BasicSettings';
+import { BasicSameDay } from './pages/basic/BasicSameDay';
 import { Login } from './pages/Login';
 import { DashboardWrapper } from './pages/DashboardWrapper';
 import { Transactions } from './pages/Transactions';
@@ -69,10 +78,21 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, Component: BasicDashboard },
-      { path: 'more',    Component: SaveAndEarnMore },
-      { path: 'qualify', Component: HVMNudge },
-      { path: 'deliver', Component: BasicDeliver },
-      { path: 'account', Component: BasicAccount },
+      { path: 'more',     Component: SaveAndEarnMore },
+      { path: 'qualify',  Component: HVMNudge },
+      { path: 'deliver',  Component: BasicDeliver },
+      { path: 'account',  Component: BasicAccount },
+      // Basic-native deep pages — keep self-serve sellers inside BasicLayout
+      // instead of dropping them into the Business+ /dashboard chrome.
+      { path: 'orders',      Component: BasicOrders },
+      { path: 'orders/:id',  Component: BasicOrderDetail },
+      { path: 'bulk',        Component: BasicBulkUpload },
+      { path: 'store',       Component: BasicStore },
+      { path: 'inventory',   Component: BasicInventory },
+      { path: 'earnings',    Component: BasicEarnings },
+      { path: 'support',     Component: BasicSupport },
+      { path: 'settings',    Component: BasicSettings },
+      { path: 'same-day',    Component: BasicSameDay },
     ],
   },
   {

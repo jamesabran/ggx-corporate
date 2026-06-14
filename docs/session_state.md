@@ -5,11 +5,12 @@
 
 ## Current State - Updated 2026-06-14
 
-- **Stage:** Basic User mobile demo complete and pushed.
-- **Branch:** `feature/customer-segment-growth-demo` (pushed to `origin`).
-- **Latest commit:** `72ba058` - design: revise Basic User mobile home to match GGX app visual language.
-- **Build/typecheck status:** green (verified after `72ba058`).
-- **Push status:** pushed — `origin/feature/customer-segment-growth-demo` is up to date.
+- **Stage:** Basic User experience is now self-contained under `/basic/*` —
+  deep CTAs no longer drop into the Business+ `/dashboard` chrome.
+- **Branch:** `feature/customer-segment-growth-demo`.
+- **Build/typecheck status:** green (`npm run typecheck` + `npm run build`
+  verified after the Basic-native pages pass).
+- **Push status:** not pushed in this pass (commit pending; push only when asked).
 - **Working tree note:** `.claude/settings.local.json` is local config; leave it
   alone unless explicitly asked. QA scripts/dirs are gitignored locally.
 
@@ -59,6 +60,57 @@
   so nudge shows on first load). Change default in context to demo `basic` state.
 - No auth gate, no backend calls — all mock/static. Safe to remove the whole
   `/basic` route group without touching Business+ dashboard.
+
+### Refinement pass (aligned to `basic_user_requirements.md`)
+
+- **Same-Day Delivery is no longer a default Basic service.** Removed it from the
+  home service tiles and from the booking-flow default. In `BasicDeliver` it is
+  shown as an eligibility-gated row that routes to the Growing nudge
+  (`/basic/qualify`) instead of being bookable. Matches the doc rule: SDD is an
+  enabled-only capability, surfaced as a Growing → HVM nudge.
+- **"Prepaid Packs" / "Sulit Bundles" standalone framing removed.** The doc treats
+  packs as booking-measurement only. Home tiles now lead with the free Basic
+  toolkit (Standard Delivery, Bulk Upload [Free], Sell Online, Track Order);
+  Save & Earn now surfaces Vouchers, buyer Promo Codes, and a Volume-Pricing
+  Growing nudge (→ `/basic/qualify`).
+- **Desktop responsiveness:** `BasicLayout` now centers the app shell in a
+  phone-width frame (`max-w-[480px]`) on tablet/desktop with a neutral backdrop;
+  bottom nav is pinned to that frame. Mobile (375px) layout is unchanged.
+- **Branding:** softened the account "GGX Basic" badge/footer to normal GGX
+  branding ("Basic" plan label; "GoGo Xpress · Basic account"). Header already
+  used the GoGo Xpress logo.
+- Growing remains a nudge-only layer (segment context default `growing`); no new
+  feature tier. Business+ `/dashboard` routes and public surfaces
+  (`/track`, `/shop`, `/buy`, `/checkout`) untouched.
+
+### Basic-native deep pages (keep sellers inside BasicLayout)
+
+- New routes under `/basic/*`, all rendered inside `BasicLayout` (mobile-first,
+  375px; phone-width frame on desktop). No auth gate, all mock/static:
+  - `orders` + `orders/:id` — bookings/transaction history with quick filters,
+    status timeline, COD summary, track + get-help actions.
+  - `bulk` — Bulk Upload (Free) with dropzone, template download, recent batches.
+  - `store` — Sell Online hub: storefront card, stats, Inventory / Promo Codes /
+    Connect Shopify (Shopify folded in here — no `/dashboard/shopify` link).
+  - `inventory` — product list with stock badges (stock is reference-only, not
+    reserved/deducted — matches product rules).
+  - `earnings` — payout summary (available / processing / collected), payout
+    history, **payout bank enrollment + management dialog**. No contract billing
+    or enterprise finance controls.
+  - `support` — live chat / call / help topics / tickets.
+  - `settings` — profile, address book, payout account, security, notification
+    toggles. No enterprise/role controls.
+  - `same-day` — Same-Day **sales/lead handoff** page (hero, highlights, lead
+    form, "Request Same-Day access" / "Get in touch with Sales", success state).
+    Same-Day is NOT bookable in Basic.
+- Shared mock data in `pages/basic/basicMockData.ts` (orders list ↔ detail).
+- All Basic deep CTAs (home tiles, Explore, Save & Earn, Account, bottom-nav
+  "Orders") now point to `/basic/*`. Bottom nav tab renamed Transactions → Orders.
+- Booking "Same-Day" option in `BasicDeliver` now routes to `/basic/same-day`
+  (was `/basic/qualify`). Account screen no longer links into `/dashboard`.
+- Intentional cross-over kept: `HVMNudge` ("Preview / Explore GGX Business+")
+  still links to `/dashboard` — it is the dedicated upgrade/qualification context
+  where showing the upgrade target is the point. Everyday Basic stays in `/basic`.
 
 ## Current Priority
 

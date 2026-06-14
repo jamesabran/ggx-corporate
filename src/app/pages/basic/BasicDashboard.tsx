@@ -11,9 +11,10 @@ import {
   IconTicket,
   IconGift,
   IconUsers,
-  IconChartBar,
+  IconWallet,
   IconBrandShopee,
-  IconClock,
+  IconMapPin,
+  IconBox,
 } from '@tabler/icons-react';
 import { Badge } from '../../components/ui/Badge';
 import { GrowingNudgeCard } from '../../components/basic/GrowingNudgeCard';
@@ -34,14 +35,6 @@ interface ServiceTile {
 
 const SERVICE_TILES: ServiceTile[] = [
   {
-    label: 'Same Day\nDelivery',
-    icon: IconClock,
-    iconBg: 'bg-orange-100',
-    iconColor: 'text-orange-500',
-    tileBg: 'bg-white',
-    href: '/basic/deliver?type=sameday',
-  },
-  {
     label: 'Standard\nDelivery',
     icon: IconPackage,
     iconBg: 'bg-blue-100',
@@ -55,16 +48,24 @@ const SERVICE_TILES: ServiceTile[] = [
     iconBg: 'bg-violet-100',
     iconColor: 'text-violet-600',
     tileBg: 'bg-white',
-    href: '/dashboard/bulk-uploader',
+    href: '/basic/bulk',
+    badge: 'Free',
   },
   {
-    label: 'Prepaid\nPacks',
-    icon: IconGift,
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
+    label: 'Sell\nOnline',
+    icon: IconBuildingStore,
+    iconBg: 'bg-teal-100',
+    iconColor: 'text-teal-600',
     tileBg: 'bg-white',
-    href: '/basic/more',
-    badge: 'Save',
+    href: '/basic/store',
+  },
+  {
+    label: 'Track\nOrder',
+    icon: IconMapPin,
+    iconBg: 'bg-sky-100',
+    iconColor: 'text-sky-600',
+    tileBg: 'bg-white',
+    href: '/track',
   },
 ];
 
@@ -79,11 +80,11 @@ interface ExploreTile {
 }
 
 const EXPLORE_TILES: ExploreTile[] = [
-  { label: 'Shopify',    icon: IconBrandShopee,   iconBg: 'bg-green-100',  iconColor: 'text-green-600',  href: '/dashboard/shopify' },
-  { label: 'Storefront', icon: IconBuildingStore,  iconBg: 'bg-teal-100',   iconColor: 'text-teal-600',   href: '/dashboard/storefront' },
+  { label: 'Shopify',    icon: IconBrandShopee,   iconBg: 'bg-green-100',  iconColor: 'text-green-600',  href: '/basic/store' },
+  { label: 'Inventory',  icon: IconBox,            iconBg: 'bg-teal-100',   iconColor: 'text-teal-600',   href: '/basic/inventory' },
+  { label: 'Earnings',   icon: IconWallet,         iconBg: 'bg-emerald-100',iconColor: 'text-emerald-600',href: '/basic/earnings' },
   { label: 'Rewards',    icon: IconGift,           iconBg: 'bg-pink-100',   iconColor: 'text-pink-600',   href: '/basic/more' },
   { label: 'Referrals',  icon: IconUsers,          iconBg: 'bg-amber-100',  iconColor: 'text-amber-600',  href: '/basic/more' },
-  { label: 'Analytics',  icon: IconChartBar,       iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600', href: '/dashboard/analytics/basic' },
   { label: 'Vouchers',   icon: IconTicket,         iconBg: 'bg-red-100',    iconColor: 'text-red-500',    href: '/basic/more' },
 ];
 
@@ -203,7 +204,7 @@ export function BasicDashboard() {
       <div className="bg-white rounded-2xl shadow-sm px-4 pt-4 pb-4">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-bold text-gray-900">Activity for Last 7 Days</p>
-          <Link to="/dashboard/transactions" className="text-xs font-semibold text-blue-600 flex items-center gap-0.5">
+          <Link to="/basic/orders" className="text-xs font-semibold text-blue-600 flex items-center gap-0.5">
             View <IconArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -235,7 +236,7 @@ export function BasicDashboard() {
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <p className="text-sm font-bold text-gray-900">Recent Orders</p>
-          <Link to="/dashboard/transactions" className="text-xs font-semibold text-blue-600 flex items-center gap-0.5">
+          <Link to="/basic/orders" className="text-xs font-semibold text-blue-600 flex items-center gap-0.5">
             See all <IconArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -247,7 +248,7 @@ export function BasicDashboard() {
             return (
               <button
                 key={o.id}
-                onClick={() => navigate(`/dashboard/transactions/${o.id}`)}
+                onClick={() => navigate(`/basic/orders/${o.id}`)}
                 className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-gray-50 transition-colors cursor-pointer"
               >
                 {/* Status icon container */}
