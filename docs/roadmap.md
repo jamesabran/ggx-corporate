@@ -23,6 +23,15 @@ deferred production-only stage. Start it only when a BFF/backend exists.
 |---|---|---|
 | Low | Figma/component alignment pass | Reflect new reusable components in the Figma DS when the component library changes materially. |
 
+## Pre-Production Cleanup
+
+Not current demo blockers. Defer unless one of these begins breaking public/demo
+routes.
+
+| Item | Target end state | Notes |
+|---|---|---|
+| `/dashboard` URL cleanup | `/dashboard` means only the authenticated Dashboard landing page. | Authenticated modules become first-level routes (`/transactions`, `/bulk-upload`, `/reports`, `/settings`, etc.) instead of `/dashboard/*`. Existing `/dashboard/*` module routes must be redirected safely when this lands. Not a blocker unless it breaks public/demo routes (`/track`, `/shop`, `/buy`, `/checkout`) or the Basic `/basic/*` layer. |
+
 ## Deferred Production-Only Items
 
 These require backend/BFF contracts and should not be implemented as frontend-only

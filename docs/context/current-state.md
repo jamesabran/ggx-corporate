@@ -15,9 +15,9 @@ project truth.
 
 ## App State
 
-- The latest app checkpoint before this documentation cleanup was Session 54:
-  Storefront access fix and Inventory upsell polish.
-- Build was green at commit `2564363`.
+- For the latest validated checkpoint, build status, and most recent feature work,
+  read `docs/session_state.md` (the authoritative current-state file). Do not treat
+  any commit hash or session number quoted in this file as the current head.
 - Backend integration is the next major stage, but it is blocked until a real BFF
   exists.
 - Mock/demo services remain the implementation substrate for current UI behavior.
