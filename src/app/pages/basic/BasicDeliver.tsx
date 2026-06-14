@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import {
   IconTruck,
@@ -7,10 +8,14 @@ import {
   IconUser,
   IconPhone,
   IconCurrencyDollar,
+  IconTruckDelivery,
+  IconHome,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
+
+type FieldKey = 'recipient' | 'contact' | 'address' | 'cod';
 
 const SERVICE_TYPES = [
   {
@@ -37,11 +42,11 @@ const SERVICE_TYPES = [
   },
 ];
 
-const FORM_FIELDS = [
-  { icon: IconUser,           label: 'Recipient Name',    placeholder: 'Full name' },
-  { icon: IconPhone,          label: 'Contact Number',    placeholder: '+63 9XX XXX XXXX' },
-  { icon: IconMapPin,         label: 'Delivery Address',  placeholder: 'Street, City, Province' },
-  { icon: IconCurrencyDollar, label: 'COD Amount (opt.)', placeholder: '₱0.00' },
+const FORM_FIELDS: { key: FieldKey; icon: typeof IconUser; label: string; placeholder: string; inputMode?: 'tel' | 'numeric' }[] = [
+  { key: 'recipient', icon: IconUser,           label: 'Recipient Name',    placeholder: 'Full name' },
+  { key: 'contact',   icon: IconPhone,          label: 'Contact Number',    placeholder: '+63 9XX XXX XXXX', inputMode: 'tel' },
+  { key: 'address',   icon: IconMapPin,         label: 'Delivery Address',  placeholder: 'Street, City, Province' },
+  { key: 'cod',       icon: IconCurrencyDollar, label: 'COD Amount (opt.)', placeholder: '0.00', inputMode: 'numeric' },
 ];
 
 export function BasicDeliver() {
@@ -50,6 +55,16 @@ export function BasicDeliver() {
   const requested = params.get('type') ?? 'standard';
   // Same-Day is eligibility-gated, so it can never be the selected (bookable) type.
   const preselected = requested === 'sameday' ? 'standard' : requested;
+
+  const [handoff, setHandoff] = useState<'pickup' | 'dropoff'>('pickup');
+  const [form, setForm] = useState<Record<FieldKey, string>>({
+    recipient: '', contact: '', address: '', cod: '',
+  });
+
+  const goToReview = () =>
+    navigate('/basic/deliver/review', {
+      state: { type: 'standard', handoff, ...form },
+    });
 
   return (
     <div className="space-y-0">
@@ -90,6 +105,30 @@ export function BasicDeliver() {
         </div>
       </div>
 
+      {/* Handoff: rider pickup vs drop-off */}
+      <div className="bg-white px-4 pt-4 pb-3 mt-2">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">How we collect</p>
+        <div className="grid grid-cols-2 gap-2.5">
+          {([
+            { key: 'pickup',  label: 'Rider pickup',  sub: 'We collect from you', icon: IconTruckDelivery },
+            { key: 'dropoff', label: 'Drop-off',      sub: 'At the nearest hub',  icon: IconHome },
+          ] as const).map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setHandoff(opt.key)}
+              className={cn(
+                'flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all cursor-pointer',
+                handoff === opt.key ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200 bg-white hover:border-gray-300'
+              )}
+            >
+              <opt.icon className={cn('w-5 h-5', handoff === opt.key ? 'text-blue-600' : 'text-gray-400')} />
+              <p className="text-sm font-semibold text-gray-900 leading-snug">{opt.label}</p>
+              <p className="text-[11px] text-gray-500 leading-snug">{opt.sub}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Quick-form */}
       <div className="bg-white px-4 pt-4 pb-4 mt-2">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Delivery Details</p>
@@ -102,6 +141,9 @@ export function BasicDeliver() {
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider leading-none mb-1">{f.label}</p>
                   <input
                     type="text"
+                    inputMode={f.inputMode}
+                    value={form[f.key]}
+                    onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
                     placeholder={f.placeholder}
                     className="w-full text-sm text-gray-700 placeholder-gray-300 bg-transparent border-none outline-none leading-snug"
                   />
@@ -116,9 +158,9 @@ export function BasicDeliver() {
       <div className="px-4 pt-2 pb-4 space-y-3">
         <Button
           className="w-full h-12 text-base"
-          onClick={() => navigate('/basic/orders')}
+          onClick={goToReview}
         >
-          Continue to Booking
+          Review booking
           <IconArrowRight className="w-4 h-4" />
         </Button>
         <p className="text-xs text-center text-gray-400">

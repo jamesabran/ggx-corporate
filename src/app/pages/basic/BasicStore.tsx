@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import {
   IconBuildingStore,
@@ -8,9 +9,11 @@ import {
   IconChevronRight,
   IconEye,
   IconShare,
+  IconCircleCheckFilled,
 } from '@tabler/icons-react';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { Dialog } from '../../components/ui/Dialog';
 import { cn } from '../../lib/utils';
 
 interface ToolRow {
@@ -19,17 +22,40 @@ interface ToolRow {
   icon: React.ComponentType<{ className?: string }>;
   iconBg: string;
   iconColor: string;
-  to: string;
-  badge?: string;
+  /** Real navigation target. Omitted for demo stubs. */
+  to?: string;
+  /** Demo stub: a badge + a small interest/coming-soon dialog instead of routing. */
+  stub?: 'soon' | 'interest';
 }
 
 const TOOLS: ToolRow[] = [
-  { label: 'Inventory',    sub: 'Add and manage your products',          icon: IconBox,         iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', to: '/basic/inventory' },
-  { label: 'Promo Codes',  sub: 'Create discount codes for buyers',      icon: IconTag,         iconBg: 'bg-pink-100',    iconColor: 'text-pink-600',    to: '/basic/store' },
-  { label: 'Connect Shopify', sub: 'Sync your Shopify store — free',      icon: IconBrandShopee, iconBg: 'bg-green-100',   iconColor: 'text-green-600',   to: '/basic/store', badge: 'Free' },
+  { label: 'Inventory',       sub: 'Add and manage your products',     icon: IconBox,         iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', to: '/basic/inventory' },
+  { label: 'Promo Codes',     sub: 'Create discount codes for buyers', icon: IconTag,         iconBg: 'bg-pink-100',    iconColor: 'text-pink-600',    stub: 'soon' },
+  { label: 'Connect Shopify', sub: 'Sync products from your Shopify store', icon: IconBrandShopee, iconBg: 'bg-green-100', iconColor: 'text-green-600', stub: 'interest' },
 ];
 
+const STUB_COPY: Record<'soon' | 'interest', { badge: string; title: string; body: string; cta: string }> = {
+  soon: {
+    badge: 'Coming soon',
+    title: 'Promo Codes are coming soon',
+    body: 'Soon you’ll be able to create discount codes for your storefront buyers. We’ll let you know the moment it’s ready.',
+    cta: 'Notify me',
+  },
+  interest: {
+    badge: 'Express interest',
+    title: 'Connect your Shopify store',
+    body: 'Shopify sync for Basic sellers is on the way and free to use. Let us know you’re interested and we’ll reach out with setup steps.',
+    cta: 'Express interest',
+  },
+};
+
 export function BasicStore() {
+  const [stub, setStub] = useState<null | 'soon' | 'interest'>(null);
+  const [done, setDone] = useState(false);
+
+  const openStub = (kind: 'soon' | 'interest') => { setDone(false); setStub(kind); };
+  const closeStub = () => setStub(null);
+
   return (
     <div className="px-4 pt-3 pb-2 space-y-4">
       {/* Storefront card */}
@@ -71,21 +97,40 @@ export function BasicStore() {
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <p className="px-4 pt-4 pb-2 text-sm font-bold text-gray-900">Commerce tools</p>
         <div className="divide-y divide-gray-50">
-          {TOOLS.map((t) => (
-            <Link key={t.label} to={t.to} className="flex items-center gap-3 px-4 py-3.5 active:bg-gray-50 transition-colors">
-              <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', t.iconBg)}>
-                <t.icon className={cn('w-5 h-5', t.iconColor)} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-gray-900 leading-snug">{t.label}</p>
-                  {t.badge && <Badge variant="success" className="text-[10px] px-1.5 py-0.5 leading-none">{t.badge}</Badge>}
+          {TOOLS.map((t) => {
+            const inner = (
+              <>
+                <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', t.iconBg)}>
+                  <t.icon className={cn('w-5 h-5', t.iconColor)} />
                 </div>
-                <p className="text-xs text-gray-500 leading-snug mt-0.5">{t.sub}</p>
-              </div>
-              <IconChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-            </Link>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-gray-900 leading-snug">{t.label}</p>
+                    {t.stub && (
+                      <Badge variant={t.stub === 'soon' ? 'default' : 'info'} className="text-[10px] px-1.5 py-0.5 leading-none">
+                        {STUB_COPY[t.stub].badge}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 leading-snug mt-0.5">{t.sub}</p>
+                </div>
+                <IconChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+              </>
+            );
+            return t.stub ? (
+              <button
+                key={t.label}
+                onClick={() => openStub(t.stub!)}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-gray-50 transition-colors cursor-pointer"
+              >
+                {inner}
+              </button>
+            ) : (
+              <Link key={t.label} to={t.to!} className="flex items-center gap-3 px-4 py-3.5 active:bg-gray-50 transition-colors">
+                {inner}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
@@ -94,6 +139,28 @@ export function BasicStore() {
           <IconExternalLink className="w-4 h-4" /> Add a product
         </Button>
       </Link>
+
+      {/* Intentional demo stub dialog (Promo Codes / Connect Shopify) */}
+      <Dialog open={stub !== null} onClose={closeStub} title={stub ? STUB_COPY[stub].title : undefined}>
+        {stub && !done && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500 leading-relaxed">{STUB_COPY[stub].body}</p>
+            <Button className="w-full h-11" onClick={() => setDone(true)}>{STUB_COPY[stub].cta}</Button>
+          </div>
+        )}
+        {stub && done && (
+          <div className="flex flex-col items-center text-center py-2">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center mb-3">
+              <IconCircleCheckFilled className="w-7 h-7 text-emerald-500" />
+            </div>
+            <p className="text-sm font-semibold text-gray-900">You’re on the list</p>
+            <p className="text-xs text-gray-500 mt-1 mb-4 max-w-xs leading-snug">
+              Thanks! We’ll reach out as soon as this is ready for your account.
+            </p>
+            <Button variant="outline" className="h-11 px-6" onClick={closeStub}>Done</Button>
+          </div>
+        )}
+      </Dialog>
     </div>
   );
 }

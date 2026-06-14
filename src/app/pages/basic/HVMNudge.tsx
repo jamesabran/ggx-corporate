@@ -80,7 +80,7 @@ export function HVMNudge() {
         </Card>
 
         <div className="mt-6 w-full space-y-3">
-          <Link to="/dashboard" className="block">
+          <Link to="/basic/business-preview" className="block">
             <Button className="w-full h-12 text-base">
               Explore GGX Business+
               <IconArrowRight className="w-4 h-4" />
@@ -252,13 +252,13 @@ export function HVMNudge() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-semibold text-gray-900">Preview GGX Business+</p>
-              <Link to="/dashboard" className="text-xs font-medium text-blue-600 flex items-center gap-0.5">
+              <Link to="/basic/business-preview" className="text-xs font-medium text-blue-600 flex items-center gap-0.5">
                 Open <IconChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
             <p className="text-xs text-gray-500 leading-snug">
-              You can explore the full Business+ dashboard now. This is the contracted HVM/Corporate
-              experience with subaccounts, advanced analytics, billing, and more.
+              See what Business+ offers when you grow — special pricing, faster delivery options, priority
+              support, and contracted billing, all arranged with our team.
             </p>
           </CardContent>
         </Card>

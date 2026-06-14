@@ -5,8 +5,9 @@
 
 ## Current State - Updated 2026-06-14
 
-- **Stage:** Basic User experience is now self-contained under `/basic/*` —
-  deep CTAs no longer drop into the Business+ `/dashboard` chrome.
+- **Stage:** Basic User experience is now fully self-contained under `/basic/*` —
+  no everyday CTA opens Business+ `/dashboard` chrome, booking has a real
+  review/confirmation step, and Store stubs are intentional.
 - **Branch:** `feature/customer-segment-growth-demo`.
 - **Build/typecheck status:** green (`npm run typecheck` + `npm run build`
   verified after the Basic-native pages pass).
@@ -111,6 +112,26 @@
 - Intentional cross-over kept: `HVMNudge` ("Preview / Explore GGX Business+")
   still links to `/dashboard` — it is the dedicated upgrade/qualification context
   where showing the upgrade target is the point. Everyday Basic stays in `/basic`.
+
+### Polish pass — fully self-contained Basic
+
+- **No more Basic → `/dashboard` crossover.** `HVMNudge` "Explore / Preview
+  Business+" links now point to a new Basic-native page `BasicBusinessPreview`
+  (`/basic/business-preview`): a showcase of what Business+ offers (special
+  pricing, Same-Day/on-demand, priority support, contracted billing) framed as a
+  nudge/lead-capture; CTAs hand off to `/basic/qualify`. It is NOT a tier
+  dashboard. Only a descriptive code comment now mentions `/dashboard`.
+- **Basic booking now has a real review step.** `BasicDeliver` is controlled
+  (recipient/contact/address/COD) and adds a rider-pickup vs drop-off choice;
+  "Review booking" routes to `BasicBookingReview` (`/basic/deliver/review`) via
+  navigation state. Review shows service type, handoff, delivery summary,
+  payment/fees (estimated, frontend-only), and a Confirm CTA that routes to an
+  order detail. Standard stays default; Same-Day still not bookable.
+- **Store stubs are intentional.** `BasicStore` Promo Codes ("Coming soon") and
+  Connect Shopify ("Express interest") now open a small in-page dialog with a
+  notify/express-interest acknowledgement instead of self-routing. They never
+  touch `/dashboard`.
+- New page titles in `BasicLayout`: "GGX Business+", "Review Booking".
 
 ## Current Priority
 

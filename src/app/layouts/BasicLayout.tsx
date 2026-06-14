@@ -26,9 +26,11 @@ export function BasicLayout() {
   const isHome = location.pathname === '/basic' || location.pathname === '/basic/';
 
   const pageTitle = (() => {
-    if (location.pathname.startsWith('/basic/more'))      return 'Save & Earn More';
-    if (location.pathname.startsWith('/basic/qualify'))   return 'Business Benefits';
-    if (location.pathname.startsWith('/basic/deliver'))   return 'Ship Now';
+    if (location.pathname.startsWith('/basic/more'))            return 'Save & Earn More';
+    if (location.pathname.startsWith('/basic/qualify'))         return 'Business Benefits';
+    if (location.pathname.startsWith('/basic/business-preview')) return 'GGX Business+';
+    if (location.pathname.startsWith('/basic/deliver/review'))  return 'Review Booking';
+    if (location.pathname.startsWith('/basic/deliver'))         return 'Ship Now';
     if (location.pathname.startsWith('/basic/account'))   return 'Account';
     if (location.pathname.startsWith('/basic/orders'))    return 'Orders';
     if (location.pathname.startsWith('/basic/bulk'))      return 'Bulk Upload';

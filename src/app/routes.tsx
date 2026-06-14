@@ -17,6 +17,8 @@ import { BasicEarnings } from './pages/basic/BasicEarnings';
 import { BasicSupport } from './pages/basic/BasicSupport';
 import { BasicSettings } from './pages/basic/BasicSettings';
 import { BasicSameDay } from './pages/basic/BasicSameDay';
+import { BasicBusinessPreview } from './pages/basic/BasicBusinessPreview';
+import { BasicBookingReview } from './pages/basic/BasicBookingReview';
 import { Login } from './pages/Login';
 import { DashboardWrapper } from './pages/DashboardWrapper';
 import { Transactions } from './pages/Transactions';
@@ -80,7 +82,8 @@ export const router = createBrowserRouter([
       { index: true, Component: BasicDashboard },
       { path: 'more',     Component: SaveAndEarnMore },
       { path: 'qualify',  Component: HVMNudge },
-      { path: 'deliver',  Component: BasicDeliver },
+      { path: 'deliver',         Component: BasicDeliver },
+      { path: 'deliver/review',  Component: BasicBookingReview },
       { path: 'account',  Component: BasicAccount },
       // Basic-native deep pages — keep self-serve sellers inside BasicLayout
       // instead of dropping them into the Business+ /dashboard chrome.
@@ -91,8 +94,9 @@ export const router = createBrowserRouter([
       { path: 'inventory',   Component: BasicInventory },
       { path: 'earnings',    Component: BasicEarnings },
       { path: 'support',     Component: BasicSupport },
-      { path: 'settings',    Component: BasicSettings },
-      { path: 'same-day',    Component: BasicSameDay },
+      { path: 'settings',         Component: BasicSettings },
+      { path: 'same-day',         Component: BasicSameDay },
+      { path: 'business-preview', Component: BasicBusinessPreview },
     ],
   },
   {
