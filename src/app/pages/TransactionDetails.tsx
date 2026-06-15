@@ -16,6 +16,8 @@ import {
   getTransactionTotals,
   statusConfig,
   serviceTypeLabel,
+  SOURCE_TYPE_LABEL,
+  BOOKING_METHOD_LABEL,
   type Transaction,
 } from '../services/transactionService';
 import {
@@ -331,6 +333,44 @@ export function TransactionDetails() {
               </CardContent>
             </Card>
           )}
+
+          {/* Order attribution — scope, source, connected store, booking method */}
+          <Card>
+            <CardHeader><CardTitle>Order Source &amp; Attribution</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Account scope</p>
+                  <p className="text-gray-900 text-sm">
+                    {transaction.attribution.accountScope === 'main' ? 'Main Account' : 'Subaccount'}
+                    {transaction.attribution.accountScope === 'subaccount' && (
+                      <span className="text-gray-500"> · {transaction.subaccount}</span>
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Source</p>
+                  <p className="text-gray-900 text-sm">{SOURCE_TYPE_LABEL[transaction.attribution.sourceType]}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Booking method</p>
+                  <p className="text-gray-900 text-sm">{BOOKING_METHOD_LABEL[transaction.attribution.bookingMethod]}</p>
+                </div>
+                {transaction.attribution.connectedStore && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Connected store / integration</p>
+                    <p className="text-gray-900 text-sm">{transaction.attribution.connectedStore}</p>
+                  </div>
+                )}
+                {transaction.attribution.createdBy && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Created by</p>
+                    <p className="text-gray-900 text-sm">{transaction.attribution.createdBy}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {transaction.batch && (
             <Card>

@@ -58,20 +58,30 @@ import {
   statusConfig,
   getTransactionByTracking,
   subaccountDisplayLabel,
+  sourceTypeLabel,
   serviceTypeLabel,
+  bookingMethodGroup,
   SERVICE_TYPE_SHORT_LABEL,
+  SOURCE_TYPE_LABEL,
+  BOOKING_METHOD_LABEL,
   type Transaction,
   type TransactionSummary,
   type TransactionStatus,
   type TransactionSource,
   type TransactionBatch,
   type DeliveryServiceType,
+  type SourceType,
+  type BookingMethod,
+  type OrderAttribution,
 } from '../data/transactions';
 import { getAccountIdByName } from '../data/accounts';
 import { getSettlement } from '../data/earnings';
 import type { SettlementTransaction } from '../data/earnings';
 
-export type { Transaction, TransactionSummary, TransactionStatus, TransactionSource, TransactionBatch, DeliveryServiceType };
+export type { Transaction, TransactionSummary, TransactionStatus, TransactionSource, TransactionBatch, DeliveryServiceType, SourceType, BookingMethod, OrderAttribution };
+
+/** Attribution display helpers + label maps (re-exported for UI consumers). */
+export { sourceTypeLabel, bookingMethodGroup, SOURCE_TYPE_LABEL, BOOKING_METHOD_LABEL };
 
 /**
  * Service-type display helpers (re-exported for UI consumers). `serviceTypeLabel`
@@ -106,6 +116,8 @@ export interface TransactionFilters {
   type?: string;
   /** Delivery service type (Standard / Same-Day / On-Demand). */
   serviceType?: DeliveryServiceType | 'all';
+  /** High-level Source (attribution). */
+  sourceType?: SourceType | 'all';
   /** Subaccount display name (legacy; prefer `subaccountId` once migration is complete). */
   subaccountName?: string;
   /** Canonical subaccount id. If provided, takes precedence over `subaccountName`. */
@@ -120,7 +132,7 @@ export async function getTransactions(
   let result = [...deliveries];
   if (!filters) return result;
 
-  const { status, type, serviceType, subaccountName, subaccountId, search } = filters;
+  const { status, type, serviceType, sourceType, subaccountName, subaccountId, search } = filters;
 
   if (status && status !== 'all') {
     result = result.filter((t) => t.status === status);
@@ -130,6 +142,9 @@ export async function getTransactions(
   }
   if (serviceType && serviceType !== 'all') {
     result = result.filter((t) => t.serviceType === serviceType);
+  }
+  if (sourceType && sourceType !== 'all') {
+    result = result.filter((t) => t.sourceType === sourceType);
   }
   if (subaccountId && subaccountId !== 'all' && subaccountId !== 'main') {
     // Match via batch.accountId or the subaccount-name→id bridge, so manual and
