@@ -9,7 +9,7 @@ import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { LocationCascadeFields } from '../components/LocationCascadeFields';
 import { CheckoutDeliveryOptions } from '../components/CheckoutDeliveryOptions';
-import { CheckoutPaymentOptions, type DeliveryFeePayer } from '../components/CheckoutPaymentOptions';
+import { CheckoutPaymentOptions } from '../components/CheckoutPaymentOptions';
 import { getInventoryProduct, productCover, type InventoryProduct } from '../services/inventoryService';
 import { getFeatureStateSync } from '../services/featureEnablementService';
 import { getStorefrontProfile } from '../services/storefrontService';
@@ -59,7 +59,6 @@ export function BuyerCheckout() {
     ...(odEnabled ? (['on_demand'] as DeliveryServiceType[]) : []),
   ];
   const [deliveryOption, setDeliveryOption] = useState<DeliveryServiceType>('standard');
-  const [feePayer, setFeePayer] = useState<DeliveryFeePayer>('buyer');
 
   useEffect(() => {
     let active = true;
@@ -94,9 +93,11 @@ export function BuyerCheckout() {
   const qty = Math.max(1, Number(form.qty) || 1);
   const subtotal = product ? product.unitPrice * qty : 0;
   const region = classifyRegion(form.province);
+  const feeKnown = region !== 'unknown';
+  // Buyer always pays the delivery fee on COD orders (mock default). Who covers
+  // the fee is seller/store configuration, not a buyer-facing choice.
   const deliveryFee = estimateDeliveryFee(deliveryOption, region);
-  const buyerFee = feePayer === 'buyer' ? deliveryFee : 0;
-  const collectTotal = subtotal + buyerFee;
+  const collectTotal = subtotal + (feeKnown ? deliveryFee : 0);
   const outOfStock = !!product && (product.status !== 'active' || (!product.unlimitedStock && product.stockQuantity <= 0));
   const canOrder = useMemo(
     () => !outOfStock && form.name.trim() && form.mobile.trim() && form.street.trim()
@@ -163,7 +164,7 @@ export function BuyerCheckout() {
               <Row label="Deliver to">{form.name} · {form.mobile}</Row>
               <Row label="Address">{[form.street, form.barangay, form.city, form.province].filter(Boolean).join(', ')}</Row>
               <Row label="Subtotal">{peso(subtotal)}</Row>
-              <Row label="Delivery fee">{buyerFee > 0 ? peso(buyerFee) : 'Seller-paid'}</Row>
+              <Row label="Delivery fee">{peso(deliveryFee)}</Row>
               <div className="border-t border-gray-100 pt-2 flex justify-between font-semibold">
                 <span className="text-gray-900">Total to collect (COD)</span><span className="text-gray-900">{peso(collectTotal)}</span>
               </div>
@@ -253,7 +254,7 @@ export function BuyerCheckout() {
 
           <Card>
             <CardContent className="p-6">
-              <CheckoutPaymentOptions feePayer={feePayer} onFeePayerChange={setFeePayer} />
+              <CheckoutPaymentOptions />
             </CardContent>
           </Card>
         </div>
@@ -279,9 +280,9 @@ export function BuyerCheckout() {
                   <span className="font-medium text-gray-900">{peso(subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Delivery fee {feePayer === 'seller' && <span className="text-xs text-gray-400">(seller-paid)</span>}</span>
+                  <span className="text-gray-600">Delivery fee</span>
                   <span className="font-medium text-gray-900">
-                    {feePayer === 'seller' ? <span className="text-emerald-600">Free</span> : peso(deliveryFee)}
+                    {feeKnown ? peso(deliveryFee) : <span className="text-gray-400 font-normal text-xs">Calculated after address</span>}
                   </span>
                 </div>
                 <div className="border-t border-gray-100 pt-2 flex justify-between">

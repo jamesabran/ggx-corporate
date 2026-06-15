@@ -60,10 +60,12 @@
   pickup → Out for delivery → Completed (or Cancelled). The Deliveries tab shows
   delivery/fulfilment statuses only.
 - **Buyer checkout** uses a 65/35 desktop layout (details/payment · order
-  summary), friendly timing labels (no STD/SDD/OD), a payment section (COD live;
-  online/prepaid coming soon) and delivery-fee handling (buyer pays vs seller
-  absorbs) feeding the COD total. Delivery fees are demo estimates
-  (`lib/checkoutEstimates.ts`); real rates stay backend-owned.
+  summary), friendly timing labels (no STD/SDD/OD), and a tabbed payment section
+  (Cash/COD live; e-wallets / card / online banking present but coming soon). The
+  buyer does **not** choose who pays the delivery fee — fee-payer is seller/store
+  config, not a buyer control. The delivery fee (mock estimate,
+  `lib/checkoutEstimates.ts`; real rates backend-owned) is added to the COD total,
+  shown as "Calculated after address" until a province is entered.
 - Buyer order status: `awaiting_acceptance` → `accepted` | `rejected`.
 - A delivery transaction is created (revealed) **only when the seller accepts**.
   At acceptance, a tracking number is assigned and — for On-Demand — the delivery
