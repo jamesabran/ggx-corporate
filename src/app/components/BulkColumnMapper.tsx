@@ -14,8 +14,8 @@ const GGX_FIELDS = [
   { key: 'cityMunicipality',  label: 'City/Municipality',          required: true  },
   { key: 'barangay',          label: 'Barangay',                   required: true  },
   { key: 'landmarks',         label: 'Landmarks, Floor or Unit #', required: false },
-  { key: 'itemName',          label: 'Item Name',                  required: false },
-  { key: 'pouchSize',         label: 'Pouch/box size',             required: false },
+  { key: 'itemName',          label: 'Item Name',                  required: true  },
+  { key: 'pouchSize',         label: 'Pouch/box size',             required: true  },
   { key: 'cod',               label: 'Cash on delivery (COD)',     required: false },
   { key: 'codAmount',         label: 'COD Amount',                 required: false },
   { key: 'declaredValue',     label: 'Declared Value',             required: false },
@@ -36,15 +36,40 @@ export interface BulkColumnMapperProps {
   onDownloadTemplate: () => void;
 }
 
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// Obvious header aliases (synonyms) used to strengthen auto-mapping. These
+// supplement — not replace — the existing label-substring matching below.
+const FIELD_ALIASES: Partial<Record<FieldKey, string[]>> = {
+  recipientName: ['recipient', 'buyer', 'buyer name', 'consignee', 'customer name', 'customer'],
+  mobileNumber: ['mobile', 'mobile no', 'mobile number', 'phone', 'contact', 'contact no', 'contact number', 'cp', 'cp#', 'cellphone', 'cell'],
+  streetAddress: ['address', 'ship to', 'shipping address', 'delivery address'],
+  province: ['state', 'region'],
+  cityMunicipality: ['city', 'municipality', 'town', 'city/town', 'city / town'],
+  barangay: ['brgy', 'district', 'village'],
+  landmarks: ['unit', 'floor', 'unit/floor', 'landmark'],
+  itemName: ['item', 'product', 'product name', 'item description', 'description'],
+  pouchSize: ['pouch', 'box size', 'pouch size', 'receptacle size', 'parcel size', 'package size'],
+  cod: ['cod', 'cash on delivery', 'collect'],
+  codAmount: ['cod amount', 'collectible', 'collectible amount', 'amount'],
+  declaredValue: ['item value', 'declared'],
+};
+
 function autoMap(fileHeaders: string[], fields: typeof GGX_FIELDS): Record<string, string> {
   const result: Record<string, string> = {};
+  // Track headers already consumed so auto-map never produces duplicate mappings.
+  const used = new Set<string>();
   for (const field of fields) {
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
     const nf = norm(field.label);
+    const aliases = (FIELD_ALIASES[field.key] ?? []).map(norm);
     for (const h of fileHeaders) {
+      if (used.has(h)) continue;
       const nh = norm(h);
-      if (nf === nh || (nf.length > 4 && nh.includes(nf)) || (nh.length > 4 && nf.includes(nh))) {
+      const labelMatch = nf === nh || (nf.length > 4 && nh.includes(nf)) || (nh.length > 4 && nf.includes(nh));
+      const aliasMatch = aliases.some((a) => a === nh || (a.length > 3 && (nh === a || nh.includes(a))));
+      if (labelMatch || aliasMatch) {
         result[field.key] = h;
+        used.add(h);
         break;
       }
     }
@@ -65,6 +90,21 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
   const requiredMapped = GGX_FIELDS
     .filter((f) => f.required)
     .every((f) => !!mapping[f.key]);
+
+  // Headers currently selected by any field — used to mark dropdown options as
+  // "In use" vs "Available" without adding a separate summary panel.
+  const usedHeaders = new Set(GGX_FIELDS.map((f) => mapping[f.key]).filter(Boolean));
+
+  // Detect uploaded columns mapped to more than one GGX field.
+  const headerToFields = new Map<string, string[]>();
+  for (const field of GGX_FIELDS) {
+    const h = mapping[field.key];
+    if (h) headerToFields.set(h, [...(headerToFields.get(h) ?? []), field.label]);
+  }
+  const duplicateMappings = [...headerToFields.entries()].filter(([, fields]) => fields.length > 1);
+  const hasDuplicates = duplicateMappings.length > 0;
+
+  const canConfirm = requiredMapped && !hasDuplicates;
 
   const maxOffset = Math.max(0, sampleData.length - SAMPLE_COLS);
 
@@ -150,9 +190,15 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
                           className="text-sm w-full"
                         >
                           <option value="">Select column</option>
-                          {fileHeaders.map((h) => (
-                            <option key={h} value={h}>{h}</option>
-                          ))}
+                          {fileHeaders.map((h) => {
+                            // Mark availability so users can see which uploaded
+                            // columns are still free vs already mapped elsewhere.
+                            const suffix =
+                              h === selectedHeader ? '' : usedHeaders.has(h) ? '  · In use' : '  · Available';
+                            return (
+                              <option key={h} value={h}>{h}{suffix}</option>
+                            );
+                          })}
                         </Select>
                       </td>
                       {visibleSampleCols.map((sample, i) => (
@@ -173,6 +219,23 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
         </CardContent>
       </Card>
 
+      {/* Duplicate mapping warning */}
+      {hasDuplicates && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-medium text-amber-800">
+            Some uploaded columns are mapped to more than one field
+          </p>
+          <ul className="mt-1 space-y-0.5 text-xs text-amber-700 list-disc list-inside">
+            {duplicateMappings.map(([header, fields]) => (
+              <li key={header}>
+                <span className="font-medium">“{header}”</span> is mapped to: {fields.join(', ')}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1 text-xs text-amber-700">Assign a different column to each field to continue.</p>
+        </div>
+      )}
+
       {/* Footer actions */}
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={onBack}>
@@ -183,7 +246,7 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
           {!requiredMapped && (
             <p className="text-xs text-gray-500">Map all required fields (*) to continue</p>
           )}
-          <Button disabled={!requiredMapped} onClick={() => onConfirm(mapping as Record<FieldKey, string>)}>
+          <Button disabled={!canConfirm} onClick={() => onConfirm(mapping as Record<FieldKey, string>)}>
             Confirm Fields and Upload
           </Button>
         </div>
