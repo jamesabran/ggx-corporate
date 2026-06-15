@@ -4,28 +4,31 @@ import { Button } from './ui/Button';
 import { Select } from './ui/Select';
 import { Card, CardContent } from './ui/Card';
 import { loadState, saveState } from '../lib/storage';
+import { BULK_FIELD_LABELS as L } from '../data/bulkTemplate';
 
-// GGX field definitions for column mapping. Field names and required/optional
-// logic align with the in-app spreadsheet bulk uploader rules. Optional fields
-// carry "(Optional)" in their label; required fields are identified by its
-// absence (no asterisks). Item Protection Fee is intentionally not a mapper field.
+// GGX field definitions for column mapping. Labels come from the shared
+// BULK_FIELD_LABELS so the mapper matches the in-app spreadsheet, failed-orders
+// table, and template. Optional fields carry "(Optional)" in their label;
+// required fields omit it (no asterisks). Item Protection Fee is intentionally
+// not a mapper field. (`itemProtection` key maps to the "Insure full item value?"
+// field — the key is internal and kept stable.)
 const GGX_FIELDS = [
-  { key: 'recipientName',     label: 'Name',                                       required: true  },
-  { key: 'mobileNumber',      label: 'Mobile',                                     required: true  },
-  { key: 'streetAddress',     label: 'Street Address',                             required: true  },
-  { key: 'province',          label: 'Province',                                   required: true  },
-  { key: 'cityMunicipality',  label: 'City / Municipality',                        required: true  },
-  { key: 'barangay',          label: 'Barangay',                                   required: true  },
-  { key: 'landmarks',         label: 'Landmarks, Floor or Unit Number (Optional)', required: false },
-  { key: 'itemName',          label: 'Item Name',                                  required: true  },
-  { key: 'pouchSize',         label: 'Pouch/box size',                             required: true  },
-  { key: 'codAmount',         label: 'COD Amount',                                 required: true  },
-  { key: 'cod',               label: 'Cash on delivery (COD)',                     required: true  },
-  { key: 'declaredValue',     label: 'Declared Item Value',                        required: true  },
-  { key: 'itemProtection',    label: 'Insure full item value?',                    required: true  },
-  { key: 'recipientPaysFees', label: 'Recipient Pays Fees',                        required: true  },
-  { key: 'promoCode',         label: 'Promo Code (Optional)',                      required: false },
-  { key: 'referenceId',       label: 'Reference ID (Optional)',                    required: false },
+  { key: 'recipientName',     label: L.name,              required: true  },
+  { key: 'mobileNumber',      label: L.mobile,            required: true  },
+  { key: 'streetAddress',     label: L.streetAddress,     required: true  },
+  { key: 'province',          label: L.province,          required: true  },
+  { key: 'cityMunicipality',  label: L.cityMunicipality,  required: true  },
+  { key: 'barangay',          label: L.barangay,          required: true  },
+  { key: 'landmarks',         label: L.landmarks,         required: false },
+  { key: 'itemName',          label: L.itemName,          required: true  },
+  { key: 'pouchSize',         label: L.pouchSize,         required: true  },
+  { key: 'codAmount',         label: L.codAmount,         required: true  },
+  { key: 'cod',               label: L.cod,               required: true  },
+  { key: 'declaredValue',     label: L.declaredValue,     required: true  },
+  { key: 'itemProtection',    label: L.insureFull,        required: true  },
+  { key: 'recipientPaysFees', label: L.recipientPaysFees, required: true  },
+  { key: 'promoCode',         label: L.promoCode,         required: false },
+  { key: 'referenceId',       label: L.referenceId,       required: false },
 ] as const;
 
 type FieldKey = (typeof GGX_FIELDS)[number]['key'];
@@ -43,19 +46,26 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 // Obvious header aliases (synonyms) used to strengthen auto-mapping. These
 // supplement — not replace — the existing label-substring matching below.
+// Aliases keep older/varied uploaded headers auto-mapping after the rename to the
+// shared field model — including the previous GGX labels (Recipient Name, Mobile
+// Number, City/Municipality, Declared Value, Item Protection, Promo code, etc.).
 const FIELD_ALIASES: Partial<Record<FieldKey, string[]>> = {
-  recipientName: ['recipient', 'buyer', 'buyer name', 'consignee', 'customer name', 'customer'],
+  recipientName: ['recipient', 'recipient name', 'buyer', 'buyer name', 'consignee', 'customer name', 'customer'],
   mobileNumber: ['mobile', 'mobile no', 'mobile number', 'phone', 'contact', 'contact no', 'contact number', 'cp', 'cp#', 'cellphone', 'cell'],
-  streetAddress: ['address', 'ship to', 'shipping address', 'delivery address'],
+  streetAddress: ['address', 'street address', 'ship to', 'shipping address', 'delivery address'],
   province: ['state', 'region'],
-  cityMunicipality: ['city', 'municipality', 'town', 'city/town', 'city / town'],
+  cityMunicipality: ['city', 'municipality', 'city/municipality', 'town', 'city/town', 'city / town'],
   barangay: ['brgy', 'district', 'village'],
-  landmarks: ['unit', 'floor', 'unit/floor', 'landmark'],
-  itemName: ['item', 'product', 'product name', 'item description', 'description'],
-  pouchSize: ['pouch', 'box size', 'pouch size', 'receptacle size', 'parcel size', 'package size'],
-  cod: ['cod', 'cash on delivery', 'collect'],
+  landmarks: ['unit', 'floor', 'unit/floor', 'landmark', 'landmarks'],
+  itemName: ['item', 'item name', 'product', 'product name', 'item description', 'description'],
+  pouchSize: ['pouch', 'box size', 'pouch size', 'pouch/box size', 'receptacle size', 'parcel size', 'package size', 'size'],
+  cod: ['cod', 'cash on delivery', 'collect cod', 'collect item value', 'collect'],
   codAmount: ['cod amount', 'collectible', 'collectible amount', 'amount'],
   declaredValue: ['declared value', 'declared item value', 'item value', 'declared', 'value'],
+  itemProtection: ['insure', 'insure full value', 'insure full item value', 'item protection', 'protection'],
+  recipientPaysFees: ['recipient pays', 'recipient pays fees', 'pays fees', 'who pays'],
+  promoCode: ['promo', 'promo code', 'voucher', 'discount code'],
+  referenceId: ['reference id', 'reference', 'ref id', 'ref', 'tracking', 'tracking id'],
 };
 
 function autoMap(fileHeaders: string[], fields: typeof GGX_FIELDS): Record<string, string> {

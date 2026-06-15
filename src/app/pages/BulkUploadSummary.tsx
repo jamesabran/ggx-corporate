@@ -14,7 +14,7 @@ import { PaymentMethodTabs, type SelectedPaymentMethod } from '../components/Pay
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
 import { isBillingAccount } from '../services/paymentService';
 import { getBulkUploadById, getSpreadsheetBatchRows, type SpreadsheetBatchRow } from '../services/bulkUploadService';
-import { RECEPTACLE_SIZES } from '../data/bulkTemplate';
+import { RECEPTACLE_SIZES, BULK_FIELD_LABELS as L } from '../data/bulkTemplate';
 import { LocationCascadeCells } from '../components/LocationCascadeCells';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 
@@ -112,7 +112,7 @@ interface ErrorRowData {
 const INITIAL_ERROR_ROWS: ErrorRowData[] = [
   {
     row: 3,
-    errors: ['"Mobile Number" field is required', '"Pouch/box size" field is required', '"Insure full item value?" field is required'],
+    errors: ['"Mobile" field is required', '"Pouch/box size" field is required', '"Insure full item value?" field is required'],
     recipientName: 'Jen Ramos', mobileNumber: '', streetAddress: '123 Penarubia St.',
     province: 'Metro Manila', cityMunicipality: 'Mandaluyong City', barangay: 'Malamig', landmarks: '–',
     itemName: 'UNO FLIP! Double Sided Card', pouchSize: '', cod: 'No', codAmount: '',
@@ -202,9 +202,9 @@ function validateEdits(
 ): string[] {
   const errs: string[] = [];
 
-  if (row.errors.some((e) => e.includes('Mobile Number'))  && !edits.mobileNumber.trim())  errs.push('"Mobile Number" field is required');
-  if (row.errors.some((e) => e.includes('Recipient Name')) && !edits.recipientName.trim()) errs.push('"Recipient Name" field is required');
-  if (row.errors.some((e) => e.includes('Street Address')) && !edits.streetAddress.trim()) errs.push('"Street Address" field is required');
+  if (row.errors.some((e) => e.includes('"Mobile"'))         && !edits.mobileNumber.trim())  errs.push('"Mobile" field is required');
+  if (row.errors.some((e) => e.includes('"Name"'))           && !edits.recipientName.trim()) errs.push('"Name" field is required');
+  if (row.errors.some((e) => e.includes('"Street Address"')) && !edits.streetAddress.trim()) errs.push('"Street Address" field is required');
   if (row.errors.some((e) => e.includes('Pouch/box size') && e.includes('required')) && !edits.pouchSize.trim()) {
     errs.push('"Pouch/box size" field is required');
   }
@@ -236,9 +236,9 @@ function validateEdits(
 
 function fieldHasError(fieldKey: EditableField, row: ErrorRowData, edits: RowEdits): boolean {
   switch (fieldKey) {
-    case 'mobileNumber':  return row.errors.some((e) => e.includes('Mobile Number'))  && !edits.mobileNumber.trim();
-    case 'recipientName': return row.errors.some((e) => e.includes('Recipient Name')) && !edits.recipientName.trim();
-    case 'streetAddress': return row.errors.some((e) => e.includes('Street Address')) && !edits.streetAddress.trim();
+    case 'mobileNumber':  return row.errors.some((e) => e.includes('"Mobile"'))         && !edits.mobileNumber.trim();
+    case 'recipientName': return row.errors.some((e) => e.includes('"Name"'))           && !edits.recipientName.trim();
+    case 'streetAddress': return row.errors.some((e) => e.includes('"Street Address"')) && !edits.streetAddress.trim();
     case 'insureFull':    return row.errors.some((e) => e.includes('Insure full item value')) && !edits.insureFull.trim();
     case 'pouchSize':
       if (row.errors.some((e) => e.includes('Pouch/box size') && e.includes('required')) && !edits.pouchSize.trim()) return true;
@@ -451,8 +451,8 @@ export function BulkUploadSummary() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Recipient</TableHead>
-                      <TableHead>Item Name</TableHead>
+                      <TableHead>{L.name}</TableHead>
+                      <TableHead>{L.itemName}</TableHead>
                       <TableHead className="text-right">Item Price</TableHead>
                       <TableHead>Fees paid by</TableHead>
                       <TableHead className="text-right">Fees</TableHead>
@@ -484,13 +484,13 @@ export function BulkUploadSummary() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Recipient</TableHead>
-                      <TableHead>Mobile</TableHead>
+                      <TableHead>{L.name}</TableHead>
+                      <TableHead>{L.mobile}</TableHead>
                       <TableHead>Location</TableHead>
-                      <TableHead>Product</TableHead>
+                      <TableHead>{L.itemName}</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
-                      <TableHead className="text-right">Declared value</TableHead>
-                      <TableHead>Parcel size</TableHead>
+                      <TableHead className="text-right">{L.declaredValue}</TableHead>
+                      <TableHead>{L.pouchSize}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -566,25 +566,25 @@ export function BulkUploadSummary() {
                   <tr>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 w-12">Row</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[190px]">Error</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[160px]">Recipient Name <span className="text-red-500">*</span></th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">Mobile Number <span className="text-red-500">*</span></th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[200px]">Street Address <span className="text-red-500">*</span></th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">Province <span className="text-red-500">*</span></th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[190px]">City/Municipality <span className="text-red-500">*</span></th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">Barangay <span className="text-red-500">*</span></th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">Landmarks / Unit #</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[185px]">Item Name</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">Pouch/box size</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[110px]">COD?</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[130px]">COD Amount</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[130px]">Declared Value</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">Insure full item value? <span className="text-red-500">*</span></th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[160px]">{L.name}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">{L.mobile}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[200px]">{L.streetAddress}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">{L.province}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[190px]">{L.cityMunicipality}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">{L.barangay}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[210px]">{L.landmarks}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[185px]">{L.itemName}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.pouchSize}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[170px]">{L.cod}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[130px]">{L.codAmount}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.declaredValue}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.insureFull}</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[145px]">
                       Item Protection Fee
-                      <span className="font-normal text-gray-400 block text-xs leading-tight">(Declared − ₱500) × 1%</span>
+                      <span className="font-normal text-gray-400 block text-xs leading-tight">Auto-calculated · (Declared − ₱500) × 1%</span>
                     </th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">Recipient Pays Fees</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[140px]">Reference ID</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.recipientPaysFees}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[160px]">{L.referenceId}</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[80px]">Actions</th>
                   </tr>
                 </thead>
@@ -622,13 +622,13 @@ export function BulkUploadSummary() {
                         {/* Mobile Number */}
                         <td className="px-3 py-2.5">
                           <ErrInput value={edits.mobileNumber} onChange={(v) => updateEdit(row.row, 'mobileNumber', v)} error={fe('mobileNumber')} placeholder="e.g. +639170000000" />
-                          {fe('mobileNumber') && <p className="text-xs text-red-600 mt-0.5">Contact number is required</p>}
+                          {fe('mobileNumber') && <p className="text-xs text-red-600 mt-0.5">Mobile is required</p>}
                         </td>
 
                         {/* Street Address */}
                         <td className="px-3 py-2.5">
                           <ErrInput value={edits.streetAddress} onChange={(v) => updateEdit(row.row, 'streetAddress', v)} error={fe('streetAddress')} />
-                          {fe('streetAddress') && <p className="text-xs text-red-600 mt-0.5">Address is required</p>}
+                          {fe('streetAddress') && <p className="text-xs text-red-600 mt-0.5">Street Address is required</p>}
                         </td>
 
                         {/* Province / City/Municipality / Barangay — 3 cascade cells */}

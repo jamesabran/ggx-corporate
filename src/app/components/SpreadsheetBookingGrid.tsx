@@ -179,7 +179,7 @@ export function SpreadsheetBookingGrid({
               <th className="sticky left-0 z-10 bg-gray-50 px-2 py-2 text-gray-400 font-medium text-center">#</th>
               {BOOKING_COLUMNS.map((col) => (
                 <th key={col.key} className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">
-                  {col.label}{col.required && <span className="text-red-500"> *</span>}
+                  {col.label}
                 </th>
               ))}
               <th className="px-2 py-2 text-center text-gray-400 font-medium">Row</th>

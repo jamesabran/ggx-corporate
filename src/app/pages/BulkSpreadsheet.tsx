@@ -412,7 +412,7 @@ export function BulkSpreadsheet() {
               {fees.pendingRows > 0 && (
                 <p className="text-xs text-gray-500 flex items-start gap-1">
                   <IconInfoCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  {fees.pendingRows} row{fees.pendingRows === 1 ? '' : 's'} pending — add parcel size to estimate.
+                  {fees.pendingRows} row{fees.pendingRows === 1 ? '' : 's'} pending — add Pouch/box size to estimate.
                 </p>
               )}
               <p className="text-xs text-gray-400">
