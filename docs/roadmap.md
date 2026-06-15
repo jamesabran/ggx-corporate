@@ -23,6 +23,21 @@ deferred production-only stage. Start it only when a BFF/backend exists.
 |---|---|---|
 | Low | Figma/component alignment pass | Reflect new reusable components in the Figma DS when the component library changes materially. |
 
+## Future Backlog (Planned, Not Started)
+
+Detailed specs (copy, enums, payloads): `context/future-backlog.md`.
+
+| Group | Item | Summary |
+|---|---|---|
+| Data / Attribution | Order attribution model | Four dimensions (account scope, source, connected store/integration, booking method). Transactions stays simple (Subaccount + short Source column); detail/filters/exports/reports/analytics go granular. Bulk template upload vs in-app spreadsheet roll up as `Bulk Upload` in UI but stay separate in data. |
+| Data / Attribution | Storefront vs Single Product Checkout | Track storefront checkout and standalone product-link checkout separately in analytics; do not merge. |
+| Bulk Upload | Smart column matching | Auto-suggest field mappings (exact/synonym/sample-value); dynamic auto-match message; user must review before continuing. |
+| Bulk Upload | Missing/unmatched column visibility | Block on unmatched required fields; surface optional unmatched and non-imported extra columns without blocking. |
+| Bulk Upload | Saved column mapping templates | Save final user-confirmed mapping for reuse; toggle default ON near CTA. |
+| Bulk Upload | Mapping template scope | Subaccount / Main Account / shared account-level scoping; explicit sharing; scoped suggestion order. |
+| Backend / API Integrations | Drop-off Locations API | `POST /v1/sams/distancefromhubs` for nearby hubs by address. Production-only; see deferred items below. |
+| Backend / API Integrations | Rates API | `POST /v2/orders/estimates/rates` for delivery rate estimates. Bearer token via `.env.local`/BFF only — never committed or exposed in frontend. Production-only. |
+
 ## Deferred Production-Only Items
 
 These require backend/BFF contracts and should not be implemented as frontend-only
@@ -39,6 +54,8 @@ source-of-truth logic.
 | Uploaded-file path adoption of `lib/bookingValidation` | Wait for real file parsing; retain template-specific coverage such as COD cap, duplicate Reference ID, and pouch size. |
 | Custom Reports saved template persistence | Backend-owned persistence for user-defined report templates. |
 | Custom Reports scheduled exports | Backend-owned scheduling and delivery channel support. |
+| Drop-off Locations API integration | `POST /v1/sams/distancefromhubs`. Address-based hub discovery; needs backend/BFF wiring. See `context/future-backlog.md`. |
+| Rates API integration | `POST /v2/orders/estimates/rates`. Rate estimates must come from backend; Bearer token via BFF, never exposed in frontend. See `context/future-backlog.md`. |
 
 ## Completed Current-State Highlights
 

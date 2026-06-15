@@ -50,6 +50,7 @@ check whether the other needs the same update.
 | `context/business-plus-addons.md` | Account Add-ons, access status, CTA, scope rules |
 | `context/commerce-workflows.md` | Inventory, Storefront, checkout/cart demo surfaces |
 | `context/bulk-booking.md` | Upload File, in-app spreadsheet, product attachment, fees |
+| `context/future-backlog.md` | Detailed specs for planned-but-not-started roadmap items |
 | `context/ui-components.md` | Design system, component, responsive, and Figma rules |
 
 ## Detailed Rule Docs
