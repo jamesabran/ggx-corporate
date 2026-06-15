@@ -55,7 +55,7 @@ const FIELD_ALIASES: Partial<Record<FieldKey, string[]>> = {
   pouchSize: ['pouch', 'box size', 'pouch size', 'receptacle size', 'parcel size', 'package size'],
   cod: ['cod', 'cash on delivery', 'collect'],
   codAmount: ['cod amount', 'collectible', 'collectible amount', 'amount'],
-  declaredValue: ['item value', 'declared'],
+  declaredValue: ['declared value', 'declared item value', 'item value', 'declared', 'value'],
 };
 
 function autoMap(fileHeaders: string[], fields: typeof GGX_FIELDS): Record<string, string> {
@@ -232,11 +232,17 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
                   });
 
                   const requiredUnmapped = field.required && !selectedHeader;
+                  const optionalUnmapped = !field.required && !selectedHeader;
+                  const rowTone = requiredUnmapped
+                    ? 'bg-red-50/40 hover:bg-red-50/60'
+                    : optionalUnmapped
+                      ? 'bg-gray-50 hover:bg-gray-100/60'
+                      : 'hover:bg-gray-50/50';
 
                   return (
                     <tr
                       key={field.key}
-                      className={`border-b border-gray-100 ${requiredUnmapped ? 'bg-red-50/40 hover:bg-red-50/60' : 'hover:bg-gray-50/50'}`}
+                      className={`border-b border-gray-100 ${rowTone}`}
                     >
                       <td className="px-4 py-2.5">
                         <span className="text-sm font-medium text-gray-900">{field.label}</span>
