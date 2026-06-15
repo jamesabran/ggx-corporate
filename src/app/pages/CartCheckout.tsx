@@ -98,34 +98,57 @@ export function CartCheckout() {
   );
 
   const handlePlace = async () => {
-    if (!canOrder) return;
-    if (seller) {
-      const order = await placeStorefrontOrder({
-        scopeAccountId: seller.scopeId,
-        storeName: seller.storeName,
-        storeSlug: seller.slug,
-        channel: 'storefront_checkout',
-        serviceType: deliveryOption,
-        buyer: {
-          name: form.name.trim(),
-          mobile: form.mobile.trim(),
-          address: [form.street, form.barangay, form.city, form.province].map((s) => s.trim()).filter(Boolean).join(', '),
-          destination: [form.city, form.province].map((s) => s.trim()).filter(Boolean).join(', '),
-        },
-        items: items.map((i) => ({
-          productId: i.productId,
-          name: i.productSnapshot.name,
-          quantity: i.quantity,
-          unitPrice: i.productSnapshot.unitPrice,
-        })),
-        codTotal: collectTotal,
-      });
-      setPlacedOrderId(order.id);
-    }
+    // Seller context is required to attribute + place the order. Without it we
+    // must not fabricate a confirmation (see the "Store session expired" guard).
+    if (!canOrder || !seller) return;
+    const order = await placeStorefrontOrder({
+      scopeAccountId: seller.scopeId,
+      storeName: seller.storeName,
+      storeSlug: seller.slug,
+      channel: 'storefront_checkout',
+      serviceType: deliveryOption,
+      buyer: {
+        name: form.name.trim(),
+        mobile: form.mobile.trim(),
+        address: [form.street, form.barangay, form.city, form.province].map((s) => s.trim()).filter(Boolean).join(', '),
+        destination: [form.city, form.province].map((s) => s.trim()).filter(Boolean).join(', '),
+      },
+      items: items.map((i) => ({
+        productId: i.productId,
+        name: i.productSnapshot.name,
+        quantity: i.quantity,
+        unitPrice: i.productSnapshot.unitPrice,
+      })),
+      codTotal: collectTotal,
+    });
+    setPlacedOrderId(order.id);
     setSnapshot({ subtotal, fee: feeKnown ? deliveryFee : 0, total: collectTotal, itemCount, service: deliveryOption });
     clearCart();
     setPlaced(true);
   };
+
+  // No seller context (e.g. /checkout opened directly without coming from a
+  // store) → can't attribute or place an order. Show a clear recoverable state
+  // instead of a fabricated confirmation. `placed` is unreachable without a
+  // seller, so this never hides a real confirmation.
+  if (!placed && !seller) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="text-center max-w-sm">
+          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <IconBuildingStore className="w-7 h-7 text-gray-400" />
+          </div>
+          <h1 className="text-lg font-semibold text-gray-900">Store session expired</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Please return to the store and try checking out again.
+          </p>
+          <button type="button" onClick={() => navigate(-1)} className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-800">
+            Go back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (items.length === 0 && !placed) {
     return (
