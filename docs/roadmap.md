@@ -31,9 +31,9 @@ Detailed specs (copy, enums, payloads): `context/future-backlog.md`.
 |---|---|---|
 | Data / Attribution | Order attribution model | Four dimensions (account scope, source, connected store/integration, booking method). Transactions stays simple (Subaccount + short Source column); detail/filters/exports/reports/analytics go granular. Bulk template upload vs in-app spreadsheet roll up as `Bulk Upload` in UI but stay separate in data. |
 | Data / Attribution | Storefront vs Single Product Checkout | Track storefront checkout and standalone product-link checkout separately in analytics; do not merge. |
-| Bulk Upload | Smart column matching | Auto-suggest field mappings (exact/synonym/sample-value); dynamic auto-match message; user must review before continuing. |
-| Bulk Upload | Missing/unmatched column visibility | Block on unmatched required fields; surface optional unmatched and non-imported extra columns without blocking. |
-| Bulk Upload | Saved column mapping templates | Save final user-confirmed mapping for reuse; toggle default ON near CTA. |
+| Bulk Upload | Smart column matching | Auto-suggest field mappings (exact/synonym/sample-value); dynamic auto-match message; user must review before continuing. **Mock implemented** in `BulkColumnMapper` (aliases + auto-match + review). |
+| Bulk Upload | Missing/unmatched column visibility | Block on unmatched required fields; surface optional unmatched and non-imported extra columns without blocking. **Mock implemented** (red required rows, soft optional rows, In use/Available dropdown hints, top summary). |
+| Bulk Upload | Saved column mapping templates | Save final user-confirmed mapping for reuse; toggle default ON near CTA. **Mock implemented** via `lib/columnMappingTemplates` (localStorage; restore on same/similar headers). Scope (Main/Subaccount/shared) + backend persistence still deferred. |
 | Bulk Upload | Mapping template scope | Subaccount / Main Account / shared account-level scoping; explicit sharing; scoped suggestion order. |
 | Backend / API Integrations | Drop-off Locations API | `POST /v1/sams/distancefromhubs` for nearby hubs by address. Production-only; see deferred items below. |
 | Backend / API Integrations | Rates API | `POST /v2/orders/estimates/rates` for delivery rate estimates. Bearer token via `.env.local`/BFF only — never committed or exposed in frontend. Production-only. |

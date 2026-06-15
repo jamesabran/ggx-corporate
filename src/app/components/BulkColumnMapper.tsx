@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { IconDownload, IconArrowLeft, IconChevronRight, IconChevronLeft, IconInfoCircle } from '@tabler/icons-react';
+import { IconDownload, IconArrowLeft, IconChevronRight, IconChevronLeft, IconInfoCircle, IconBookmark } from '@tabler/icons-react';
 import { Button } from './ui/Button';
 import { Select } from './ui/Select';
 import { Card, CardContent } from './ui/Card';
 import { loadState, saveState } from '../lib/storage';
 import { BULK_FIELD_LABELS as L } from '../data/bulkTemplate';
+import { findTemplateForHeaders, saveTemplateForHeaders } from '../lib/columnMappingTemplates';
 
 // GGX field definitions for column mapping. Labels come from the shared
 // BULK_FIELD_LABELS so the mapper matches the in-app spreadsheet, failed-orders
@@ -94,10 +95,25 @@ function autoMap(fileHeaders: string[], fields: typeof GGX_FIELDS): Record<strin
 const SAMPLE_COLS = 3;
 
 export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm, onBack, onDownloadTemplate }: BulkColumnMapperProps) {
-  const initialMapping = useMemo(() => autoMap(fileHeaders, GGX_FIELDS), [fileHeaders]);
+  // A previously-saved mapping for the same/similar headers, if any (mock/local).
+  const matchedTemplate = useMemo(() => findTemplateForHeaders(fileHeaders), [fileHeaders]);
+  // Initial mapping: auto-match, then overlay any saved template (template wins
+  // for headers that still exist in this file). This handles similar files with
+  // extra/missing columns — saved choices apply where valid, auto-match fills the rest.
+  const initialMapping = useMemo(() => {
+    const auto = autoMap(fileHeaders, GGX_FIELDS);
+    if (!matchedTemplate) return auto;
+    const merged = { ...auto };
+    for (const [key, header] of Object.entries(matchedTemplate.mapping)) {
+      if (fileHeaders.includes(header)) merged[key] = header;
+    }
+    return merged;
+  }, [matchedTemplate, fileHeaders]);
   const [mapping, setMapping] = useState<Record<string, string>>(initialMapping);
-  // Fields the system auto-matched. Cleared per-field once the user edits them,
-  // so the "Auto-matched" status only reflects untouched system suggestions.
+  // Whether the initial mapping was restored from a saved template.
+  const [templateApplied, setTemplateApplied] = useState<boolean>(!!matchedTemplate);
+  // Fields the system pre-filled (auto-match or restored template). Cleared
+  // per-field once the user edits them.
   const [autoMatchedKeys, setAutoMatchedKeys] = useState<Set<string>>(() => new Set(Object.keys(initialMapping)));
   // Which sample data offset is visible (left/right scroll through sample columns).
   const [sampleOffset, setSampleOffset] = useState(0);
@@ -121,9 +137,21 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
     saveState('bulkColumnMapping.savePref', checked);
   };
 
+  // Discard a restored template and fall back to fresh auto-match.
+  const resetToAutoMatch = () => {
+    const auto = autoMap(fileHeaders, GGX_FIELDS);
+    setMapping(auto);
+    setAutoMatchedKeys(new Set(Object.keys(auto)));
+    setTemplateApplied(false);
+  };
+
   const handleConfirm = () => {
-    // Demo persistence: store the confirmed mapping locally when opted in.
-    if (saveMapping) saveState('bulkColumnMapping.lastMapping', mapping);
+    // Demo persistence: store the confirmed mapping locally when opted in, and
+    // upsert a reusable template keyed by this file's header signature.
+    if (saveMapping) {
+      saveState('bulkColumnMapping.lastMapping', mapping);
+      saveTemplateForHeaders(fileHeaders, mapping, fileName ? `Mapping for ${fileName}` : undefined);
+    }
     onConfirm(mapping as Record<FieldKey, string>);
   };
 
@@ -179,18 +207,39 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
         </Button>
       </div>
 
-      {/* Auto-match summary */}
-      <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-        <IconInfoCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-        <p className="text-sm text-blue-800">
-          {autoMatchedCount > 0
-            ? `${autoMatchedCount} field${autoMatchedCount === 1 ? '' : 's'} auto-matched. `
-            : 'We couldn’t auto-match your columns. '}
-          {requiredRemaining > 0
-            ? `Review and complete the remaining required field${requiredRemaining === 1 ? '' : 's'}.`
-            : 'Review the matched fields before continuing.'}
-        </p>
-      </div>
+      {/* Mapping summary — saved template restored, or auto-match status */}
+      {templateApplied ? (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <p className="flex items-start gap-2 text-sm text-emerald-800">
+            <IconBookmark className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+            <span>
+              Applied your saved column mapping from a previous similar upload.{' '}
+              {requiredRemaining > 0
+                ? `Review and complete the remaining required field${requiredRemaining === 1 ? '' : 's'}.`
+                : 'Review the matched fields before continuing.'}
+            </span>
+          </p>
+          <button
+            type="button"
+            onClick={resetToAutoMatch}
+            className="self-start sm:self-center flex-shrink-0 text-xs font-medium text-emerald-700 hover:text-emerald-800 underline"
+          >
+            Use auto-match instead
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <IconInfoCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-blue-800">
+            {autoMatchedCount > 0
+              ? `${autoMatchedCount} field${autoMatchedCount === 1 ? '' : 's'} auto-matched. `
+              : 'We couldn’t auto-match your columns. '}
+            {requiredRemaining > 0
+              ? `Review and complete the remaining required field${requiredRemaining === 1 ? '' : 's'}.`
+              : 'Review the matched fields before continuing.'}
+          </p>
+        </div>
+      )}
 
       {/* Mapping table */}
       <Card>
