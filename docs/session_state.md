@@ -155,6 +155,30 @@
   old/varied names to exercise aliasing.
 - Build/typecheck green. Not pushed.
 
+## Most Recent Feature Work — Saved mapping scope + Order attribution (2026-06-15)
+
+- **Saved column-mapping templates are scope-aware (mock).**
+  `lib/columnMappingTemplates` keys templates by header signature **and**
+  `scopeAccountId`; `findTemplateForHeaders(headers, scopeAccountId)` prefers the
+  active scope's own templates, then account-level `shared` ones. `BulkColumnMapper`
+  takes `scopeAccountId` (passed from `BulkUploader` via `uploadAccount.accountId`),
+  restores a matching saved mapping on load (banner + "Use auto-match instead"),
+  and upserts on Confirm. Real cross-account sharing UI + backend persistence
+  remain deferred.
+- **Order attribution model (mock).** `OrderAttribution` on transactions
+  (accountScope, sourceType, bookingMethod, connectedStore, integrationId,
+  createdBy). Helpers/labels: `SOURCE_TYPE_LABEL`, `BOOKING_METHOD_LABEL`,
+  `bookingMethodGroup` (both bulk methods → `bulk_upload`).
+  - Transactions list: short **Source** column + **Source filter**; Subaccount
+    column is ownership-only (the old "- Shopify" concatenation was removed).
+  - Transaction detail: "Order Source & Attribution" card.
+  - Custom Reports: selectable + exportable **Source** column.
+  - Seeded GoBenta (Storefront Checkout) + Product Checkout (Single Product
+    Checkout) demo rows and a created-by example.
+  - Still pending: analytics breakdowns by source/booking-method, and the
+    dedicated Storefront-vs-Product-checkout analytics split.
+- Build/typecheck green. Not pushed.
+
 ## Current Priority
 
 Backend integration remains the next major app stage:
