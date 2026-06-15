@@ -64,6 +64,9 @@ import {
   SERVICE_TYPE_SHORT_LABEL,
   SOURCE_TYPE_LABEL,
   BOOKING_METHOD_LABEL,
+  BOOKING_METHOD_ANALYTICS_LABEL,
+  SOURCE_TYPE_ORDER,
+  BOOKING_METHOD_ORDER,
   type Transaction,
   type TransactionSummary,
   type TransactionStatus,
@@ -261,6 +264,10 @@ export async function getDashboardStats(subaccountId?: string): Promise<Dashboar
 export interface BasicAnalytics {
   /** Booking count per delivery service type (Standard / Same-Day / On-Demand). */
   serviceTypeMix: { key: DeliveryServiceType; label: string; count: number }[];
+  /** Booking count per high-level Source (GoBenta vs Product Checkout kept separate). */
+  sourceMix: { key: SourceType; label: string; count: number }[];
+  /** Booking count per granular booking method (two bulk methods kept separate). */
+  bookingMethodMix: { key: BookingMethod; label: string; count: number }[];
   /** Daily booking volume for the active period (oldest → newest). */
   dailyVolume: { date: string; count: number }[];
   /** Total bookings in the active period. */
@@ -312,14 +319,25 @@ export async function getBasicAnalytics(
   const order: DeliveryServiceType[] = ['standard', 'same_day', 'on_demand'];
   const counts: Record<DeliveryServiceType, number> = { standard: 0, same_day: 0, on_demand: 0 };
   const byStatus = { delivered: 0, 'in-transit': 0, 'picked-up': 0, pending: 0, failed: 0, returned: 0 } as Record<TransactionStatus, number>;
+  // Attribution breakdowns: source mix + granular booking-method mix.
+  const sourceCounts = Object.fromEntries(SOURCE_TYPE_ORDER.map((k) => [k, 0])) as Record<SourceType, number>;
+  const bmCounts = Object.fromEntries(BOOKING_METHOD_ORDER.map((k) => [k, 0])) as Record<BookingMethod, number>;
   let totalCod = 0;
   for (const t of subset) {
     counts[t.serviceType] = (counts[t.serviceType] ?? 0) + 1;
     byStatus[t.status] = (byStatus[t.status] ?? 0) + 1;
+    sourceCounts[t.attribution.sourceType] += 1;
+    bmCounts[t.attribution.bookingMethod] += 1;
     totalCod += t.payment.codAmount;
   }
   const serviceTypeMix = order.map((key) => ({
     key, label: SERVICE_TYPE_SHORT_LABEL[key], count: counts[key],
+  }));
+  const sourceMix = SOURCE_TYPE_ORDER.map((key) => ({
+    key, label: SOURCE_TYPE_LABEL[key], count: sourceCounts[key],
+  }));
+  const bookingMethodMix = BOOKING_METHOD_ORDER.map((key) => ({
+    key, label: BOOKING_METHOD_ANALYTICS_LABEL[key], count: bmCounts[key],
   }));
 
   const byDate = new Map<string, number>();
@@ -330,7 +348,7 @@ export async function getBasicAnalytics(
 
   const periodTotal = subset.length;
   const successRate = periodTotal > 0 ? Math.round((byStatus.delivered / periodTotal) * 1000) / 10 : 0;
-  return { serviceTypeMix, dailyVolume, periodTotal, byStatus, totalCod, successRate };
+  return { serviceTypeMix, sourceMix, bookingMethodMix, dailyVolume, periodTotal, byStatus, totalCod, successRate };
 }
 
 // ─── Batch grouping ──────────────────────────────────────────────────────────

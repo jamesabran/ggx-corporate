@@ -57,6 +57,30 @@ export const BOOKING_METHOD_LABEL: Record<BookingMethod, string> = {
   single_product_checkout: 'Single Product Checkout',
 };
 
+/**
+ * Analytics labels keep the two bulk methods distinct (they roll up to a single
+ * "Bulk Upload" only in list/detail UI) so analytics can measure template upload
+ * vs in-app spreadsheet separately, per the attribution model.
+ */
+export const BOOKING_METHOD_ANALYTICS_LABEL: Record<BookingMethod, string> = {
+  single_booking:          'Single Booking',
+  bulk_template_upload:    'Bulk Upload (Template)',
+  bulk_in_app_spreadsheet: 'Bulk Upload (In-app)',
+  api_created:             'API-created',
+  shopify_import:          'Shopify Import',
+  storefront_checkout:     'Storefront Checkout',
+  single_product_checkout: 'Single Product Checkout',
+};
+
+/** Fixed display order for source / booking-method analytics breakdowns. */
+export const SOURCE_TYPE_ORDER: SourceType[] = [
+  'ggx_dashboard', 'bulk_upload', 'api', 'shopify', 'gobenta', 'product_checkout',
+];
+export const BOOKING_METHOD_ORDER: BookingMethod[] = [
+  'single_booking', 'bulk_template_upload', 'bulk_in_app_spreadsheet',
+  'api_created', 'shopify_import', 'storefront_checkout', 'single_product_checkout',
+];
+
 /** Analytics-safe rollup group (both bulk methods → 'bulk_upload'; others 1:1). */
 export function bookingMethodGroup(method: BookingMethod): string {
   return method === 'bulk_template_upload' || method === 'bulk_in_app_spreadsheet'

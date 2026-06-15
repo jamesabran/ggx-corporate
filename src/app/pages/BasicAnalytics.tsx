@@ -63,6 +63,9 @@ export function BasicAnalytics() {
   const maxMix = Math.max(1, ...mix.map((m) => m.count));
   const days = basic?.dailyVolume ?? [];
   const maxDay = Math.max(1, ...days.map((d) => d.count));
+  // Attribution breakdowns (hide zero rows to keep the lists scannable).
+  const sourceMix = (basic?.sourceMix ?? []).filter((m) => m.count > 0);
+  const bookingMethodMix = (basic?.bookingMethodMix ?? []).filter((m) => m.count > 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -159,6 +162,23 @@ export function BasicAnalytics() {
         </Card>
       </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <BreakdownCard
+          title="Bookings by Source"
+          rows={sourceMix}
+          total={periodTotal}
+          barClass="bg-indigo-500"
+          emptyText="No bookings in this period."
+        />
+        <BreakdownCard
+          title="Bookings by Booking Method"
+          rows={bookingMethodMix}
+          total={periodTotal}
+          barClass="bg-teal-500"
+          emptyText="No bookings in this period."
+        />
+      </div>
+
       <Card>
         <CardContent className="p-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
@@ -171,5 +191,38 @@ export function BasicAnalytics() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** Horizontal-bar breakdown (count + share of period total) for an attribution mix. */
+function BreakdownCard({ title, rows, total, barClass, emptyText }: {
+  title: string;
+  rows: { key: string; label: string; count: number }[];
+  total: number;
+  barClass: string;
+  emptyText: string;
+}) {
+  const max = Math.max(1, ...rows.map((r) => r.count));
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">{title}</CardTitle></CardHeader>
+      <CardContent className="space-y-4">
+        {rows.length === 0 ? (
+          <p className="text-sm text-gray-400">{emptyText}</p>
+        ) : rows.map((r) => (
+          <div key={r.key}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-sm text-gray-700">{r.label}</span>
+              <span className="text-sm font-semibold text-gray-900 tabular-nums">
+                {r.count}<span className="text-gray-400 font-normal ml-1">({total > 0 ? Math.round((r.count / total) * 100) : 0}%)</span>
+              </span>
+            </div>
+            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${barClass}`} style={{ width: `${(r.count / max) * 100}%` }} />
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
