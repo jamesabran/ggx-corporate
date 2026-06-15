@@ -41,6 +41,8 @@ export interface BulkColumnMapperProps {
   onConfirm: (mapping: Record<FieldKey, string>) => void;
   onBack: () => void;
   onDownloadTemplate: () => void;
+  /** Active account scope ('main' or a subaccount id) for saved-mapping scoping. */
+  scopeAccountId?: string;
 }
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -94,9 +96,13 @@ function autoMap(fileHeaders: string[], fields: typeof GGX_FIELDS): Record<strin
 // Number of sample columns to show. The user can scroll through them.
 const SAMPLE_COLS = 3;
 
-export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm, onBack, onDownloadTemplate }: BulkColumnMapperProps) {
-  // A previously-saved mapping for the same/similar headers, if any (mock/local).
-  const matchedTemplate = useMemo(() => findTemplateForHeaders(fileHeaders), [fileHeaders]);
+export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm, onBack, onDownloadTemplate, scopeAccountId }: BulkColumnMapperProps) {
+  // A previously-saved mapping for the same/similar headers in this scope, if any
+  // (mock/local): the active scope's own templates take priority over shared ones.
+  const matchedTemplate = useMemo(
+    () => findTemplateForHeaders(fileHeaders, scopeAccountId),
+    [fileHeaders, scopeAccountId],
+  );
   // Initial mapping: auto-match, then overlay any saved template (template wins
   // for headers that still exist in this file). This handles similar files with
   // extra/missing columns — saved choices apply where valid, auto-match fills the rest.
@@ -150,7 +156,10 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
     // upsert a reusable template keyed by this file's header signature.
     if (saveMapping) {
       saveState('bulkColumnMapping.lastMapping', mapping);
-      saveTemplateForHeaders(fileHeaders, mapping, fileName ? `Mapping for ${fileName}` : undefined);
+      saveTemplateForHeaders(fileHeaders, mapping, {
+        scopeAccountId,
+        name: fileName ? `Mapping for ${fileName}` : undefined,
+      });
     }
     onConfirm(mapping as Record<FieldKey, string>);
   };

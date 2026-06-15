@@ -17,6 +17,15 @@ export interface ColumnMappingTemplate {
   id: string;
   /** Human-readable label (demo-generated; not user-edited yet). */
   name: string;
+  /**
+   * Account scope that owns this template: 'main' for Main Account, or a
+   * subaccount id. Templates are suggested to their owning scope first, then to
+   * any account-level shared templates. (Mock — real scope/sharing contract is
+   * deferred; see docs/context/future-backlog.md §4.)
+   */
+  scopeAccountId: string;
+  /** When true, available across the account (not just the owning scope). */
+  shared: boolean;
   /** Original uploaded headers (used for similarity matching). */
   headers: string[];
   /** Normalized + sorted header signature (used for exact matching). */
@@ -49,22 +58,16 @@ export function listTemplates(): ColumnMappingTemplate[] {
   return loadState<ColumnMappingTemplate[]>(STORAGE_KEY, []);
 }
 
-/**
- * Find the best saved template for these headers: an exact signature match wins;
- * otherwise the most similar template above the similarity threshold. Returns
- * null when nothing suitable is saved.
- */
-export function findTemplateForHeaders(headers: string[]): ColumnMappingTemplate | null {
-  const templates = listTemplates();
-  if (templates.length === 0) return null;
-
+/** Best exact-or-similar match within a candidate list (null if none qualifies). */
+function matchInList(headers: string[], list: ColumnMappingTemplate[]): ColumnMappingTemplate | null {
+  if (list.length === 0) return null;
   const sig = headerSignature(headers);
-  const exact = templates.find((t) => t.signature === sig);
+  const exact = list.find((t) => t.signature === sig);
   if (exact) return exact;
 
   let best: ColumnMappingTemplate | null = null;
   let bestScore = 0;
-  for (const t of templates) {
+  for (const t of list) {
     const score = similarity(headers, t.headers);
     if (score > bestScore) { bestScore = score; best = t; }
   }
@@ -72,32 +75,67 @@ export function findTemplateForHeaders(headers: string[]): ColumnMappingTemplate
 }
 
 /**
- * Upsert a template for a header set. Matching by exact signature: an existing
- * template is updated (mapping + lastUsedAt) rather than duplicated.
+ * Find the best saved template for these headers, scoped by account when
+ * provided: prefer templates owned by the active scope, then account-level
+ * shared templates. Within each tier an exact signature match wins, otherwise
+ * the most similar template above the threshold. Returns null when nothing
+ * suitable is saved.
+ */
+export function findTemplateForHeaders(
+  headers: string[],
+  scopeAccountId?: string,
+): ColumnMappingTemplate | null {
+  const all = listTemplates();
+  if (all.length === 0) return null;
+
+  if (!scopeAccountId) return matchInList(headers, all);
+
+  // 1) Templates saved by this scope, then 2) shared account-level templates.
+  const own = matchInList(headers, all.filter((t) => t.scopeAccountId === scopeAccountId));
+  if (own) return own;
+  return matchInList(headers, all.filter((t) => t.shared && t.scopeAccountId !== scopeAccountId));
+}
+
+export interface SaveTemplateOptions {
+  /** Owning account scope ('main' or a subaccount id). Defaults to 'main'. */
+  scopeAccountId?: string;
+  /** Make available across the account (Main Account action; deferred UI). */
+  shared?: boolean;
+  name?: string;
+}
+
+/**
+ * Upsert a template for a header set within a scope. Matching by exact signature
+ * AND owning scope: an existing same-scope template is updated rather than
+ * duplicated, so a subaccount's mapping never overwrites another scope's.
  */
 export function saveTemplateForHeaders(
   headers: string[],
   mapping: Record<string, string>,
-  name?: string,
+  opts: SaveTemplateOptions = {},
 ): ColumnMappingTemplate {
+  const scopeAccountId = opts.scopeAccountId ?? 'main';
   const templates = listTemplates();
   const sig = headerSignature(headers);
   const now = new Date().toISOString();
   const cleaned = Object.fromEntries(Object.entries(mapping).filter(([, v]) => !!v));
 
-  const existing = templates.find((t) => t.signature === sig);
+  const existing = templates.find((t) => t.signature === sig && t.scopeAccountId === scopeAccountId);
   if (existing) {
     existing.mapping = cleaned;
     existing.headers = headers;
     existing.lastUsedAt = now;
-    if (name) existing.name = name;
+    if (opts.shared !== undefined) existing.shared = opts.shared;
+    if (opts.name) existing.name = opts.name;
     saveState(STORAGE_KEY, templates);
     return existing;
   }
 
   const created: ColumnMappingTemplate = {
     id: `tpl-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    name: name ?? `Mapping for ${headers.length} columns`,
+    name: opts.name ?? `Mapping for ${headers.length} columns`,
+    scopeAccountId,
+    shared: opts.shared ?? false,
     headers,
     signature: sig,
     mapping: cleaned,

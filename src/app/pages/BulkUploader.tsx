@@ -235,6 +235,7 @@ export function BulkUploader() {
           onConfirm={handleMappingConfirm}
           onBack={() => setStep('form')}
           onDownloadTemplate={downloadBulkTemplate}
+          scopeAccountId={uploadAccount.accountId}
         />
       </div>
     );
