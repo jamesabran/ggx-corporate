@@ -133,6 +133,28 @@
   touch `/dashboard`.
 - New page titles in `BasicLayout`: "GGX Business+", "Review Booking".
 
+## Most Recent Feature Work — Bulk Upload field-name unification (2026-06-15)
+
+- **Single source of truth for field labels:** `BULK_FIELD_LABELS` in
+  `data/bulkTemplate.ts` is now consumed by the column mapper (`BulkColumnMapper`),
+  the in-app spreadsheet grid (`BOOKING_COLUMNS` in `lib/bookingValidation`), the
+  failed-orders retry table (`BulkUploadSummary`), and the download template. Same
+  field → same name everywhere (Name, Mobile, City / Municipality, Declared Item
+  Value, Insure full item value?, Recipient Pays Fees; Landmarks / Promo Code /
+  Reference ID carry "(Optional)").
+- **Consistent required/optional treatment:** removed red asterisks from the
+  spreadsheet grid and failed-orders headers; optional fields are marked only by
+  "(Optional)". Grid required flags follow the model, with two intentional
+  exceptions: **COD Amount** is conditionally required (only when COD = Yes), and
+  **Item Name** (grid `productSku`) is satisfied by attached Inventory products.
+- **Item Protection Fee** is no longer a template/mappable field — it remains only
+  as a derived, read-only display in the failed-orders table fee column.
+- **Mapper aliases** keep older uploaded headers auto-mapping (Recipient Name,
+  Mobile Number, City/Municipality, Declared Value, Item Protection, Promo code,
+  Ref ID, etc.). The `MOCK_CUSTOM_HEADERS` in `BulkUploader` intentionally keep
+  old/varied names to exercise aliasing.
+- Build/typecheck green. Not pushed.
+
 ## Current Priority
 
 Backend integration remains the next major app stage:
