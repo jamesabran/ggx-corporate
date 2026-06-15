@@ -292,6 +292,32 @@ Polish pass on top of the OD ↔ storefront model (model unchanged).
   from delivery status and avoids ambiguous "Pending" in the orders queue.
 - Build + typecheck green. Not pushed. Docs: `storefront_rules.md` updated.
 
+## Most Recent Feature Work — Checkout + Transactions demo fixes (2026-06-15)
+
+Targeted demo fixes (no model/IA redesign).
+
+- **OD transaction entitlement (Transactions):** On-Demand rows now only show
+  where the OD add-on is enabled for the current scope. Feature gating in
+  `Transactions` uses the module-access scope (`useModuleAccessContext().scopeAccountId`,
+  which maps a standard account to its synthetic scope id) — so a Main/standard
+  account with OD disabled shows no OD rows, and the On-Demand service-type filter
+  option is hidden. OD support is unchanged where enabled (Acme Luzon).
+- **Inventory exposes Store Orders:** the commerce-tab check uses the same
+  module-access scope, fixing the standard-account case where Inventory was
+  enabled at `STANDARD_SCOPE_ID` but the tab checked the wrong scope. Works
+  immediately + after refresh (feature state persists).
+- **Metro-only SDD/OD checkout eligibility:** new `isMetroManila()` in
+  `lib/checkoutEstimates`. In `BuyerCheckout` + `CartCheckout`, Same-day/On-demand
+  are selectable only for Metro Manila addresses; otherwise the cards are shown
+  disabled with "Available for Metro Manila deliveries only." A fallback effect
+  resets the selection to Standard when the address isn't Metro, so fee/total stay
+  correct. Standard is always available.
+- **Checkout layout:** Delivery option moved out of the Delivery details card into
+  its own card with an H2 heading matching "Payment options"; option cards stay
+  `grid-cols-1 sm:grid-cols-2` (stack < 640px, side-by-side ≥ 640px). 65/35 layout
+  + sticky summary preserved.
+- Build + typecheck green. Not pushed.
+
 ## Current Priority
 
 Backend integration remains the next major app stage:

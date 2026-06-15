@@ -21,6 +21,16 @@ const VISMIN = [
   'surigao', 'maguindanao', 'basilan', 'sulu', 'tawi', 'camiguin',
 ];
 
+/**
+ * Strict Metro Manila (NCR) check — used for Same-day / On-demand eligibility,
+ * which are Metro-only. Narrower than the `metro` estimate bucket (that also
+ * covers nearby provinces for Standard timing).
+ */
+export function isMetroManila(province: string): boolean {
+  const p = province.trim().toLowerCase();
+  return p.includes('metro manila') || p === 'ncr' || p.includes('national capital region');
+}
+
 /** Classify a delivery province into a coarse region for estimates. */
 export function classifyRegion(province: string): DeliveryRegion {
   const p = province.trim().toLowerCase();

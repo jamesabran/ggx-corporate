@@ -14,7 +14,7 @@ import { getInventoryProduct, productCover, type InventoryProduct } from '../ser
 import { getFeatureStateSync } from '../services/featureEnablementService';
 import { getStorefrontProfile } from '../services/storefrontService';
 import { placeStorefrontOrder } from '../services/storefrontOrdersService';
-import { classifyRegion, estimateDeliveryFee } from '../lib/checkoutEstimates';
+import { classifyRegion, estimateDeliveryFee, isMetroManila } from '../lib/checkoutEstimates';
 import type { DeliveryServiceType } from '../services/transactionService';
 
 const peso = (n: number) =>
@@ -87,6 +87,15 @@ export function BuyerCheckout() {
     if (!deliveryOptions.includes(deliveryOption)) setDeliveryOption('standard');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [odEnabled, storeMeta.sameDay]);
+
+  // Same-day / On-demand are Metro-Manila-only. Fall back to Standard when the
+  // address isn't Metro Manila so totals + the placed order stay consistent.
+  const metroOnly = isMetroManila(form.province);
+  useEffect(() => {
+    if (!metroOnly && (deliveryOption === 'same_day' || deliveryOption === 'on_demand')) {
+      setDeliveryOption('standard');
+    }
+  }, [metroOnly, deliveryOption]);
 
   const set = <K extends keyof OrderForm>(k: K, v: string) => setForm((prev) => ({ ...prev, [k]: v }));
 
@@ -242,15 +251,22 @@ export function BuyerCheckout() {
                   />
                 </Field>
               </div>
-
-              <CheckoutDeliveryOptions
-                options={deliveryOptions}
-                value={deliveryOption}
-                onChange={setDeliveryOption}
-                region={region}
-              />
             </CardContent>
           </Card>
+
+          {deliveryOptions.length > 1 && (
+            <Card>
+              <CardContent className="p-6">
+                <CheckoutDeliveryOptions
+                  options={deliveryOptions}
+                  value={deliveryOption}
+                  onChange={setDeliveryOption}
+                  region={region}
+                  metroOnly={metroOnly}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardContent className="p-6">

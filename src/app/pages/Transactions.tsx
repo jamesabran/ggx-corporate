@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useScopedAccountId } from '../hooks/useAccountScope';
 import { getFeatureStateSync } from '../services/featureEnablementService';
+import { useModuleAccessContext } from '../hooks/useModuleAccess';
 import { StoreOrdersPanel } from '../components/StoreOrdersPanel';
 // Data access goes through the transactionService facade (not the data module
 // directly). The service shapes data the UI needs; in production it is fronted
@@ -63,12 +64,22 @@ export function Transactions() {
   const scopeId = useScopedAccountId();
   const mainView = subAccountsEnabled && scopeId === undefined; // consolidated admin view
 
+  // Feature gating uses the module-access scope (maps a standard account to its
+  // synthetic scope id), consistent with the sidebar / add-on surfaces — so a
+  // standard account that enabled the add-on resolves correctly.
+  const featureScope = useModuleAccessContext().scopeAccountId;
+
   // Commerce (Inventory/Storefront) gating: the Store Orders tab only appears when
   // commerce is enabled for the active account/subaccount. Without it, Transactions
   // behaves as the normal delivery transactions page (no tabs).
   const commerceEnabled =
-    getFeatureStateSync('inventory', scopeId).enabled ||
-    getFeatureStateSync('storefront', scopeId).enabled;
+    getFeatureStateSync('inventory', featureScope).enabled ||
+    getFeatureStateSync('storefront', featureScope).enabled;
+
+  // On-Demand entitlement: only show On-Demand transactions where the OD add-on
+  // is enabled for the current scope (OD is subaccount-scoped). A main/standard
+  // account without OD must not start with On-Demand rows.
+  const odEnabledForScope = getFeatureStateSync('on_demand', featureScope).enabled;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'store-orders' | 'deliveries'>(
@@ -129,7 +140,9 @@ export function Transactions() {
     const serviceOk = serviceTypeFilter === 'all' || d.serviceType === serviceTypeFilter;
     const sourceOk = sourceFilter === 'all' || d.sourceType === sourceFilter;
     const subOk    = subaccountFilter === 'all' || d.subaccount === subaccountFilter;
-    return searchOk && statusOk && serviceOk && sourceOk && subOk;
+    // Hide On-Demand rows unless the current scope has the OD add-on enabled.
+    const odOk     = odEnabledForScope || d.serviceType !== 'on_demand';
+    return searchOk && statusOk && serviceOk && sourceOk && subOk && odOk;
   });
 
   return (
@@ -239,7 +252,9 @@ export function Transactions() {
                   <option value="all">All Service Types</option>
                   <option value="standard">{SERVICE_TYPE_SHORT_LABEL.standard}</option>
                   <option value="same_day">{SERVICE_TYPE_SHORT_LABEL.same_day}</option>
-                  <option value="on_demand">{SERVICE_TYPE_SHORT_LABEL.on_demand}</option>
+                  {odEnabledForScope && (
+                    <option value="on_demand">{SERVICE_TYPE_SHORT_LABEL.on_demand}</option>
+                  )}
                 </Select>
               </div>
               <div className="w-full sm:w-[160px] flex-shrink-0">
