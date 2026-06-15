@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import {
-  IconPackage, IconShieldCheck, IconCircleCheck, IconCash, IconBuildingStore,
+  IconPackage, IconShieldCheck, IconCircleCheck, IconCash, IconBuildingStore, IconClock,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { LocationCascadeFields } from '../components/LocationCascadeFields';
+import { CheckoutDeliveryOptions } from '../components/CheckoutDeliveryOptions';
 import { getInventoryProduct, productCover, type InventoryProduct } from '../services/inventoryService';
+import { getFeatureStateSync } from '../services/featureEnablementService';
+import { getStorefrontProfile } from '../services/storefrontService';
+import { placeStorefrontOrder } from '../services/storefrontOrdersService';
+import type { DeliveryServiceType } from '../services/transactionService';
 
 const peso = (n: number) =>
   `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -19,6 +24,12 @@ interface OrderForm {
 }
 
 const blank: OrderForm = { name: '', mobile: '', street: '', province: '', city: '', barangay: '', qty: '1' };
+
+const DELIVERY_LABEL: Record<DeliveryServiceType, string> = {
+  standard: 'Standard',
+  same_day: 'Same-Day',
+  on_demand: 'On-Demand',
+};
 
 /**
  * Public buyer checkout at /buy/:productId — opened from a product's shareable
@@ -33,14 +44,47 @@ export function BuyerCheckout() {
   const [form, setForm] = useState<OrderForm>(blank);
   const [activeImage, setActiveImage] = useState<string | undefined>();
   const [placed, setPlaced] = useState(false);
+  const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+
+  // Seller scope drives delivery-option availability (On-Demand add-on gating)
+  // and order attribution. Resolved from the product's owning scope.
+  const scopeId = product?.scopeAccountId;
+  const [storeMeta, setStoreMeta] = useState<{ name: string; slug?: string; sameDay: boolean }>({ name: 'Store', sameDay: false });
+  const odEnabled = scopeId ? getFeatureStateSync('on_demand', scopeId).enabled : false;
+  const deliveryOptions: DeliveryServiceType[] = [
+    'standard',
+    ...(storeMeta.sameDay ? (['same_day'] as DeliveryServiceType[]) : []),
+    ...(odEnabled ? (['on_demand'] as DeliveryServiceType[]) : []),
+  ];
+  const [deliveryOption, setDeliveryOption] = useState<DeliveryServiceType>('standard');
 
   useEffect(() => {
     let active = true;
     getInventoryProduct(productId ?? '')
-      .then((p) => { if (active) { setProduct(p); setActiveImage(p ? productCover(p) : undefined); } })
+      .then(async (p) => {
+        if (!active) return;
+        setProduct(p);
+        setActiveImage(p ? productCover(p) : undefined);
+        if (p) {
+          const profile = await getStorefrontProfile(p.scopeAccountId);
+          if (active && profile) {
+            setStoreMeta({
+              name: profile.storeName,
+              slug: profile.slug,
+              sameDay: profile.deliveryOptions.includes('same_day'),
+            });
+          }
+        }
+      })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [productId]);
+
+  // Keep selection valid if options change once seller context resolves.
+  useEffect(() => {
+    if (!deliveryOptions.includes(deliveryOption)) setDeliveryOption('standard');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [odEnabled, storeMeta.sameDay]);
 
   const set = <K extends keyof OrderForm>(k: K, v: string) => setForm((prev) => ({ ...prev, [k]: v }));
 
@@ -52,6 +96,27 @@ export function BuyerCheckout() {
       && form.province.trim() && form.city.trim() && form.barangay.trim(),
     [outOfStock, form],
   );
+
+  const handlePlace = async () => {
+    if (!canOrder || !product || !scopeId) return;
+    const order = await placeStorefrontOrder({
+      scopeAccountId: scopeId,
+      storeName: storeMeta.name,
+      storeSlug: storeMeta.slug,
+      channel: 'product_checkout',
+      serviceType: deliveryOption,
+      buyer: {
+        name: form.name.trim(),
+        mobile: form.mobile.trim(),
+        address: [form.street, form.barangay, form.city, form.province].map((s) => s.trim()).filter(Boolean).join(', '),
+        destination: [form.city, form.province].map((s) => s.trim()).filter(Boolean).join(', '),
+      },
+      items: [{ productId: product.id, name: product.name, quantity: qty, unitPrice: product.unitPrice }],
+      codTotal: total,
+    });
+    setPlacedOrderId(order.id);
+    setPlaced(true);
+  };
 
   if (loading) return null;
 
@@ -74,14 +139,20 @@ export function BuyerCheckout() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-              <IconCircleCheck className="w-9 h-9 text-green-600" />
+            <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+              <IconClock className="w-9 h-9 text-amber-600" />
             </div>
             <h1 className="text-xl font-bold text-gray-900">Order placed!</h1>
             <p className="text-sm text-gray-600 mt-2">
-              Thanks, {form.name}. Your order for <span className="font-medium">{qty} × {product.name}</span> is confirmed.
+              Thanks, {form.name}. Your order for <span className="font-medium">{qty} × {product.name}</span> has been sent to the seller.
             </p>
+            <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-medium text-amber-700">
+              <IconClock className="w-3.5 h-3.5" />
+              Awaiting seller acceptance
+            </div>
             <div className="mt-4 rounded-lg border border-gray-200 p-4 text-sm text-left space-y-1.5">
+              {placedOrderId && <Row label="Order #">{placedOrderId}</Row>}
+              <Row label="Delivery">{DELIVERY_LABEL[deliveryOption]}</Row>
               <Row label="Deliver to">{form.name} · {form.mobile}</Row>
               <Row label="Address">{[form.street, form.barangay, form.city, form.province].filter(Boolean).join(', ')}</Row>
               <Row label="Payment"><span className="inline-flex items-center gap-1"><IconCash className="w-4 h-4 text-emerald-600" /> Cash on Delivery</span></Row>
@@ -90,8 +161,16 @@ export function BuyerCheckout() {
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-4">
-              The seller will book this for delivery via GoGo Xpress. Pay cash when your parcel arrives.
+              The seller will review and accept your order, then book it for delivery via GoGo Xpress. Pay cash when your parcel arrives.
             </p>
+            {placedOrderId && (
+              <Link
+                to={`/track/${placedOrderId}`}
+                className="mt-4 inline-block text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                Track this order
+              </Link>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -168,6 +247,12 @@ export function BuyerCheckout() {
                 </Field>
               </div>
 
+              <CheckoutDeliveryOptions
+                options={deliveryOptions}
+                value={deliveryOption}
+                onChange={setDeliveryOption}
+              />
+
               <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 flex items-center gap-2">
                 <IconShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                 <p className="text-xs text-emerald-800">Cash on Delivery (COD) — pay in cash when your parcel arrives.</p>
@@ -178,7 +263,7 @@ export function BuyerCheckout() {
                 <span className="text-lg font-bold text-gray-900">{peso(total)}</span>
               </div>
 
-              <Button className="w-full" disabled={!canOrder} onClick={() => setPlaced(true)}>
+              <Button className="w-full" disabled={!canOrder} onClick={handlePlace}>
                 <IconCash className="w-4 h-4" /> Place COD order
               </Button>
               {outOfStock && (

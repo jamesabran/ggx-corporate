@@ -40,6 +40,49 @@
   > "Unpublishing will hide your storefront from new customers. Existing orders
   > and active deliveries will continue until completed."
 
+## Storefront Orders vs Delivery Transactions
+
+> Model in `data/storefrontOrders.ts`; access via
+> `services/storefrontOrdersService.ts`. Seller surface:
+> `/dashboard/storefront/orders` (+ `/:id`).
+
+- A **Storefront Order** is the buyer's commerce order placed through `/shop`
+  (storefront cart) or `/buy` (single-product) checkout. A **Delivery
+  Transaction** is the fulfillment record. **These are separate, with separate
+  status fields** — never use one field for both seller acceptance and delivery
+  progress.
+- Buyer order status: `awaiting_acceptance` → `accepted` | `rejected`.
+- A delivery transaction is created (revealed) **only when the seller accepts**.
+  At acceptance, a tracking number is assigned and — for On-Demand — the delivery
+  starts at "Looking for driver". This is the point the order is *booked*. There
+  is no state where an order is both "awaiting acceptance" and "booked".
+- On-Demand is offered as a buyer delivery option at checkout **only when the
+  seller scope has the On-Demand add-on enabled** (`feature_enablement`), gated
+  independently of the storefront's listed delivery options.
+- Accepted-order deliveries are **synthesized** into the transaction surfaces
+  (list / detail / public tracking resolve them by tracking number) rather than
+  written into the static transaction seed.
+
+### On-Demand delivery lifecycle (demo)
+
+`data/onDemandDelivery.ts` owns the granular delivery stages, ETA, and rider
+map position (demo/presentation; dispatch-owned in production):
+Looking for driver → Driver assigned → Preparing order → Ready for rider pickup →
+Handed over to rider → Picked up → En route → Delivered. The seller order detail
+exposes a demo "Advance" control to walk these. The mock map
+(`components/OnDemandMap.tsx`) shows pickup/drop-off pins, a rider marker that
+moves with the stage, route line, ETA chip, and status chip — reused by the
+seller transaction detail and the public tracking page. No real map/geolocation/
+dispatch integration.
+
+## Public tracking
+
+- Reference can be a delivery tracking number (`GGX-…`) **or** a storefront order
+  number (`SO-…`).
+- Before acceptance → buyer-facing "Waiting for seller to accept your order".
+- After acceptance → OD delivery progress + mock map (rider position reflects the
+  stage).
+
 ## Scoping
 
 - Storefront is scoped to a Standard account or a Subaccount.

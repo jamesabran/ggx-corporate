@@ -9,12 +9,15 @@ import {
   IconExternalLink,
   IconBolt,
   IconHeadset,
+  IconClock,
 } from '@tabler/icons-react';
-import { getTransactionById, getOnDemandProgress, statusConfig, type Transaction } from '../services/transactionService';
+import { getTransactionById, resolveOnDemandProgress, statusConfig, type Transaction } from '../services/transactionService';
+import { getOrderById, STOREFRONT_ORDER_STATUS_META, type StorefrontOrder } from '../services/storefrontOrdersService';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { OnDemandBadge, OnDemandMapPlaceholder, OnDemandRoute, OnDemandTimeline } from '../components/OnDemandTracker';
+import { OnDemandBadge, OnDemandRoute, OnDemandTimeline } from '../components/OnDemandTracker';
+import { OnDemandMap } from '../components/OnDemandMap';
 
 const statusIcon: Record<string, React.ReactNode> = {
   delivered: <IconCircleCheck className="w-6 h-6 text-green-500" />,
@@ -147,8 +150,7 @@ function TrackingResult({ transaction }: { transaction: Transaction }) {
  * CTA. No buyer-facing app or real map/dispatch integration required.
  */
 function OnDemandTrackingResult({ transaction }: { transaction: Transaction }) {
-  const status = statusConfig[transaction.status];
-  const progress = getOnDemandProgress(transaction);
+  const progress = resolveOnDemandProgress(transaction);
 
   return (
     <div className="space-y-6">
@@ -162,20 +164,18 @@ function OnDemandTrackingResult({ transaction }: { transaction: Transaction }) {
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <h2 className="text-lg font-semibold text-gray-900 truncate">{transaction.trackingNumber}</h2>
               <OnDemandBadge />
-              <Badge variant={status.variant}>{status.label}</Badge>
+              <Badge className="bg-violet-100 text-violet-800">{progress.currentLabel}</Badge>
             </div>
             <p className="text-sm text-gray-500">
-              {progress.currentLabel}
-              <span className="mx-1.5 text-gray-300">·</span>
               <span className="font-medium text-violet-700">{progress.eta}</span>
             </p>
           </div>
         </div>
       </div>
 
-      {/* Live map placeholder */}
+      {/* Live map mockup */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-        <OnDemandMapPlaceholder eta={progress.eta} />
+        <OnDemandMap progress={progress} />
       </div>
 
       {/* Pickup / drop-off */}
@@ -212,6 +212,73 @@ function OnDemandTrackingResult({ transaction }: { transaction: Transaction }) {
   );
 }
 
+/**
+ * Buyer-facing state for a storefront order that the seller has not yet booked
+ * for delivery (awaiting acceptance, or rejected). No delivery/tracking exists
+ * yet, so this shows the order state rather than delivery progress.
+ */
+function OrderStatusResult({ order }: { order: StorefrontOrder }) {
+  const meta = STOREFRONT_ORDER_STATUS_META[order.status];
+  const rejected = order.status === 'rejected';
+  const peso = (n: number) => `₱${n.toLocaleString('en-PH')}`;
+  return (
+    <div className="space-y-6">
+      <div className={`rounded-2xl border p-6 shadow-sm bg-white ${rejected ? 'border-gray-200' : 'border-amber-200'}`}>
+        <div className="flex items-start gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${rejected ? 'bg-gray-100' : 'bg-amber-50'}`}>
+            {rejected ? <IconAlertCircle className="w-6 h-6 text-gray-400" /> : <IconClock className="w-6 h-6 text-amber-600" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <h2 className="text-lg font-semibold text-gray-900 truncate">{order.id}</h2>
+              <Badge variant={meta.variant}>{meta.label}</Badge>
+            </div>
+            <p className="text-sm text-gray-500">
+              {rejected
+                ? 'This order was not accepted by the seller and was not booked for delivery.'
+                : 'Waiting for the seller to accept your order. Tracking begins once it’s accepted and booked.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h3 className="font-semibold text-gray-900 mb-4">Order summary</h3>
+        <div className="space-y-2.5">
+          {order.items.map((it, i) => (
+            <div key={i} className="flex items-center justify-between text-sm">
+              <span className="text-gray-700">{it.quantity} × {it.name}</span>
+              <span className="text-gray-900">{peso(it.unitPrice * it.quantity)}</span>
+            </div>
+          ))}
+          <div className="border-t border-gray-100 pt-2 flex items-center justify-between font-semibold">
+            <span className="text-gray-900">Total (COD)</span>
+            <span className="text-gray-900">{peso(order.codTotal)}</span>
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Deliver to</p>
+            <p className="text-gray-900">{order.buyer.name}</p>
+            <p className="text-gray-500">{order.buyer.address}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Store</p>
+            <p className="text-gray-900">{order.storeName}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 flex items-center gap-3">
+        <IconHeadset className="w-5 h-5 text-gray-400 flex-shrink-0" />
+        <p className="text-sm text-gray-600">
+          Questions about this order? <a href="mailto:support@gogoxpress.com" className="font-medium text-blue-600 hover:text-blue-800">Contact support</a>.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function TrackingNotFound({ trackingNumber }: { trackingNumber: string }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
@@ -233,15 +300,39 @@ export function TrackingPage() {
   const [transaction, setTransaction] = useState<Transaction | null | undefined>(
     trackingNumber ? undefined : null
   );
+  // A storefront order that has no delivery yet (awaiting acceptance / rejected).
+  const [order, setOrder] = useState<StorefrontOrder | null>(null);
   const [loading, setLoading] = useState(!!trackingNumber);
 
   useEffect(() => {
-    if (!searched) { setTransaction(null); setLoading(false); return; }
+    let active = true;
+    if (!searched) { setTransaction(null); setOrder(null); setLoading(false); return; }
     setLoading(true);
     setTransaction(undefined);
+    setOrder(null);
+    // A reference can be a delivery tracking number (GGX-…) or a storefront order
+    // id (SO-…). Try the delivery first; fall back to the order. An accepted order
+    // resolves to its delivery; an awaiting/rejected order shows its order state.
     getTransactionById(searched)
-      .then((tx) => { setTransaction(tx); setLoading(false); })
-      .catch(() => { setTransaction(null); setLoading(false); });
+      .then(async (tx) => {
+        if (!active) return;
+        if (tx) { setTransaction(tx); setLoading(false); return; }
+        const o = await getOrderById(searched);
+        if (!active) return;
+        if (o?.status === 'accepted' && o.trackingNumber) {
+          const delivery = await getTransactionById(o.trackingNumber);
+          if (!active) return;
+          setTransaction(delivery);
+        } else if (o) {
+          setOrder(o);
+          setTransaction(null);
+        } else {
+          setTransaction(null);
+        }
+        setLoading(false);
+      })
+      .catch(() => { if (active) { setTransaction(null); setLoading(false); } });
+    return () => { active = false; };
   }, [searched]);
 
   const handleSearch = () => {
@@ -273,7 +364,7 @@ export function TrackingPage() {
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Track your package</h1>
-          <p className="text-sm text-gray-500 mt-1">Enter a GGX tracking number to see real-time updates.</p>
+          <p className="text-sm text-gray-500 mt-1">Enter a GGX tracking number or storefront order number to see updates.</p>
         </div>
 
         {/* Search bar */}
@@ -298,8 +389,12 @@ export function TrackingPage() {
           </div>
         )}
 
-        {!loading && transaction === null && searched && (
+        {!loading && transaction === null && !order && searched && (
           <TrackingNotFound trackingNumber={searched} />
+        )}
+
+        {!loading && !transaction && order && (
+          <OrderStatusResult order={order} />
         )}
 
         {!loading && transaction && (

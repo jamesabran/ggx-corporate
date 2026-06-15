@@ -219,6 +219,51 @@ Add-on that unlocks OD booking + OD transaction visibility.
   flows). OD is demonstrated across all surfaces via the seed.
 - Build + typecheck green. Not pushed.
 
+## Most Recent Feature Work — OD ↔ Storefront checkout + seller acceptance (2026-06-15)
+
+Connected On-Demand to Storefront checkout and seller order acceptance, with a
+clean **order-status vs delivery-status** separation (fixes the old confusing
+"pending but already booked" GGX-2026-90011 seed).
+
+- **Product-model correction.** New **Storefront Order** domain
+  (`data/storefrontOrders.ts` + `services/storefrontOrdersService.ts`): buyer
+  commerce order with its own status (`awaiting_acceptance` → `accepted` |
+  `rejected`), separate from the delivery Transaction. A delivery is created only
+  on seller acceptance (tracking assigned; OD starts "Looking for driver").
+- **Granular OD delivery lifecycle** (`data/onDemandDelivery.ts`): Looking for
+  driver → Driver assigned → Preparing order → Ready for rider pickup → Handed
+  over to rider → Picked up → En route → Delivered (+ cancelled), each with ETA +
+  rider map position. `getOnDemandProgress(stage)`, `deliveryStageFromStatus`,
+  `statusFromDeliveryStage`, `nextDeliveryStage`. The old status-derived OD
+  progress block was removed from `data/transactions.ts`.
+- **Mock map** `components/OnDemandMap.tsx`: styled city-map background, pickup +
+  drop-off pins, dotted route, rider marker that moves with the stage (searching →
+  near pickup → between → at drop-off), ETA chip + status chip. Replaces the old
+  plain placeholder. Reused by seller transaction detail + public tracking.
+- **Buyer checkout** (`BuyerCheckout` `/buy`, `CartCheckout` `/checkout`): new
+  `CheckoutDeliveryOptions` picker; On-Demand appears only when the seller scope
+  has the OD add-on enabled. Placing an order creates a Storefront Order
+  (`awaiting_acceptance`) and shows "Awaiting seller acceptance" + a Track link.
+  Seller scope threaded via `cartStore` seller context (set in `StorefrontPreview`).
+- **Seller surface** `StorefrontOrders` (`/dashboard/storefront/orders`) +
+  `StorefrontOrderDetail` (`/:id`), in the Commerce sidebar group. Queue shows
+  buyer orders **separate** from Transactions; detail shows buyer/order/delivery
+  summary, Accept / Reject, and a demo "Advance" control for the OD lifecycle +
+  the mock map.
+- **Transaction detail** (`TransactionDetails`): OD section now uses `OnDemandMap`
+  + stage-driven `resolveOnDemandProgress`; shows linked storefront-order context;
+  header badge shows the OD stage label (no ambiguous "Pending").
+- **Public tracking** (`TrackingPage`): accepts `GGX-…` or `SO-…`; pre-acceptance
+  shows "Waiting for seller to accept your order"; post-acceptance shows OD
+  progress + mock map.
+- **Service merge:** `transactionService` synthesizes accepted-order deliveries
+  into the list + by-tracking lookups (not written to the static seed).
+- **Seed cleanup:** removed pending OD row GGX-2026-90011 from the transaction
+  seed; reintroduced cleanly as accepted storefront order SO-2026-0002 (linked
+  delivery GGX-2026-90011, "Driver assigned"), plus awaiting-acceptance order
+  SO-2026-0001. Both on Acme Luzon (OD + Storefront enabled).
+- Build + typecheck green. Not pushed. Docs: `storefront_rules.md` updated.
+
 ## Current Priority
 
 Backend integration remains the next major app stage:

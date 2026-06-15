@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { loadState, saveState } from './storage';
 
 export interface CartItem {
   productId: string;
@@ -11,10 +12,30 @@ export interface CartItem {
   };
 }
 
+/** Seller context for the active cart (which store the items came from). */
+export interface CartSeller {
+  scopeId: string;
+  storeName: string;
+  slug: string;
+}
+
 type Listener = () => void;
 
 let cart: CartItem[] = [];
+// Seller context persists (survives the /shop → /checkout navigation + reload) so
+// the checkout can gate delivery options and attribute the placed order.
+let seller: CartSeller | null = loadState<CartSeller | null>('cartSeller', null);
 const listeners = new Set<Listener>();
+
+/** Record which store the current cart belongs to (set when browsing /shop/:slug). */
+export function setCartSeller(next: CartSeller | null): void {
+  seller = next;
+  saveState('cartSeller', seller);
+}
+
+export function getCartSeller(): CartSeller | null {
+  return seller;
+}
 
 function notify() {
   listeners.forEach((l) => l());

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
-import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff, IconUpload, IconArrowRight, IconReceiptRefund, IconX, IconCircleCheck, IconCheck, IconPhoto, IconExternalLink, IconBolt, IconMapPin, IconHeadset } from '@tabler/icons-react';
+import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff, IconUpload, IconArrowRight, IconReceiptRefund, IconX, IconCircleCheck, IconCheck, IconPhoto, IconExternalLink, IconBolt, IconMapPin, IconHeadset, IconBuildingStore } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -14,14 +14,16 @@ import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 import {
   getTransactionById,
   getTransactionTotals,
-  getOnDemandProgress,
+  resolveOnDemandProgress,
   statusConfig,
   serviceTypeLabel,
   SOURCE_TYPE_LABEL,
   BOOKING_METHOD_LABEL,
   type Transaction,
 } from '../services/transactionService';
-import { OnDemandBadge, OnDemandMapPlaceholder, OnDemandRoute, OnDemandTimeline } from '../components/OnDemandTracker';
+import { OnDemandBadge, OnDemandRoute, OnDemandTimeline } from '../components/OnDemandTracker';
+import { OnDemandMap } from '../components/OnDemandMap';
+import { getOrderByTracking } from '../services/storefrontOrdersService';
 import {
   getClaimByTrackingNumber, fileClaim, cancelBooking, isBookingCancelled,
   claimEligible, cancelEligible, CLAIM_STATUS_META, CLAIM_REASONS, type Claim,
@@ -153,7 +155,11 @@ export function TransactionDetails() {
             <p className="text-gray-600">
               <span className="font-medium">Tracking Number:</span> {transaction.trackingNumber}
             </p>
-            <Badge variant={status.variant}>{status.label}</Badge>
+            {/* For On-Demand, show the granular delivery stage (avoids the
+                ambiguous coarse "Pending" while a driver is being matched). */}
+            {transaction.serviceType === 'on_demand'
+              ? <Badge className="bg-violet-100 text-violet-800">{resolveOnDemandProgress(transaction).currentLabel}</Badge>
+              : <Badge variant={status.variant}>{status.label}</Badge>}
           </div>
           <p className="text-sm text-gray-500 mt-1">
             Created: {transaction.createdAt}
@@ -168,7 +174,8 @@ export function TransactionDetails() {
           {/* On-Demand live delivery progress — OD bookings only. Courier-style
               progress, mocked ETA, pickup/drop-off, and OD action CTAs. */}
           {transaction.serviceType === 'on_demand' && (() => {
-            const progress = getOnDemandProgress(transaction);
+            const progress = resolveOnDemandProgress(transaction);
+            const linkedOrder = getOrderByTracking(transaction.trackingNumber);
             return (
               <Card className="border-violet-200">
                 <CardHeader>
@@ -190,7 +197,34 @@ export function TransactionDetails() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  <OnDemandMapPlaceholder eta={progress.eta} />
+                  {/* Linked storefront order context (when this delivery came
+                      from a storefront/product checkout that the seller accepted). */}
+                  {linkedOrder && (
+                    <div className="flex items-start justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+                      <div className="flex items-start gap-2.5">
+                        <IconBuildingStore className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm">
+                          <p className="font-medium text-gray-900">
+                            From storefront order {linkedOrder.id}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {linkedOrder.storeName} · accepted by seller · COD ₱{linkedOrder.codTotal.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-shrink-0"
+                        onClick={() => navigate(`/dashboard/storefront/orders/${linkedOrder.id}`)}
+                      >
+                        View order
+                        <IconArrowRight className="w-3.5 h-3.5 ml-1" />
+                      </Button>
+                    </div>
+                  )}
+
+                  <OnDemandMap progress={progress} />
 
                   <OnDemandRoute
                     pickup={{ name: transaction.sender.name, address: transaction.sender.address }}

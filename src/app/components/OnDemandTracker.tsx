@@ -7,8 +7,7 @@
  * eventual live map are backend/dispatch-owned (see getOnDemandProgress).
  */
 import {
-  IconBolt, IconMapPin, IconFlag3, IconClockHour4, IconMap2,
-  IconCircleCheck, IconAlertTriangle,
+  IconBolt, IconMapPin, IconFlag3, IconCircleCheck, IconAlertTriangle,
 } from '@tabler/icons-react';
 import type { OnDemandProgress } from '../services/transactionService';
 
@@ -19,36 +18,6 @@ export function OnDemandBadge({ className = '' }: { className?: string }) {
       <IconBolt className="w-3.5 h-3.5" />
       On-Demand
     </span>
-  );
-}
-
-/** Placeholder live-map card — a real driver map lands here once dispatch is wired. */
-export function OnDemandMapPlaceholder({ eta }: { eta: string }) {
-  return (
-    <div className="relative overflow-hidden rounded-xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white">
-      {/* faint grid to read as a map */}
-      <div
-        className="absolute inset-0 opacity-[0.5]"
-        style={{
-          backgroundImage:
-            'linear-gradient(#ede9fe 1px, transparent 1px), linear-gradient(90deg, #ede9fe 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-        }}
-      />
-      <div className="relative flex flex-col items-center justify-center gap-2 py-9 text-center px-4">
-        <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center">
-          <IconMap2 className="w-6 h-6 text-violet-600" />
-        </div>
-        <p className="text-sm font-medium text-gray-700">Live map preview</p>
-        <p className="text-xs text-gray-500 max-w-xs">
-          A real-time driver map will appear here once live dispatch tracking is connected.
-        </p>
-        <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-violet-700 shadow-sm">
-          <IconClockHour4 className="w-3.5 h-3.5" />
-          {eta}
-        </span>
-      </div>
-    </div>
   );
 }
 

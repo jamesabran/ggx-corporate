@@ -1,13 +1,24 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 import {
-  IconBuildingStore, IconCash, IconCircleCheck, IconPackage, IconShieldCheck,
+  IconBuildingStore, IconCash, IconClock, IconPackage, IconShieldCheck,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { LocationCascadeFields } from '../components/LocationCascadeFields';
-import { useCartItems, clearCart } from '../lib/cartStore';
+import { CheckoutDeliveryOptions } from '../components/CheckoutDeliveryOptions';
+import { useCartItems, clearCart, getCartSeller } from '../lib/cartStore';
+import { getFeatureStateSync } from '../services/featureEnablementService';
+import { getStorefrontProfile } from '../services/storefrontService';
+import { placeStorefrontOrder } from '../services/storefrontOrdersService';
+import type { DeliveryServiceType } from '../services/transactionService';
+
+const DELIVERY_LABEL: Record<DeliveryServiceType, string> = {
+  standard: 'Standard',
+  same_day: 'Same-Day',
+  on_demand: 'On-Demand',
+};
 
 const peso = (n: number) =>
   `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -33,6 +44,32 @@ export function CartCheckout() {
   const [placed, setPlaced] = useState(false);
   const [placedTotal, setPlacedTotal] = useState(0);
   const [placedItemCount, setPlacedItemCount] = useState(0);
+  const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+
+  // Seller context (set while browsing /shop/:slug) gates delivery options and
+  // attributes the placed order.
+  const seller = getCartSeller();
+  const odEnabled = seller ? getFeatureStateSync('on_demand', seller.scopeId).enabled : false;
+  const [sameDayOffered, setSameDayOffered] = useState(false);
+  useEffect(() => {
+    let active = true;
+    if (!seller) { setSameDayOffered(false); return; }
+    getStorefrontProfile(seller.scopeId).then((p) => {
+      if (active) setSameDayOffered(!!p?.deliveryOptions.includes('same_day'));
+    });
+    return () => { active = false; };
+  }, [seller?.scopeId]);
+
+  const deliveryOptions: DeliveryServiceType[] = [
+    'standard',
+    ...(sameDayOffered ? (['same_day'] as DeliveryServiceType[]) : []),
+    ...(odEnabled ? (['on_demand'] as DeliveryServiceType[]) : []),
+  ];
+  const [deliveryOption, setDeliveryOption] = useState<DeliveryServiceType>('standard');
+  useEffect(() => {
+    if (!deliveryOptions.includes(deliveryOption)) setDeliveryOption('standard');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [odEnabled, sameDayOffered]);
 
   const set = <K extends keyof CheckoutForm>(k: K, v: string) =>
     setForm((prev) => ({ ...prev, [k]: v }));
@@ -52,8 +89,31 @@ export function CartCheckout() {
     form.province.trim() && form.city.trim() && form.barangay.trim()
   );
 
-  const handlePlace = () => {
+  const handlePlace = async () => {
     if (!canOrder) return;
+    if (seller) {
+      const order = await placeStorefrontOrder({
+        scopeAccountId: seller.scopeId,
+        storeName: seller.storeName,
+        storeSlug: seller.slug,
+        channel: 'storefront_checkout',
+        serviceType: deliveryOption,
+        buyer: {
+          name: form.name.trim(),
+          mobile: form.mobile.trim(),
+          address: [form.street, form.barangay, form.city, form.province].map((s) => s.trim()).filter(Boolean).join(', '),
+          destination: [form.city, form.province].map((s) => s.trim()).filter(Boolean).join(', '),
+        },
+        items: items.map((i) => ({
+          productId: i.productId,
+          name: i.productSnapshot.name,
+          quantity: i.quantity,
+          unitPrice: i.productSnapshot.unitPrice,
+        })),
+        codTotal: total,
+      });
+      setPlacedOrderId(order.id);
+    }
     setPlacedTotal(total);
     setPlacedItemCount(itemCount);
     clearCart();
@@ -78,14 +138,20 @@ export function CartCheckout() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-              <IconCircleCheck className="w-9 h-9 text-green-600" />
+            <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+              <IconClock className="w-9 h-9 text-amber-600" />
             </div>
             <h1 className="text-xl font-bold text-gray-900">Order placed!</h1>
             <p className="text-sm text-gray-600 mt-2">
-              Thanks, {form.name}. Your order of {placedItemCount} item{placedItemCount === 1 ? '' : 's'} is confirmed.
+              Thanks, {form.name}. Your order of {placedItemCount} item{placedItemCount === 1 ? '' : 's'} has been sent to the seller.
             </p>
+            <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-medium text-amber-700">
+              <IconClock className="w-3.5 h-3.5" />
+              Awaiting seller acceptance
+            </div>
             <div className="mt-4 rounded-lg border border-gray-200 p-4 text-sm text-left space-y-1.5">
+              {placedOrderId && <Row label="Order #">{placedOrderId}</Row>}
+              <Row label="Delivery">{DELIVERY_LABEL[deliveryOption]}</Row>
               <Row label="Deliver to">{form.name} · {form.mobile}</Row>
               <Row label="Address">{[form.street, form.barangay, form.city, form.province].filter(Boolean).join(', ')}</Row>
               <Row label="Payment"><span className="inline-flex items-center gap-1"><IconCash className="w-4 h-4 text-emerald-600" /> Cash on Delivery</span></Row>
@@ -95,8 +161,13 @@ export function CartCheckout() {
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-4">
-              The seller will book your items for delivery via GoGo Xpress. Pay cash when your parcel arrives.
+              The seller will review and accept your order, then book it for delivery via GoGo Xpress. Pay cash when your parcel arrives.
             </p>
+            {placedOrderId && (
+              <Link to={`/track/${placedOrderId}`} className="mt-4 inline-block text-sm font-medium text-blue-600 hover:text-blue-800">
+                Track this order
+              </Link>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -128,6 +199,12 @@ export function CartCheckout() {
                   onChange={(p, c, b) => setForm((prev) => ({ ...prev, province: p, city: c, barangay: b }))}
                 />
               </div>
+
+              <CheckoutDeliveryOptions
+                options={deliveryOptions}
+                value={deliveryOption}
+                onChange={setDeliveryOption}
+              />
 
               <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 flex items-center gap-2">
                 <IconShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
@@ -173,6 +250,9 @@ export function CartCheckout() {
               <Button className="w-full" disabled={!canOrder} onClick={handlePlace}>
                 <IconCash className="w-4 h-4" /> Place COD order · {peso(total)}
               </Button>
+              <p className="text-xs text-gray-400 text-center">
+                Your order is sent to the seller to accept before it&apos;s booked for delivery.
+              </p>
             </CardContent>
           </Card>
         </div>
