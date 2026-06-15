@@ -5,41 +5,27 @@ import { Select } from './ui/Select';
 import { Card, CardContent } from './ui/Card';
 import { loadState, saveState } from '../lib/storage';
 
-// Row status pill tones. Kept small and inline so we don't add a new component.
-const PILL_TONES = {
-  required: 'bg-red-50 text-red-700 border-red-200',
-  optional: 'bg-gray-100 text-gray-500 border-gray-200',
-  auto: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  mapped: 'bg-blue-50 text-blue-700 border-blue-200',
-} as const;
-
-function StatusPill({ tone, children }: { tone: keyof typeof PILL_TONES; children: React.ReactNode }) {
-  return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${PILL_TONES[tone]}`}>
-      {children}
-    </span>
-  );
-}
-
-// GGX field definitions for column mapping.
-// Required fields must be mapped before Confirm is enabled.
+// GGX field definitions for column mapping. Field names and required/optional
+// logic align with the in-app spreadsheet bulk uploader rules. Optional fields
+// carry "(Optional)" in their label; required fields are identified by its
+// absence (no asterisks). Item Protection Fee is intentionally not a mapper field.
 const GGX_FIELDS = [
-  { key: 'recipientName',     label: 'Recipient Name',             required: true  },
-  { key: 'mobileNumber',      label: 'Mobile Number',              required: true  },
-  { key: 'streetAddress',     label: 'Street Address',             required: true  },
-  { key: 'province',          label: 'Province',                   required: true  },
-  { key: 'cityMunicipality',  label: 'City/Municipality',          required: true  },
-  { key: 'barangay',          label: 'Barangay',                   required: true  },
-  { key: 'landmarks',         label: 'Landmarks, Floor or Unit #', required: false },
-  { key: 'itemName',          label: 'Item Name',                  required: true  },
-  { key: 'pouchSize',         label: 'Pouch/box size',             required: true  },
-  { key: 'cod',               label: 'Cash on delivery (COD)',     required: false },
-  { key: 'codAmount',         label: 'COD Amount',                 required: false },
-  { key: 'declaredValue',     label: 'Declared Value',             required: false },
-  { key: 'itemProtection',    label: 'Item Protection',            required: false },
-  { key: 'recipientPaysFees', label: 'Recipient pays fees',        required: false },
-  { key: 'promoCode',         label: 'Promo code',                 required: false },
-  { key: 'referenceId',       label: 'Reference ID',               required: false },
+  { key: 'recipientName',     label: 'Name',                                       required: true  },
+  { key: 'mobileNumber',      label: 'Mobile',                                     required: true  },
+  { key: 'streetAddress',     label: 'Street Address',                             required: true  },
+  { key: 'province',          label: 'Province',                                   required: true  },
+  { key: 'cityMunicipality',  label: 'City / Municipality',                        required: true  },
+  { key: 'barangay',          label: 'Barangay',                                   required: true  },
+  { key: 'landmarks',         label: 'Landmarks, Floor or Unit Number (Optional)', required: false },
+  { key: 'itemName',          label: 'Item Name',                                  required: true  },
+  { key: 'pouchSize',         label: 'Pouch/box size',                             required: true  },
+  { key: 'codAmount',         label: 'COD Amount',                                 required: true  },
+  { key: 'cod',               label: 'Cash on delivery (COD)',                     required: true  },
+  { key: 'declaredValue',     label: 'Declared Item Value',                        required: true  },
+  { key: 'itemProtection',    label: 'Insure full item value?',                    required: true  },
+  { key: 'recipientPaysFees', label: 'Recipient Pays Fees',                        required: true  },
+  { key: 'promoCode',         label: 'Promo Code (Optional)',                      required: false },
+  { key: 'referenceId',       label: 'Reference ID (Optional)',                    required: false },
 ] as const;
 
 type FieldKey = (typeof GGX_FIELDS)[number]['key'];
@@ -156,7 +142,7 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
   // Precise CTA helper text describing exactly what is blocking Confirm.
   let blockerText = '';
   if (!requiredMapped && hasDuplicates) {
-    blockerText = 'Map required fields and resolve duplicates to continue';
+    blockerText = 'Map required fields and resolve duplicate mappings to continue';
   } else if (!requiredMapped) {
     blockerText = `Map ${requiredRemaining} required field${requiredRemaining === 1 ? '' : 's'} to continue`;
   } else if (hasDuplicates) {
@@ -245,9 +231,7 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
                       : '–';
                   });
 
-                  const isMapped = !!selectedHeader;
-                  const isAuto = isMapped && autoMatchedKeys.has(field.key);
-                  const requiredUnmapped = field.required && !isMapped;
+                  const requiredUnmapped = field.required && !selectedHeader;
 
                   return (
                     <tr
@@ -255,10 +239,7 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
                       className={`border-b border-gray-100 ${requiredUnmapped ? 'bg-red-50/40 hover:bg-red-50/60' : 'hover:bg-gray-50/50'}`}
                     >
                       <td className="px-4 py-2.5">
-                        <span className={`text-sm font-medium ${field.required ? 'text-gray-900' : 'text-gray-500'}`}>
-                          {field.label}
-                          {field.required && <span className="text-red-500 ml-0.5">*</span>}
-                        </span>
+                        <span className="text-sm font-medium text-gray-900">{field.label}</span>
                       </td>
                       <td className="px-4 py-2.5">
                         <Select
@@ -277,18 +258,6 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
                             );
                           })}
                         </Select>
-                        {/* Row status — visible without opening the dropdown */}
-                        <div className="mt-1.5">
-                          {isAuto ? (
-                            <StatusPill tone="auto">Auto-matched</StatusPill>
-                          ) : isMapped ? (
-                            <StatusPill tone="mapped">Mapped</StatusPill>
-                          ) : field.required ? (
-                            <StatusPill tone="required">Required · Unmapped</StatusPill>
-                          ) : (
-                            <StatusPill tone="optional">Optional</StatusPill>
-                          )}
-                        </div>
                       </td>
                       {visibleSampleCols.map((sample, i) => (
                         <td key={i} className="px-4 py-2.5 text-sm text-gray-600 max-w-[140px] truncate">
@@ -325,35 +294,31 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
         </div>
       )}
 
-      {/* Save mapping (mock/demo) */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={saveMapping}
-            onChange={(e) => toggleSaveMapping(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-          />
-          <span className="text-sm">
-            <span className="font-medium text-gray-900">Save this column mapping for future uploads with similar headers</span>
-            <span className="block text-xs text-gray-500 mt-0.5">Saved locally on this device for now (demo).</span>
-          </span>
-        </label>
-      </div>
-
       {/* Footer actions */}
-      <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={onBack}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <Button variant="outline" onClick={onBack} className="self-start">
           <IconArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <div className="flex items-center gap-3">
-          {blockerText && (
-            <p className="text-xs text-gray-500">{blockerText}</p>
-          )}
-          <Button disabled={!canConfirm} onClick={handleConfirm}>
-            Confirm Fields and Upload
-          </Button>
+        <div className="flex flex-col items-start sm:items-end gap-2">
+          {/* Save mapping (mock/demo) — kept close to the Confirm CTA */}
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={saveMapping}
+              onChange={(e) => toggleSaveMapping(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            Save this column mapping for future uploads with similar headers
+          </label>
+          <div className="flex items-center gap-3">
+            {blockerText && (
+              <p className="text-xs text-gray-500">{blockerText}</p>
+            )}
+            <Button disabled={!canConfirm} onClick={handleConfirm}>
+              Confirm Fields and Upload
+            </Button>
+          </div>
         </div>
       </div>
     </div>
