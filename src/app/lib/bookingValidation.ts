@@ -12,7 +12,7 @@
  */
 
 import { BOOKING_SERVICE_TYPES, SERVICE_TYPES, type ServiceTypeKey } from '../data/serviceTypes';
-import { RECEPTACLE_SIZES } from '../data/bulkTemplate';
+import { RECEPTACLE_SIZES, BULK_FIELD_LABELS as L } from '../data/bulkTemplate';
 
 export type BookingField =
   | 'recipientName'
@@ -96,23 +96,30 @@ export const YES_NO = ['Yes', 'No'] as const;
 // Payment column); Item Protection Fee is a derived display, not an input column.
 // Widths give labels + cascade dropdowns room; the grid scrolls horizontally
 // rather than compressing columns (see SpreadsheetBookingGrid).
+// Labels come from the shared BULK_FIELD_LABELS so the grid matches the column
+// mapper, failed-orders table, and template. Required/optional follows the shared
+// field model. Exceptions (kept to avoid breaking flow behavior): COD Amount is
+// conditionally required (only when "Cash on delivery (COD)" = Yes, enforced in
+// validateRow), so it stays required:false here; Item Name (productSku) is
+// required but the requirement is satisfied by attached Inventory products (see
+// validateRow). Qty is grid-specific (not in the shared model).
 export const BOOKING_COLUMNS: ColumnDef[] = [
-  { key: 'recipientName',    label: 'Recipient name',    required: true,  width: 180 },
-  { key: 'recipientMobile',  label: 'Contact number',    required: true,  width: 180 },
-  { key: 'address',          label: 'Street address',    required: true,  width: 300 },
-  { key: 'province',         label: 'Province',          required: true,  width: 190 },
-  { key: 'city',             label: 'City / Municipality',required: true, width: 190 },
-  { key: 'barangay',         label: 'Barangay',          required: true,  width: 200 },
-  { key: 'landmarks',        label: 'Landmarks / unit #',required: false, width: 180 },
-  { key: 'productSku',       label: 'Item name / SKU',   required: false, width: 260 },
+  { key: 'recipientName',    label: L.name,              required: true,  width: 180 },
+  { key: 'recipientMobile',  label: L.mobile,            required: true,  width: 180 },
+  { key: 'address',          label: L.streetAddress,     required: true,  width: 300 },
+  { key: 'province',         label: L.province,          required: true,  width: 190 },
+  { key: 'city',             label: L.cityMunicipality,  required: true,  width: 190 },
+  { key: 'barangay',         label: L.barangay,          required: true,  width: 200 },
+  { key: 'landmarks',        label: L.landmarks,         required: false, width: 280 },
+  { key: 'productSku',       label: L.itemName,          required: true,  width: 240 },
   { key: 'quantity',         label: 'Qty',               required: true,  width: 80 },
-  { key: 'parcelSize',       label: 'Receptacle size',   required: false, width: 170, options: RECEPTACLE_SIZES },
-  { key: 'cod',              label: 'Collect COD?',      required: false, width: 130, options: YES_NO },
-  { key: 'codAmount',        label: 'Collectible amount',required: false, width: 160 },
-  { key: 'declaredValue',    label: 'Declared value',    required: false, width: 160 },
-  { key: 'insureFull',       label: 'Insure full value?',required: false, width: 150, options: YES_NO },
-  { key: 'recipientPaysFees',label: 'Recipient pays fees?',required: false, width: 170, options: YES_NO },
-  { key: 'referenceId',      label: 'Reference ID',      required: false, width: 160 },
+  { key: 'parcelSize',       label: L.pouchSize,         required: true,  width: 170, options: RECEPTACLE_SIZES },
+  { key: 'codAmount',        label: L.codAmount,         required: false, width: 160 },
+  { key: 'cod',              label: L.cod,               required: true,  width: 200, options: YES_NO },
+  { key: 'declaredValue',    label: L.declaredValue,     required: true,  width: 180 },
+  { key: 'insureFull',       label: L.insureFull,        required: true,  width: 200, options: YES_NO },
+  { key: 'recipientPaysFees',label: L.recipientPaysFees, required: true,  width: 200, options: YES_NO },
+  { key: 'referenceId',      label: L.referenceId,       required: false, width: 200 },
 ];
 
 /** Fixed widths (px) for the grid's row-number and row-actions columns. */
@@ -178,6 +185,9 @@ export function validateRow(
   }
 
   for (const field of REQUIRED_FIELDS) {
+    // Item Name requirement is satisfied by attached Inventory products (the
+    // free-text cell stays empty while products are attached).
+    if (field === 'productSku' && row.products && row.products.length > 0) continue;
     if (!row[field]?.trim()) errors[field] = 'Required';
   }
 

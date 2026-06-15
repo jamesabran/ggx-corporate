@@ -45,10 +45,12 @@ check whether the other needs the same update.
 | File | Topic |
 |---|---|
 | `context/current-state.md` | Current product/build state and standing constraints |
+| `context/basic_user_requirements.md` | Basic self-serve seller product definition, segments, journeys, rules |
 | `context/backend-integration.md` | Service-layer/BFF integration guardrails |
 | `context/business-plus-addons.md` | Account Add-ons, access status, CTA, scope rules |
 | `context/commerce-workflows.md` | Inventory, Storefront, checkout/cart demo surfaces |
 | `context/bulk-booking.md` | Upload File, in-app spreadsheet, product attachment, fees |
+| `context/future-backlog.md` | Detailed specs for planned-but-not-started roadmap items |
 | `context/ui-components.md` | Design system, component, responsive, and Figma rules |
 
 ## Detailed Rule Docs

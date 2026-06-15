@@ -14,8 +14,95 @@ export type TransactionStatus =
   | 'failed'
   | 'returned';
 
-/** Where a transaction originated. Drives the Shopify "- Shopify" tag. */
+/** Legacy origin channel (kept for back-compat). Superseded by `attribution`. */
 export type TransactionSource = 'manual' | 'bulk_upload' | 'api' | 'shopify';
+
+// ── Order attribution model (see docs/context/future-backlog.md §1) ───────────
+// Four dimensions: account scope/ownership, high-level Source, connected
+// store/integration, and booking method. The Transactions list stays simple
+// (ownership in the Subaccount column + a short Source column); detail/filters/
+// exports/reports use the fuller attribution. Backend stays granular (e.g. bulk
+// template vs in-app spreadsheet) for analytics; the frontend label rolls both
+// bulk methods up to "Bulk Upload".
+
+/** High-level origin shown in the Transactions "Source" column (short labels). */
+export type SourceType = 'ggx_dashboard' | 'bulk_upload' | 'api' | 'shopify' | 'gobenta' | 'product_checkout';
+
+export const SOURCE_TYPE_LABEL: Record<SourceType, string> = {
+  ggx_dashboard:    'GGX Dashboard',
+  bulk_upload:      'Bulk Upload',
+  api:              'API',
+  shopify:          'Shopify',
+  gobenta:          'GoBenta',
+  product_checkout: 'Product Checkout',
+};
+
+/** How the order was created (backend stays granular; frontend label rolls bulk up). */
+export type BookingMethod =
+  | 'single_booking'
+  | 'bulk_template_upload'
+  | 'bulk_in_app_spreadsheet'
+  | 'api_created'
+  | 'shopify_import'
+  | 'storefront_checkout'
+  | 'single_product_checkout';
+
+export const BOOKING_METHOD_LABEL: Record<BookingMethod, string> = {
+  single_booking:          'Single Booking',
+  bulk_template_upload:    'Bulk Upload',
+  bulk_in_app_spreadsheet: 'Bulk Upload',
+  api_created:             'API-created',
+  shopify_import:          'Shopify Import',
+  storefront_checkout:     'Storefront Checkout',
+  single_product_checkout: 'Single Product Checkout',
+};
+
+/**
+ * Analytics labels keep the two bulk methods distinct (they roll up to a single
+ * "Bulk Upload" only in list/detail UI) so analytics can measure template upload
+ * vs in-app spreadsheet separately, per the attribution model.
+ */
+export const BOOKING_METHOD_ANALYTICS_LABEL: Record<BookingMethod, string> = {
+  single_booking:          'Single Booking',
+  bulk_template_upload:    'Bulk Upload (Template)',
+  bulk_in_app_spreadsheet: 'Bulk Upload (In-app)',
+  api_created:             'API-created',
+  shopify_import:          'Shopify Import',
+  storefront_checkout:     'Storefront Checkout',
+  single_product_checkout: 'Single Product Checkout',
+};
+
+/** Fixed display order for source / booking-method analytics breakdowns. */
+export const SOURCE_TYPE_ORDER: SourceType[] = [
+  'ggx_dashboard', 'bulk_upload', 'api', 'shopify', 'gobenta', 'product_checkout',
+];
+export const BOOKING_METHOD_ORDER: BookingMethod[] = [
+  'single_booking', 'bulk_template_upload', 'bulk_in_app_spreadsheet',
+  'api_created', 'shopify_import', 'storefront_checkout', 'single_product_checkout',
+];
+
+/** Analytics-safe rollup group (both bulk methods → 'bulk_upload'; others 1:1). */
+export function bookingMethodGroup(method: BookingMethod): string {
+  return method === 'bulk_template_upload' || method === 'bulk_in_app_spreadsheet'
+    ? 'bulk_upload'
+    : method;
+}
+
+/** Full order attribution carried on a transaction. */
+export interface OrderAttribution {
+  /** Ownership scope: Main Account vs a Subaccount. */
+  accountScope: 'main' | 'subaccount';
+  /** High-level origin (short, list-friendly). */
+  sourceType: SourceType;
+  /** How the order was created (granular). */
+  bookingMethod: BookingMethod;
+  /** Connected store / integration display name, when applicable. */
+  connectedStore?: string;
+  /** Integration id when from a connected integration (Shopify / GoBenta / API). */
+  integrationId?: string;
+  /** Who created the order (when known). */
+  createdBy?: string;
+}
 
 /**
  * Delivery service type for a transaction. A subset of the Business+ service
@@ -93,10 +180,12 @@ export interface Transaction {
   status: TransactionStatus;
   date: string;
   subaccount: string;
-  /** Origin channel of the transaction. Defaults to 'manual' / 'bulk_upload'. */
+  /** Legacy origin channel. Defaults to 'manual' / 'bulk_upload'. */
   source: TransactionSource;
   /** Shopify store display name when source === 'shopify'. */
   shopifyStoreName?: string;
+  /** Full order attribution (scope, source, connected store, booking method). */
+  attribution: OrderAttribution;
   // Detail fields
   createdAt: string;
   pickupDate: string;
@@ -184,6 +273,11 @@ interface RowSeed {
   source?: TransactionSource;
   /** Shopify store display name (source === 'shopify' rows). */
   shopifyStoreName?: string;
+  /** Attribution overrides — omit to derive from `source`/`batch`. */
+  sourceType?: SourceType;
+  bookingMethod?: BookingMethod;
+  connectedStore?: string;
+  createdBy?: string;
   /** Set when the transaction originated from a Bulk Upload batch. batchId values
    *  match the seed batches shown in BulkUploader's Recent Uploads. */
   batch?: TransactionBatch;
@@ -198,7 +292,7 @@ const rows: RowSeed[] = [
   // ── May 31 (today) ───────────────────────────────────────────────────────────
   { tracking: 'GGX-2026-90010', recipient: 'Nexus Retail Group', destination: 'Makati City, Metro Manila', contactNumber: '+63 917 211 0011', recipientAddress: 'Ayala Mall, Glorietta 5, Makati City, Metro Manila', status: 'pending', type: 'Express', date: '2026-05-31', subaccount: 'Acme Corporation', codAmount: 32000, batch: { batchId: 'UPLOAD-2026-05-31-001', fileName: 'may31_express_orders.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 247, delivered: 5, inProgress: 240, failed: 2 } }},
   { tracking: 'GGX-2026-90009', recipient: 'Meridian Health Corp.', destination: 'Quezon City, Metro Manila', contactNumber: '+63 918 322 0022', recipientAddress: 'Trinoma Mall, North EDSA, Quezon City, Metro Manila', status: 'in-transit', type: 'Express', date: '2026-05-31', subaccount: 'Acme Luzon', codAmount: 18750, batch: { batchId: 'UPLOAD-2026-05-31-002', fileName: 'may31_luzon_am.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 184, delivered: 12, inProgress: 170, failed: 2 } } },
-  { tracking: 'GGX-2026-90008', recipient: 'Horizon Publishing Co.', destination: 'Pasig City, Metro Manila', contactNumber: '+63 919 433 0033', recipientAddress: 'Robinsons Galleria, Ortigas, Pasig City, Metro Manila', status: 'failed', type: 'Standard', date: '2026-05-31', subaccount: 'Acme Corporation', codAmount: 9400, serviceType: 'on_demand' },
+  { tracking: 'GGX-2026-90008', recipient: 'Horizon Publishing Co.', destination: 'Pasig City, Metro Manila', contactNumber: '+63 919 433 0033', recipientAddress: 'Robinsons Galleria, Ortigas, Pasig City, Metro Manila', status: 'failed', type: 'Standard', date: '2026-05-31', subaccount: 'Acme Corporation', codAmount: 9400, serviceType: 'on_demand', sourceType: 'product_checkout', connectedStore: 'TechGear PH — product link' },
   // ── May 30 ───────────────────────────────────────────────────────────────────
   { tracking: 'GGX-2026-90007', recipient: 'PeakSoft Technologies', destination: 'Taguig City, Metro Manila', contactNumber: '+63 917 544 0044', recipientAddress: 'One Bonifacio High Street, BGC, Taguig City', status: 'delivered', type: 'Express', date: '2026-05-30', subaccount: 'Acme Corporation', codAmount: 27500, batch: { batchId: 'UPLOAD-2026-05-30-001', fileName: 'may30_corporate.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 312, delivered: 298, inProgress: 11, failed: 3 } } },
   { tracking: 'GGX-2026-90006', recipient: 'Citadel Finance Group', destination: 'Mandaluyong City, Metro Manila', contactNumber: '+63 918 655 0055', recipientAddress: 'Shaw Boulevard, Mandaluyong City, Metro Manila', status: 'failed', type: 'Express', date: '2026-05-30', subaccount: 'Acme Luzon', codAmount: 43200, batch: { batchId: 'UPLOAD-2026-05-30-002', fileName: 'may30_priority.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 67, delivered: 58, inProgress: 3, failed: 6 } } },
@@ -216,9 +310,9 @@ const rows: RowSeed[] = [
   { tracking: 'GGX-2024-89236', recipient: 'Metro Solutions Inc.', destination: 'Pasig City, Metro Manila', contactNumber: '+63 918 555 4040', recipientAddress: 'Ortigas Center, San Antonio, Pasig City, Metro Manila', status: 'failed', type: 'Express', date: '2026-05-17', subaccount: 'Acme Luzon', codAmount: 12300, batch: { batchId: 'UPLOAD-2026-05-17-002', fileName: 'luzon_daily.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 76, delivered: 64, inProgress: 4, failed: 8 } } },
   { tracking: 'GGX-2024-89235', recipient: 'Digital Ventures Co.', destination: 'Taguig City, Metro Manila', contactNumber: '+63 919 666 5050', recipientAddress: 'BGC, Fort Bonifacio, Taguig City, Metro Manila', status: 'delivered', type: 'Standard', date: '2026-05-16', subaccount: 'Acme Corporation', codAmount: 7400, serviceType: 'same_day' },
   { tracking: 'GGX-2024-89234', recipient: 'Tech Solutions Inc.', destination: 'Mandaluyong City, Metro Manila', contactNumber: '+63 917 777 6060', recipientAddress: 'Greenfield District, Mandaluyong City, Metro Manila', status: 'delivered', type: 'Express', date: '2026-05-16', subaccount: 'Acme Luzon', codAmount: 9800, batch: { batchId: 'UPLOAD-2026-05-18-001', fileName: 'morning_batch.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 134, delivered: 128, inProgress: 3, failed: 3 } } },
-  { tracking: 'GGX-2024-89233', recipient: 'Global Innovations Ltd.', destination: 'Caloocan City, Metro Manila', contactNumber: '+63 918 888 7070', recipientAddress: 'Grace Park, Caloocan City, Metro Manila', status: 'in-transit', type: 'Standard', date: '2026-05-16', subaccount: 'Acme Corporation', codAmount: 6200 },
+  { tracking: 'GGX-2024-89233', recipient: 'Global Innovations Ltd.', destination: 'Caloocan City, Metro Manila', contactNumber: '+63 918 888 7070', recipientAddress: 'Grace Park, Caloocan City, Metro Manila', status: 'in-transit', type: 'Standard', date: '2026-05-16', subaccount: 'Acme Corporation', codAmount: 6200, sourceType: 'gobenta', connectedStore: 'Acme GoBenta Shop' },
   { tracking: 'GGX-2024-89232', recipient: 'Acme Corporation', destination: 'Santa Rosa, Laguna', contactNumber: '+63 919 999 8080', recipientAddress: 'Nuvali, Santa Rosa, Laguna', status: 'picked-up', type: 'Express', date: '2026-05-15', subaccount: 'Acme Luzon', codAmount: 17600, serviceType: 'on_demand' },
-  { tracking: 'GGX-2024-89231', recipient: 'Summit Partners', destination: 'Bacoor, Cavite', contactNumber: '+63 917 101 9090', recipientAddress: 'Molino Boulevard, Bacoor, Cavite', status: 'returned', type: 'Standard', date: '2026-05-15', subaccount: 'Acme Corporation', codAmount: 4300 },
+  { tracking: 'GGX-2024-89231', recipient: 'Summit Partners', destination: 'Bacoor, Cavite', contactNumber: '+63 917 101 9090', recipientAddress: 'Molino Boulevard, Bacoor, Cavite', status: 'returned', type: 'Standard', date: '2026-05-15', subaccount: 'Acme Corporation', codAmount: 4300, createdBy: 'Maria Santos' },
   // ── May 14–12 (older, SLA-notable) ───────────────────────────────────────────
   { tracking: 'GGX-2024-89230', recipient: 'Castillo & Partners Law', destination: 'Makati City, Metro Manila', contactNumber: '+63 918 202 1212', recipientAddress: 'RCBC Plaza, Ayala Avenue, Makati City', status: 'failed', type: 'Express', date: '2026-05-14', subaccount: 'Acme Corporation', codAmount: 19500, serviceType: 'on_demand' },
   { tracking: 'GGX-2024-89229', recipient: 'IronForge Manufacturing', destination: 'Batangas City, Batangas', contactNumber: '+63 919 313 2323', recipientAddress: 'Batangas City Industrial Estate, Batangas City', status: 'returned', type: 'Express', date: '2026-05-14', subaccount: 'Acme Luzon', codAmount: 72000, batch: { batchId: 'UPLOAD-2026-05-14-001', fileName: 'may14_southern.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 112, delivered: 95, inProgress: 6, failed: 11 } } },
@@ -226,6 +320,42 @@ const rows: RowSeed[] = [
   { tracking: 'GGX-2024-89227', recipient: 'Cascade Food Corp.', destination: 'San Fernando, Pampanga', contactNumber: '+63 918 535 4545', recipientAddress: 'SM City Pampanga, San Fernando, Pampanga', status: 'failed', type: 'Standard', date: '2026-05-13', subaccount: 'Acme Corporation', codAmount: 15600, batch: { batchId: 'UPLOAD-2026-05-13-001', fileName: 'may13_central_luzon.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 89, delivered: 80, inProgress: 2, failed: 7 } }},
   { tracking: 'GGX-2024-89226', recipient: 'Onyx Trading Corp.', destination: 'Angeles City, Pampanga', contactNumber: '+63 919 646 5656', recipientAddress: 'Fields Avenue, Angeles City, Pampanga', status: 'delivered', type: 'Express', date: '2026-05-12', subaccount: 'Acme Luzon', codAmount: 33700 },
 ];
+
+/** Resolve the high-level Source for a row (explicit override, else from legacy source). */
+function deriveSourceType(r: RowSeed): SourceType {
+  if (r.sourceType) return r.sourceType;
+  const legacy = r.source ?? (r.batch ? 'bulk_upload' : 'manual');
+  switch (legacy) {
+    case 'shopify':     return 'shopify';
+    case 'bulk_upload': return 'bulk_upload';
+    case 'api':         return 'api';
+    default:            return 'ggx_dashboard';
+  }
+}
+
+/** Resolve the booking method for a row (explicit override, else from Source). */
+function deriveBookingMethod(r: RowSeed, sourceType: SourceType): BookingMethod {
+  if (r.bookingMethod) return r.bookingMethod;
+  switch (sourceType) {
+    case 'shopify':          return 'shopify_import';
+    case 'bulk_upload':      return 'bulk_template_upload';
+    case 'api':              return 'api_created';
+    case 'gobenta':          return 'storefront_checkout';
+    case 'product_checkout': return 'single_product_checkout';
+    default:                 return 'single_booking';
+  }
+}
+
+function buildAttribution(r: RowSeed): OrderAttribution {
+  const sourceType = deriveSourceType(r);
+  return {
+    accountScope: r.subaccount === 'Main Account' ? 'main' : 'subaccount',
+    sourceType,
+    bookingMethod: deriveBookingMethod(r, sourceType),
+    connectedStore: r.connectedStore ?? r.shopifyStoreName,
+    createdBy: r.createdBy,
+  };
+}
 
 export const transactions: Transaction[] = rows.map((r) => ({
   trackingNumber: r.tracking,
@@ -240,6 +370,7 @@ export const transactions: Transaction[] = rows.map((r) => ({
   subaccount: r.subaccount,
   source: r.source ?? (r.batch ? 'bulk_upload' : 'manual'),
   shopifyStoreName: r.shopifyStoreName,
+  attribution: buildAttribution(r),
   createdAt: `${r.date} 09:30 AM`,
   pickupDate: r.date,
   deliveryDate: r.status === 'delivered' ? r.date : '—',
@@ -268,6 +399,8 @@ export interface TransactionSummary {
   subaccount: string;
   source: TransactionSource;
   shopifyStoreName?: string;
+  /** High-level Source for the list's Source column. */
+  sourceType: SourceType;
 }
 
 export const deliveries: TransactionSummary[] = transactions.map((t) => ({
@@ -281,15 +414,22 @@ export const deliveries: TransactionSummary[] = transactions.map((t) => ({
   subaccount: t.subaccount,
   source: t.source,
   shopifyStoreName: t.shopifyStoreName,
+  sourceType: t.attribution.sourceType,
 }));
 
 /**
- * Subaccount column display label. Shopify-sourced transactions are tagged
- * "{Subaccount Name} - Shopify"; all other sources show the plain name.
- * The underlying `subaccount` value is unchanged so filtering stays intact.
+ * Subaccount column display label = ownership only (Main Account or the
+ * Subaccount name), never blank/N/A. Source now has its own column, so the
+ * old "{Subaccount} - Shopify" concatenation has been removed (attribution
+ * model: do not concatenate Subaccount + Source + Store in the table).
  */
-export function subaccountDisplayLabel(t: Pick<TransactionSummary, 'subaccount' | 'source'>): string {
-  return t.source === 'shopify' ? `${t.subaccount} - Shopify` : t.subaccount;
+export function subaccountDisplayLabel(t: Pick<TransactionSummary, 'subaccount'>): string {
+  return t.subaccount || 'Main Account';
+}
+
+/** Short Source label for the Transactions list "Source" column. */
+export function sourceTypeLabel(t: Pick<TransactionSummary, 'sourceType'>): string {
+  return SOURCE_TYPE_LABEL[t.sourceType];
 }
 
 /** Look up a full transaction by its tracking number (the `:id` route param). */

@@ -8,7 +8,7 @@ import { Badge } from '../components/ui/Badge';
 import { getStorefrontProfileBySlug, type StorefrontProfile } from '../services/storefrontService';
 import { getInventoryProductsByIds, isLowStock, productCover, type InventoryProduct } from '../services/inventoryService';
 import { getServiceTypeLabel } from '../data/serviceTypes';
-import { addToCart, useCartItems } from '../lib/cartStore';
+import { addToCart, useCartItems, setCartSeller } from '../lib/cartStore';
 
 const peso = (n: number) =>
   `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -39,6 +39,9 @@ export function StorefrontPreview() {
         if (!active) return;
         setProfile(p);
         if (p) {
+          // Remember which store this cart belongs to so /checkout can gate
+          // delivery options (e.g. On-Demand) and attribute the placed order.
+          setCartSeller({ scopeId: p.scopeAccountId, storeName: p.storeName, slug: p.slug });
           const items = await getInventoryProductsByIds(p.productIds);
           if (active) setProducts(items.filter((it) => it.status === 'active'));
         }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import {
   IconDownload, IconEye, IconPackages, IconList,
   IconChevronDown, IconChevronRight, IconTag,
@@ -13,6 +13,9 @@ import { SegmentedControl } from '../components/SegmentedControl';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useScopedAccountId } from '../hooks/useAccountScope';
+import { getFeatureStateSync } from '../services/featureEnablementService';
+import { useModuleAccessContext } from '../hooks/useModuleAccess';
+import { StoreOrdersPanel } from '../components/StoreOrdersPanel';
 // Data access goes through the transactionService facade (not the data module
 // directly). The service shapes data the UI needs; in production it is fronted
 // by the GGX Corporate BFF over OMS/fulfillment/FTX. See transactionService.ts.
@@ -22,11 +25,19 @@ import {
   getTransactionBatches,
   statusConfig,
   subaccountDisplayLabel,
+  sourceTypeLabel,
   SERVICE_TYPE_SHORT_LABEL,
+  SOURCE_TYPE_LABEL,
   type TransactionSummary,
   type TransactionBatchGroup,
   type DeliveryServiceType,
+  type SourceType,
 } from '../services/transactionService';
+
+/** Source filter options (order matches the attribution model). */
+const SOURCE_FILTER_OPTIONS: SourceType[] = [
+  'ggx_dashboard', 'bulk_upload', 'api', 'shopify', 'gobenta', 'product_checkout',
+];
 
 // Each booking has exactly ONE service type. Badge colors align with the Bulk
 // Upload service types — Standard = blue, Same-Day = orange, On-Demand = purple —
@@ -53,12 +64,36 @@ export function Transactions() {
   const scopeId = useScopedAccountId();
   const mainView = subAccountsEnabled && scopeId === undefined; // consolidated admin view
 
+  // Feature gating uses the module-access scope (maps a standard account to its
+  // synthetic scope id), consistent with the sidebar / add-on surfaces — so a
+  // standard account that enabled the add-on resolves correctly.
+  const featureScope = useModuleAccessContext().scopeAccountId;
+
+  // Commerce (Inventory/Storefront) gating: the Store Orders tab only appears when
+  // commerce is enabled for the active account/subaccount. Without it, Transactions
+  // behaves as the normal delivery transactions page (no tabs).
+  const commerceEnabled =
+    getFeatureStateSync('inventory', featureScope).enabled ||
+    getFeatureStateSync('storefront', featureScope).enabled;
+
+  // On-Demand entitlement: only show On-Demand transactions where the OD add-on
+  // is enabled for the current scope (OD is subaccount-scoped). A main/standard
+  // account without OD must not start with On-Demand rows.
+  const odEnabledForScope = getFeatureStateSync('on_demand', featureScope).enabled;
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'store-orders' | 'deliveries'>(
+    searchParams.get('view') === 'store-orders' ? 'store-orders' : 'deliveries'
+  );
+  const showStoreOrders = commerceEnabled && activeTab === 'store-orders';
+
   // View mode: flat list vs. grouped by batch
   const [viewMode, setViewMode] = useState<'all' | 'batches'>('all');
 
   // "All Transactions" filter state
   const [statusFilter, setStatusFilter] = useState('all');
   const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const [subaccountFilter, setSubaccountFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -103,8 +138,11 @@ export function Transactions() {
       d.destination.toLowerCase().includes(q);
     const statusOk = statusFilter === 'all' || d.status === statusFilter;
     const serviceOk = serviceTypeFilter === 'all' || d.serviceType === serviceTypeFilter;
+    const sourceOk = sourceFilter === 'all' || d.sourceType === sourceFilter;
     const subOk    = subaccountFilter === 'all' || d.subaccount === subaccountFilter;
-    return searchOk && statusOk && serviceOk && subOk;
+    // Hide On-Demand rows unless the current scope has the OD add-on enabled.
+    const odOk     = odEnabledForScope || d.serviceType !== 'on_demand';
+    return searchOk && statusOk && serviceOk && sourceOk && subOk && odOk;
   });
 
   return (
@@ -115,31 +153,69 @@ export function Transactions() {
           <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
           <p className="text-gray-600 mt-1">Track all your bookings and deliveries</p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* View mode toggle */}
-          <SegmentedControl
-            segments={[
-              { value: 'all',     label: 'All Transactions', icon: IconList },
-              { value: 'batches', label: 'By Batch',         icon: IconPackages },
-            ]}
-            value={viewMode}
-            onChange={(v) => setViewMode(v as 'all' | 'batches')}
-          />
-          <Button variant="outline" iconEnd>
-            Export CSV
-            <IconDownload className="w-4 h-4" />
-          </Button>
-        </div>
+        {!showStoreOrders && (
+          <div className="flex items-center gap-2">
+            {/* View mode toggle */}
+            <SegmentedControl
+              segments={[
+                { value: 'all',     label: 'All Transactions', icon: IconList },
+                { value: 'batches', label: 'By Batch',         icon: IconPackages },
+              ]}
+              value={viewMode}
+              onChange={(v) => setViewMode(v as 'all' | 'batches')}
+            />
+            <Button variant="outline" iconEnd>
+              Export CSV
+              <IconDownload className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
-      {loadError && (
+      {/* Commerce tabs — Store Orders vs Deliveries. Only when commerce is on. */}
+      {commerceEnabled && (
+        <div className="border-b border-gray-200">
+          <nav className="flex gap-6" aria-label="Transactions tabs">
+            {([
+              { key: 'store-orders', label: 'Store Orders' },
+              { key: 'deliveries',   label: 'Deliveries' },
+            ] as const).map((tab) => {
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => {
+                    setActiveTab(tab.key);
+                    const next = new URLSearchParams(searchParams);
+                    if (tab.key === 'store-orders') next.set('view', 'store-orders');
+                    else next.delete('view');
+                    setSearchParams(next, { replace: true });
+                  }}
+                  className={`-mb-px border-b-2 px-1 py-3 text-sm font-medium transition-colors ${
+                    active
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      )}
+
+      {loadError && !showStoreOrders && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
           {loadError}
         </div>
       )}
 
+      {/* ── Store Orders tab — buyer commerce orders (separate from deliveries) ── */}
+      {showStoreOrders && <StoreOrdersPanel scopeId={scopeId} />}
+
       {/* ── All Transactions view ──────────────────────────────────────────── */}
-      {viewMode === 'all' && (
+      {!showStoreOrders && viewMode === 'all' && (
         <Card>
           <CardHeader>
             {/* Filter toolbar — flex-col on mobile, single row on sm+ */}
@@ -176,7 +252,17 @@ export function Transactions() {
                   <option value="all">All Service Types</option>
                   <option value="standard">{SERVICE_TYPE_SHORT_LABEL.standard}</option>
                   <option value="same_day">{SERVICE_TYPE_SHORT_LABEL.same_day}</option>
-                  <option value="on_demand">{SERVICE_TYPE_SHORT_LABEL.on_demand}</option>
+                  {odEnabledForScope && (
+                    <option value="on_demand">{SERVICE_TYPE_SHORT_LABEL.on_demand}</option>
+                  )}
+                </Select>
+              </div>
+              <div className="w-full sm:w-[160px] flex-shrink-0">
+                <Select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
+                  <option value="all">All Sources</option>
+                  {SOURCE_FILTER_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{SOURCE_TYPE_LABEL[s]}</option>
+                  ))}
                 </Select>
               </div>
             </div>
@@ -189,6 +275,7 @@ export function Transactions() {
                   <TableHead>Recipient</TableHead>
                   <TableHead>Destination</TableHead>
                   {mainView && <TableHead>Subaccount</TableHead>}
+                  <TableHead>Source</TableHead>
                   <TableHead>Service Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
@@ -198,7 +285,7 @@ export function Transactions() {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={mainView ? 8 : 7} className="text-center py-8 text-gray-400 text-sm">
+                    <TableCell colSpan={mainView ? 9 : 8} className="text-center py-8 text-gray-400 text-sm">
                       No transactions match your search or filters.
                     </TableCell>
                   </TableRow>
@@ -218,6 +305,9 @@ export function Transactions() {
                         </span>
                       </TableCell>
                     )}
+                    <TableCell>
+                      <span className="text-sm text-gray-600">{sourceTypeLabel(delivery)}</span>
+                    </TableCell>
                     <TableCell>
                       <ServiceTypeCell serviceType={delivery.serviceType} />
                     </TableCell>
@@ -252,7 +342,7 @@ export function Transactions() {
       )}
 
       {/* ── By Batch view ─────────────────────────────────────────────────── */}
-      {viewMode === 'batches' && (
+      {!showStoreOrders && viewMode === 'batches' && (
         <div className="space-y-4">
           {batchGroups.length === 0 ? (
             <Card>

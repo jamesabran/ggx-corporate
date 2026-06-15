@@ -28,7 +28,10 @@ import {
 import { isAddonEnabledForAccount } from '../services/addonsService';
 import { MAIN_SCOPE } from '../data/addonState';
 import { SUBACCOUNT_OPTIONS } from '../data/users';
-import { getBasicAnalytics } from '../services/transactionService';
+import { getBasicAnalytics, type BasicAnalytics, type DeliveryServiceType } from '../services/transactionService';
+
+/** Distinct colors for the source / booking-method attribution charts. */
+const ATTRIBUTION_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
 
 const DEFAULT_OVERVIEW: AnalyticsOverview = {
   totalOrders: 0,
@@ -73,6 +76,8 @@ export function DataAnalytics() {
   const [serviceTypeFilter, setServiceTypeFilter] = useState('all');
   // Subaccount comparison data (main account view only)
   const [subComparison, setSubComparison] = useState<{ id: string; name: string; total: number; successRate: number; totalCod: number }[]>([]);
+  // Order-attribution breakdowns (source mix + granular booking-method mix).
+  const [attribution, setAttribution] = useState<Pick<BasicAnalytics, 'sourceMix' | 'bookingMethodMix'> | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -117,6 +122,25 @@ export function DataAnalytics() {
     return () => { active = false; };
   }, [mainView, subAccountsEnabled, advancedEnabled]);
 
+  // Load order-attribution breakdowns for the active scope + service-type filter.
+  useEffect(() => {
+    if (!advancedEnabled) return;
+    let active = true;
+    getBasicAnalytics(scopeId, {
+      serviceType: serviceTypeFilter === 'all' ? undefined : (serviceTypeFilter as DeliveryServiceType),
+    })
+      .then((b) => { if (active) setAttribution({ sourceMix: b.sourceMix, bookingMethodMix: b.bookingMethodMix }); })
+      .catch(() => { if (active) setAttribution(null); });
+    return () => { active = false; };
+  }, [scopeId, serviceTypeFilter, advancedEnabled]);
+
+  const sourceData = (attribution?.sourceMix ?? [])
+    .filter((m) => m.count > 0)
+    .map((m, i) => ({ name: m.label, value: m.count, color: ATTRIBUTION_COLORS[i % ATTRIBUTION_COLORS.length] }));
+  const bookingMethodData = (attribution?.bookingMethodMix ?? [])
+    .filter((m) => m.count > 0)
+    .map((m) => ({ name: m.label, count: m.count }));
+
   const claimsTotal = claims.length;
   const claimsOpen = claims.filter((c) => c.status === 'open' || c.status === 'in-review').length;
   const claimsSettledAmount = claims
@@ -153,6 +177,8 @@ export function DataAnalytics() {
       `RTS Rate,${overview.rtsRatePct.toFixed(1)}%`,
       `SLA Hit,${overview.slaHitPct.toFixed(1)}%`,
       `Claims Total,${claimsTotal}`,
+      ...(attribution?.sourceMix.filter((m) => m.count > 0).map((m) => `Source: ${m.label},${m.count}`) ?? []),
+      ...(attribution?.bookingMethodMix.filter((m) => m.count > 0).map((m) => `Booking method: ${m.label},${m.count}`) ?? []),
     ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -420,6 +446,53 @@ export function DataAnalytics() {
                 <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
               </PieChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Order attribution — source mix + granular booking-method mix */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Bookings by Source</CardTitle>
+            <CardDescription>Order origin (GoBenta and Product Checkout counted separately)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {sourceData.length === 0 ? (
+              <p className="text-sm text-gray-400 py-12 text-center">No bookings in this scope.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie data={sourceData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
+                    {sourceData.map((e) => <Cell key={e.name} fill={e.color} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Bookings by Booking Method</CardTitle>
+            <CardDescription>Bulk template upload and in-app spreadsheet tracked separately</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {bookingMethodData.length === 0 ? (
+              <p className="text-sm text-gray-400 py-12 text-center">No bookings in this scope.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={bookingMethodData} layout="vertical" margin={{ left: 24, right: 16 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                  <XAxis type="number" stroke="#6b7280" allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" stroke="#6b7280" width={150} tick={{ fontSize: 12 }} />
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+                  <Bar dataKey="count" fill="#6366f1" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -217,7 +217,7 @@ export function BulkSpreadsheet() {
                 <div className="text-left">
                   <div className="font-semibold">On-Demand Delivery</div>
                   <div className={`text-xs ${uploadMode === 'on-demand' ? 'text-violet-100' : onDemandEnabled ? 'text-gray-500' : 'text-violet-600'}`}>
-                    {onDemandEnabled ? 'Immediate, direct pickup & delivery' : 'Enable in Add-ons →'}
+                    {onDemandEnabled ? 'Immediate, direct pickup & delivery' : 'Immediate, direct pickup & delivery — enable in Add-ons'}
                   </div>
                 </div>
               </div>
@@ -412,7 +412,7 @@ export function BulkSpreadsheet() {
               {fees.pendingRows > 0 && (
                 <p className="text-xs text-gray-500 flex items-start gap-1">
                   <IconInfoCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  {fees.pendingRows} row{fees.pendingRows === 1 ? '' : 's'} pending — add parcel size to estimate.
+                  {fees.pendingRows} row{fees.pendingRows === 1 ? '' : 's'} pending — add Pouch/box size to estimate.
                 </p>
               )}
               <p className="text-xs text-gray-400">

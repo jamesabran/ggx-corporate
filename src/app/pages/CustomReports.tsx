@@ -16,12 +16,12 @@ import { EnablementGate } from '../components/EnablementGate';
 import { getFeatureStateSync } from '../services/featureEnablementService';
 import {
   getTransactions, getTransactionsBySubaccountId, statusConfig,
-  SERVICE_TYPE_SHORT_LABEL,
+  SERVICE_TYPE_SHORT_LABEL, sourceTypeLabel,
   type TransactionSummary, type TransactionStatus, type DeliveryServiceType,
 } from '../services/transactionService';
 import { getSubaccountOptions } from '../services/userService';
 
-type ColKey = 'tracking' | 'recipient' | 'destination' | 'serviceType' | 'status' | 'date' | 'subaccount';
+type ColKey = 'tracking' | 'recipient' | 'destination' | 'serviceType' | 'status' | 'date' | 'subaccount' | 'source';
 type DateRange = 'today' | 'last7' | 'last30' | 'all';
 type StatusFilter = TransactionStatus | 'all' | 'failed_returned';
 
@@ -30,6 +30,7 @@ const COLUMNS: { key: ColKey; label: string }[] = [
   { key: 'recipient',   label: 'Recipient' },
   { key: 'destination', label: 'Destination' },
   { key: 'serviceType', label: 'Service type' },
+  { key: 'source',      label: 'Source' },
   { key: 'status',      label: 'Status' },
   { key: 'date',        label: 'Date' },
   { key: 'subaccount',  label: 'Subaccount' },
@@ -105,6 +106,7 @@ function cellValue(row: TransactionSummary, key: ColKey): string {
     case 'recipient':   return row.recipient;
     case 'destination': return row.destination;
     case 'serviceType': return SERVICE_TYPE_SHORT_LABEL[row.serviceType];
+    case 'source':      return sourceTypeLabel(row);
     case 'status':      return statusConfig[row.status].label;
     case 'date':        return row.date;
     case 'subaccount':  return row.subaccount;

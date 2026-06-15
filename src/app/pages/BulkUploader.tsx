@@ -49,12 +49,12 @@ const STATUS_CONFIG = {
 const MOCK_CUSTOM_HEADERS = [
   'Buyer Name', 'CP#', 'Street Address', 'Province', 'City / Town',
   'Barangay', 'Unit/Floor', 'Item Name', 'Pouch/box size', 'Cash on delivery (COD)',
-  'COD Amount', 'Item Protection', 'Recipient Pays', 'Promo', 'Ref ID',
+  'COD Amount', 'Declared Value', 'Item Protection', 'Recipient Pays', 'Promo', 'Ref ID',
 ];
 const MOCK_SAMPLE_DATA = [
-  ['Jen Ramos',  '+639176543210', '123 Penarubia St.',           'Metro Manila', 'Mandaluyong City', 'Malamig',    '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'No',  '–',      '–', 'No', '–', '–'],
-  ['Ramon Jee',  '+639101234567', '2287 Allegro Center, Chin...', 'Metro Manila', 'Makati City',      'Magallanes', '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'Yes', '500.00', '–', '–', '–', '–'],
-  ['Rena Jams',  '+639123456789', '1234 Harmony Lane St.',       'Metro Manila', 'Quezon City',      'Barangay 1', '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'No',  '–',      '–', '–', '–', '–'],
+  ['Jen Ramos',  '+639176543210', '123 Penarubia St.',           'Metro Manila', 'Mandaluyong City', 'Malamig',    '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'No',  '–',      '599.00',  '–', 'No', '–', '–'],
+  ['Ramon Jee',  '+639101234567', '2287 Allegro Center, Chin...', 'Metro Manila', 'Makati City',      'Magallanes', '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'Yes', '500.00', '1200.00', '–', '–', '–', '–'],
+  ['Rena Jams',  '+639123456789', '1234 Harmony Lane St.',       'Metro Manila', 'Quezon City',      'Barangay 1', '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'No',  '–',      '350.00',  '–', '–', '–', '–'],
 ];
 
 /** Whether the uploaded file already uses GGX template headers (skip mapping). */
@@ -235,6 +235,7 @@ export function BulkUploader() {
           onConfirm={handleMappingConfirm}
           onBack={() => setStep('form')}
           onDownloadTemplate={downloadBulkTemplate}
+          scopeAccountId={uploadAccount.accountId}
         />
       </div>
     );

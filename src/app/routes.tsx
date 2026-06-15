@@ -1,6 +1,24 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import { RootLayout } from './layouts/RootLayout';
+import { BasicLayout } from './layouts/BasicLayout';
+import { BasicSegmentProvider } from './contexts/BasicSegmentContext';
+import { BasicDashboard } from './pages/basic/BasicDashboard';
+import { SaveAndEarnMore } from './pages/basic/SaveAndEarnMore';
+import { HVMNudge } from './pages/basic/HVMNudge';
+import { BasicDeliver } from './pages/basic/BasicDeliver';
+import { BasicAccount } from './pages/basic/BasicAccount';
+import { BasicOrders } from './pages/basic/BasicOrders';
+import { BasicOrderDetail } from './pages/basic/BasicOrderDetail';
+import { BasicBulkUpload } from './pages/basic/BasicBulkUpload';
+import { BasicStore } from './pages/basic/BasicStore';
+import { BasicInventory } from './pages/basic/BasicInventory';
+import { BasicEarnings } from './pages/basic/BasicEarnings';
+import { BasicSupport } from './pages/basic/BasicSupport';
+import { BasicSettings } from './pages/basic/BasicSettings';
+import { BasicSameDay } from './pages/basic/BasicSameDay';
+import { BasicBusinessPreview } from './pages/basic/BasicBusinessPreview';
+import { BasicBookingReview } from './pages/basic/BasicBookingReview';
 import { Login } from './pages/Login';
 import { DashboardWrapper } from './pages/DashboardWrapper';
 import { Transactions } from './pages/Transactions';
@@ -38,6 +56,7 @@ import { OpsRequestDetail } from './pages/OpsRequestDetail';
 import { AccountAddOns } from './pages/AccountAddOns';
 import { Inventory } from './pages/Inventory';
 import { Storefront } from './pages/Storefront';
+import { StorefrontOrderDetail } from './pages/StorefrontOrderDetail';
 import { BasicAnalytics } from './pages/BasicAnalytics';
 import { CustomReports } from './pages/CustomReports';
 import { ProtectedRoute, AdminRoute } from './components/RouteGuards';
@@ -51,6 +70,35 @@ export const router = createBrowserRouter([
   {
     path: '/',
     Component: Login,
+  },
+  {
+    // Basic / self-serve mobile demo entry. Standalone from the Business+ dashboard.
+    path: '/basic',
+    element: (
+      <BasicSegmentProvider>
+        <BasicLayout />
+      </BasicSegmentProvider>
+    ),
+    children: [
+      { index: true, Component: BasicDashboard },
+      { path: 'more',     Component: SaveAndEarnMore },
+      { path: 'qualify',  Component: HVMNudge },
+      { path: 'deliver',         Component: BasicDeliver },
+      { path: 'deliver/review',  Component: BasicBookingReview },
+      { path: 'account',  Component: BasicAccount },
+      // Basic-native deep pages — keep self-serve sellers inside BasicLayout
+      // instead of dropping them into the Business+ /dashboard chrome.
+      { path: 'orders',      Component: BasicOrders },
+      { path: 'orders/:id',  Component: BasicOrderDetail },
+      { path: 'bulk',        Component: BasicBulkUpload },
+      { path: 'store',       Component: BasicStore },
+      { path: 'inventory',   Component: BasicInventory },
+      { path: 'earnings',    Component: BasicEarnings },
+      { path: 'support',     Component: BasicSupport },
+      { path: 'settings',         Component: BasicSettings },
+      { path: 'same-day',         Component: BasicSameDay },
+      { path: 'business-preview', Component: BasicBusinessPreview },
+    ],
   },
   {
     path: '/track',
@@ -125,6 +173,9 @@ export const router = createBrowserRouter([
       { path: 'account-add-ons', Component: AccountAddOns },
       { path: 'inventory', Component: Inventory },
       { path: 'storefront', Component: Storefront },
+      // Store Orders list now lives as a tab under Transactions; the order detail
+      // keeps its own route (linked from that tab).
+      { path: 'storefront/orders/:id', Component: StorefrontOrderDetail },
 
       // Shared: subaccount settings (Managers can view their own subaccount's settings)
       { path: 'subaccounts/:id/settings', Component: SubAccountSettings },

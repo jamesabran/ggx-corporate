@@ -58,20 +58,102 @@ import {
   statusConfig,
   getTransactionByTracking,
   subaccountDisplayLabel,
+  sourceTypeLabel,
   serviceTypeLabel,
+  bookingMethodGroup,
   SERVICE_TYPE_SHORT_LABEL,
+  SOURCE_TYPE_LABEL,
+  BOOKING_METHOD_LABEL,
+  BOOKING_METHOD_ANALYTICS_LABEL,
+  SOURCE_TYPE_ORDER,
+  BOOKING_METHOD_ORDER,
   type Transaction,
   type TransactionSummary,
   type TransactionStatus,
   type TransactionSource,
   type TransactionBatch,
   type DeliveryServiceType,
+  type SourceType,
+  type BookingMethod,
+  type OrderAttribution,
 } from '../data/transactions';
 import { getAccountIdByName } from '../data/accounts';
 import { getSettlement } from '../data/earnings';
 import type { SettlementTransaction } from '../data/earnings';
+import {
+  getOnDemandProgress,
+  deliveryStageFromStatus,
+  OD_STAGE_DEFS,
+  type OnDemandProgress,
+  type OnDemandDeliveryStage,
+} from '../data/onDemandDelivery';
+import {
+  acceptedOrders,
+  buildTransactionFromOrder,
+  getOrderByTracking,
+} from '../data/storefrontOrders';
 
-export type { Transaction, TransactionSummary, TransactionStatus, TransactionSource, TransactionBatch, DeliveryServiceType };
+export type { Transaction, TransactionSummary, TransactionStatus, TransactionSource, TransactionBatch, DeliveryServiceType, SourceType, BookingMethod, OrderAttribution, OnDemandProgress, OnDemandDeliveryStage };
+
+/**
+ * On-Demand live delivery progress (re-exported for UI consumers). Derives the
+ * courier-style stage stepper + mocked ETA + rider map position from a granular
+ * delivery stage. Demo / presentation only — dispatch status and real ETAs are
+ * backend-owned.
+ */
+export { getOnDemandProgress, OD_STAGE_DEFS };
+
+/**
+ * Resolve OD delivery progress for a transaction. Storefront-accepted orders
+ * carry an explicit granular delivery stage; existing seed OD transactions fall
+ * back to a stage derived from their coarse status (with a failed/returned
+ * exception marker). The two status axes — buyer order acceptance vs delivery
+ * progress — stay separate; this only reads the delivery side.
+ */
+export function resolveOnDemandProgress(tx: Transaction): OnDemandProgress {
+  const order = getOrderByTracking(tx.trackingNumber);
+  if (order?.deliveryStage) return getOnDemandProgress(order.deliveryStage);
+  const exception = tx.status === 'failed' ? 'failed' : tx.status === 'returned' ? 'returned' : undefined;
+  return getOnDemandProgress(deliveryStageFromStatus(tx.status), { exception });
+}
+
+// ── Synthesized storefront-order delivery transactions ─────────────────────────
+// Accepted storefront orders "reveal" a delivery transaction. We synthesize these
+// on demand (rather than mutate the static seed) so the list, detail, and public
+// tracking surfaces resolve them by tracking number alongside seed transactions.
+
+function synthesizedTransactions(): Transaction[] {
+  return acceptedOrders()
+    .map(buildTransactionFromOrder)
+    .filter((t): t is Transaction => !!t);
+}
+
+function toSummary(t: Transaction): TransactionSummary {
+  return {
+    tracking: t.trackingNumber,
+    recipient: t.recipient.name,
+    destination: t.destination,
+    status: t.status,
+    type: t.type,
+    serviceType: t.serviceType,
+    date: t.date,
+    subaccount: t.subaccount,
+    source: t.source,
+    shopifyStoreName: t.shopifyStoreName,
+    sourceType: t.attribution.sourceType,
+  };
+}
+
+/** Seed transactions + synthesized accepted-order deliveries (synthesized first). */
+function allTransactions(): Transaction[] {
+  return [...synthesizedTransactions(), ...transactions];
+}
+function allSummaries(): TransactionSummary[] {
+  return [...synthesizedTransactions().map(toSummary), ...deliveries];
+}
+
+/** Attribution display helpers + label maps (re-exported for UI consumers). */
+export { sourceTypeLabel, bookingMethodGroup, SOURCE_TYPE_LABEL, BOOKING_METHOD_LABEL };
 
 /**
  * Service-type display helpers (re-exported for UI consumers). `serviceTypeLabel`
@@ -106,6 +188,8 @@ export interface TransactionFilters {
   type?: string;
   /** Delivery service type (Standard / Same-Day / On-Demand). */
   serviceType?: DeliveryServiceType | 'all';
+  /** High-level Source (attribution). */
+  sourceType?: SourceType | 'all';
   /** Subaccount display name (legacy; prefer `subaccountId` once migration is complete). */
   subaccountName?: string;
   /** Canonical subaccount id. If provided, takes precedence over `subaccountName`. */
@@ -117,10 +201,10 @@ export interface TransactionFilters {
 export async function getTransactions(
   filters?: TransactionFilters
 ): Promise<TransactionSummary[]> {
-  let result = [...deliveries];
+  let result = allSummaries();
   if (!filters) return result;
 
-  const { status, type, serviceType, subaccountName, subaccountId, search } = filters;
+  const { status, type, serviceType, sourceType, subaccountName, subaccountId, search } = filters;
 
   if (status && status !== 'all') {
     result = result.filter((t) => t.status === status);
@@ -131,11 +215,14 @@ export async function getTransactions(
   if (serviceType && serviceType !== 'all') {
     result = result.filter((t) => t.serviceType === serviceType);
   }
+  if (sourceType && sourceType !== 'all') {
+    result = result.filter((t) => t.sourceType === sourceType);
+  }
   if (subaccountId && subaccountId !== 'all' && subaccountId !== 'main') {
-    // Match via batch.accountId or the subaccount-name→id bridge, so manual and
-    // Shopify-sourced rows (no batch origin) are scoped correctly too.
+    // Match via batch.accountId or the subaccount-name→id bridge, so manual,
+    // Shopify-sourced, and storefront-order rows (no batch origin) are scoped too.
     const ids = new Set(
-      transactions.filter((t) => txAccountId(t) === subaccountId).map((t) => t.trackingNumber)
+      allTransactions().filter((t) => txAccountId(t) === subaccountId).map((t) => t.trackingNumber)
     );
     result = result.filter((t) => ids.has(t.tracking));
   } else if (subaccountName && subaccountName !== 'all') {
@@ -157,7 +244,12 @@ export async function getTransactions(
 export async function getTransactionById(
   trackingNumber: string
 ): Promise<Transaction | null> {
-  return getTransactionByTracking(trackingNumber) ?? null;
+  const seed = getTransactionByTracking(trackingNumber);
+  if (seed) return seed;
+  // Fall back to a synthesized delivery from an accepted storefront order.
+  const order = getOrderByTracking(trackingNumber);
+  if (order) return buildTransactionFromOrder(order) ?? null;
+  return null;
 }
 
 /**
@@ -167,14 +259,14 @@ export async function getTransactionById(
 export async function getTransactionsBySubaccountId(
   subaccountId: string
 ): Promise<TransactionSummary[]> {
-  if (subaccountId === 'main') return deliveries;
+  if (subaccountId === 'main') return allSummaries();
 
   // Match via batch origin OR the subaccount-name→id bridge, so batch, manual,
-  // and Shopify-sourced rows for the subaccount are all included.
+  // Shopify-sourced, and storefront-order rows for the subaccount are all included.
   const ids = new Set(
-    transactions.filter((t) => txAccountId(t) === subaccountId).map((t) => t.trackingNumber)
+    allTransactions().filter((t) => txAccountId(t) === subaccountId).map((t) => t.trackingNumber)
   );
-  return deliveries.filter((d) => ids.has(d.tracking));
+  return allSummaries().filter((d) => ids.has(d.tracking));
 }
 
 /**
@@ -246,6 +338,10 @@ export async function getDashboardStats(subaccountId?: string): Promise<Dashboar
 export interface BasicAnalytics {
   /** Booking count per delivery service type (Standard / Same-Day / On-Demand). */
   serviceTypeMix: { key: DeliveryServiceType; label: string; count: number }[];
+  /** Booking count per high-level Source (GoBenta vs Product Checkout kept separate). */
+  sourceMix: { key: SourceType; label: string; count: number }[];
+  /** Booking count per granular booking method (two bulk methods kept separate). */
+  bookingMethodMix: { key: BookingMethod; label: string; count: number }[];
   /** Daily booking volume for the active period (oldest → newest). */
   dailyVolume: { date: string; count: number }[];
   /** Total bookings in the active period. */
@@ -297,14 +393,25 @@ export async function getBasicAnalytics(
   const order: DeliveryServiceType[] = ['standard', 'same_day', 'on_demand'];
   const counts: Record<DeliveryServiceType, number> = { standard: 0, same_day: 0, on_demand: 0 };
   const byStatus = { delivered: 0, 'in-transit': 0, 'picked-up': 0, pending: 0, failed: 0, returned: 0 } as Record<TransactionStatus, number>;
+  // Attribution breakdowns: source mix + granular booking-method mix.
+  const sourceCounts = Object.fromEntries(SOURCE_TYPE_ORDER.map((k) => [k, 0])) as Record<SourceType, number>;
+  const bmCounts = Object.fromEntries(BOOKING_METHOD_ORDER.map((k) => [k, 0])) as Record<BookingMethod, number>;
   let totalCod = 0;
   for (const t of subset) {
     counts[t.serviceType] = (counts[t.serviceType] ?? 0) + 1;
     byStatus[t.status] = (byStatus[t.status] ?? 0) + 1;
+    sourceCounts[t.attribution.sourceType] += 1;
+    bmCounts[t.attribution.bookingMethod] += 1;
     totalCod += t.payment.codAmount;
   }
   const serviceTypeMix = order.map((key) => ({
     key, label: SERVICE_TYPE_SHORT_LABEL[key], count: counts[key],
+  }));
+  const sourceMix = SOURCE_TYPE_ORDER.map((key) => ({
+    key, label: SOURCE_TYPE_LABEL[key], count: sourceCounts[key],
+  }));
+  const bookingMethodMix = BOOKING_METHOD_ORDER.map((key) => ({
+    key, label: BOOKING_METHOD_ANALYTICS_LABEL[key], count: bmCounts[key],
   }));
 
   const byDate = new Map<string, number>();
@@ -315,7 +422,7 @@ export async function getBasicAnalytics(
 
   const periodTotal = subset.length;
   const successRate = periodTotal > 0 ? Math.round((byStatus.delivered / periodTotal) * 1000) / 10 : 0;
-  return { serviceTypeMix, dailyVolume, periodTotal, byStatus, totalCod, successRate };
+  return { serviceTypeMix, sourceMix, bookingMethodMix, dailyVolume, periodTotal, byStatus, totalCod, successRate };
 }
 
 // ─── Batch grouping ──────────────────────────────────────────────────────────

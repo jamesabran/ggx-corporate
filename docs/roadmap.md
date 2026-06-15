@@ -23,14 +23,20 @@ deferred production-only stage. Start it only when a BFF/backend exists.
 |---|---|---|
 | Low | Figma/component alignment pass | Reflect new reusable components in the Figma DS when the component library changes materially. |
 
-## Pre-Production Cleanup
+## Future Backlog (Planned, Not Started)
 
-Not current demo blockers. Defer unless one of these begins breaking public/demo
-routes.
+Detailed specs (copy, enums, payloads): `context/future-backlog.md`.
 
-| Item | Target end state | Notes |
+| Group | Item | Summary |
 |---|---|---|
-| `/dashboard` URL cleanup | `/dashboard` means only the authenticated Dashboard landing page. | Authenticated modules become first-level routes (`/transactions`, `/bulk-upload`, `/reports`, `/settings`, etc.) instead of `/dashboard/*`. Existing `/dashboard/*` module routes must be redirected safely when this lands. Not a blocker unless it breaks public/demo routes (`/track`, `/shop`, `/buy`, `/checkout`) or the Basic `/basic/*` layer. |
+| Data / Attribution | Order attribution model | Four dimensions (account scope, source, connected store/integration, booking method). **Mock implemented**: `OrderAttribution` on transactions; Transactions list has a short Source column + Source filter (Subaccount column = ownership only, no concatenation); detail shows full attribution; Custom Reports has a Source column/export; Basic **and Advanced** Data Analytics have Bookings-by-Source and Bookings-by-Booking-Method breakdowns (granular bulk split; Advanced adds them to CSV export). Booking-method backend stays granular (bulk template vs in-app spreadsheet) while the frontend rolls both up to `Bulk Upload`. |
+| Data / Attribution | Storefront vs Single Product Checkout | Track storefront checkout and standalone product-link checkout separately in analytics; do not merge. **Mock implemented**: distinct `gobenta` (Storefront Checkout) and `product_checkout` (Single Product Checkout) source/booking-method values — filterable in Transactions and shown separately in the Basic Data Analytics breakdowns. |
+| Bulk Upload | Smart column matching | Auto-suggest field mappings (exact/synonym/sample-value); dynamic auto-match message; user must review before continuing. **Mock implemented** in `BulkColumnMapper` (aliases + auto-match + review). |
+| Bulk Upload | Missing/unmatched column visibility | Block on unmatched required fields; surface optional unmatched and non-imported extra columns without blocking. **Mock implemented** (red required rows, soft optional rows, In use/Available dropdown hints, top summary). |
+| Bulk Upload | Saved column mapping templates | Save final user-confirmed mapping for reuse; toggle default ON near CTA. **Mock implemented** via `lib/columnMappingTemplates` (localStorage; restore on same/similar headers). Scope (Main/Subaccount/shared) + backend persistence still deferred. |
+| Bulk Upload | Mapping template scope | Subaccount / Main Account / shared account-level scoping; explicit sharing; scoped suggestion order. |
+| Backend / API Integrations | Drop-off Locations API | `POST /v1/sams/distancefromhubs` for nearby hubs by address. Production-only; see deferred items below. |
+| Backend / API Integrations | Rates API | `POST /v2/orders/estimates/rates` for delivery rate estimates. Bearer token via `.env.local`/BFF only — never committed or exposed in frontend. Production-only. |
 
 ## Deferred Production-Only Items
 
@@ -48,6 +54,8 @@ source-of-truth logic.
 | Uploaded-file path adoption of `lib/bookingValidation` | Wait for real file parsing; retain template-specific coverage such as COD cap, duplicate Reference ID, and pouch size. |
 | Custom Reports saved template persistence | Backend-owned persistence for user-defined report templates. |
 | Custom Reports scheduled exports | Backend-owned scheduling and delivery channel support. |
+| Drop-off Locations API integration | `POST /v1/sams/distancefromhubs`. Address-based hub discovery; needs backend/BFF wiring. See `context/future-backlog.md`. |
+| Rates API integration | `POST /v2/orders/estimates/rates`. Rate estimates must come from backend; Bearer token via BFF, never exposed in frontend. See `context/future-backlog.md`. |
 
 ## Completed Current-State Highlights
 
