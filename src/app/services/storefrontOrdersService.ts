@@ -24,11 +24,13 @@ import {
   acceptOrder,
   rejectOrder,
   advanceDelivery,
+  storeOrderDisplay,
   STOREFRONT_ORDER_STATUS_META,
   type StorefrontOrder,
   type StorefrontOrderStatus,
   type StorefrontOrderChannel,
   type StorefrontOrderItem,
+  type StoreOrderDisplayStatus,
   type PlaceOrderInput,
 } from '../data/storefrontOrders';
 
@@ -37,9 +39,10 @@ export type {
   StorefrontOrderStatus,
   StorefrontOrderChannel,
   StorefrontOrderItem,
+  StoreOrderDisplayStatus,
   PlaceOrderInput,
 };
-export { STOREFRONT_ORDER_STATUS_META };
+export { STOREFRONT_ORDER_STATUS_META, storeOrderDisplay };
 export { buildTransactionFromOrder, getOrderByTracking, acceptedOrders };
 
 /** Orders for the active scope (newest first); all orders in consolidated view. */

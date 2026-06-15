@@ -43,14 +43,27 @@
 ## Storefront Orders vs Delivery Transactions
 
 > Model in `data/storefrontOrders.ts`; access via
-> `services/storefrontOrdersService.ts`. Seller surface:
-> `/dashboard/storefront/orders` (+ `/:id`).
+> `services/storefrontOrdersService.ts`. Seller surface: **Store Orders tab inside
+> Transactions** (order detail at `/dashboard/storefront/orders/:id`).
 
 - A **Storefront Order** is the buyer's commerce order placed through `/shop`
   (storefront cart) or `/buy` (single-product) checkout. A **Delivery
   Transaction** is the fulfillment record. **These are separate, with separate
   status fields** — never use one field for both seller acceptance and delivery
   progress.
+- **IA:** the buyer-order queue is a **Store Orders tab inside Transactions**
+  (Store Orders · Deliveries), shown only when Inventory/Storefront commerce is
+  enabled for the active scope — **no separate sidebar item**. Non-commerce
+  accounts see Transactions as the normal deliveries page (no tabs).
+- **Store Order display status** (queue) is buyer-order-centric and distinct from
+  delivery status: Awaiting seller acceptance → Accepted → Preparing → Ready for
+  pickup → Out for delivery → Completed (or Cancelled). The Deliveries tab shows
+  delivery/fulfilment statuses only.
+- **Buyer checkout** uses a 65/35 desktop layout (details/payment · order
+  summary), friendly timing labels (no STD/SDD/OD), a payment section (COD live;
+  online/prepaid coming soon) and delivery-fee handling (buyer pays vs seller
+  absorbs) feeding the COD total. Delivery fees are demo estimates
+  (`lib/checkoutEstimates.ts`); real rates stay backend-owned.
 - Buyer order status: `awaiting_acceptance` → `accepted` | `rejected`.
 - A delivery transaction is created (revealed) **only when the seller accepts**.
   At acceptance, a tracking number is assigned and — for On-Demand — the delivery

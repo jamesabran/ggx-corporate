@@ -1,23 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
-  IconBuildingStore, IconCash, IconClock, IconPackage, IconShieldCheck,
+  IconBuildingStore, IconCash, IconClock, IconPackage,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { LocationCascadeFields } from '../components/LocationCascadeFields';
 import { CheckoutDeliveryOptions } from '../components/CheckoutDeliveryOptions';
+import { CheckoutPaymentOptions, type DeliveryFeePayer } from '../components/CheckoutPaymentOptions';
 import { useCartItems, clearCart, getCartSeller } from '../lib/cartStore';
 import { getFeatureStateSync } from '../services/featureEnablementService';
 import { getStorefrontProfile } from '../services/storefrontService';
 import { placeStorefrontOrder } from '../services/storefrontOrdersService';
+import { classifyRegion, estimateDeliveryFee } from '../lib/checkoutEstimates';
 import type { DeliveryServiceType } from '../services/transactionService';
 
-const DELIVERY_LABEL: Record<DeliveryServiceType, string> = {
-  standard: 'Standard',
-  same_day: 'Same-Day',
-  on_demand: 'On-Demand',
+const DELIVERY_TITLE: Record<DeliveryServiceType, string> = {
+  standard: 'Standard delivery',
+  same_day: 'Same-day delivery',
+  on_demand: 'On-demand delivery',
 };
 
 const peso = (n: number) =>
@@ -42,9 +44,8 @@ export function CartCheckout() {
   const items = useCartItems();
   const [form, setForm] = useState<CheckoutForm>(blank);
   const [placed, setPlaced] = useState(false);
-  const [placedTotal, setPlacedTotal] = useState(0);
-  const [placedItemCount, setPlacedItemCount] = useState(0);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  const [snapshot, setSnapshot] = useState({ subtotal: 0, fee: 0, total: 0, itemCount: 0, service: 'standard' as DeliveryServiceType });
 
   // Seller context (set while browsing /shop/:slug) gates delivery options and
   // attributes the placed order.
@@ -71,10 +72,12 @@ export function CartCheckout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [odEnabled, sameDayOffered]);
 
+  const [feePayer, setFeePayer] = useState<DeliveryFeePayer>('buyer');
+
   const set = <K extends keyof CheckoutForm>(k: K, v: string) =>
     setForm((prev) => ({ ...prev, [k]: v }));
 
-  const total = useMemo(
+  const subtotal = useMemo(
     () => items.reduce((sum, i) => sum + i.productSnapshot.unitPrice * i.quantity, 0),
     [items],
   );
@@ -82,6 +85,11 @@ export function CartCheckout() {
     () => items.reduce((sum, i) => sum + i.quantity, 0),
     [items],
   );
+
+  const region = classifyRegion(form.province);
+  const deliveryFee = estimateDeliveryFee(deliveryOption, region);
+  const buyerFee = feePayer === 'buyer' ? deliveryFee : 0;
+  const collectTotal = subtotal + buyerFee;
 
   const canOrder = !!(
     items.length > 0 &&
@@ -110,12 +118,11 @@ export function CartCheckout() {
           quantity: i.quantity,
           unitPrice: i.productSnapshot.unitPrice,
         })),
-        codTotal: total,
+        codTotal: collectTotal,
       });
       setPlacedOrderId(order.id);
     }
-    setPlacedTotal(total);
-    setPlacedItemCount(itemCount);
+    setSnapshot({ subtotal, fee: buyerFee, total: collectTotal, itemCount, service: deliveryOption });
     clearCart();
     setPlaced(true);
   };
@@ -143,7 +150,7 @@ export function CartCheckout() {
             </div>
             <h1 className="text-xl font-bold text-gray-900">Order placed!</h1>
             <p className="text-sm text-gray-600 mt-2">
-              Thanks, {form.name}. Your order of {placedItemCount} item{placedItemCount === 1 ? '' : 's'} has been sent to the seller.
+              Thanks, {form.name}. Your order of {snapshot.itemCount} item{snapshot.itemCount === 1 ? '' : 's'} has been sent to the seller.
             </p>
             <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-medium text-amber-700">
               <IconClock className="w-3.5 h-3.5" />
@@ -151,13 +158,14 @@ export function CartCheckout() {
             </div>
             <div className="mt-4 rounded-lg border border-gray-200 p-4 text-sm text-left space-y-1.5">
               {placedOrderId && <Row label="Order #">{placedOrderId}</Row>}
-              <Row label="Delivery">{DELIVERY_LABEL[deliveryOption]}</Row>
+              <Row label="Delivery">{DELIVERY_TITLE[snapshot.service]}</Row>
               <Row label="Deliver to">{form.name} · {form.mobile}</Row>
               <Row label="Address">{[form.street, form.barangay, form.city, form.province].filter(Boolean).join(', ')}</Row>
-              <Row label="Payment"><span className="inline-flex items-center gap-1"><IconCash className="w-4 h-4 text-emerald-600" /> Cash on Delivery</span></Row>
+              <Row label="Subtotal">{peso(snapshot.subtotal)}</Row>
+              <Row label="Delivery fee">{snapshot.fee > 0 ? peso(snapshot.fee) : 'Seller-paid'}</Row>
               <div className="border-t border-gray-100 pt-2 flex justify-between font-semibold">
-                <span className="text-gray-900">Total (COD)</span>
-                <span className="text-gray-900">{peso(placedTotal)}</span>
+                <span className="text-gray-900">Total to collect (COD)</span>
+                <span className="text-gray-900">{peso(snapshot.total)}</span>
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-4">
@@ -182,9 +190,10 @@ export function CartCheckout() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Delivery details */}
-        <div>
+      {/* Desktop: ~65% form / ~35% summary. Mobile: single column. */}
+      <main className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-[1.85fr_1fr] gap-6 lg:gap-8 items-start">
+        {/* Delivery details + payment (65%) */}
+        <div className="space-y-6">
           <Card>
             <CardContent className="p-6 space-y-4">
               <h2 className="text-base font-semibold text-gray-900">Delivery details</h2>
@@ -204,18 +213,20 @@ export function CartCheckout() {
                 options={deliveryOptions}
                 value={deliveryOption}
                 onChange={setDeliveryOption}
+                region={region}
               />
+            </CardContent>
+          </Card>
 
-              <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 flex items-center gap-2">
-                <IconShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <p className="text-xs text-emerald-800">Cash on Delivery (COD) — pay in cash when your parcel arrives.</p>
-              </div>
+          <Card>
+            <CardContent className="p-6">
+              <CheckoutPaymentOptions feePayer={feePayer} onFeePayerChange={setFeePayer} />
             </CardContent>
           </Card>
         </div>
 
-        {/* Order summary */}
-        <div className="space-y-4">
+        {/* Order summary (35%) */}
+        <div className="lg:sticky lg:top-6">
           <Card>
             <CardContent className="p-6 space-y-4">
               <h2 className="text-base font-semibold text-gray-900">Order summary</h2>
@@ -242,13 +253,25 @@ export function CartCheckout() {
               </div>
               <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal ({itemCount} item{itemCount === 1 ? '' : 's'})</span>
-                  <span className="font-medium text-gray-900">{peso(total)}</span>
+                  <span className="text-gray-600">Item subtotal ({itemCount} item{itemCount === 1 ? '' : 's'})</span>
+                  <span className="font-medium text-gray-900">{peso(subtotal)}</span>
                 </div>
-                <p className="text-xs text-gray-400">COD amount and shipping confirmed at delivery booking.</p>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Delivery fee {feePayer === 'seller' && <span className="text-xs text-gray-400">(seller-paid)</span>}</span>
+                  <span className="font-medium text-gray-900">
+                    {feePayer === 'seller'
+                      ? <span className="text-emerald-600">Free</span>
+                      : peso(deliveryFee)}
+                  </span>
+                </div>
+                <div className="border-t border-gray-100 pt-2 flex justify-between">
+                  <span className="font-semibold text-gray-900">Total to collect (COD)</span>
+                  <span className="font-bold text-gray-900">{peso(collectTotal)}</span>
+                </div>
+                <p className="text-[11px] text-gray-400">Delivery fee is an estimate; final fees are confirmed when the seller books delivery.</p>
               </div>
               <Button className="w-full" disabled={!canOrder} onClick={handlePlace}>
-                <IconCash className="w-4 h-4" /> Place COD order · {peso(total)}
+                <IconCash className="w-4 h-4" /> Place COD order · {peso(collectTotal)}
               </Button>
               <p className="text-xs text-gray-400 text-center">
                 Your order is sent to the seller to accept before it&apos;s booked for delivery.

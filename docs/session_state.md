@@ -264,6 +264,34 @@ clean **order-status vs delivery-status** separation (fixes the old confusing
   SO-2026-0001. Both on Acme Luzon (OD + Storefront enabled).
 - Build + typecheck green. Not pushed. Docs: `storefront_rules.md` updated.
 
+## Most Recent Feature Work — Checkout UX + Transactions IA cleanup (2026-06-15)
+
+Polish pass on top of the OD ↔ storefront model (model unchanged).
+
+- **Checkout layout** (`BuyerCheckout`, `CartCheckout`): desktop 65/35 grid
+  (`lg:grid-cols-[1.85fr_1fr]`) — details + payment left, sticky order summary
+  right; mobile stays single-column. BuyerCheckout product is now a compact header.
+- **Friendly delivery labels** (`lib/checkoutEstimates.ts` + `CheckoutDeliveryOptions`):
+  buyers see timing/value copy, never STD/SDD/OD. Standard is region-based
+  (Metro 1–2d / Luzon 3–5d / VisMin 5–7d, else "depends on location"), Same-day
+  "Within the day", On-demand "Within 40 minutes". Internal keys unchanged.
+- **Payment options** (`CheckoutPaymentOptions`): COD (live) + online/prepaid
+  (coming soon, disabled); delivery-fee handling (buyer pays vs seller absorbs).
+  Summary shows item subtotal · delivery fee (mock estimate) · total to collect
+  (COD). `feePayer` feeds the order `codTotal`.
+- **Transactions IA:** removed the standalone **Storefront Orders** sidebar item +
+  list route + page (`pages/StorefrontOrders.tsx` deleted). The queue is now a
+  **Store Orders** tab inside Transactions (`components/StoreOrdersPanel.tsx`),
+  alongside **Deliveries**. Tabs show **only when Inventory/Storefront is enabled**
+  for the scope; non-commerce accounts get the normal deliveries page (no tabs).
+  Tab state syncs to `?view=store-orders`; order detail back-nav + the deleted
+  route redirect there. Order detail route `/dashboard/storefront/orders/:id` kept.
+- **Status copy:** new buyer-order display status (`storeOrderDisplay`) —
+  Awaiting seller acceptance → Accepted → Preparing → Ready for pickup → Out for
+  delivery → Completed / Cancelled — keeps Store Order status visually distinct
+  from delivery status and avoids ambiguous "Pending" in the orders queue.
+- Build + typecheck green. Not pushed. Docs: `storefront_rules.md` updated.
+
 ## Current Priority
 
 Backend integration remains the next major app stage:

@@ -31,7 +31,6 @@ import {
   IconActivityHeartbeat,
   IconClipboardList,
   IconBuildingStore,
-  IconShoppingBag,
   IconApps,
 } from '@tabler/icons-react';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
@@ -229,7 +228,6 @@ export function RootLayout() {
   const commerceChildren: NavChild[] = [
     ...(inventoryEnabled ? [{ name: 'Inventory', href: '/dashboard/inventory', icon: IconPackage }] : []),
     ...(storefrontEnabled ? [{ name: 'Storefront', href: '/dashboard/storefront', icon: IconBuildingStore }] : []),
-    ...(storefrontEnabled ? [{ name: 'Storefront Orders', href: '/dashboard/storefront/orders', icon: IconShoppingBag }] : []),
   ];
 
   const addOnsChild: NavChild = { name: 'Account Add-ons', href: '/dashboard/account-add-ons', icon: IconApps };

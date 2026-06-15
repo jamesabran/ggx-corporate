@@ -56,7 +56,6 @@ import { OpsRequestDetail } from './pages/OpsRequestDetail';
 import { AccountAddOns } from './pages/AccountAddOns';
 import { Inventory } from './pages/Inventory';
 import { Storefront } from './pages/Storefront';
-import { StorefrontOrders } from './pages/StorefrontOrders';
 import { StorefrontOrderDetail } from './pages/StorefrontOrderDetail';
 import { BasicAnalytics } from './pages/BasicAnalytics';
 import { CustomReports } from './pages/CustomReports';
@@ -174,7 +173,8 @@ export const router = createBrowserRouter([
       { path: 'account-add-ons', Component: AccountAddOns },
       { path: 'inventory', Component: Inventory },
       { path: 'storefront', Component: Storefront },
-      { path: 'storefront/orders', Component: StorefrontOrders },
+      // Store Orders list now lives as a tab under Transactions; the order detail
+      // keeps its own route (linked from that tab).
       { path: 'storefront/orders/:id', Component: StorefrontOrderDetail },
 
       // Shared: subaccount settings (Managers can view their own subaccount's settings)

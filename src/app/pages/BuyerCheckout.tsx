@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
-  IconPackage, IconShieldCheck, IconCircleCheck, IconCash, IconBuildingStore, IconClock,
+  IconPackage, IconCash, IconBuildingStore, IconClock,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -9,10 +9,12 @@ import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { LocationCascadeFields } from '../components/LocationCascadeFields';
 import { CheckoutDeliveryOptions } from '../components/CheckoutDeliveryOptions';
+import { CheckoutPaymentOptions, type DeliveryFeePayer } from '../components/CheckoutPaymentOptions';
 import { getInventoryProduct, productCover, type InventoryProduct } from '../services/inventoryService';
 import { getFeatureStateSync } from '../services/featureEnablementService';
 import { getStorefrontProfile } from '../services/storefrontService';
 import { placeStorefrontOrder } from '../services/storefrontOrdersService';
+import { classifyRegion, estimateDeliveryFee } from '../lib/checkoutEstimates';
 import type { DeliveryServiceType } from '../services/transactionService';
 
 const peso = (n: number) =>
@@ -25,10 +27,10 @@ interface OrderForm {
 
 const blank: OrderForm = { name: '', mobile: '', street: '', province: '', city: '', barangay: '', qty: '1' };
 
-const DELIVERY_LABEL: Record<DeliveryServiceType, string> = {
-  standard: 'Standard',
-  same_day: 'Same-Day',
-  on_demand: 'On-Demand',
+const DELIVERY_TITLE: Record<DeliveryServiceType, string> = {
+  standard: 'Standard delivery',
+  same_day: 'Same-day delivery',
+  on_demand: 'On-demand delivery',
 };
 
 /**
@@ -57,6 +59,7 @@ export function BuyerCheckout() {
     ...(odEnabled ? (['on_demand'] as DeliveryServiceType[]) : []),
   ];
   const [deliveryOption, setDeliveryOption] = useState<DeliveryServiceType>('standard');
+  const [feePayer, setFeePayer] = useState<DeliveryFeePayer>('buyer');
 
   useEffect(() => {
     let active = true;
@@ -89,7 +92,11 @@ export function BuyerCheckout() {
   const set = <K extends keyof OrderForm>(k: K, v: string) => setForm((prev) => ({ ...prev, [k]: v }));
 
   const qty = Math.max(1, Number(form.qty) || 1);
-  const total = product ? product.unitPrice * qty : 0;
+  const subtotal = product ? product.unitPrice * qty : 0;
+  const region = classifyRegion(form.province);
+  const deliveryFee = estimateDeliveryFee(deliveryOption, region);
+  const buyerFee = feePayer === 'buyer' ? deliveryFee : 0;
+  const collectTotal = subtotal + buyerFee;
   const outOfStock = !!product && (product.status !== 'active' || (!product.unlimitedStock && product.stockQuantity <= 0));
   const canOrder = useMemo(
     () => !outOfStock && form.name.trim() && form.mobile.trim() && form.street.trim()
@@ -112,7 +119,7 @@ export function BuyerCheckout() {
         destination: [form.city, form.province].map((s) => s.trim()).filter(Boolean).join(', '),
       },
       items: [{ productId: product.id, name: product.name, quantity: qty, unitPrice: product.unitPrice }],
-      codTotal: total,
+      codTotal: collectTotal,
     });
     setPlacedOrderId(order.id);
     setPlaced(true);
@@ -152,12 +159,13 @@ export function BuyerCheckout() {
             </div>
             <div className="mt-4 rounded-lg border border-gray-200 p-4 text-sm text-left space-y-1.5">
               {placedOrderId && <Row label="Order #">{placedOrderId}</Row>}
-              <Row label="Delivery">{DELIVERY_LABEL[deliveryOption]}</Row>
+              <Row label="Delivery">{DELIVERY_TITLE[deliveryOption]}</Row>
               <Row label="Deliver to">{form.name} · {form.mobile}</Row>
               <Row label="Address">{[form.street, form.barangay, form.city, form.province].filter(Boolean).join(', ')}</Row>
-              <Row label="Payment"><span className="inline-flex items-center gap-1"><IconCash className="w-4 h-4 text-emerald-600" /> Cash on Delivery</span></Row>
+              <Row label="Subtotal">{peso(subtotal)}</Row>
+              <Row label="Delivery fee">{buyerFee > 0 ? peso(buyerFee) : 'Seller-paid'}</Row>
               <div className="border-t border-gray-100 pt-2 flex justify-between font-semibold">
-                <span className="text-gray-900">Total (COD)</span><span className="text-gray-900">{peso(total)}</span>
+                <span className="text-gray-900">Total to collect (COD)</span><span className="text-gray-900">{peso(collectTotal)}</span>
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-4">
@@ -187,40 +195,27 @@ export function BuyerCheckout() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Product */}
-        <div>
-          <div className="aspect-square rounded-2xl bg-white border border-gray-200 overflow-hidden flex items-center justify-center">
-            {cover
-              ? <img src={cover} alt={product.name} className="w-full h-full object-cover" />
-              : <IconPackage className="w-16 h-16 text-gray-300" />}
-          </div>
-          {product.images.length > 1 && (
-            <div className="flex gap-2 mt-3 flex-wrap">
-              {product.images.map((url) => (
-                <button
-                  key={url}
-                  type="button"
-                  onClick={() => setActiveImage(url)}
-                  className={`w-16 h-16 rounded-lg overflow-hidden border ${cover === url ? 'border-blue-500 ring-1 ring-blue-300' : 'border-gray-200'}`}
-                >
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="mt-5">
-            <p className="text-xs text-gray-400">{product.category}</p>
-            <h1 className="text-2xl font-bold text-gray-900 mt-0.5">{product.name}</h1>
-            <p className="text-xl font-bold text-gray-900 mt-2">{peso(product.unitPrice)}</p>
-            {outOfStock
-              ? <Badge variant="danger" className="mt-2">Out of stock</Badge>
-              : <p className="text-sm text-gray-500 mt-2">{product.description}</p>}
-          </div>
-        </div>
+      {/* Desktop: ~65% details / ~35% summary. Mobile: single column. */}
+      <main className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-[1.85fr_1fr] gap-6 lg:gap-8 items-start">
+        {/* Details (65%) */}
+        <div className="space-y-6">
+          {/* Compact product header */}
+          <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                {cover
+                  ? <img src={cover} alt={product.name} className="w-full h-full object-cover" />
+                  : <IconPackage className="w-8 h-8 text-gray-300" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400">{product.category}</p>
+                <h1 className="text-lg font-bold text-gray-900 leading-tight truncate">{product.name}</h1>
+                <p className="text-base font-bold text-gray-900 mt-0.5">{peso(product.unitPrice)}</p>
+                {outOfStock && <Badge variant="danger" className="mt-1">Out of stock</Badge>}
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Order form */}
-        <div>
           <Card>
             <CardContent className="p-6 space-y-4">
               <h2 className="text-base font-semibold text-gray-900">Delivery details</h2>
@@ -251,24 +246,59 @@ export function BuyerCheckout() {
                 options={deliveryOptions}
                 value={deliveryOption}
                 onChange={setDeliveryOption}
+                region={region}
               />
+            </CardContent>
+          </Card>
 
-              <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 flex items-center gap-2">
-                <IconShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <p className="text-xs text-emerald-800">Cash on Delivery (COD) — pay in cash when your parcel arrives.</p>
+          <Card>
+            <CardContent className="p-6">
+              <CheckoutPaymentOptions feePayer={feePayer} onFeePayerChange={setFeePayer} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Order summary (35%) */}
+        <div className="lg:sticky lg:top-6">
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <h2 className="text-base font-semibold text-gray-900">Order summary</h2>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  {cover ? <img src={cover} alt={product.name} className="w-full h-full object-cover" /> : <IconPackage className="w-5 h-5 text-gray-300" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-900 leading-snug truncate">{product.name}</p>
+                  <p className="text-xs text-gray-500">Qty {qty}</p>
+                </div>
+                <p className="text-sm font-medium text-gray-900 flex-shrink-0">{peso(subtotal)}</p>
               </div>
-
-              <div className="border-t border-gray-100 pt-3 flex items-center justify-between">
-                <span className="text-sm text-gray-600">Total ({qty} × {peso(product.unitPrice)})</span>
-                <span className="text-lg font-bold text-gray-900">{peso(total)}</span>
+              <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Item subtotal</span>
+                  <span className="font-medium text-gray-900">{peso(subtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Delivery fee {feePayer === 'seller' && <span className="text-xs text-gray-400">(seller-paid)</span>}</span>
+                  <span className="font-medium text-gray-900">
+                    {feePayer === 'seller' ? <span className="text-emerald-600">Free</span> : peso(deliveryFee)}
+                  </span>
+                </div>
+                <div className="border-t border-gray-100 pt-2 flex justify-between">
+                  <span className="font-semibold text-gray-900">Total to collect (COD)</span>
+                  <span className="font-bold text-gray-900">{peso(collectTotal)}</span>
+                </div>
+                <p className="text-[11px] text-gray-400">Delivery fee is an estimate; final fees are confirmed when the seller books delivery.</p>
               </div>
-
               <Button className="w-full" disabled={!canOrder} onClick={handlePlace}>
                 <IconCash className="w-4 h-4" /> Place COD order
               </Button>
               {outOfStock && (
                 <p className="text-xs text-red-600 text-center">This product is currently unavailable.</p>
               )}
+              <p className="text-xs text-gray-400 text-center">
+                Your order is sent to the seller to accept before it&apos;s booked for delivery.
+              </p>
             </CardContent>
           </Card>
         </div>

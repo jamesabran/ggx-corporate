@@ -64,8 +64,8 @@ export function StorefrontOrderDetail() {
   if (!order) {
     return (
       <div className="p-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/storefront/orders')}>
-          <IconArrowLeft className="w-4 h-4 mr-2" /> Back to Storefront Orders
+        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/transactions?view=store-orders')}>
+          <IconArrowLeft className="w-4 h-4 mr-2" /> Back to Store Orders
         </Button>
         <Card className="mt-6">
           <CardContent className="p-12 text-center">
@@ -101,8 +101,8 @@ export function StorefrontOrderDetail() {
 
   return (
     <div className="p-6 space-y-6">
-      <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/storefront/orders')}>
-        <IconArrowLeft className="w-4 h-4 mr-2" /> Back to Storefront Orders
+      <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/transactions?view=store-orders')}>
+        <IconArrowLeft className="w-4 h-4 mr-2" /> Back to Store Orders
       </Button>
 
       {/* Header — order status + delivery status shown SEPARATELY */}

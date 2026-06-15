@@ -43,6 +43,11 @@ export const STOREFRONT_ORDER_STATUS_META: Record<StorefrontOrderStatus, {
   rejected:            { label: 'Rejected',                   variant: 'danger' },
 };
 
+export interface StoreOrderDisplayStatus {
+  label: string;
+  variant: 'success' | 'info' | 'warning' | 'danger' | 'pending' | 'default';
+}
+
 export interface StorefrontOrderItem {
   productId?: string;
   name: string;
@@ -129,6 +134,28 @@ const SEED: StorefrontOrder[] = [
 const STORE_KEY = 'storefrontOrders';
 const orders: StorefrontOrder[] = loadState<StorefrontOrder[]>(STORE_KEY, SEED);
 function persist(): void { saveState(STORE_KEY, orders); }
+
+/**
+ * Buyer-order-facing display status for the Store Orders queue. Distinct from the
+ * delivery transaction status: it reflects the order's acceptance + fulfilment
+ * lifecycle (Awaiting acceptance → Accepted → Preparing → Ready for pickup → Out
+ * for delivery → Completed, or Cancelled), derived from the order status + OD
+ * delivery stage. Keeps "awaiting acceptance" and delivery progress unambiguous.
+ */
+export function storeOrderDisplay(o: StorefrontOrder): StoreOrderDisplayStatus {
+  if (o.status === 'awaiting_acceptance') return { label: 'Awaiting seller acceptance', variant: 'pending' };
+  if (o.status === 'rejected') return { label: 'Cancelled', variant: 'default' };
+  switch (o.deliveryStage) {
+    case 'preparing':        return { label: 'Preparing', variant: 'warning' };
+    case 'ready_for_pickup': return { label: 'Ready for pickup', variant: 'warning' };
+    case 'handed_to_rider':
+    case 'picked_up':
+    case 'en_route':         return { label: 'Out for delivery', variant: 'info' };
+    case 'delivered':        return { label: 'Completed', variant: 'success' };
+    case 'cancelled':        return { label: 'Cancelled', variant: 'default' };
+    default:                 return { label: 'Accepted', variant: 'info' };
+  }
+}
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
 
