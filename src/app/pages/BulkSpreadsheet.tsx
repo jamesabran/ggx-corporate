@@ -217,7 +217,7 @@ export function BulkSpreadsheet() {
                 <div className="text-left">
                   <div className="font-semibold">On-Demand Delivery</div>
                   <div className={`text-xs ${uploadMode === 'on-demand' ? 'text-violet-100' : onDemandEnabled ? 'text-gray-500' : 'text-violet-600'}`}>
-                    {onDemandEnabled ? 'Immediate, direct pickup & delivery' : 'Enable in Add-ons →'}
+                    {onDemandEnabled ? 'Immediate, direct pickup & delivery' : 'Immediate, direct pickup & delivery — enable in Add-ons'}
                   </div>
                 </div>
               </div>

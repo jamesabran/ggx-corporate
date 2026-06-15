@@ -61,6 +61,8 @@ import {
   sourceTypeLabel,
   serviceTypeLabel,
   bookingMethodGroup,
+  getOnDemandProgress,
+  ON_DEMAND_STAGES,
   SERVICE_TYPE_SHORT_LABEL,
   SOURCE_TYPE_LABEL,
   BOOKING_METHOD_LABEL,
@@ -68,6 +70,7 @@ import {
   SOURCE_TYPE_ORDER,
   BOOKING_METHOD_ORDER,
   type Transaction,
+  type OnDemandProgress,
   type TransactionSummary,
   type TransactionStatus,
   type TransactionSource,
@@ -81,7 +84,14 @@ import { getAccountIdByName } from '../data/accounts';
 import { getSettlement } from '../data/earnings';
 import type { SettlementTransaction } from '../data/earnings';
 
-export type { Transaction, TransactionSummary, TransactionStatus, TransactionSource, TransactionBatch, DeliveryServiceType, SourceType, BookingMethod, OrderAttribution };
+export type { Transaction, TransactionSummary, TransactionStatus, TransactionSource, TransactionBatch, DeliveryServiceType, SourceType, BookingMethod, OrderAttribution, OnDemandProgress };
+
+/**
+ * On-Demand live delivery progress (re-exported for UI consumers). Derives the
+ * courier-style stage stepper + mocked ETA from a transaction's status. Demo /
+ * presentation only — dispatch status and real ETAs are backend-owned.
+ */
+export { getOnDemandProgress, ON_DEMAND_STAGES };
 
 /** Attribution display helpers + label maps (re-exported for UI consumers). */
 export { sourceTypeLabel, bookingMethodGroup, SOURCE_TYPE_LABEL, BOOKING_METHOD_LABEL };

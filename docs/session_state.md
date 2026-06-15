@@ -179,6 +179,46 @@
     dedicated Storefront-vs-Product-checkout analytics split.
 - Build/typecheck green. Not pushed.
 
+## Most Recent Feature Work — On-Demand Delivery MVP (2026-06-15)
+
+Premise: the order already exists before OD booking; delivery mode/quote may be
+set outside the app; no full quote/estimate flow yet. On-Demand is an Account
+Add-on that unlocks OD booking + OD transaction visibility.
+
+- **Add-on gating (already in place, verified).** `on_demand` is a subaccount-
+  scoped `FeatureId` in `data/featureEnablement.ts`, seeded enabled only for
+  `acme-luzon`; all other scopes default off and discover it in Account Add-ons.
+  Both Bulk Upload paths (`BulkUploader`, `BulkSpreadsheet`) gate the On-Demand
+  service-mode button: locked copy now reads "Immediate, direct pickup &
+  delivery — enable in Add-ons" and routes to `/dashboard/account-add-ons`;
+  selectable + bookable when enabled.
+- **Transactions list (already in place).** Single violet On-Demand service badge
+  (Standard = blue, Same-Day = orange, On-Demand = violet) + Service Type filter.
+- **NEW — OD progress model.** `getOnDemandProgress()` + `ON_DEMAND_STAGES` in
+  `data/transactions.ts` (re-exported via `transactionService`). Courier-style
+  stages: Booking confirmed → Looking for driver → Driver assigned → Picked up →
+  En route → Delivered, with a mocked ETA + failed/returned exception state.
+  Demo/presentation only (dispatch/ETA are backend-owned).
+- **NEW — shared `OnDemandTracker` component** (`components/OnDemandTracker.tsx`):
+  `OnDemandBadge`, `OnDemandMapPlaceholder` (placeholder live map, no real map
+  integration), `OnDemandRoute` (pickup/drop-off), `OnDemandTimeline` (stepper).
+  Reused by both the detail page and public tracking for visual consistency.
+- **NEW — Transaction detail OD section** (`TransactionDetails.tsx`): shown only
+  when `serviceType === 'on_demand'`. Map placeholder, pickup/delivery addresses,
+  current status + ETA, progress timeline, CTAs: Track live delivery (opens
+  `/track/:id`), Contact support (reuses report modal), Cancel booking (reuses
+  `claimsService` cancel; enabled only for `pending`, mocked).
+- **NEW — public `/track` OD state** (`TrackingPage.tsx`): OD tracking numbers
+  render `OnDemandTrackingResult` (status hero, placeholder map, route cards,
+  timeline, support CTA) instead of the standard result. No buyer app required.
+- **NEW — seed row** `GGX-2026-90011` (pending On-Demand, Acme Luzon) so the
+  early-stage progress + cancel-before-pickup CTA are demoable.
+- **Intentional boundary:** booking still records to Bulk Upload history (mock);
+  the Transactions list reads the static transaction seed, same as Standard/
+  Same-Day. No live append-to-transactions store was added (would touch non-OD
+  flows). OD is demonstrated across all surfaces via the seed.
+- Build + typecheck green. Not pushed.
+
 ## Current Priority
 
 Backend integration remains the next major app stage:

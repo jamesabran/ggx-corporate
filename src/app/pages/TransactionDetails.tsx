@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
-import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff, IconUpload, IconArrowRight, IconReceiptRefund, IconX, IconCircleCheck, IconCheck, IconPhoto, IconExternalLink } from '@tabler/icons-react';
+import { IconArrowLeft, IconStar, IconFileText, IconShare, IconMessage, IconPackage, IconPackageOff, IconUpload, IconArrowRight, IconReceiptRefund, IconX, IconCircleCheck, IconCheck, IconPhoto, IconExternalLink, IconBolt, IconMapPin, IconHeadset } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -14,12 +14,14 @@ import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 import {
   getTransactionById,
   getTransactionTotals,
+  getOnDemandProgress,
   statusConfig,
   serviceTypeLabel,
   SOURCE_TYPE_LABEL,
   BOOKING_METHOD_LABEL,
   type Transaction,
 } from '../services/transactionService';
+import { OnDemandBadge, OnDemandMapPlaceholder, OnDemandRoute, OnDemandTimeline } from '../components/OnDemandTracker';
 import {
   getClaimByTrackingNumber, fileClaim, cancelBooking, isBookingCancelled,
   claimEligible, cancelEligible, CLAIM_STATUS_META, CLAIM_REASONS, type Claim,
@@ -163,6 +165,83 @@ export function TransactionDetails() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {/* On-Demand live delivery progress — OD bookings only. Courier-style
+              progress, mocked ETA, pickup/drop-off, and OD action CTAs. */}
+          {transaction.serviceType === 'on_demand' && (() => {
+            const progress = getOnDemandProgress(transaction);
+            return (
+              <Card className="border-violet-200">
+                <CardHeader>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-9 h-9 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+                        <IconBolt className="w-5 h-5 text-violet-600" />
+                      </span>
+                      <div>
+                        <CardTitle>On-Demand Delivery</CardTitle>
+                        <p className="text-sm text-gray-500 mt-0.5">
+                          {progress.currentLabel}
+                          <span className="mx-1.5 text-gray-300">·</span>
+                          <span className="font-medium text-violet-700">{progress.eta}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <OnDemandBadge />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <OnDemandMapPlaceholder eta={progress.eta} />
+
+                  <OnDemandRoute
+                    pickup={{ name: transaction.sender.name, address: transaction.sender.address }}
+                    dropoff={{ name: transaction.recipient.name, address: transaction.recipient.address }}
+                  />
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Delivery progress</p>
+                    <OnDemandTimeline progress={progress} />
+                  </div>
+
+                  {/* OD action CTAs */}
+                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                    <Button
+                      className="flex-1"
+                      onClick={() => window.open(`/track/${transaction.trackingNumber}`, '_blank', 'noopener')}
+                    >
+                      <IconMapPin className="w-4 h-4 mr-2" />
+                      Track live delivery
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={() => setShowReportModal(true)}>
+                      <IconHeadset className="w-4 h-4 mr-2" />
+                      Contact support
+                    </Button>
+                    {cancelled ? (
+                      <Button variant="ghost" className="flex-1 text-gray-400" disabled>
+                        <IconX className="w-4 h-4 mr-2" />
+                        Booking cancelled
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        className="flex-1 text-red-600 hover:bg-red-50"
+                        disabled={!canCancel}
+                        onClick={() => setShowCancelConfirm(true)}
+                      >
+                        <IconX className="w-4 h-4 mr-2" />
+                        Cancel booking
+                      </Button>
+                    )}
+                  </div>
+                  {!cancelled && !canCancel && (
+                    <p className="text-xs text-gray-400 -mt-2">
+                      Cancellation is only available for newly-booked deliveries before a driver picks up.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           <Card>
             <CardHeader><CardTitle>Pick-up and Delivery Dates</CardTitle></CardHeader>
             <CardContent>

@@ -6,13 +6,15 @@ import {
   IconTruck,
   IconAlertCircle,
   IconSearch,
-  IconArrowLeft,
   IconExternalLink,
+  IconBolt,
+  IconHeadset,
 } from '@tabler/icons-react';
-import { getTransactionById, statusConfig, type Transaction } from '../services/transactionService';
+import { getTransactionById, getOnDemandProgress, statusConfig, type Transaction } from '../services/transactionService';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { OnDemandBadge, OnDemandMapPlaceholder, OnDemandRoute, OnDemandTimeline } from '../components/OnDemandTracker';
 
 const statusIcon: Record<string, React.ReactNode> = {
   delivered: <IconCircleCheck className="w-6 h-6 text-green-500" />,
@@ -139,6 +141,77 @@ function TrackingResult({ transaction }: { transaction: Transaction }) {
   );
 }
 
+/**
+ * Public On-Demand live-tracking state. Demo only — current status, mocked ETA,
+ * pickup/drop-off cards, courier-style timeline, placeholder map, and a support
+ * CTA. No buyer-facing app or real map/dispatch integration required.
+ */
+function OnDemandTrackingResult({ transaction }: { transaction: Transaction }) {
+  const status = statusConfig[transaction.status];
+  const progress = getOnDemandProgress(transaction);
+
+  return (
+    <div className="space-y-6">
+      {/* Status hero */}
+      <div className="rounded-2xl border border-violet-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center flex-shrink-0">
+            <IconBolt className="w-6 h-6 text-violet-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <h2 className="text-lg font-semibold text-gray-900 truncate">{transaction.trackingNumber}</h2>
+              <OnDemandBadge />
+              <Badge variant={status.variant}>{status.label}</Badge>
+            </div>
+            <p className="text-sm text-gray-500">
+              {progress.currentLabel}
+              <span className="mx-1.5 text-gray-300">·</span>
+              <span className="font-medium text-violet-700">{progress.eta}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Live map placeholder */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <OnDemandMapPlaceholder eta={progress.eta} />
+      </div>
+
+      {/* Pickup / drop-off */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h3 className="font-semibold text-gray-900 mb-4">Route</h3>
+        <OnDemandRoute
+          pickup={{ name: transaction.sender.name, address: transaction.sender.address }}
+          dropoff={{ name: transaction.recipient.name, address: transaction.recipient.address }}
+        />
+      </div>
+
+      {/* Timeline */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h3 className="font-semibold text-gray-900 mb-5">Delivery progress</h3>
+        <OnDemandTimeline progress={progress} />
+      </div>
+
+      {/* Support CTA */}
+      <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-start gap-3 flex-1">
+          <IconHeadset className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-gray-600">
+            Questions about this On-Demand delivery? Our support team can help.
+          </p>
+        </div>
+        <a href="mailto:support@gogoxpress.com" className="sm:flex-shrink-0">
+          <Button variant="outline" size="sm" className="w-full">
+            <IconHeadset className="w-4 h-4 mr-1.5" />
+            Contact support
+          </Button>
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function TrackingNotFound({ trackingNumber }: { trackingNumber: string }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
@@ -230,7 +303,9 @@ export function TrackingPage() {
         )}
 
         {!loading && transaction && (
-          <TrackingResult transaction={transaction} />
+          transaction.serviceType === 'on_demand'
+            ? <OnDemandTrackingResult transaction={transaction} />
+            : <TrackingResult transaction={transaction} />
         )}
 
         {!loading && !searched && (

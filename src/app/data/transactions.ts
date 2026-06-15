@@ -293,6 +293,9 @@ const rows: RowSeed[] = [
   { tracking: 'GGX-2026-90010', recipient: 'Nexus Retail Group', destination: 'Makati City, Metro Manila', contactNumber: '+63 917 211 0011', recipientAddress: 'Ayala Mall, Glorietta 5, Makati City, Metro Manila', status: 'pending', type: 'Express', date: '2026-05-31', subaccount: 'Acme Corporation', codAmount: 32000, batch: { batchId: 'UPLOAD-2026-05-31-001', fileName: 'may31_express_orders.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 247, delivered: 5, inProgress: 240, failed: 2 } }},
   { tracking: 'GGX-2026-90009', recipient: 'Meridian Health Corp.', destination: 'Quezon City, Metro Manila', contactNumber: '+63 918 322 0022', recipientAddress: 'Trinoma Mall, North EDSA, Quezon City, Metro Manila', status: 'in-transit', type: 'Express', date: '2026-05-31', subaccount: 'Acme Luzon', codAmount: 18750, batch: { batchId: 'UPLOAD-2026-05-31-002', fileName: 'may31_luzon_am.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 184, delivered: 12, inProgress: 170, failed: 2 } } },
   { tracking: 'GGX-2026-90008', recipient: 'Horizon Publishing Co.', destination: 'Pasig City, Metro Manila', contactNumber: '+63 919 433 0033', recipientAddress: 'Robinsons Galleria, Ortigas, Pasig City, Metro Manila', status: 'failed', type: 'Standard', date: '2026-05-31', subaccount: 'Acme Corporation', codAmount: 9400, serviceType: 'on_demand', sourceType: 'product_checkout', connectedStore: 'TechGear PH — product link' },
+  // Newly-booked On-Demand parcel (demonstrates early-stage progress + the
+  // cancel-before-pickup CTA on the detail + tracking surfaces).
+  { tracking: 'GGX-2026-90011', recipient: 'Brightline Pharmacy', destination: 'Makati City, Metro Manila', contactNumber: '+63 917 233 0099', recipientAddress: 'Legaspi Village, Makati City, Metro Manila', status: 'pending', type: 'Express', date: '2026-05-31', subaccount: 'Acme Luzon', codAmount: 2750, serviceType: 'on_demand', createdBy: 'Maria Santos' },
   // ── May 30 ───────────────────────────────────────────────────────────────────
   { tracking: 'GGX-2026-90007', recipient: 'PeakSoft Technologies', destination: 'Taguig City, Metro Manila', contactNumber: '+63 917 544 0044', recipientAddress: 'One Bonifacio High Street, BGC, Taguig City', status: 'delivered', type: 'Express', date: '2026-05-30', subaccount: 'Acme Corporation', codAmount: 27500, batch: { batchId: 'UPLOAD-2026-05-30-001', fileName: 'may30_corporate.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-corporation', accountName: 'Acme Corporation', reportedCounts: { total: 312, delivered: 298, inProgress: 11, failed: 3 } } },
   { tracking: 'GGX-2026-90006', recipient: 'Citadel Finance Group', destination: 'Mandaluyong City, Metro Manila', contactNumber: '+63 918 655 0055', recipientAddress: 'Shaw Boulevard, Mandaluyong City, Metro Manila', status: 'failed', type: 'Express', date: '2026-05-30', subaccount: 'Acme Luzon', codAmount: 43200, batch: { batchId: 'UPLOAD-2026-05-30-002', fileName: 'may30_priority.xlsx', uploadedVia: 'bulk_upload', accountId: 'acme-luzon', accountName: 'Acme Luzon', reportedCounts: { total: 67, delivered: 58, inProgress: 3, failed: 6 } } },
@@ -436,4 +439,78 @@ export function sourceTypeLabel(t: Pick<TransactionSummary, 'sourceType'>): stri
 export function getTransactionByTracking(tracking: string | undefined): Transaction | undefined {
   if (!tracking) return undefined;
   return transactions.find((t) => t.trackingNumber === tracking);
+}
+
+// ─── On-Demand live delivery progress (presentation / demo) ───────────────────
+//
+// On-Demand bookings get a courier-style progress model distinct from the bulk
+// timeline above: Booking confirmed → Looking for driver → Driver assigned →
+// Picked up → En route → Delivered. Stages, the current ETA, and exception state
+// are DEMO/PRESENTATION values standing in for dispatch-provided fields
+// (FarEye-linked fulfillment in production). The frontend is NOT the source of
+// truth for dispatch status or real ETAs — these mirror the `serviceTypeLabel`/
+// `buildTimeline` pattern of treating mock values as backend-supplied.
+
+export type OnDemandStageState = 'done' | 'current' | 'upcoming';
+
+/** Canonical On-Demand delivery stages, oldest → newest. */
+export const ON_DEMAND_STAGES: { label: string; note: string }[] = [
+  { label: 'Booking confirmed', note: 'On-Demand booking confirmed and ready for dispatch.' },
+  { label: 'Looking for driver', note: 'Matching your parcel with a nearby driver.' },
+  { label: 'Driver assigned',   note: 'A driver accepted and is heading to the pickup point.' },
+  { label: 'Picked up',         note: 'Driver has collected the parcel from the sender.' },
+  { label: 'En route',          note: 'Driver is on the way to the drop-off location.' },
+  { label: 'Delivered',         note: 'Parcel delivered to the recipient.' },
+];
+
+// How far through the OD stages each transaction status has progressed (index).
+const onDemandReachedStage: Record<TransactionStatus, number> = {
+  pending: 1,      // Looking for driver
+  'picked-up': 3,  // Picked up
+  'in-transit': 4, // En route
+  delivered: 5,    // Delivered
+  failed: 4,       // En route, then failed
+  returned: 5,     // attempted, then returned
+};
+
+export interface OnDemandProgress {
+  /** Index of the current stage within ON_DEMAND_STAGES. */
+  currentStage: number;
+  /** Label of the current stage. */
+  currentLabel: string;
+  /** Mocked ETA / status line for the hero. */
+  eta: string;
+  /** Set when the delivery hit a terminal failure / return. */
+  exception?: 'failed' | 'returned';
+  /** Per-stage display state for the stepper. */
+  stages: { label: string; note: string; state: OnDemandStageState }[];
+}
+
+/** Mocked ETA / status line per transaction status (demo value). */
+function onDemandEta(status: TransactionStatus): string {
+  switch (status) {
+    case 'pending':    return 'Finding a driver — ETA updates once assigned';
+    case 'picked-up':  return 'Arriving in ~20–30 mins';
+    case 'in-transit': return 'Arriving in ~10–15 mins';
+    case 'delivered':  return 'Delivered';
+    case 'failed':     return 'Delivery attempt unsuccessful';
+    case 'returned':   return 'Returned to sender';
+  }
+}
+
+/** Derive the On-Demand live progress view for a transaction (demo/presentation). */
+export function getOnDemandProgress(t: Pick<Transaction, 'status'>): OnDemandProgress {
+  const reached = onDemandReachedStage[t.status];
+  const exception = t.status === 'failed' ? 'failed' : t.status === 'returned' ? 'returned' : undefined;
+  const stages = ON_DEMAND_STAGES.map((s, i) => ({
+    ...s,
+    state: (i < reached ? 'done' : i === reached ? 'current' : 'upcoming') as OnDemandStageState,
+  }));
+  return {
+    currentStage: reached,
+    currentLabel: ON_DEMAND_STAGES[reached]?.label ?? ON_DEMAND_STAGES[ON_DEMAND_STAGES.length - 1].label,
+    eta: onDemandEta(t.status),
+    exception,
+    stages,
+  };
 }
