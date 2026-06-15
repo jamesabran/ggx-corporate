@@ -1,8 +1,25 @@
-import { useState } from 'react';
-import { IconDownload, IconArrowLeft, IconChevronRight, IconChevronLeft } from '@tabler/icons-react';
+import { useMemo, useState } from 'react';
+import { IconDownload, IconArrowLeft, IconChevronRight, IconChevronLeft, IconInfoCircle } from '@tabler/icons-react';
 import { Button } from './ui/Button';
 import { Select } from './ui/Select';
 import { Card, CardContent } from './ui/Card';
+import { loadState, saveState } from '../lib/storage';
+
+// Row status pill tones. Kept small and inline so we don't add a new component.
+const PILL_TONES = {
+  required: 'bg-red-50 text-red-700 border-red-200',
+  optional: 'bg-gray-100 text-gray-500 border-gray-200',
+  auto: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  mapped: 'bg-blue-50 text-blue-700 border-blue-200',
+} as const;
+
+function StatusPill({ tone, children }: { tone: keyof typeof PILL_TONES; children: React.ReactNode }) {
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${PILL_TONES[tone]}`}>
+      {children}
+    </span>
+  );
+}
 
 // GGX field definitions for column mapping.
 // Required fields must be mapped before Confirm is enabled.
@@ -81,15 +98,45 @@ function autoMap(fileHeaders: string[], fields: typeof GGX_FIELDS): Record<strin
 const SAMPLE_COLS = 3;
 
 export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm, onBack, onDownloadTemplate }: BulkColumnMapperProps) {
-  const [mapping, setMapping] = useState<Record<string, string>>(() => autoMap(fileHeaders, GGX_FIELDS));
+  const initialMapping = useMemo(() => autoMap(fileHeaders, GGX_FIELDS), [fileHeaders]);
+  const [mapping, setMapping] = useState<Record<string, string>>(initialMapping);
+  // Fields the system auto-matched. Cleared per-field once the user edits them,
+  // so the "Auto-matched" status only reflects untouched system suggestions.
+  const [autoMatchedKeys, setAutoMatchedKeys] = useState<Set<string>>(() => new Set(Object.keys(initialMapping)));
   // Which sample data offset is visible (left/right scroll through sample columns).
   const [sampleOffset, setSampleOffset] = useState(0);
+  // Save-mapping preference. Mock/demo only — persisted via the shared localStorage
+  // helper; there is no backend mapping-template contract yet.
+  const [saveMapping, setSaveMapping] = useState<boolean>(() => loadState('bulkColumnMapping.savePref', true));
 
-  const setField = (key: string, value: string) => setMapping((prev) => ({ ...prev, [key]: value }));
+  const setField = (key: string, value: string) => {
+    setMapping((prev) => ({ ...prev, [key]: value }));
+    // A manual change means this field is no longer a system suggestion.
+    setAutoMatchedKeys((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  };
+
+  const toggleSaveMapping = (checked: boolean) => {
+    setSaveMapping(checked);
+    saveState('bulkColumnMapping.savePref', checked);
+  };
+
+  const handleConfirm = () => {
+    // Demo persistence: store the confirmed mapping locally when opted in.
+    if (saveMapping) saveState('bulkColumnMapping.lastMapping', mapping);
+    onConfirm(mapping as Record<FieldKey, string>);
+  };
 
   const requiredMapped = GGX_FIELDS
     .filter((f) => f.required)
     .every((f) => !!mapping[f.key]);
+
+  const requiredRemaining = GGX_FIELDS.filter((f) => f.required && !mapping[f.key]).length;
+  const autoMatchedCount = GGX_FIELDS.filter((f) => autoMatchedKeys.has(f.key) && mapping[f.key]).length;
 
   // Headers currently selected by any field — used to mark dropdown options as
   // "In use" vs "Available" without adding a separate summary panel.
@@ -105,6 +152,16 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
   const hasDuplicates = duplicateMappings.length > 0;
 
   const canConfirm = requiredMapped && !hasDuplicates;
+
+  // Precise CTA helper text describing exactly what is blocking Confirm.
+  let blockerText = '';
+  if (!requiredMapped && hasDuplicates) {
+    blockerText = 'Map required fields and resolve duplicates to continue';
+  } else if (!requiredMapped) {
+    blockerText = `Map ${requiredRemaining} required field${requiredRemaining === 1 ? '' : 's'} to continue`;
+  } else if (hasDuplicates) {
+    blockerText = 'Resolve duplicate column mappings to continue';
+  }
 
   const maxOffset = Math.max(0, sampleData.length - SAMPLE_COLS);
 
@@ -124,6 +181,19 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
           <IconDownload className="w-4 h-4 mr-2" />
           Download Template
         </Button>
+      </div>
+
+      {/* Auto-match summary */}
+      <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+        <IconInfoCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+        <p className="text-sm text-blue-800">
+          {autoMatchedCount > 0
+            ? `${autoMatchedCount} field${autoMatchedCount === 1 ? '' : 's'} auto-matched. `
+            : 'We couldn’t auto-match your columns. '}
+          {requiredRemaining > 0
+            ? `Review and complete the remaining required field${requiredRemaining === 1 ? '' : 's'}.`
+            : 'Review the matched fields before continuing.'}
+        </p>
       </div>
 
       {/* Mapping table */}
@@ -175,8 +245,15 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
                       : '–';
                   });
 
+                  const isMapped = !!selectedHeader;
+                  const isAuto = isMapped && autoMatchedKeys.has(field.key);
+                  const requiredUnmapped = field.required && !isMapped;
+
                   return (
-                    <tr key={field.key} className="border-b border-gray-100 hover:bg-gray-50/50">
+                    <tr
+                      key={field.key}
+                      className={`border-b border-gray-100 ${requiredUnmapped ? 'bg-red-50/40 hover:bg-red-50/60' : 'hover:bg-gray-50/50'}`}
+                    >
                       <td className="px-4 py-2.5">
                         <span className={`text-sm font-medium ${field.required ? 'text-gray-900' : 'text-gray-500'}`}>
                           {field.label}
@@ -187,7 +264,7 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
                         <Select
                           value={selectedHeader}
                           onChange={(e) => setField(field.key, e.target.value)}
-                          className="text-sm w-full"
+                          className={`text-sm w-full ${requiredUnmapped ? 'border-red-300' : ''}`}
                         >
                           <option value="">Select column</option>
                           {fileHeaders.map((h) => {
@@ -200,6 +277,18 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
                             );
                           })}
                         </Select>
+                        {/* Row status — visible without opening the dropdown */}
+                        <div className="mt-1.5">
+                          {isAuto ? (
+                            <StatusPill tone="auto">Auto-matched</StatusPill>
+                          ) : isMapped ? (
+                            <StatusPill tone="mapped">Mapped</StatusPill>
+                          ) : field.required ? (
+                            <StatusPill tone="required">Required · Unmapped</StatusPill>
+                          ) : (
+                            <StatusPill tone="optional">Optional</StatusPill>
+                          )}
+                        </div>
                       </td>
                       {visibleSampleCols.map((sample, i) => (
                         <td key={i} className="px-4 py-2.5 text-sm text-gray-600 max-w-[140px] truncate">
@@ -236,6 +325,22 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
         </div>
       )}
 
+      {/* Save mapping (mock/demo) */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={saveMapping}
+            onChange={(e) => toggleSaveMapping(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <span className="text-sm">
+            <span className="font-medium text-gray-900">Save this column mapping for future uploads with similar headers</span>
+            <span className="block text-xs text-gray-500 mt-0.5">Saved locally on this device for now (demo).</span>
+          </span>
+        </label>
+      </div>
+
       {/* Footer actions */}
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={onBack}>
@@ -243,10 +348,10 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
           Back
         </Button>
         <div className="flex items-center gap-3">
-          {!requiredMapped && (
-            <p className="text-xs text-gray-500">Map all required fields (*) to continue</p>
+          {blockerText && (
+            <p className="text-xs text-gray-500">{blockerText}</p>
           )}
-          <Button disabled={!canConfirm} onClick={() => onConfirm(mapping as Record<FieldKey, string>)}>
+          <Button disabled={!canConfirm} onClick={handleConfirm}>
             Confirm Fields and Upload
           </Button>
         </div>
