@@ -1,127 +1,125 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import {
-  IconLayoutDashboard,
-  IconTruck,
-  IconSparkles,
-  IconUser,
   IconBell,
-  IconMenu2,
   IconChevronLeft,
-  IconReceiptTax,
+  IconUser,
 } from '@tabler/icons-react';
-import { cn } from '../lib/utils';
+import { BasicAuroraBg } from '../components/basic/BasicAuroraBg';
+import { BasicBottomNav } from '../components/basic/BasicBottomNav';
 
-const bottomNav = [
-  { label: 'Home',     href: '/basic',          icon: IconLayoutDashboard },
-  { label: 'Rewards',  href: '/basic/more',      icon: IconSparkles },
-  { label: 'Ship',     href: '/basic/deliver',   icon: IconTruck },
-  { label: 'Orders',   href: '/basic/orders',    icon: IconReceiptTax },
-  { label: 'Account',  href: '/basic/account',   icon: IconUser },
+const PAGE_TITLES: [string, string][] = [
+  ['/basic/more',             'Save & Earn More'],
+  ['/basic/qualify',          'Business Benefits'],
+  ['/basic/business-preview', 'GGX Business+'],
+  ['/basic/deliver/review',   'Review Booking'],
+  ['/basic/deliver',          'Ship Now'],
+  ['/basic/account',          'Account'],
+  ['/basic/orders',           'Transactions'],
+  ['/basic/bulk',             'Bulk Upload'],
+  ['/basic/store',            'Your Store'],
+  ['/basic/inventory',        'Inventory'],
+  ['/basic/earnings',         'Earnings'],
+  ['/basic/support',          'Help & Support'],
+  ['/basic/settings',         'Settings'],
+  ['/basic/same-day',         'Same-Day Delivery'],
 ];
+
+function resolveTitle(pathname: string): string | null {
+  for (const [prefix, title] of PAGE_TITLES) {
+    if (pathname.startsWith(prefix)) return title;
+  }
+  return null;
+}
+
+const glassBtn =
+  'flex h-[42px] w-[42px] flex-shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform active:scale-95';
+const glassBtnStyle = {
+  background: 'rgba(255,255,255,0.55)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255,255,255,0.7)',
+  boxShadow: '0 4px 14px rgba(40,70,120,0.1)',
+} as const;
 
 export function BasicLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
   const isHome = location.pathname === '/basic' || location.pathname === '/basic/';
-
-  const pageTitle = (() => {
-    if (location.pathname.startsWith('/basic/more'))            return 'Save & Earn More';
-    if (location.pathname.startsWith('/basic/qualify'))         return 'Business Benefits';
-    if (location.pathname.startsWith('/basic/business-preview')) return 'GGX Business+';
-    if (location.pathname.startsWith('/basic/deliver/review'))  return 'Review Booking';
-    if (location.pathname.startsWith('/basic/deliver'))         return 'Ship Now';
-    if (location.pathname.startsWith('/basic/account'))   return 'Account';
-    if (location.pathname.startsWith('/basic/orders'))    return 'Orders';
-    if (location.pathname.startsWith('/basic/bulk'))      return 'Bulk Upload';
-    if (location.pathname.startsWith('/basic/store'))     return 'Your Store';
-    if (location.pathname.startsWith('/basic/inventory')) return 'Inventory';
-    if (location.pathname.startsWith('/basic/earnings'))  return 'Earnings';
-    if (location.pathname.startsWith('/basic/support'))   return 'Help & Support';
-    if (location.pathname.startsWith('/basic/settings'))  return 'Settings';
-    if (location.pathname.startsWith('/basic/same-day'))  return 'Same-Day Delivery';
-    return null;
-  })();
+  const pageTitle = resolveTitle(location.pathname);
 
   return (
-    // Neutral page backdrop so the mobile app-shell stays a centered, phone-width
-    // frame on tablet/desktop instead of stretching edge-to-edge.
+    /* Desktop backdrop */
     <div className="min-h-screen bg-slate-100">
-    {/* Light blue app-shell background matching the GGX mobile app */}
-    <div className="relative mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[#EAF2FF] shadow-sm">
+      {/* Phone shell */}
+      <div
+        data-shell="basic"
+        className="relative mx-auto flex min-h-screen w-full max-w-[430px] flex-col overflow-hidden"
+        style={{ background: 'var(--basic-bg)' }}
+      >
+        {/* Aurora blur blobs — behind everything */}
+        <BasicAuroraBg />
 
-      {/* ── Top bar ── */}
-      <header className="sticky top-0 z-30 bg-[#EAF2FF] flex items-center justify-between h-14 px-4 flex-shrink-0">
-
-        {/* Left slot */}
-        {isHome ? (
-          <button
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-600 hover:bg-white/60 active:bg-white/80 transition-colors cursor-pointer"
-            aria-label="Menu"
-          >
-            <IconMenu2 className="w-[22px] h-[22px]" />
-          </button>
-        ) : (
-          <button
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-600 hover:bg-white/60 active:bg-white/80 transition-colors cursor-pointer"
-            aria-label="Back"
-          >
-            <IconChevronLeft className="w-[22px] h-[22px]" />
-          </button>
-        )}
-
-        {/* Center slot */}
-        {isHome ? (
-          <img
-            src="https://gogoxpress.com/wp-content/uploads/2022/07/gogox-logo.png"
-            alt="GoGo Xpress"
-            className="h-7 w-auto"
-          />
-        ) : (
-          <p className="text-base font-bold text-gray-900 truncate px-2">{pageTitle}</p>
-        )}
-
-        {/* Right slot */}
-        <button
-          className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-600 hover:bg-white/60 active:bg-white/80 transition-colors cursor-pointer relative"
-          aria-label="Notifications"
+        {/* ── Header ── */}
+        <header
+          className="relative z-20 flex h-14 flex-shrink-0 items-center justify-between px-4"
+          style={{
+            background: 'rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
         >
-          <IconBell className="w-[22px] h-[22px]" />
-          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
-        </button>
-      </header>
-
-      {/* ── Page content ── */}
-      <main className="flex-1 pb-[72px]">
-        <Outlet />
-      </main>
-
-      {/* ── Bottom navigation (pinned to the phone-width frame) ── */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 z-30 w-full max-w-[480px] bg-white border-t border-gray-200 flex items-stretch h-[64px]">
-        {bottomNav.map((item) => {
-          const isActive =
-            item.href === '/basic'
-              ? location.pathname === '/basic' || location.pathname === '/basic/'
-              : location.pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-1 transition-colors',
-                isActive ? 'text-blue-600' : 'text-gray-400'
-              )}
+          {/* Left slot */}
+          {isHome ? (
+            <img
+              src="https://gogoxpress.com/wp-content/uploads/2022/07/gogox-logo.png"
+              alt="GOGO XPRESS"
+              className="h-7 w-auto"
+            />
+          ) : (
+            <button
+              onClick={() => navigate(-1)}
+              className={glassBtn}
+              style={glassBtnStyle}
+              aria-label="Back"
             >
-              <item.icon className={cn('w-[22px] h-[22px] flex-shrink-0', isActive ? 'text-blue-600' : 'text-gray-400')} />
-              <span className={cn('text-[11px] font-semibold leading-none', isActive ? 'text-blue-600' : 'text-gray-400')}>
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
+              <IconChevronLeft className="h-[22px] w-[22px]" style={{ color: '#20303f' }} />
+            </button>
+          )}
+
+          {/* Center — page title on inner pages only */}
+          {!isHome && pageTitle && (
+            <p className="truncate px-2 text-base font-bold" style={{ color: '#20303f' }}>
+              {pageTitle}
+            </p>
+          )}
+
+          {/* Right slot — always bell + profile */}
+          <div className="flex items-center gap-[11px]">
+            <button className={glassBtn} style={glassBtnStyle} aria-label="Notifications">
+              <div className="relative">
+                <IconBell className="h-[20px] w-[20px]" style={{ color: '#20303f' }} />
+                <span
+                  className="absolute right-[-1px] top-[-1px] h-2 w-2 rounded-full border-2 border-white"
+                  style={{ background: '#e0244d' }}
+                />
+              </div>
+            </button>
+            <button className={glassBtn} style={glassBtnStyle} aria-label="Profile">
+              <IconUser className="h-[20px] w-[20px]" style={{ color: '#1e8fd6' }} />
+            </button>
+          </div>
+        </header>
+
+        {/* ── Page content ── */}
+        {/* pb-[96px] clears the fixed glass nav pill (64px) + bottom margin (18px) + buffer */}
+        <main className="relative z-10 flex-1 overflow-y-auto pb-[96px]">
+          <Outlet />
+        </main>
+
+        {/* ── Glass bottom nav ── */}
+        <BasicBottomNav />
+      </div>
     </div>
   );
 }

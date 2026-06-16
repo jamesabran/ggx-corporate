@@ -1,0 +1,36 @@
+/* Basic-segment visual tokens — scoped so they never reach Business+ pages */
+[data-shell="basic"] {
+  --basic-bg: linear-gradient(168deg, #dce9f8 0%, #e6e7f3 26%, #f3dce6 52%, #fbe6ec 72%, #e9f3ef 100%);
+
+  /* aurora blob colors */
+  --basic-blob-blue:   #74b6ef;
+  --basic-blob-pink:   #e87aa6;
+  --basic-blob-gold:   #f4cf7a;
+  --basic-blob-teal:   #7fd8c4;
+  --basic-blob-purple: #8aa0ee;
+
+  /* glass surfaces */
+  --basic-glass:        rgba(255, 255, 255, 0.42);
+  --basic-glass-strong: rgba(255, 255, 255, 0.62);
+  --basic-glass-border: rgba(255, 255, 255, 0.7);
+  --basic-glass-shadow: 0 14px 38px rgba(40, 70, 120, 0.12);
+
+  /* bottom nav glass */
+  --basic-nav-bg:     rgba(255, 255, 255, 0.62);
+  --basic-nav-border: rgba(255, 255, 255, 0.75);
+  --basic-nav-shadow: 0 16px 38px rgba(40, 70, 120, 0.2);
+
+  /* Book Now FAB */
+  --basic-fab-gradient: linear-gradient(140deg, #2f9be8, #1e6fd6);
+  --basic-fab-shadow:   0 10px 22px rgba(30, 111, 214, 0.5), 0 0 0 5px rgba(255, 255, 255, 0.55);
+
+  /* accent palette */
+  --basic-blue:   #1e8fd6;
+  --basic-muted:  #7e93a6;
+  --basic-text:   #20303f;
+  --basic-sub:    #5d7589;
+  --basic-label:  #33485c;
+
+  /* GOGO Packs tile gradient */
+  --basic-packs-tile: linear-gradient(140deg, rgba(116, 182, 239, 0.5), rgba(232, 122, 166, 0.4));
+}

@@ -1,100 +1,79 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
-  IconPackage,
-  IconUpload,
-  IconBuildingStore,
   IconArrowRight,
   IconCircleCheckFilled,
   IconHourglass,
   IconTruck,
-  IconTicket,
   IconGift,
-  IconUsers,
-  IconWallet,
-  IconBrandShopee,
-  IconMapPin,
-  IconBox,
 } from '@tabler/icons-react';
 import { Badge } from '../../components/ui/Badge';
-import { GrowingNudgeCard } from '../../components/basic/GrowingNudgeCard';
+import { BasicPromoCarousel } from '../../components/basic/BasicPromoCarousel';
+import { BasicGlassCard } from '../../components/basic/BasicGlassCard';
+import { BasicActivitySummary } from '../../components/basic/BasicActivitySummary';
 import { useBasicSegment } from '../../contexts/BasicSegmentContext';
-import { cn } from '../../lib/utils';
 
-// ── Service tiles ────────────────────────────────────────────────────────────
+// Illustrated asset imports (Vite resolves to hashed URLs)
+import iconSdd      from '@/assets/basic/icon-sdd.png';
+import iconStandard from '@/assets/basic/icon-standard.png';
+import iconBulk     from '@/assets/basic/icon-bulk.png';
+import iconPacks    from '@/assets/basic/icon-packs.png';
+import iconShopify  from '@/assets/basic/icon-shopify.png';
+import iconStorefront from '@/assets/basic/icon-storefront.png';
+import iconRewards  from '@/assets/basic/icon-rewards.png';
+import iconReferrals from '@/assets/basic/icon-referrals.png';
+import iconAnalytics from '@/assets/basic/icon-analytics.png';
 
-interface ServiceTile {
+// ── Primary action tiles (4-up horizontal row) ───────────────────────────────
+
+interface PrimaryTile {
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  iconBg: string;
-  iconColor: string;
-  tileBg: string;
+  img: string;
   href: string;
   badge?: string;
+  tileBg?: string;
 }
 
-const SERVICE_TILES: ServiceTile[] = [
+const PRIMARY_TILES: PrimaryTile[] = [
+  {
+    label: 'Same Day\nDelivery',
+    img: iconSdd,
+    href: '/basic/same-day',
+  },
   {
     label: 'Standard\nDelivery',
-    icon: IconPackage,
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-    tileBg: 'bg-white',
+    img: iconStandard,
     href: '/basic/deliver?type=standard',
   },
   {
     label: 'Bulk\nUpload',
-    icon: IconUpload,
-    iconBg: 'bg-violet-100',
-    iconColor: 'text-violet-600',
-    tileBg: 'bg-white',
+    img: iconBulk,
     href: '/basic/bulk',
     badge: 'Free',
   },
   {
-    label: 'Sell\nOnline',
-    icon: IconBuildingStore,
-    iconBg: 'bg-teal-100',
-    iconColor: 'text-teal-600',
-    tileBg: 'bg-white',
-    href: '/basic/store',
-  },
-  {
-    label: 'Track\nOrder',
-    icon: IconMapPin,
-    iconBg: 'bg-sky-100',
-    iconColor: 'text-sky-600',
-    tileBg: 'bg-white',
-    href: '/track',
+    label: 'GOGO\nPacks',
+    img: iconPacks,
+    href: '/basic/more',
+    badge: 'New',
+    tileBg: 'linear-gradient(140deg, rgba(116,182,239,0.5), rgba(232,122,166,0.4))',
   },
 ];
 
-// ── Explore more tiles ────────────────────────────────────────────────────────
+// ── Secondary tiles (5-up row) ───────────────────────────────────────────────
 
-interface ExploreTile {
+interface SecondaryTile {
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  iconBg: string;
-  iconColor: string;
+  img: string;
   href: string;
 }
 
-const EXPLORE_TILES: ExploreTile[] = [
-  { label: 'Shopify',    icon: IconBrandShopee,   iconBg: 'bg-green-100',  iconColor: 'text-green-600',  href: '/basic/store' },
-  { label: 'Inventory',  icon: IconBox,            iconBg: 'bg-teal-100',   iconColor: 'text-teal-600',   href: '/basic/inventory' },
-  { label: 'Earnings',   icon: IconWallet,         iconBg: 'bg-emerald-100',iconColor: 'text-emerald-600',href: '/basic/earnings' },
-  { label: 'Rewards',    icon: IconGift,           iconBg: 'bg-pink-100',   iconColor: 'text-pink-600',   href: '/basic/more' },
-  { label: 'Referrals',  icon: IconUsers,          iconBg: 'bg-amber-100',  iconColor: 'text-amber-600',  href: '/basic/more' },
-  { label: 'Vouchers',   icon: IconTicket,         iconBg: 'bg-red-100',    iconColor: 'text-red-500',    href: '/basic/more' },
-];
-
-// ── Activity stats ────────────────────────────────────────────────────────────
-
-const ACTIVITY_STATS = [
-  { value: '48',  label: 'New Orders' },
-  { value: '38',  label: 'Deliveries' },
-  { value: '93%', label: 'On-Time' },
-  { value: '3',   label: 'Returns' },
+const SECONDARY_TILES: SecondaryTile[] = [
+  { label: 'Shopify',     img: iconShopify,    href: '/basic/store' },
+  { label: 'Storefront',  img: iconStorefront, href: '/basic/store' },
+  { label: 'Rewards',     img: iconRewards,    href: '/basic/more' },
+  { label: 'Referrals',   img: iconReferrals,  href: '/basic/more' },
+  { label: 'Analytics',   img: iconAnalytics,  href: '/basic/earnings' },
 ];
 
 // ── Recent orders ─────────────────────────────────────────────────────────────
@@ -106,7 +85,11 @@ const MOCK_ORDERS = [
   { id: 'GGX-240530-022', recipient: 'Carlo Bautista', status: 'delivered',  time: '2 days ago' },
 ];
 
-const STATUS_CFG: Record<string, { label: string; variant: 'info' | 'success' | 'pending'; icon: React.ComponentType<{ className?: string }> }> = {
+const STATUS_CFG: Record<string, {
+  label: string;
+  variant: 'info' | 'success' | 'pending';
+  icon: React.ComponentType<{ className?: string }>;
+}> = {
   'in-transit': { label: 'In Transit', variant: 'info',    icon: IconTruck },
   'delivered':  { label: 'Delivered',  variant: 'success', icon: IconCircleCheckFilled },
   'pending':    { label: 'Pending',    variant: 'pending', icon: IconHourglass },
@@ -125,123 +108,135 @@ export function BasicDashboard() {
   });
 
   return (
-    // Extra top padding so content doesn't crowd the sticky header
-    <div className="px-4 pt-2 pb-2 space-y-5">
+    <div className="space-y-[18px] px-4 pt-3 pb-2">
 
-      {/* ── Welcome ── */}
-      <div className="pt-1">
-        <p className="text-sm text-gray-500 leading-snug">{greeting}</p>
-        <h1 className="text-[26px] font-extrabold text-gray-900 leading-tight tracking-tight">
-          Alex!
+      {/* ── 1. Promo carousel ── */}
+      <BasicPromoCarousel />
+
+      {/* ── 2. Welcome greeting ── */}
+      <div>
+        <p className="text-[15.5px] font-medium" style={{ color: '#5d7589' }}>
+          {greeting}
+        </p>
+        <h1
+          className="text-[29px] font-extrabold leading-tight tracking-tight"
+          style={{ color: '#20303f', letterSpacing: '-0.02em' }}
+        >
+          Welcome, <span style={{ color: '#1e8fd6' }}>Max!</span>
         </h1>
+        <p className="mt-1 text-[15.5px] font-medium" style={{ color: '#5d7589' }}>
+          What do you want to send today?
+        </p>
       </div>
 
-      {/* ── HVM nudge (Growing state) ── */}
-      {segment === 'growing' && <GrowingNudgeCard />}
-
-      {/* ── Service tiles (2 × 2) ── */}
-      <div>
-        <div className="grid grid-cols-2 gap-3">
-          {SERVICE_TILES.map((tile) => (
+      {/* ── 3. Services glass container ── */}
+      <BasicGlassCard className="p-[18px_14px_15px]">
+        {/* Row 1 — 4 primary tiles */}
+        <div className="flex gap-[9px]">
+          {PRIMARY_TILES.map((tile) => (
             <button
               key={tile.label}
               onClick={() => navigate(tile.href)}
-              className={cn(
-                'relative flex flex-col items-center justify-center gap-3 rounded-2xl shadow-sm cursor-pointer',
-                'active:scale-[0.97] transition-transform',
-                tile.tileBg,
-                'py-6 px-3'
-              )}
+              className="relative flex flex-1 cursor-pointer flex-col items-center"
+              style={{ background: 'none', border: 'none', padding: 0 }}
             >
               {/* Badge */}
               {tile.badge && (
-                <span className="absolute top-3 right-3 text-[10px] font-bold bg-green-500 text-white rounded-full px-2 py-0.5 leading-none">
+                <span
+                  className="absolute -right-[5px] -top-[9px] z-10 rounded-[9px] px-2 py-0.5 text-[9px] font-extrabold text-white"
+                  style={{
+                    background: tile.badge === 'New' ? '#5ab94a' : '#22c55e',
+                    boxShadow: '0 3px 8px rgba(90,185,74,0.4)',
+                  }}
+                >
                   {tile.badge}
                 </span>
               )}
 
-              {/* Icon container */}
-              <div className={cn('w-16 h-16 rounded-2xl flex items-center justify-center', tile.iconBg)}>
-                <tile.icon className={cn('w-8 h-8', tile.iconColor)} />
+              {/* Tile box */}
+              <div
+                className="flex h-[80px] w-full items-center justify-center rounded-[18px]"
+                style={{
+                  background: tile.tileBg ?? 'rgba(255,255,255,0.62)',
+                  border: '1px solid rgba(255,255,255,0.8)',
+                  boxShadow: '0 5px 14px rgba(40,70,120,0.08)',
+                }}
+              >
+                <img
+                  src={tile.img}
+                  alt={tile.label.replace('\n', ' ')}
+                  className="h-[62px] w-[62px] object-contain"
+                />
               </div>
 
               {/* Label */}
-              <p className="text-sm font-bold text-gray-800 text-center leading-snug whitespace-pre-line">
+              <p
+                className="mt-[7px] whitespace-pre-line text-center text-[11px] font-bold leading-snug"
+                style={{ color: '#33485c' }}
+              >
                 {tile.label}
               </p>
             </button>
           ))}
         </div>
-      </div>
 
-      {/* ── Explore more ── */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-4 pt-4 pb-3">
-          <p className="text-sm font-bold text-gray-900">Explore more</p>
-          <Link to="/basic/more" className="flex items-center gap-0.5 text-sm font-semibold text-blue-600">
-            View all <IconArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+        {/* Divider */}
+        <div
+          className="my-[15px] mx-1"
+          style={{ height: 1, background: 'rgba(255,255,255,0.6)' }}
+        />
 
-        {/* Horizontal scroll row */}
-        <div className="flex gap-1 overflow-x-auto scrollbar-none px-3 pb-4">
-          {EXPLORE_TILES.map((tile) => (
+        {/* Row 2 — 5 secondary tiles */}
+        <div className="flex justify-between px-[2px]">
+          {SECONDARY_TILES.map((tile) => (
             <Link
               key={tile.label}
               to={tile.href}
-              className="flex-shrink-0 flex flex-col items-center gap-2 w-[72px] active:opacity-70 transition-opacity"
+              className="flex flex-1 flex-col items-center active:opacity-70 transition-opacity"
             >
-              <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center', tile.iconBg)}>
-                <tile.icon className={cn('w-7 h-7', tile.iconColor)} />
+              <div className="flex h-[56px] w-[56px] items-center justify-center">
+                <img src={tile.img} alt={tile.label} className="h-[50px] w-[50px] object-contain" />
               </div>
-              <span className="text-xs font-medium text-gray-600 text-center leading-snug">{tile.label}</span>
+              <span
+                className="mt-[6px] text-center text-[10.5px] font-bold"
+                style={{ color: '#33485c' }}
+              >
+                {tile.label}
+              </span>
             </Link>
           ))}
         </div>
-      </div>
 
-      {/* ── Activity ── */}
-      <div className="bg-white rounded-2xl shadow-sm px-4 pt-4 pb-4">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-bold text-gray-900">Activity for Last 7 Days</p>
-          <Link to="/basic/orders" className="text-xs font-semibold text-blue-600 flex items-center gap-0.5">
-            View <IconArrowRight className="w-3.5 h-3.5" />
+        {/* View all link */}
+        <div className="mt-[14px] flex items-center justify-center gap-[6px]">
+          <Link
+            to="/basic/more"
+            className="flex items-center gap-[6px] text-[13.5px] font-extrabold"
+            style={{ color: '#1e8fd6' }}
+          >
+            View all
+            <IconArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </BasicGlassCard>
+
+      {/* ── 4. Activity summary ── */}
+      <BasicActivitySummary />
+
+      {/* ── 5. Recent Orders ── */}
+      <BasicGlassCard className="overflow-hidden">
+        <div className="flex items-center justify-between px-4 pb-2 pt-4">
+          <p className="text-sm font-bold" style={{ color: '#20303f' }}>Recent Orders</p>
+          <Link
+            to="/basic/orders"
+            className="flex items-center gap-0.5 text-xs font-semibold"
+            style={{ color: '#1e8fd6' }}
+          >
+            See all <IconArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
-        {/* COD summary strip */}
-        <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-100">
-          <div>
-            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider leading-none mb-1">Deposited</p>
-            <p className="text-2xl font-extrabold text-blue-600 leading-none tabular-nums">₱18,450</p>
-          </div>
-          <div className="text-right">
-            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider leading-none mb-1">For Processing</p>
-            <p className="text-xl font-bold text-gray-700 leading-none tabular-nums">₱4,320</p>
-          </div>
-        </div>
-
-        {/* Stats row */}
-        <div className="grid grid-cols-4 gap-1">
-          {ACTIVITY_STATS.map((s) => (
-            <div key={s.label} className="flex flex-col items-center gap-1">
-              <p className="text-xl font-extrabold text-gray-900 leading-none tabular-nums">{s.value}</p>
-              <p className="text-[11px] text-gray-400 font-medium text-center leading-snug">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Recent Orders ── */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <p className="text-sm font-bold text-gray-900">Recent Orders</p>
-          <Link to="/basic/orders" className="text-xs font-semibold text-blue-600 flex items-center gap-0.5">
-            See all <IconArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        <div className="divide-y divide-gray-50">
+        <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.5)' }}>
           {MOCK_ORDERS.map((o) => {
             const sc = STATUS_CFG[o.status];
             const StatusIcon = sc.icon;
@@ -249,52 +244,66 @@ export function BasicDashboard() {
               <button
                 key={o.id}
                 onClick={() => navigate(`/basic/orders/${o.id}`)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-gray-50 transition-colors cursor-pointer"
+                className="flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-white/20"
               >
-                {/* Status icon container */}
-                <div className={cn(
-                  'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
-                  o.status === 'delivered'  ? 'bg-emerald-50' :
-                  o.status === 'in-transit' ? 'bg-blue-50' : 'bg-orange-50'
-                )}>
-                  <StatusIcon className={cn(
-                    'w-5 h-5',
+                <div
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl"
+                  style={{
+                    background:
+                      o.status === 'delivered'  ? 'rgba(209,250,229,0.7)' :
+                      o.status === 'in-transit' ? 'rgba(219,234,254,0.7)' :
+                                                  'rgba(255,237,213,0.7)',
+                  }}
+                >
+                  <StatusIcon className={`h-5 w-5 ${
                     o.status === 'delivered'  ? 'text-emerald-500' :
-                    o.status === 'in-transit' ? 'text-blue-500' : 'text-orange-400'
-                  )} />
+                    o.status === 'in-transit' ? 'text-blue-500'    : 'text-orange-400'
+                  }`} />
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate leading-snug">{o.id}</p>
-                  <p className="text-xs text-gray-500 leading-snug">{o.recipient}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold leading-snug" style={{ color: '#20303f' }}>
+                    {o.id}
+                  </p>
+                  <p className="text-xs leading-snug" style={{ color: '#5d7589' }}>{o.recipient}</p>
                 </div>
 
-                <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                  <Badge variant={sc.variant} className="text-[10px] px-2 py-0.5 leading-none">{sc.label}</Badge>
-                  <span className="text-[11px] text-gray-400 leading-none">{o.time}</span>
+                <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
+                  <Badge variant={sc.variant} className="text-[10px] px-2 py-0.5 leading-none">
+                    {sc.label}
+                  </Badge>
+                  <span className="text-[11px] leading-none" style={{ color: '#7e93a6' }}>{o.time}</span>
                 </div>
               </button>
             );
           })}
         </div>
-      </div>
+      </BasicGlassCard>
 
-      {/* ── Basic state: soft upgrade nudge at bottom ── */}
+      {/* ── 6. Upgrade nudge (basic segment only) ── */}
       {segment === 'basic' && (
-        <div className="bg-white rounded-2xl shadow-sm px-4 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <IconGift className="w-5 h-5 text-amber-600" />
+        <BasicGlassCard className="flex items-center gap-3 p-4">
+          <div
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl"
+            style={{ background: 'rgba(251,191,36,0.25)' }}
+          >
+            <IconGift className="h-5 w-5" style={{ color: '#d97706' }} />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 leading-snug">Ship more to unlock benefits</p>
-            <Link to="/basic/qualify" className="text-xs font-semibold text-blue-600 leading-snug">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold leading-snug" style={{ color: '#20303f' }}>
+              Ship more to unlock benefits
+            </p>
+            <Link
+              to="/basic/qualify"
+              className="text-xs font-semibold leading-snug"
+              style={{ color: '#1e8fd6' }}
+            >
               Learn about Business pricing →
             </Link>
           </div>
-        </div>
+        </BasicGlassCard>
       )}
 
-      {/* Bottom spacer so last card isn't flush with the nav */}
       <div className="h-1" />
     </div>
   );
