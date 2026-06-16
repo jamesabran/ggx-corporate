@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import {
   IconChevronLeft,
@@ -142,11 +142,6 @@ function FirstMileCard({ value, onChange }: { value: FirstMile; onChange: (v: Fi
 
 // ── Item details ──────────────────────────────────────────────────────────────
 
-const ITEM_CATEGORIES = [
-  'Clothing', 'Electronics', 'Books', 'Food & Beverages',
-  'Health & Beauty', 'Home & Living', 'Toys', 'Documents', 'Other',
-];
-
 interface ItemState {
   itemName: string;
   pouchSize: PouchSize;
@@ -159,13 +154,19 @@ function ItemDetailsCard({
   state,
   onChange,
   errors,
+  forceExpand,
 }: {
   state: ItemState;
   onChange: (patch: Partial<ItemState>) => void;
   errors: Partial<Record<string, boolean>>;
+  forceExpand?: boolean;
 }) {
   const [expanded, setExpanded] = useState(!state.itemName);
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (forceExpand) setExpanded(true);
+  }, [forceExpand]);
 
   const scrollPouch = (dir: -1 | 1) =>
     carouselRef.current?.scrollBy({ left: dir * 148, behavior: 'smooth' });
@@ -692,6 +693,7 @@ export function BasicBookingScreen() {
         state={itemState}
         onChange={(patch) => setItemState((s) => ({ ...s, ...patch }))}
         errors={fieldErrors}
+        forceExpand={!!(fieldErrors.itemName || fieldErrors.codAmount)}
       />
 
       {/* Schedule info */}

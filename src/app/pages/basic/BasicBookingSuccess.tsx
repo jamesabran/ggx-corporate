@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import {
   IconCircleCheckFilled,
@@ -18,8 +19,7 @@ export function BasicBookingSuccess() {
   const location = useLocation();
   const draft = (location.state as { draft?: BookingDraft } | null)?.draft;
 
-  // Use a stable tracking number for this mount
-  const [trackingNo] = [generateTrackingNumber()];
+  const [trackingNo] = useState(generateTrackingNumber);
 
   return (
     <div className="flex flex-col items-center px-4 pt-10 pb-6 text-center min-h-[60vh]">
