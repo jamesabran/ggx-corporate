@@ -1,7 +1,9 @@
 export type PouchSize = 'small' | 'medium' | 'large' | 'xl' | 'xxl';
 export type FirstMile = 'pickup' | 'dropoff';
 export type ItemProtection = 'free' | 'full';
-export type PaymentMethod = 'gcash' | 'cod' | 'wallet';
+// Payment method only applies when feePayer === 'sender'. 'cod' is an item-collection
+// toggle (handled by the cod/codAmount fields), not a shipping fee payment method.
+export type PaymentMethod = 'gcash' | 'wallet';
 export type FeePayer = 'sender' | 'receiver';
 
 export interface BookingAddress {
@@ -24,10 +26,11 @@ export interface BookingDraft {
   pouchSize: PouchSize;
   cod: boolean;
   codAmount: string;
-  declaredValue: string;
+  // No declaredValue for Basic — protection is derived from COD amount only.
   itemProtection: ItemProtection;
-  paymentMethod: PaymentMethod;
   feePayer: FeePayer;
+  // paymentMethod is only meaningful when feePayer === 'sender'.
+  paymentMethod: PaymentMethod;
   promoCode: string;
   promoDiscount: number;
 }
@@ -45,10 +48,9 @@ export const INITIAL_DRAFT: BookingDraft = {
   pouchSize: 'small',
   cod: false,
   codAmount: '',
-  declaredValue: '',
   itemProtection: 'free',
-  paymentMethod: 'gcash',
   feePayer: 'sender',
+  paymentMethod: 'gcash',
   promoCode: '',
   promoDiscount: 0,
 };
@@ -77,9 +79,12 @@ export interface FeeBreakdown {
 export function computeFee(draft: Partial<BookingDraft>): FeeBreakdown {
   const pouch = POUCH_OPTIONS.find((p) => p.key === (draft.pouchSize ?? 'small'));
   const shipping = pouch?.price ?? 80;
-  const declared = Number(draft.declaredValue) || 0;
+  // Protection base = COD amount when COD is on; otherwise no basis for full protection.
+  const base = draft.cod ? (Number(draft.codAmount) || 0) : 0;
   const protection =
-    draft.itemProtection === 'full' ? Math.round(Math.max(declared - 500, 0) * 0.01) : 0;
+    draft.itemProtection === 'full' && draft.cod
+      ? Math.round(Math.max(base - 500, 0) * 0.01)
+      : 0;
   const discount = draft.promoDiscount ?? 0;
   return { shipping, protection, discount, total: Math.max(shipping + protection - discount, 0) };
 }

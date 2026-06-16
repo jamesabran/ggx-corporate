@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import {
   IconClock,
   IconAddressBook,
@@ -58,16 +58,25 @@ function validate(a: BookingAddress): AddressErrors {
 
 export function BasicDeliver() {
   const navigate = useNavigate();
-  const [address, setAddress] = useState<BookingAddress>(EMPTY_ADDRESS);
+  const location = useLocation();
+  const locationState = location.state as { draft?: BookingDraft; editReturn?: boolean } | null;
+  const editReturn = locationState?.editReturn ?? false;
+  const incomingDraft = locationState?.draft ?? null;
+
+  const [address, setAddress] = useState<BookingAddress>(
+    incomingDraft?.sender ?? EMPTY_ADDRESS,
+  );
   const [errors, setErrors] = useState<AddressErrors>({});
   const [bookSheet, setBookSheet] = useState(false);
   const [saveToBook, setSaveToBook] = useState(false);
   const [recent, setRecent] = useState<BasicAddress[]>([]);
 
-  // Pre-populate from default sender
+  // Pre-populate from default sender only when no incoming draft
   useEffect(() => {
-    const def = getDefaultSenderAddress();
-    if (def) setAddress(addressFromBook(def));
+    if (!incomingDraft?.sender) {
+      const def = getDefaultSenderAddress();
+      if (def) setAddress(addressFromBook(def));
+    }
     setRecent(getRecentAddresses().slice(0, 3));
   }, []);
 
@@ -110,8 +119,15 @@ export function BasicDeliver() {
       }
     }
 
-    const draft: BookingDraft = { ...INITIAL_DRAFT, sender: address };
-    navigate('/basic/deliver/receiver', { state: { draft } });
+    const draft: BookingDraft = incomingDraft
+      ? { ...incomingDraft, sender: address }
+      : { ...INITIAL_DRAFT, sender: address };
+
+    if (editReturn) {
+      navigate('/basic/deliver/booking', { state: { draft } });
+    } else {
+      navigate('/basic/deliver/receiver', { state: { draft } });
+    }
   };
 
   return (
@@ -119,7 +135,7 @@ export function BasicDeliver() {
       {/* Step header */}
       <div className="px-4 pt-4 pb-3">
         <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">
-          Step 1 of 6
+          Step 1 of 3
         </p>
         <p className="text-[13px] text-gray-500 leading-snug">
           Who is sending this delivery?
@@ -217,7 +233,7 @@ export function BasicDeliver() {
           <p className="text-xs text-gray-400">Computed at review</p>
         </div>
         <Button className="w-full h-12 text-base" onClick={handleNext}>
-          Next — Receiver Details
+          {editReturn ? 'Save Sender' : 'Next — Receiver Details'}
           <IconChevronRight className="w-4 h-4" />
         </Button>
       </div>

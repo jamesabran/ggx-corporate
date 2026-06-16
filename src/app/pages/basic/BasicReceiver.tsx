@@ -70,7 +70,7 @@ export function BasicReceiver() {
     });
 
     const draft: BookingDraft = { ...prevDraft, receiver: address };
-    navigate('/basic/deliver/summary', { state: { draft } });
+    navigate('/basic/deliver/booking', { state: { draft } });
   };
 
   return (
@@ -78,7 +78,7 @@ export function BasicReceiver() {
       {/* Step header */}
       <div className="px-4 pt-4 pb-3">
         <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">
-          Step 2 of 6
+          Step 2 of 3
         </p>
         <p className="text-[13px] text-gray-500 leading-snug">
           Where is this delivery going?
@@ -107,7 +107,7 @@ export function BasicReceiver() {
       {/* CTA */}
       <div className="px-4 pt-4">
         <Button className="w-full h-12 text-base" onClick={handleNext}>
-          Next — Delivery Options
+          Next — Book Delivery
           <IconChevronRight className="w-4 h-4" />
         </Button>
       </div>

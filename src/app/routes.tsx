@@ -8,10 +8,7 @@ import { SaveAndEarnMore } from './pages/basic/SaveAndEarnMore';
 import { HVMNudge } from './pages/basic/HVMNudge';
 import { BasicDeliver } from './pages/basic/BasicDeliver';
 import { BasicReceiver } from './pages/basic/BasicReceiver';
-import { BasicDeliverySummary } from './pages/basic/BasicDeliverySummary';
-import { BasicItemDetails } from './pages/basic/BasicItemDetails';
-import { BasicPaymentStep } from './pages/basic/BasicPaymentStep';
-import { BasicBookingReview } from './pages/basic/BasicBookingReview';
+import { BasicBookingScreen } from './pages/basic/BasicBookingScreen';
 import { BasicBookingSuccess } from './pages/basic/BasicBookingSuccess';
 import { BasicAddressBook } from './pages/basic/BasicAddressBook';
 import { BasicAccount } from './pages/basic/BasicAccount';
@@ -91,10 +88,7 @@ export const router = createBrowserRouter([
       { path: 'qualify',  Component: HVMNudge },
       { path: 'deliver',            Component: BasicDeliver },
       { path: 'deliver/receiver',   Component: BasicReceiver },
-      { path: 'deliver/summary',    Component: BasicDeliverySummary },
-      { path: 'deliver/items',      Component: BasicItemDetails },
-      { path: 'deliver/payment',    Component: BasicPaymentStep },
-      { path: 'deliver/review',     Component: BasicBookingReview },
+      { path: 'deliver/booking',    Component: BasicBookingScreen },
       { path: 'deliver/success',    Component: BasicBookingSuccess },
       { path: 'address-book',       Component: BasicAddressBook },
       { path: 'account',  Component: BasicAccount },

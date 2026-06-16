@@ -14,10 +14,7 @@ const PAGE_TITLES: [string, string][] = [
   ['/basic/qualify',               'Business Benefits'],
   ['/basic/business-preview',      'GGX Business+'],
   ['/basic/deliver/success',       'Booking Confirmed'],
-  ['/basic/deliver/review',        'Review Booking'],
-  ['/basic/deliver/payment',       'Payment'],
-  ['/basic/deliver/items',         'Item Details'],
-  ['/basic/deliver/summary',       'Delivery'],
+  ['/basic/deliver/booking',       'Book Delivery'],
   ['/basic/deliver/receiver',      'Receiver Details'],
   ['/basic/deliver',               'Sender Details'],
   ['/basic/address-book',          'Address Book'],
@@ -63,7 +60,7 @@ export function BasicLayout() {
       {/* Phone shell */}
       <div
         data-shell="basic"
-        className="relative mx-auto flex min-h-screen w-full max-w-[430px] flex-col overflow-hidden"
+        className="relative mx-auto flex h-screen w-full max-w-[430px] flex-col overflow-hidden"
         style={{ background: 'var(--basic-bg)' }}
       >
         {/* Aurora blur blobs — behind everything */}
