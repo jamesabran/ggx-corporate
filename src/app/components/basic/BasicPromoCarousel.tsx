@@ -19,9 +19,9 @@ const SLIDES: Slide[] = [
     id: 'packs',
     icon: iconPacksBanner,
     iconBg: 'linear-gradient(135deg, rgba(232,122,166,0.32), rgba(116,182,239,0.28))',
-    headline: <>Save more with <strong>GOGO Packs!</strong></>,
-    sub: 'Prepaid deliveries at lower cost.',
-    cta: 'Buy GOGO Packs!',
+    headline: <>Save more with <strong>Sulit Bundles!</strong></>,
+    sub: 'Prepaid deliveries at a lower cost.',
+    cta: 'View Sulit Bundles',
     href: '/basic/more',
   },
   {

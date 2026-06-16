@@ -7,6 +7,13 @@ import { BasicDashboard } from './pages/basic/BasicDashboard';
 import { SaveAndEarnMore } from './pages/basic/SaveAndEarnMore';
 import { HVMNudge } from './pages/basic/HVMNudge';
 import { BasicDeliver } from './pages/basic/BasicDeliver';
+import { BasicReceiver } from './pages/basic/BasicReceiver';
+import { BasicDeliverySummary } from './pages/basic/BasicDeliverySummary';
+import { BasicItemDetails } from './pages/basic/BasicItemDetails';
+import { BasicPaymentStep } from './pages/basic/BasicPaymentStep';
+import { BasicBookingReview } from './pages/basic/BasicBookingReview';
+import { BasicBookingSuccess } from './pages/basic/BasicBookingSuccess';
+import { BasicAddressBook } from './pages/basic/BasicAddressBook';
 import { BasicAccount } from './pages/basic/BasicAccount';
 import { BasicOrders } from './pages/basic/BasicOrders';
 import { BasicOrderDetail } from './pages/basic/BasicOrderDetail';
@@ -18,7 +25,6 @@ import { BasicSupport } from './pages/basic/BasicSupport';
 import { BasicSettings } from './pages/basic/BasicSettings';
 import { BasicSameDay } from './pages/basic/BasicSameDay';
 import { BasicBusinessPreview } from './pages/basic/BasicBusinessPreview';
-import { BasicBookingReview } from './pages/basic/BasicBookingReview';
 import { Login } from './pages/Login';
 import { DashboardWrapper } from './pages/DashboardWrapper';
 import { Transactions } from './pages/Transactions';
@@ -83,8 +89,14 @@ export const router = createBrowserRouter([
       { index: true, Component: BasicDashboard },
       { path: 'more',     Component: SaveAndEarnMore },
       { path: 'qualify',  Component: HVMNudge },
-      { path: 'deliver',         Component: BasicDeliver },
-      { path: 'deliver/review',  Component: BasicBookingReview },
+      { path: 'deliver',            Component: BasicDeliver },
+      { path: 'deliver/receiver',   Component: BasicReceiver },
+      { path: 'deliver/summary',    Component: BasicDeliverySummary },
+      { path: 'deliver/items',      Component: BasicItemDetails },
+      { path: 'deliver/payment',    Component: BasicPaymentStep },
+      { path: 'deliver/review',     Component: BasicBookingReview },
+      { path: 'deliver/success',    Component: BasicBookingSuccess },
+      { path: 'address-book',       Component: BasicAddressBook },
       { path: 'account',  Component: BasicAccount },
       // Basic-native deep pages — keep self-serve sellers inside BasicLayout
       // instead of dropping them into the Business+ /dashboard chrome.

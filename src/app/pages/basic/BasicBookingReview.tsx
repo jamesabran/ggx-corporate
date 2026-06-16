@@ -1,127 +1,232 @@
-import { useLocation, useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import {
-  IconPackage,
+  IconEdit,
   IconMapPin,
-  IconUser,
-  IconPhone,
-  IconCurrencyDollar,
-  IconArrowRight,
+  IconPackage,
+  IconShieldCheck,
+  IconCreditCard,
+  IconCash,
+  IconWallet,
   IconTruckDelivery,
-  IconHome,
+  IconBuildingStore,
+  IconTag,
 } from '@tabler/icons-react';
 import { Button } from '../../components/ui/Button';
-import { cn } from '../../lib/utils';
+import {
+  computeFee,
+  POUCH_OPTIONS,
+  type BookingDraft,
+} from '../../lib/basicBookingTypes';
 
-interface BookingDraft {
-  type: 'standard';
-  recipient: string;
-  contact: string;
-  address: string;
-  cod: string;
-  handoff: 'pickup' | 'dropoff';
+function ReviewSection({
+  title,
+  editHref,
+  editState,
+  children,
+}: {
+  title: string;
+  editHref: string;
+  editState: object;
+  children: React.ReactNode;
+}) {
+  const navigate = useNavigate();
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">{title}</p>
+        <button
+          onClick={() => navigate(editHref, { state: editState })}
+          className="flex items-center gap-1 text-xs font-semibold text-blue-600 cursor-pointer hover:text-blue-700 transition-colors"
+        >
+          <IconEdit className="w-3.5 h-3.5" /> Edit
+        </button>
+      </div>
+      <div className="px-4 py-3">{children}</div>
+    </div>
+  );
 }
 
-const DEFAULT_DRAFT: BookingDraft = {
-  type: 'standard',
-  recipient: 'Maria Santos',
-  contact: '+63 917 555 0142',
-  address: 'Quezon City, Metro Manila',
-  cod: '1250',
-  handoff: 'pickup',
-};
+function AddressBlock({ label, addr }: { label: string; addr: BookingDraft['sender'] }) {
+  if (!addr) return null;
+  const line = [addr.street, addr.unit, addr.barangay, addr.city, addr.province].filter(Boolean).join(', ');
+  return (
+    <div className="flex items-start gap-2.5">
+      <IconMapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+      <div>
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+        <p className="text-sm font-semibold text-gray-900">{addr.name} · {addr.mobile}</p>
+        <p className="text-xs text-gray-500 leading-snug">{line}</p>
+      </div>
+    </div>
+  );
+}
 
-// Estimated, frontend-only preview. Authoritative fees are service/backend-owned.
-const SHIPPING_FEE = 59;
+const PAYMENT_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+  gcash:  { label: 'GCash',            icon: IconCreditCard },
+  cod:    { label: 'Cash on Delivery', icon: IconCash       },
+  wallet: { label: 'GGX Wallet',       icon: IconWallet     },
+};
 
 export function BasicBookingReview() {
   const navigate = useNavigate();
   const location = useLocation();
-  const draft = { ...DEFAULT_DRAFT, ...(location.state as Partial<BookingDraft> | null) };
+  const draft = (location.state as { draft?: BookingDraft } | null)?.draft;
 
-  const cod = Number(draft.cod) || 0;
+  if (!draft?.sender || !draft?.receiver) {
+    navigate('/basic/deliver', { replace: true });
+    return null;
+  }
 
-  const summaryRows = [
-    { icon: IconUser,           label: 'Recipient',        value: draft.recipient },
-    { icon: IconPhone,          label: 'Contact',          value: draft.contact },
-    { icon: IconMapPin,         label: 'Delivery address', value: draft.address },
-    {
-      icon: draft.handoff === 'dropoff' ? IconHome : IconTruckDelivery,
-      label: 'Handoff',
-      value: draft.handoff === 'dropoff' ? 'Drop-off at nearest hub' : 'Rider pickup',
-    },
-  ];
+  const fees    = computeFee(draft);
+  const pouch   = POUCH_OPTIONS.find((p) => p.key === draft.pouchSize);
+  const payment = PAYMENT_LABELS[draft.paymentMethod] ?? PAYMENT_LABELS.gcash;
+  const PayIcon = payment.icon;
+
+  const handleBook = () => {
+    navigate('/basic/deliver/success', { state: { draft } });
+  };
 
   return (
-    <div className="px-4 pt-3 pb-2 space-y-4">
-      {/* Service type */}
-      <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
-          <IconPackage className="w-5 h-5 text-white" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-gray-900 leading-snug">Standard Delivery</p>
-          <p className="text-xs text-gray-500 leading-snug">Nationwide · 1–5 business days</p>
-        </div>
-      </div>
-
-      {/* Delivery summary */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <p className="px-4 pt-4 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-widest">Delivery details</p>
-        <div className="divide-y divide-gray-50">
-          {summaryRows.map((r) => (
-            <div key={r.label} className="flex items-center gap-3 px-4 py-3.5">
-              <r.icon className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider leading-none mb-1">{r.label}</p>
-                <p className="text-sm text-gray-800 leading-snug">{r.value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Payment & fees */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Payment & fees</p>
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Shipping fee (est.)</span>
-            <span className="text-sm font-semibold text-gray-900 tabular-nums">₱{SHIPPING_FEE.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Item protection</span>
-            <span className="text-sm text-gray-400">Not added</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600 flex items-center gap-1.5">
-              <IconCurrencyDollar className="w-4 h-4 text-gray-400" /> COD to collect
-            </span>
-            <span className="text-sm font-semibold text-gray-900 tabular-nums">₱{cod.toLocaleString()}</span>
-          </div>
-          <div className="border-t border-gray-100 pt-2.5 flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-900">Estimated charge</span>
-            <span className="text-lg font-extrabold text-blue-600 tabular-nums">₱{SHIPPING_FEE.toLocaleString()}</span>
-          </div>
-        </div>
-        <p className="text-[11px] text-gray-400 leading-snug mt-3">
-          Estimated only — final shipping fees and surcharges are confirmed by GoGo Xpress at booking.
+    <div className="space-y-0 pb-4">
+      {/* Step header */}
+      <div className="px-4 pt-4 pb-3">
+        <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-widest mb-0.5">
+          Step 6 of 6 — Final Review
+        </p>
+        <p className="text-[13px] text-gray-500 leading-snug">
+          Review everything before confirming.
         </p>
       </div>
 
-      {/* CTAs */}
-      <div className="space-y-2.5">
-        <Button
-          className="w-full h-12 text-base"
-          onClick={() => navigate('/basic/orders/GGX-240601-001')}
+      <div className="px-4 space-y-3">
+        {/* Addresses */}
+        <ReviewSection
+          title="Delivery Route"
+          editHref="/basic/deliver/summary"
+          editState={{ draft }}
         >
-          Confirm booking <IconArrowRight className="w-4 h-4" />
+          <div className="space-y-3">
+            <AddressBlock label="Sender" addr={draft.sender} />
+            <AddressBlock label="Receiver" addr={draft.receiver} />
+            <div className="flex items-center gap-2.5 pt-1 border-t border-gray-50">
+              {draft.firstMile === 'pickup'
+                ? <IconTruckDelivery className="w-4 h-4 text-gray-400" />
+                : <IconBuildingStore className="w-4 h-4 text-gray-400" />
+              }
+              <div>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Collection method</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {draft.firstMile === 'pickup' ? 'Rider Pick-up' : 'Drop-off at hub'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </ReviewSection>
+
+        {/* Item details */}
+        <ReviewSection
+          title="Item Details"
+          editHref="/basic/deliver/items"
+          editState={{ draft }}
+        >
+          <div className="space-y-2">
+            <div className="flex items-start gap-2.5">
+              <IconPackage className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{draft.itemName}</p>
+                <p className="text-xs text-gray-500">
+                  {pouch?.label} · {pouch?.dims} · max {pouch?.maxWt}
+                </p>
+              </div>
+            </div>
+            {draft.cod && (
+              <div className="flex items-center gap-2.5">
+                <IconCash className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">COD Amount</p>
+                  <p className="text-sm font-semibold text-gray-900">₱{Number(draft.codAmount).toLocaleString()}</p>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-2.5">
+              <IconShieldCheck className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <div>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Item Protection</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {draft.itemProtection === 'free'
+                    ? 'Free — ₱500 coverage'
+                    : `Full — 100% of ₱${draft.declaredValue || '0'}`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </ReviewSection>
+
+        {/* Payment */}
+        <ReviewSection
+          title="Payment"
+          editHref="/basic/deliver/payment"
+          editState={{ draft }}
+        >
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <PayIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <div>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Method</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {payment.label} · {draft.feePayer === 'sender' ? 'Paid by sender' : 'Paid by receiver'}
+                </p>
+              </div>
+            </div>
+            {draft.promoCode && (
+              <div className="flex items-center gap-2.5">
+                <IconTag className="w-4 h-4 text-violet-400 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Promo</p>
+                  <p className="text-sm font-semibold text-green-700">{draft.promoCode} · −₱{draft.promoDiscount}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </ReviewSection>
+
+        {/* Amount to pay */}
+        <div className="bg-blue-600 rounded-2xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-blue-200 uppercase tracking-widest">Estimated total</p>
+              <p className="text-3xl font-extrabold text-white mt-0.5">₱{fees.total}</p>
+              {fees.protection > 0 && (
+                <p className="text-[11px] text-blue-200 mt-0.5">
+                  Includes ₱{fees.protection} protection fee
+                </p>
+              )}
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-semibold text-blue-200">STANDARD DELIVERY</p>
+              <p className="text-xs text-blue-200 mt-0.5">1–5 business days</p>
+            </div>
+          </div>
+          <p className="mt-2 text-[10px] text-blue-300 leading-snug">
+            Estimated only — final fees confirmed by GoGo Xpress at booking.
+          </p>
+        </div>
+
+        {/* CTA */}
+        <Button
+          className="w-full h-14 text-base font-bold"
+          style={{ background: '#1e8fd6' }}
+          onClick={handleBook}
+        >
+          Book Now
         </Button>
+
         <Button
           variant="ghost"
-          className={cn('w-full h-12 text-base text-gray-600')}
-          onClick={() => navigate('/basic/deliver?type=standard')}
+          className="w-full h-11 text-gray-500"
+          onClick={() => navigate(-1)}
         >
-          Edit details
+          Go back
         </Button>
       </div>
     </div>

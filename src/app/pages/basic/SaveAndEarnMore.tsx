@@ -14,31 +14,11 @@ import {
   IconBrandShopee,
   IconGift,
   IconSparkles,
+  IconChartBar,
 } from '@tabler/icons-react';
-import { Card, CardContent } from '../../components/ui/Card';
 import { cn } from '../../lib/utils';
 
-interface FeatureTile {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  bg: string;
-  color: string;
-  href: string;
-  badge?: string;
-}
-
-const ALL_FEATURES: FeatureTile[] = [
-  { label: 'Standard Delivery',  icon: IconPackage,        bg: 'bg-blue-50',   color: 'text-blue-600',   href: '/basic/deliver?type=standard' },
-  { label: 'Bulk Upload',        icon: IconUpload,         bg: 'bg-violet-50', color: 'text-violet-600', href: '/basic/bulk' },
-  { label: 'Track Order',        icon: IconTruck,          bg: 'bg-sky-50',    color: 'text-sky-600',    href: '/track' },
-  { label: 'Add Product',        icon: IconPlus,           bg: 'bg-emerald-50',color: 'text-emerald-600',href: '/basic/inventory' },
-  { label: 'Storefront',         icon: IconBuildingStore,  bg: 'bg-teal-50',   color: 'text-teal-600',   href: '/basic/store' },
-  { label: 'Create Promo',       icon: IconTag,            bg: 'bg-pink-50',   color: 'text-pink-600',   href: '/basic/store' },
-  { label: 'Shopify',            icon: IconBrandShopee,    bg: 'bg-green-50',  color: 'text-green-600',  href: '/basic/store' },
-  { label: 'Earnings',           icon: IconCurrencyDollar, bg: 'bg-indigo-50', color: 'text-indigo-600', href: '/basic/earnings' },
-];
-
-interface SaveEarnItem {
+interface FeatureRow {
   label: string;
   sub: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -49,85 +29,7 @@ interface SaveEarnItem {
   tagColor?: string;
 }
 
-const SAVE_ITEMS: SaveEarnItem[] = [
-  {
-    label: 'Vouchers',
-    sub: 'Apply voucher codes for delivery discounts',
-    icon: IconTicket,
-    iconBg: 'bg-pink-100',
-    iconColor: 'text-pink-600',
-    href: '#',
-  },
-  {
-    label: 'Promo Codes',
-    sub: 'Create discount codes for your storefront buyers',
-    icon: IconTag,
-    iconBg: 'bg-violet-100',
-    iconColor: 'text-violet-600',
-    href: '/basic/store',
-  },
-  {
-    label: 'Volume Pricing',
-    sub: 'Frequent shippers may qualify for special rates',
-    icon: IconCurrencyDollar,
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
-    href: '/basic/qualify',
-    tag: 'Unlock more',
-    tagColor: 'bg-emerald-100 text-emerald-700',
-  },
-];
-
-const EARN_ITEMS: SaveEarnItem[] = [
-  {
-    label: 'Rewards',
-    sub: 'Earn GGX points on every successful delivery',
-    icon: IconGift,
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-    href: '#',
-    tag: 'New',
-    tagColor: 'bg-blue-100 text-blue-700',
-  },
-  {
-    label: 'Exclusive Tier',
-    sub: 'Reach higher tiers for premium perks',
-    icon: IconStar,
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
-    href: '/basic/qualify',
-    tag: 'HVM benefit',
-    tagColor: 'bg-amber-100 text-amber-700',
-  },
-  {
-    label: 'Referrals',
-    sub: 'Invite sellers and earn credits per signup',
-    icon: IconUsers,
-    iconBg: 'bg-violet-100',
-    iconColor: 'text-violet-600',
-    href: '#',
-  },
-];
-
-function FeatureTileItem({ tile }: { tile: FeatureTile }) {
-  return (
-    <Link to={tile.href} className="group">
-      <div className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white border border-gray-100 active:bg-gray-50 transition-colors hover:shadow-sm">
-        <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', tile.bg)}>
-          <tile.icon className={cn('w-6 h-6', tile.color)} />
-        </div>
-        <span className="text-xs font-medium text-gray-700 text-center leading-snug">{tile.label}</span>
-        {tile.badge && (
-          <span className="text-[10px] font-semibold bg-blue-100 text-blue-700 rounded-full px-1.5 py-0.5 leading-none">
-            {tile.badge}
-          </span>
-        )}
-      </div>
-    </Link>
-  );
-}
-
-function SaveEarnRow({ item }: { item: SaveEarnItem }) {
+function FeatureRow({ item }: { item: FeatureRow }) {
   return (
     <Link to={item.href}>
       <div className="flex items-center gap-3 px-4 py-3.5 active:bg-gray-50 transition-colors cursor-pointer">
@@ -151,73 +53,183 @@ function SaveEarnRow({ item }: { item: SaveEarnItem }) {
   );
 }
 
+function SectionCard({ title, iconBg, titleColor, items }: {
+  title: string;
+  iconBg?: string;
+  titleColor?: string;
+  items: FeatureRow[];
+}) {
+  return (
+    <div className="bg-white mt-3">
+      <div className="px-4 pt-4 pb-1">
+        <p className={cn('text-xs font-bold uppercase tracking-widest', titleColor ?? 'text-gray-400')}>
+          {title}
+        </p>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {items.map((item) => (
+          <FeatureRow key={item.label} item={item} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── GoPadala ─────────────────────────────────────────────────────────────────
+
+const GOPADALA: FeatureRow[] = [
+  {
+    label: 'Same Day Delivery',
+    sub: 'Book before 11AM for same-day delivery',
+    icon: IconTruck,
+    iconBg: 'bg-orange-100',
+    iconColor: 'text-orange-500',
+    href: '/basic/same-day',
+    tag: 'Eligibility required',
+    tagColor: 'bg-orange-100 text-orange-700',
+  },
+  {
+    label: 'Standard Delivery',
+    sub: 'Nationwide, 1–5 business days',
+    icon: IconPackage,
+    iconBg: 'bg-blue-100',
+    iconColor: 'text-blue-600',
+    href: '/basic/deliver?type=standard',
+  },
+  {
+    label: 'Bulk Upload',
+    sub: 'Upload many orders at once with a spreadsheet',
+    icon: IconUpload,
+    iconBg: 'bg-violet-100',
+    iconColor: 'text-violet-600',
+    href: '/basic/bulk',
+    tag: 'Free',
+    tagColor: 'bg-violet-100 text-violet-700',
+  },
+];
+
+// ── GoBenta ──────────────────────────────────────────────────────────────────
+
+const GOBENTA: FeatureRow[] = [
+  {
+    label: 'Add Product',
+    sub: 'List products to your storefront',
+    icon: IconPlus,
+    iconBg: 'bg-emerald-100',
+    iconColor: 'text-emerald-600',
+    href: '/basic/inventory',
+  },
+  {
+    label: 'Storefront',
+    sub: 'Your online shop for buyers',
+    icon: IconBuildingStore,
+    iconBg: 'bg-teal-100',
+    iconColor: 'text-teal-600',
+    href: '/basic/store',
+  },
+  {
+    label: 'Create Promo',
+    sub: 'Discount codes for your storefront buyers',
+    icon: IconTag,
+    iconBg: 'bg-pink-100',
+    iconColor: 'text-pink-600',
+    href: '/basic/store',
+  },
+];
+
+// ── Save and earn more ────────────────────────────────────────────────────────
+
+const SAVE_EARN: FeatureRow[] = [
+  {
+    label: 'Sulit Bundles',
+    sub: 'Prepaid delivery packs at a lower cost',
+    icon: IconGift,
+    iconBg: 'bg-rose-100',
+    iconColor: 'text-rose-600',
+    href: '/basic/more',
+    tag: 'New',
+    tagColor: 'bg-rose-100 text-rose-700',
+  },
+  {
+    label: 'Vouchers',
+    sub: 'Apply voucher codes for delivery discounts',
+    icon: IconTicket,
+    iconBg: 'bg-pink-100',
+    iconColor: 'text-pink-600',
+    href: '#',
+  },
+  {
+    label: 'Rewards',
+    sub: 'Earn GGX points on every successful delivery',
+    icon: IconStar,
+    iconBg: 'bg-amber-100',
+    iconColor: 'text-amber-600',
+    href: '#',
+  },
+  {
+    label: 'Referrals',
+    sub: 'Invite sellers and earn credits per signup',
+    icon: IconUsers,
+    iconBg: 'bg-violet-100',
+    iconColor: 'text-violet-600',
+    href: '#',
+  },
+];
+
+// ── Other features and tools ──────────────────────────────────────────────────
+
+const OTHER_TOOLS: FeatureRow[] = [
+  {
+    label: 'Shopify',
+    sub: 'Connect your Shopify store for auto-booking',
+    icon: IconBrandShopee,
+    iconBg: 'bg-green-100',
+    iconColor: 'text-green-600',
+    href: '/basic/store',
+  },
+  {
+    label: 'Analytics',
+    sub: 'Shipment and revenue insights',
+    icon: IconChartBar,
+    iconBg: 'bg-indigo-100',
+    iconColor: 'text-indigo-600',
+    href: '/basic/earnings',
+  },
+];
+
 export function SaveAndEarnMore() {
   return (
-    <div className="space-y-0">
+    <div className="space-y-0 pb-4">
       {/* Hero */}
       <div className="bg-gradient-to-br from-blue-600 to-blue-700 px-4 pt-4 pb-5">
         <div className="flex items-center gap-2 mb-1">
           <IconSparkles className="w-4 h-4 text-blue-200" />
           <p className="text-xs font-semibold text-blue-200 uppercase tracking-widest">All Features</p>
         </div>
-        <h2 className="text-lg font-bold text-white leading-tight">Save More. Earn More.</h2>
+        <h2 className="text-lg font-bold text-white leading-tight">Everything in your account</h2>
         <p className="text-sm text-blue-100 mt-1 leading-snug">
-          Everything in your Basic account — ship smarter and grow your business.
+          Ship, sell, and grow — all from one place.
         </p>
       </div>
 
-      {/* Feature tiles */}
-      <div className="bg-gray-50 px-4 pt-4 pb-2">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Shipping & Commerce</p>
-        <div className="grid grid-cols-4 gap-2">
-          {ALL_FEATURES.map((t) => (
-            <FeatureTileItem key={t.label} tile={t} />
-          ))}
-        </div>
-      </div>
+      {/* GoPadala */}
+      <SectionCard title="GoPadala — Shipping" titleColor="text-blue-600" items={GOPADALA} />
 
-      {/* Save section */}
-      <div className="mt-4 bg-white">
-        <div className="px-4 pt-4 pb-1 flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center">
-            <IconCurrencyDollar className="w-3.5 h-3.5 text-emerald-600" />
-          </div>
-          <p className="text-sm font-bold text-gray-900">Save</p>
-          <p className="text-xs text-gray-400">Reduce your shipping costs</p>
-        </div>
-        <Card className="mx-4 mb-2 border-gray-100 shadow-none rounded-xl overflow-hidden">
-          <CardContent className="p-0 divide-y divide-gray-50">
-            {SAVE_ITEMS.map((item) => (
-              <SaveEarnRow key={item.label} item={item} />
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+      {/* GoBenta */}
+      <SectionCard title="GoBenta — Selling" titleColor="text-teal-600" items={GOBENTA} />
 
-      {/* Earn section */}
-      <div className="mt-2 bg-white pb-4">
-        <div className="px-4 pt-4 pb-1 flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center">
-            <IconStar className="w-3.5 h-3.5 text-amber-600" />
-          </div>
-          <p className="text-sm font-bold text-gray-900">Earn</p>
-          <p className="text-xs text-gray-400">Rewards for your loyalty</p>
-        </div>
-        <Card className="mx-4 border-gray-100 shadow-none rounded-xl overflow-hidden">
-          <CardContent className="p-0 divide-y divide-gray-50">
-            {EARN_ITEMS.map((item) => (
-              <SaveEarnRow key={item.label} item={item} />
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Save and earn more */}
+      <SectionCard title="Save and Earn More" titleColor="text-rose-600" items={SAVE_EARN} />
+
+      {/* Other features */}
+      <SectionCard title="Other Features & Tools" titleColor="text-indigo-600" items={OTHER_TOOLS} />
 
       {/* Business upgrade CTA */}
-      <div className="px-4 pt-2 pb-4">
+      <div className="px-4 pt-3 pb-2">
         <Link to="/basic/qualify">
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center gap-3 active:opacity-80 transition-opacity">
             <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <IconStar className="w-5 h-5 text-blue-600" />
+              <IconCurrencyDollar className="w-5 h-5 text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-blue-900 leading-snug">Unlock Business Pricing</p>

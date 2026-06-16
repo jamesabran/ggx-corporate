@@ -22,7 +22,7 @@ interface SettingRow {
 
 const ACCOUNT_ROWS: SettingRow[] = [
   { icon: IconUser,         label: 'Profile',        sub: 'Name, email, mobile, store name', to: '/basic/settings',  iconBg: 'bg-blue-50',    iconColor: 'text-blue-600' },
-  { icon: IconMapPin,       label: 'Address book',   sub: 'Saved pickup & return addresses',  to: '/basic/settings',  iconBg: 'bg-teal-50',    iconColor: 'text-teal-600' },
+  { icon: IconMapPin,       label: 'Address book',   sub: 'Saved pickup & return addresses',  to: '/basic/address-book', iconBg: 'bg-teal-50', iconColor: 'text-teal-600' },
   { icon: IconBuildingBank, label: 'Payout account', sub: 'Manage your bank for payouts',      to: '/basic/earnings',  iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
   { icon: IconLock,         label: 'Security',       sub: 'Password and login',               to: '/basic/settings',  iconBg: 'bg-violet-50',  iconColor: 'text-violet-600' },
 ];
