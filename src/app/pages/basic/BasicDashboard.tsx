@@ -211,7 +211,7 @@ export function BasicDashboard() {
         <div className="mt-[14px] flex items-center justify-center gap-[6px]">
           <Link
             to="/basic/more"
-            className="flex items-center gap-[6px] text-[13.5px] font-extrabold"
+            className="flex items-center gap-[6px] text-[13.5px] font-medium"
             style={{ color: '#1e8fd6' }}
           >
             View all
@@ -229,7 +229,7 @@ export function BasicDashboard() {
           <p className="text-sm font-bold" style={{ color: '#20303f' }}>Recent Orders</p>
           <Link
             to="/basic/orders"
-            className="flex items-center gap-0.5 text-xs font-semibold"
+            className="flex items-center gap-0.5 text-xs font-medium"
             style={{ color: '#1e8fd6' }}
           >
             See all <IconArrowRight className="h-3.5 w-3.5" />

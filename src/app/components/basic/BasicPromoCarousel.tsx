@@ -100,7 +100,7 @@ export function BasicPromoCarousel() {
               </p>
               <button
                 onClick={() => navigate(slide.href)}
-                className="mt-[5px] text-[13.5px] font-extrabold leading-none cursor-pointer"
+                className="mt-[5px] text-[13.5px] font-medium leading-none cursor-pointer"
                 style={{ color: '#1e8fd6', background: 'none', border: 'none', padding: 0 }}
               >
                 {slide.cta}

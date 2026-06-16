@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import {
   IconBell,
@@ -6,9 +7,10 @@ import {
 } from '@tabler/icons-react';
 import { BasicAuroraBg } from '../components/basic/BasicAuroraBg';
 import { BasicBottomNav } from '../components/basic/BasicBottomNav';
+import { BasicAccountSheet } from '../components/basic/BasicAccountSheet';
 
 const PAGE_TITLES: [string, string][] = [
-  ['/basic/more',             'Save & Earn More'],
+  ['/basic/more',             'More Features'],
   ['/basic/qualify',          'Business Benefits'],
   ['/basic/business-preview', 'GGX Business+'],
   ['/basic/deliver/review',   'Review Booking'],
@@ -44,6 +46,7 @@ const glassBtnStyle = {
 export function BasicLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [acctOpen, setAcctOpen] = useState(false);
 
   const isHome = location.pathname === '/basic' || location.pathname === '/basic/';
   const pageTitle = resolveTitle(location.pathname);
@@ -94,21 +97,31 @@ export function BasicLayout() {
             </p>
           )}
 
-          {/* Right slot — always bell + profile */}
-          <div className="flex items-center gap-[11px]">
-            <button className={glassBtn} style={glassBtnStyle} aria-label="Notifications">
-              <div className="relative">
-                <IconBell className="h-[20px] w-[20px]" style={{ color: '#20303f' }} />
-                <span
-                  className="absolute right-[-1px] top-[-1px] h-2 w-2 rounded-full border-2 border-white"
-                  style={{ background: '#e0244d' }}
-                />
-              </div>
-            </button>
-            <button className={glassBtn} style={glassBtnStyle} aria-label="Profile">
-              <IconUser className="h-[20px] w-[20px]" style={{ color: '#1e8fd6' }} />
-            </button>
-          </div>
+          {/* Right slot — visible on Home only */}
+          {isHome ? (
+            <div className="flex items-center gap-[11px]">
+              <button className={glassBtn} style={glassBtnStyle} aria-label="Notifications">
+                <div className="relative">
+                  <IconBell className="h-[20px] w-[20px]" style={{ color: '#20303f' }} />
+                  <span
+                    className="absolute right-[-1px] top-[-1px] h-2 w-2 rounded-full border-2 border-white"
+                    style={{ background: '#e0244d' }}
+                  />
+                </div>
+              </button>
+              <button
+                className={glassBtn}
+                style={glassBtnStyle}
+                aria-label="Account"
+                onClick={() => setAcctOpen(true)}
+              >
+                <IconUser className="h-[20px] w-[20px]" style={{ color: '#1e8fd6' }} />
+              </button>
+            </div>
+          ) : (
+            /* Spacer keeps back-button and title balanced */
+            <div className="w-[42px]" />
+          )}
         </header>
 
         {/* ── Page content ── */}
@@ -119,6 +132,9 @@ export function BasicLayout() {
 
         {/* ── Glass bottom nav ── */}
         <BasicBottomNav />
+
+        {/* ── Account sheet (Home header icon) ── */}
+        <BasicAccountSheet open={acctOpen} onClose={() => setAcctOpen(false)} />
       </div>
     </div>
   );

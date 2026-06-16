@@ -64,7 +64,7 @@ export function BasicActivitySummary() {
         </div>
         <Link
           to="/basic/earnings"
-          className="flex items-center gap-1 text-[12px] font-extrabold"
+          className="flex items-center gap-1 text-[12px] font-medium"
           style={{ color: '#1e8fd6' }}
         >
           View analytics
