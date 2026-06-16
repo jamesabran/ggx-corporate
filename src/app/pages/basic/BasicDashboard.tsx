@@ -52,7 +52,7 @@ const PRIMARY_TILES: PrimaryTile[] = [
     badge: 'Free',
   },
   {
-    label: 'GOGO\nPacks',
+    label: 'Sulit\nBundles',
     img: iconPacks,
     href: '/basic/more',
     badge: 'New',
