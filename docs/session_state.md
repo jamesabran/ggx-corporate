@@ -5,9 +5,10 @@
 
 ## Current State - Updated 2026-06-17
 
-- **Stage:** Basic booking flow rebuilt as a 3-step consolidated wizard — Sender
-  Details → Receiver Details → Book Delivery (single glass-card screen). All Phase
-  2/3 work committed on `master`. Working tree is clean.
+- **Stage:** Basic Standard Delivery redesigned as compact GGX-style flow — Delivery
+  Main Page (compact cards) → Receiver Form → auto-opens Item Details drawer → Review
+  Details. No step indicators. Bottom nav hidden during booking. All Phase 4 work
+  committed on `master`. Working tree is clean.
 - **Branch:** `master`.
 - **Build/typecheck status:** green (verified after all Phase 3 commits).
 - **Push status:** not pushed (4 commits ahead of origin/master). Push only when asked.
@@ -132,45 +133,32 @@
   touch `/dashboard`.
 - New page titles in `BasicLayout`: "GGX Business+", "Review Booking".
 
-## Most Recent Feature Work — Basic booking flow rebuild (2026-06-17)
+## Most Recent Feature Work — Basic booking flow redesign (2026-06-17)
 
-Complete rewrite of the Basic Standard Delivery booking flow in two phases.
+Complete rewrite of the Standard Delivery booking flow to match the original compact GGX flow.
 
-### Phase 2 — multi-step address wizard
+### Phase 4 — compact GGX-style flow (replaces Phase 2/3 wizard)
 
-- `basicAddressBook.ts` — localStorage-backed address store (add/edit/delete/select/
-  set-default). Seed: Max Rodriguez (default sender, Makati) + Acme Warehouse (Bulacan).
-- `BasicAddressFormFields` — shared structured address form (name, mobile, street,
-  unit, province/city/barangay cascade via `locationApi`, landmark).
-- `BasicAddressSheet` — mobile bottom sheet for picking from address book.
-- `BasicDeliver` (Step 1 of 3) — sender details; pre-populates from default sender;
-  recent-addresses pills; address book sheet; `editReturn` flag skips receiver and
-  returns to booking screen when editing from there.
-- `BasicReceiver` (Step 2 of 3) — receiver details; address book sheet.
-- `BasicAddressBook` — standalone address book management page at `/basic/address-book`.
-- `SaveAndEarnMore` — restructured into 4 sections: GoPadala (shipping), GoBenta
-  (selling), Save and Earn More, Other Features & Tools.
-- `BasicPromoCarousel` — updated "GOGO Packs" → "Sulit Bundles" throughout.
-- `BasicSettings` — Address Book row links to `/basic/address-book`.
-
-### Phase 3 — consolidated booking screen
-
-- `BasicBookingScreen` at `/basic/deliver/booking` — single scrollable page with glass
-  card sections over a fixed aurora background: RouteCard (sender/receiver summary with
-  Edit links), FirstMileCard (pickup/dropoff 2-up toggle), ItemDetailsCard (expandable:
-  item name, pouch carousel, COD toggle + amount, item protection free/full),
-  ScheduleInfo (est. pickup/delivery dates), ShippingPaymentCard (fee payer toggle;
-  payment method shown only when sender pays), PromoSection (collapsible promo input),
-  Book Now bar (estimated total + CTA).
-- Removed old intermediate steps: `BasicDeliverySummary`, `BasicItemDetails`,
-  `BasicPaymentStep`, `BasicBookingReview` (files deleted, routes removed).
-- `BasicBookingSuccess` — stable tracking number via `useState`; shows item + receiver
-  summary; Track Order + Back to Home CTAs.
-- `BasicLayout` — phone shell changed from `min-h-screen` to `h-screen` so the aurora
-  background stays fixed while glass cards scroll over it. PAGE_TITLES updated.
-- `basicBookingTypes.ts` — `declaredValue` removed from `BookingDraft`; `PaymentMethod`
-  is `'gcash' | 'wallet'` only (COD is an item-collection toggle, not a payment method);
-  `computeFee` protection basis is COD amount, not declared value.
+- `BasicDeliver` (Delivery Main Page at `/basic/deliver`) — compact glass cards over fixed
+  aurora background: sender address card (tap → address book sheet), receiver address card
+  (tap → receiver form), first-mile card (pickup/dropoff 2-up), Add Item Details CTA card
+  (appears only after receiver is filled), schedule/estimate note. No form fields visible
+  on this page; no "Step x of x".
+- `BasicReceiver` — receiver address form (no step indicator); on save → returns to Delivery
+  page with `receiverJustSaved: true`; if `editReturn` → returns to Review Details.
+- `BasicItemDetailsDrawer` (new shared component) — bottom-drawer with slide-up animation,
+  backdrop blur, close handle; contains: item name, pouch size carousel, COD toggle +
+  amount, item protection (free / full). Closable without saving; reopenable from CTA card.
+  Auto-opens when user returns from receiver save.
+- `BasicBookingScreen` at `/basic/deliver/booking` — Review Details page (compact card-based):
+  schedule card, address summary card with EDIT CTAs, inline first-mile card, item summary
+  card with EDIT (opens drawer inline), receiver payable breakdown section (COD + shipping if
+  receiver pays), fixed bottom bar with payment details (fee-payer toggle + payment method,
+  expandable), promo code, total, and "Confirm Booking" CTA.
+- `BasicLayout` — bottom nav hidden on all `/basic/deliver/*` routes; main `pb` reduced
+  during booking; page title updated: "Standard Delivery" (was "Sender Details"),
+  "Review Details" (was "Book Delivery").
+- `basicBookingTypes.ts` — added `ItemState` interface export.
 
 ### Hard rules (permanent, from user)
 
@@ -179,6 +167,11 @@ Complete rewrite of the Basic Standard Delivery booking flow in two phases.
 - No `declaredValue` field in Basic booking. Protection is derived from COD amount only.
 - No real payment integration — demo/mock behavior only.
 - Keep all booking inside the Basic mobile shell and Basic routes.
+- No "Step x of x" text anywhere in the booking flow.
+- Bottom nav hidden during booking (`/basic/deliver/*`).
+- Item Details shown only after receiver address is filled.
+- Payment method options driven by fee-payer selection (sender vs receiver).
+- Receiver payable summary shown only when COD is on or receiver pays shipping.
 
 ## Most Recent Feature Work — Bulk Upload field-name unification (2026-06-15)
 
