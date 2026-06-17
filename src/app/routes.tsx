@@ -22,6 +22,12 @@ import { BasicSupport } from './pages/basic/BasicSupport';
 import { BasicSettings } from './pages/basic/BasicSettings';
 import { BasicSameDay } from './pages/basic/BasicSameDay';
 import { BasicBusinessPreview } from './pages/basic/BasicBusinessPreview';
+import { BasicV2Layout } from './layouts/BasicV2Layout';
+import { BasicV2Dashboard } from './pages/basic-v2/BasicV2Dashboard';
+import { BasicV2Deliver } from './pages/basic-v2/BasicV2Deliver';
+import { BasicV2Receiver } from './pages/basic-v2/BasicV2Receiver';
+import { BasicV2BookingScreen } from './pages/basic-v2/BasicV2BookingScreen';
+import { BasicV2BookingSuccess } from './pages/basic-v2/BasicV2BookingSuccess';
 import { Login } from './pages/Login';
 import { DashboardWrapper } from './pages/DashboardWrapper';
 import { Transactions } from './pages/Transactions';
@@ -104,6 +110,24 @@ export const router = createBrowserRouter([
       { path: 'settings',         Component: BasicSettings },
       { path: 'same-day',         Component: BasicSameDay },
       { path: 'business-preview', Component: BasicBusinessPreview },
+    ],
+  },
+  {
+    // V2 UI experiment — clean Tailwind/shadcn-style Basic surfaces.
+    // To revert: delete src/app/pages/basic-v2/, src/app/layouts/BasicV2Layout.tsx,
+    // and remove this route group. /basic is unaffected.
+    path: '/basic-v2',
+    element: (
+      <BasicSegmentProvider>
+        <BasicV2Layout />
+      </BasicSegmentProvider>
+    ),
+    children: [
+      { index: true,                    Component: BasicV2Dashboard },
+      { path: 'delivery',               Component: BasicV2Deliver },
+      { path: 'delivery/receiver',      Component: BasicV2Receiver },
+      { path: 'delivery/booking',       Component: BasicV2BookingScreen },
+      { path: 'delivery/success',       Component: BasicV2BookingSuccess },
     ],
   },
   {
