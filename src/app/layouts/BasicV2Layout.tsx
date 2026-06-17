@@ -4,9 +4,11 @@ import {
   IconChevronLeft,
   IconBell,
   IconUser,
-  IconHome2,
+  IconLayoutDashboard,
+  IconSparkles,
   IconBox,
-  IconReceipt,
+  IconReceiptTax,
+  IconWallet,
 } from '@tabler/icons-react';
 import { BasicAccountSheet } from '../components/basic/BasicAccountSheet';
 import { cn } from '../lib/utils';
@@ -25,6 +27,18 @@ function resolveTitle(pathname: string): string | null {
   return null;
 }
 
+// ── Full 5-tab bottom nav ─────────────────────────────────────────────────────
+
+const LEFT_TABS = [
+  { label: 'Home',    href: '/basic-v2',        icon: IconLayoutDashboard, exact: true },
+  { label: 'Rewards', href: '/basic/more',       icon: IconSparkles },
+];
+
+const RIGHT_TABS = [
+  { label: 'Transactions', href: '/basic/orders',   icon: IconReceiptTax },
+  { label: 'Earnings',     href: '/basic/earnings', icon: IconWallet },
+];
+
 function V2BottomNav() {
   const location = useLocation();
 
@@ -34,46 +48,73 @@ function V2BottomNav() {
       : location.pathname.startsWith(href);
   }
 
-  return (
-    <nav className="flex-shrink-0 bg-white border-t border-gray-100">
-      <div className="flex items-center h-[60px]">
-        {/* Home */}
-        <Link
-          to="/basic-v2"
-          className={cn(
-            'flex flex-1 flex-col items-center justify-center gap-[3px] py-2 transition-colors',
-            isActive('/basic-v2', true) ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600',
-          )}
-        >
-          <IconHome2 className="w-[22px] h-[22px]" />
-          <span className="text-[10px] font-bold">Home</span>
-        </Link>
+  const bookActive = location.pathname.startsWith('/basic-v2/delivery');
 
-        {/* Ship FAB */}
-        <div className="flex flex-1 flex-col items-center justify-center gap-[3px]">
+  return (
+    <nav
+      className="flex-shrink-0 bg-white border-t border-gray-100"
+      style={{ overflow: 'visible' }}
+    >
+      <div className="relative flex items-end justify-around h-[60px]">
+        {/* Left tabs */}
+        {LEFT_TABS.map(({ label, href, icon: Icon, exact }) => (
+          <Link
+            key={href}
+            to={href}
+            className={cn(
+              'flex flex-1 flex-col items-center justify-end gap-[3px] pb-[13px] pt-[11px] transition-colors',
+              isActive(href, exact) ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600',
+            )}
+          >
+            <Icon className="w-[22px] h-[22px] flex-shrink-0" />
+            <span className="text-[10px] font-bold leading-none">{label}</span>
+          </Link>
+        ))}
+
+        {/* Center FAB */}
+        <div className="flex flex-1 flex-col items-center gap-[4px]">
           <Link
             to="/basic-v2/delivery"
-            aria-label="Ship"
-            className="flex h-12 w-12 items-center justify-center rounded-full shadow-md transition-transform active:scale-95"
-            style={{ background: 'linear-gradient(140deg, #2f9be8, #1e6fd6)' }}
+            aria-label="Book Now"
+            className="flex h-13 w-13 items-center justify-center rounded-full transition-transform active:scale-95"
+            style={{
+              marginTop: -28,
+              width: 52,
+              height: 52,
+              background: 'linear-gradient(140deg, #2f9be8, #1e6fd6)',
+              boxShadow: '0 6px 18px rgba(30,111,214,0.4)',
+            }}
           >
-            <IconBox className="w-[22px] h-[22px] text-white" />
+            <IconBox className="w-[24px] h-[24px] text-white" />
           </Link>
-          <span className="text-[10px] font-extrabold text-blue-600">Ship</span>
+          <span
+            className="pb-[13px] text-[10px] font-extrabold leading-none"
+            style={{ color: bookActive ? '#1e6fd6' : '#1e6fd6' }}
+          >
+            Book Now
+          </span>
         </div>
 
-        {/* Orders */}
-        <Link
-          to="/basic/orders"
-          className="flex flex-1 flex-col items-center justify-center gap-[3px] py-2 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <IconReceipt className="w-[22px] h-[22px]" />
-          <span className="text-[10px] font-bold">Orders</span>
-        </Link>
+        {/* Right tabs */}
+        {RIGHT_TABS.map(({ label, href, icon: Icon }) => (
+          <Link
+            key={href}
+            to={href}
+            className={cn(
+              'flex flex-1 flex-col items-center justify-end gap-[3px] pb-[13px] pt-[11px] transition-colors',
+              isActive(href) ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600',
+            )}
+          >
+            <Icon className="w-[22px] h-[22px] flex-shrink-0" />
+            <span className="text-[10px] font-bold leading-none">{label}</span>
+          </Link>
+        ))}
       </div>
     </nav>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function BasicV2Layout() {
   const location = useLocation();
@@ -86,13 +127,14 @@ export function BasicV2Layout() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      {/* Phone shell */}
+      {/* Phone shell — gradient background */}
       <div
         className="relative mx-auto flex h-screen w-full max-w-[430px] flex-col overflow-hidden"
-        style={{ background: '#f8f9fb' }}
+        style={{ background: 'linear-gradient(180deg, #DDF3FB 0%, #ffffff 100%)' }}
       >
-        {/* ── Header ── */}
-        <header className="flex-shrink-0 flex h-14 items-center justify-between px-4 bg-white border-b border-gray-100 z-10">
+        {/* ── Header — transparent so gradient shows through ── */}
+        <header className="relative z-10 flex-shrink-0 flex h-14 items-center justify-between px-4">
+          {/* Left slot */}
           {isHome ? (
             <img
               src="https://gogoxpress.com/wp-content/uploads/2022/07/gogox-logo.png"
@@ -102,30 +144,29 @@ export function BasicV2Layout() {
           ) : (
             <button
               onClick={() => navigate(-1)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors"
+              className="flex h-9 w-9 items-center justify-center cursor-pointer"
               aria-label="Back"
             >
-              <IconChevronLeft className="h-5 w-5 text-gray-700" />
+              <IconChevronLeft className="h-5 w-5 text-blue-600" />
             </button>
           )}
 
+          {/* Center title on inner pages */}
           {!isHome && pageTitle && (
             <p className="truncate px-2 text-base font-bold text-gray-900">{pageTitle}</p>
           )}
 
+          {/* Right slot */}
           {isHome ? (
             <div className="flex items-center gap-2">
-              <button
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors"
-                aria-label="Notifications"
-              >
+              <button className="flex h-9 w-9 items-center justify-center cursor-pointer" aria-label="Notifications">
                 <div className="relative">
-                  <IconBell className="h-5 w-5 text-gray-700" />
+                  <IconBell className="h-5 w-5 text-blue-600" />
                   <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />
                 </div>
               </button>
               <button
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors"
+                className="flex h-9 w-9 items-center justify-center cursor-pointer"
                 aria-label="Account"
                 onClick={() => setAcctOpen(true)}
               >
@@ -138,7 +179,7 @@ export function BasicV2Layout() {
         </header>
 
         {/* ── Page content ── */}
-        <main className={`flex-1 overflow-y-auto ${isBookingFlow ? 'pb-6' : 'pb-2'}`}>
+        <main className={`relative z-0 flex-1 overflow-y-auto ${isBookingFlow ? 'pb-6' : 'pb-2'}`}>
           <Outlet />
         </main>
 

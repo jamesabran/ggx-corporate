@@ -6,7 +6,6 @@ import {
   IconHourglass,
   IconTruck,
   IconGift,
-  IconSearch,
   IconChevronRight,
 } from '@tabler/icons-react';
 import { Badge } from '../../components/ui/Badge';
@@ -202,15 +201,6 @@ export function BasicV2Dashboard() {
 
   return (
     <div className="space-y-4 px-4 pt-4 pb-4">
-
-      {/* ── Track Order search bar ── */}
-      <button
-        onClick={() => navigate('/track')}
-        className="w-full flex items-center gap-2.5 bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-400 shadow-sm cursor-pointer hover:border-blue-300 transition-colors"
-      >
-        <IconSearch className="w-4 h-4 text-gray-400 flex-shrink-0" />
-        Track a parcel…
-      </button>
 
       {/* ── Promo carousel ── */}
       <PromoCarousel />
