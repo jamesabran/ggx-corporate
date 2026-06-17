@@ -89,6 +89,14 @@ export function computeFee(draft: Partial<BookingDraft>): FeeBreakdown {
   return { shipping, protection, discount, total: Math.max(shipping + protection - discount, 0) };
 }
 
+export interface ItemState {
+  itemName: string;
+  pouchSize: PouchSize;
+  cod: boolean;
+  codAmount: string;
+  itemProtection: ItemProtection;
+}
+
 export const MOCK_PROMO_CODES: Record<string, number> = {
   SULIT10: 10,
   GOGO20:  20,

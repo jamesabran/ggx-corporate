@@ -14,9 +14,9 @@ const PAGE_TITLES: [string, string][] = [
   ['/basic/qualify',               'Business Benefits'],
   ['/basic/business-preview',      'GGX Business+'],
   ['/basic/deliver/success',       'Booking Confirmed'],
-  ['/basic/deliver/booking',       'Book Delivery'],
+  ['/basic/deliver/booking',       'Review Details'],
   ['/basic/deliver/receiver',      'Receiver Details'],
-  ['/basic/deliver',               'Sender Details'],
+  ['/basic/deliver',               'Standard Delivery'],
   ['/basic/address-book',          'Address Book'],
   ['/basic/account',               'Account'],
   ['/basic/orders',                'Transactions'],
@@ -52,6 +52,7 @@ export function BasicLayout() {
   const [acctOpen, setAcctOpen] = useState(false);
 
   const isHome = location.pathname === '/basic' || location.pathname === '/basic/';
+  const isBookingFlow = location.pathname.startsWith('/basic/deliver');
   const pageTitle = resolveTitle(location.pathname);
 
   return (
@@ -128,13 +129,13 @@ export function BasicLayout() {
         </header>
 
         {/* ── Page content ── */}
-        {/* pb-[96px] clears the fixed glass nav pill (64px) + bottom margin (18px) + buffer */}
-        <main className="relative z-10 flex-1 overflow-y-auto pb-[96px]">
+        {/* pb-[96px] clears the fixed glass nav pill; booking flow hides nav so less padding needed */}
+        <main className={`relative z-10 flex-1 overflow-y-auto ${isBookingFlow ? 'pb-6' : 'pb-[96px]'}`}>
           <Outlet />
         </main>
 
-        {/* ── Glass bottom nav ── */}
-        <BasicBottomNav />
+        {/* ── Glass bottom nav — hidden during booking flow ── */}
+        {!isBookingFlow && <BasicBottomNav />}
 
         {/* ── Account sheet (Home header icon) ── */}
         <BasicAccountSheet open={acctOpen} onClose={() => setAcctOpen(false)} />
