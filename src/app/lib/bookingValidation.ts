@@ -118,10 +118,11 @@ export const BOOKING_COLUMNS: ColumnDef[] = [
   { key: 'productSku',       label: L.itemName,          required: true,  width: 240 },
   { key: 'quantity',         label: 'Qty',               required: true,  width: 80 },
   { key: 'parcelSize',       label: L.pouchSize,         required: true,  width: 170, options: RECEPTACLE_SIZES },
-  { key: 'lengthCm',         label: L.lengthCm,          required: false, width: 110 },
-  { key: 'widthCm',          label: L.widthCm,           required: false, width: 110 },
-  { key: 'heightCm',         label: L.heightCm,          required: false, width: 110 },
-  { key: 'weightKg',         label: L.weightKg,          required: false, width: 110 },
+  // lengthCm/widthCm/heightCm/weightKg are NOT grid columns — Custom-size
+  // dimensions are entered via the inline row-level editor (see
+  // SpreadsheetBookingGrid). They remain BookingField/BookingRow members so
+  // validation and fee estimation can use them; the CSV/XLS template always
+  // includes them as columns; they are mappable in BulkColumnMapper.
   { key: 'codAmount',        label: L.codAmount,         required: false, width: 160 },
   { key: 'cod',              label: L.cod,               required: true,  width: 200, options: YES_NO },
   { key: 'declaredValue',    label: L.declaredValue,     required: true,  width: 180 },
