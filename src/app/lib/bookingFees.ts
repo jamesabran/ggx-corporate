@@ -31,16 +31,35 @@ export interface RowFeeBreakdown {
 /**
  * Estimate the fee breakdown for a single row, or `null` when there isn't
  * enough info yet (missing/unknown parcel size or service type).
+ *
+ * For CUSTOM size, dimweight pricing applies: chargeable weight =
+ * max(actual weight, L×W×H÷5000) at an estimated ₱35/kg. Returns null until
+ * all four dimension/weight fields carry valid positive numbers.
  */
 export function estimateRowFee(row: BookingRow): RowFeeBreakdown | null {
   const size = row.parcelSize?.trim().toUpperCase();
-  if (!size || !(size in SIZE_FEE)) return null;
+  if (!size) return null;
+
   const svc = row.serviceType?.trim() as ServiceTypeKey;
   if (!svc || !(svc in SERVICE_SURCHARGE)) return null;
-  const baseFee = SIZE_FEE[size];
   const serviceSurcharge = SERVICE_SURCHARGE[svc];
   const declared = parseFloat(row.declaredValue) || 0;
   const itemProtection = Math.max(declared - 500, 0) * 0.01;
+
+  if (size === 'CUSTOM') {
+    const l = parseFloat(row.lengthCm ?? '');
+    const w = parseFloat(row.widthCm ?? '');
+    const h = parseFloat(row.heightCm ?? '');
+    const wt = parseFloat(row.weightKg ?? '');
+    if (!l || !w || !h || !wt || l <= 0 || w <= 0 || h <= 0 || wt <= 0) return null;
+    const volumetricWeight = (l * w * h) / 5000;
+    const chargeableWeight = Math.max(wt, volumetricWeight);
+    const baseFee = Math.ceil(chargeableWeight * 35);
+    return { baseFee, serviceSurcharge, itemProtection, total: baseFee + serviceSurcharge + itemProtection };
+  }
+
+  if (!(size in SIZE_FEE)) return null;
+  const baseFee = SIZE_FEE[size];
   return { baseFee, serviceSurcharge, itemProtection, total: baseFee + serviceSurcharge + itemProtection };
 }
 

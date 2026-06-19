@@ -25,6 +25,10 @@ export type BookingField =
   | 'productSku'
   | 'quantity'
   | 'parcelSize'
+  | 'lengthCm'
+  | 'widthCm'
+  | 'heightCm'
+  | 'weightKg'
   | 'cod'
   | 'codAmount'
   | 'declaredValue'
@@ -114,6 +118,10 @@ export const BOOKING_COLUMNS: ColumnDef[] = [
   { key: 'productSku',       label: L.itemName,          required: true,  width: 240 },
   { key: 'quantity',         label: 'Qty',               required: true,  width: 80 },
   { key: 'parcelSize',       label: L.pouchSize,         required: true,  width: 170, options: RECEPTACLE_SIZES },
+  { key: 'lengthCm',         label: L.lengthCm,          required: false, width: 110 },
+  { key: 'widthCm',          label: L.widthCm,           required: false, width: 110 },
+  { key: 'heightCm',         label: L.heightCm,          required: false, width: 110 },
+  { key: 'weightKg',         label: L.weightKg,          required: false, width: 110 },
   { key: 'codAmount',        label: L.codAmount,         required: false, width: 160 },
   { key: 'cod',              label: L.cod,               required: true,  width: 200, options: YES_NO },
   { key: 'declaredValue',    label: L.declaredValue,     required: true,  width: 180 },
@@ -143,6 +151,7 @@ export function makeEmptyRow(id: string): BookingRow {
     id,
     recipientName: '', recipientMobile: '', address: '', province: '', city: '',
     barangay: '', landmarks: '', productSku: '', quantity: '', parcelSize: '',
+    lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
     cod: '', codAmount: '', declaredValue: '', insureFull: '', recipientPaysFees: '',
     referenceId: '', serviceType: '', notes: '',
   };
@@ -209,6 +218,23 @@ export function validateRow(
   const declared = row.declaredValue.trim();
   if (declared && (Number.isNaN(Number(declared)) || Number(declared) < 0)) {
     errors.declaredValue = 'Must be a number ≥ 0';
+  }
+
+  // Custom parcel size: Length, Width, Height (cm) and Weight (kg) become required
+  // and must be positive numbers. Row is not confirmable until all four are valid.
+  // For non-Custom sizes, the four fields are optional but validated if provided.
+  const isCustomSize = row.parcelSize.trim().toUpperCase() === 'CUSTOM';
+  const isPosNum = (s: string) => { const n = Number(s.trim()); return s.trim() !== '' && !Number.isNaN(n) && n > 0; };
+  if (isCustomSize) {
+    if (!isPosNum(row.lengthCm)) errors.lengthCm = row.lengthCm.trim() ? 'Must be a positive number (cm)' : 'Required for Custom size';
+    if (!isPosNum(row.widthCm))  errors.widthCm  = row.widthCm.trim()  ? 'Must be a positive number (cm)' : 'Required for Custom size';
+    if (!isPosNum(row.heightCm)) errors.heightCm = row.heightCm.trim() ? 'Must be a positive number (cm)' : 'Required for Custom size';
+    if (!isPosNum(row.weightKg)) errors.weightKg = row.weightKg.trim() ? 'Must be a positive number (kg)' : 'Required for Custom size';
+  } else {
+    if (row.lengthCm.trim() && !isPosNum(row.lengthCm)) errors.lengthCm = 'Must be a positive number (cm)';
+    if (row.widthCm.trim()  && !isPosNum(row.widthCm))  errors.widthCm  = 'Must be a positive number (cm)';
+    if (row.heightCm.trim() && !isPosNum(row.heightCm)) errors.heightCm = 'Must be a positive number (cm)';
+    if (row.weightKg.trim() && !isPosNum(row.weightKg)) errors.weightKg = 'Must be a positive number (kg)';
   }
 
   // COD: when collecting, a valid collectible amount (≤ template cap) is required.

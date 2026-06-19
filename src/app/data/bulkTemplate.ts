@@ -22,6 +22,10 @@ export const BULK_FIELD_LABELS = {
   landmarks:         'Landmarks, Floor or Unit Number (Optional)',
   itemName:          'Item Name',
   pouchSize:         'Pouch/box size',
+  lengthCm:          'Length (cm)',
+  widthCm:           'Width (cm)',
+  heightCm:          'Height (cm)',
+  weightKg:          'Weight (kg)',
   codAmount:         'COD Amount',
   cod:               'Cash on delivery (COD)',
   declaredValue:     'Declared Item Value',
@@ -41,6 +45,10 @@ export const BULK_TEMPLATE_COLUMNS = [
   BULK_FIELD_LABELS.landmarks,
   BULK_FIELD_LABELS.itemName,
   BULK_FIELD_LABELS.pouchSize,
+  BULK_FIELD_LABELS.lengthCm,
+  BULK_FIELD_LABELS.widthCm,
+  BULK_FIELD_LABELS.heightCm,
+  BULK_FIELD_LABELS.weightKg,
   BULK_FIELD_LABELS.codAmount,
   BULK_FIELD_LABELS.cod,
   BULK_FIELD_LABELS.declaredValue,
@@ -52,12 +60,14 @@ export const BULK_TEMPLATE_COLUMNS = [
 
 // Two sample rows mirroring the official template so users see the expected
 // format. Column order matches BULK_TEMPLATE_COLUMNS (no Item Protection Fee).
+// Length/Width/Height/Weight columns are empty for normal sizes (optional).
+// For CUSTOM size, all four dimension/weight fields are required.
 const SAMPLE_ROWS: string[][] = [
-  ['Juan dela Cruz', '9170000000', '123 Rizal Ave.', 'Metro Manila', 'Las Pinas City', 'Almanza Uno', '3rd Floor, Unit 301', 'Makabayan Book', 'SMALL', '', 'NO', '', 'NO', 'NO', '', 'Test Reference ID 01'],
-  ['Juan dela Cruz', '9170000000', '123 Rizal Ave.', 'Agusan Del Norte', 'Butuan City', 'Amparo', '3rd Floor, Unit 301', 'Makabayan Book', 'SMALL', '', 'NO', '', 'NO', 'NO', '', 'Test Reference ID 02'],
+  ['Juan dela Cruz', '9170000000', '123 Rizal Ave.', 'Metro Manila', 'Las Pinas City', 'Almanza Uno', '3rd Floor, Unit 301', 'Makabayan Book', 'SMALL', '', '', '', '', '', 'NO', '', 'NO', 'NO', '', 'Test Reference ID 01'],
+  ['Juan dela Cruz', '9170000000', '123 Rizal Ave.', 'Agusan Del Norte', 'Butuan City', 'Amparo', '3rd Floor, Unit 301', 'Makabayan Book', 'SMALL', '', '', '', '', '', 'NO', '', 'NO', 'NO', '', 'Test Reference ID 02'],
 ];
 
-export const RECEPTACLE_SIZES = ['SMALL', 'MEDIUM', 'LARGE', 'BOX', 'OVERSIZED'];
+export const RECEPTACLE_SIZES = ['SMALL', 'MEDIUM', 'LARGE', 'BOX', 'OVERSIZED', 'CUSTOM'];
 
 function csvCell(value: string): string {
   // Quote cells containing commas, quotes, or newlines.

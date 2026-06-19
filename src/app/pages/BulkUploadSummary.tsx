@@ -99,6 +99,10 @@ interface ErrorRowData {
   landmarks: string;
   itemName: string;
   pouchSize: string;
+  lengthCm: string;
+  widthCm: string;
+  heightCm: string;
+  weightKg: string;
   cod: string;               // 'Yes' | 'No' — editable
   codAmount: string;
   declaredValue: string;
@@ -109,45 +113,55 @@ interface ErrorRowData {
 
 // Rows 5 & 6 are duplicates of each other (shared REF-005), otherwise valid —
 // removing one leaves the other unique so it revalidates into the valid group.
+// Row 7 demos Custom size with missing dimension/weight fields.
 const INITIAL_ERROR_ROWS: ErrorRowData[] = [
   {
     row: 3,
     errors: ['"Mobile" field is required', '"Pouch/box size" field is required', '"Insure full item value?" field is required'],
     recipientName: 'Jen Ramos', mobileNumber: '', streetAddress: '123 Penarubia St.',
     province: 'Metro Manila', cityMunicipality: 'Mandaluyong City', barangay: 'Malamig', landmarks: '–',
-    itemName: 'UNO FLIP! Double Sided Card', pouchSize: '', cod: 'No', codAmount: '',
-    declaredValue: '', insureFull: '', recipientPaysFees: 'No', referenceId: '',
+    itemName: 'UNO FLIP! Double Sided Card', pouchSize: '', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
+    cod: 'No', codAmount: '', declaredValue: '', insureFull: '', recipientPaysFees: 'No', referenceId: '',
   },
   {
     row: 4,
     errors: ['Invalid pouch size', 'COD must not exceed ₱50,000.00'],
     recipientName: 'Rome Jans', mobileNumber: '+639101234567', streetAddress: '2287 Allegro Center, Chinatown',
     province: 'Metro Manila', cityMunicipality: 'Makati City', barangay: 'Bel-Air', landmarks: '–',
-    itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SUPERSIZED', cod: 'Yes', codAmount: '75000',
-    declaredValue: '75000', insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-004',
+    itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SUPERSIZED', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
+    cod: 'Yes', codAmount: '75000', declaredValue: '75000', insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-004',
   },
   {
     row: 5,
     errors: ['Possible duplicate of row 6'],
     recipientName: 'Rome Jans', mobileNumber: '+639101234567', streetAddress: '2287 Allegro Center, Chinatown',
     province: 'Metro Manila', cityMunicipality: 'Makati City', barangay: 'Bel-Air', landmarks: '–',
-    itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SMALL', cod: 'Yes', codAmount: '500',
-    declaredValue: '500', insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-005',
+    itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SMALL', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
+    cod: 'Yes', codAmount: '500', declaredValue: '500', insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-005',
   },
   {
     row: 6,
     errors: ['Possible duplicate of row 5'],
     recipientName: 'Rome Jans', mobileNumber: '+639101234567', streetAddress: '2287 Allegro Center, Chinatown',
     province: 'Metro Manila', cityMunicipality: 'Makati City', barangay: 'Bel-Air', landmarks: '–',
-    itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SMALL', cod: 'Yes', codAmount: '500',
-    declaredValue: '500', insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-005',
+    itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SMALL', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
+    cod: 'Yes', codAmount: '500', declaredValue: '500', insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-005',
+  },
+  {
+    row: 7,
+    errors: ['"Length (cm)" is required for Custom size', '"Width (cm)" is required for Custom size', '"Height (cm)" is required for Custom size', '"Weight (kg)" is required for Custom size'],
+    recipientName: 'Luz Fernandez', mobileNumber: '+639181234567', streetAddress: '45 Delgado St.',
+    province: 'Metro Manila', cityMunicipality: 'Pasig City', barangay: 'Bagong Ilog', landmarks: '',
+    itemName: 'Custom Package', pouchSize: 'CUSTOM', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
+    cod: 'No', codAmount: '', declaredValue: '1500', insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-007',
   },
 ];
 
 type EditableField =
   | 'recipientName' | 'mobileNumber' | 'streetAddress'
   | 'province' | 'cityMunicipality' | 'barangay' | 'landmarks'
-  | 'itemName' | 'pouchSize' | 'cod' | 'codAmount' | 'declaredValue'
+  | 'itemName' | 'pouchSize' | 'lengthCm' | 'widthCm' | 'heightCm' | 'weightKg'
+  | 'cod' | 'codAmount' | 'declaredValue'
   | 'insureFull' | 'recipientPaysFees' | 'referenceId';
 
 type RowEdits = Record<EditableField, string>;
@@ -163,6 +177,10 @@ function rowToEdits(row: ErrorRowData): RowEdits {
     landmarks:         row.landmarks,
     itemName:          row.itemName,
     pouchSize:         row.pouchSize,
+    lengthCm:          row.lengthCm,
+    widthCm:           row.widthCm,
+    heightCm:          row.heightCm,
+    weightKg:          row.weightKg,
     cod:               row.cod,
     codAmount:         row.codAmount,
     declaredValue:     row.declaredValue,
@@ -194,6 +212,12 @@ function computeItemProtectionFee(edits: RowEdits): number {
  *   while another row in the current set shares its Reference ID. Removing the
  *   partner makes the survivor unique, so its duplicate error clears.
  */
+/** Returns true when s is a non-empty, strictly positive number string. */
+function isPosNum(s: string): boolean {
+  const n = Number(s.trim());
+  return s.trim() !== '' && !Number.isNaN(n) && n > 0;
+}
+
 function validateEdits(
   row: ErrorRowData,
   edits: RowEdits,
@@ -222,6 +246,16 @@ function validateEdits(
     if (isNaN(amt) || amt > 50000) errs.push('COD must not exceed ₱50,000.00');
   }
 
+  // Custom parcel size: all four dimension/weight fields are required and must
+  // be positive numbers. This check is always live when pouchSize is CUSTOM so
+  // it re-validates as the user fills in the fields.
+  if (edits.pouchSize.trim().toUpperCase() === 'CUSTOM') {
+    if (!isPosNum(edits.lengthCm)) errs.push(edits.lengthCm.trim() ? '"Length (cm)" must be a positive number' : '"Length (cm)" is required for Custom size');
+    if (!isPosNum(edits.widthCm))  errs.push(edits.widthCm.trim()  ? '"Width (cm)" must be a positive number'  : '"Width (cm)" is required for Custom size');
+    if (!isPosNum(edits.heightCm)) errs.push(edits.heightCm.trim() ? '"Height (cm)" must be a positive number' : '"Height (cm)" is required for Custom size');
+    if (!isPosNum(edits.weightKg)) errs.push(edits.weightKg.trim() ? '"Weight (kg)" must be a positive number' : '"Weight (kg)" is required for Custom size');
+  }
+
   // Dynamic duplicate check by Reference ID across the current row set.
   const ref = edits.referenceId.trim();
   if (ref && ref !== '–') {
@@ -235,6 +269,7 @@ function validateEdits(
 }
 
 function fieldHasError(fieldKey: EditableField, row: ErrorRowData, edits: RowEdits): boolean {
+  const isCustom = edits.pouchSize.trim().toUpperCase() === 'CUSTOM';
   switch (fieldKey) {
     case 'mobileNumber':  return row.errors.some((e) => e.includes('"Mobile"'))         && !edits.mobileNumber.trim();
     case 'recipientName': return row.errors.some((e) => e.includes('"Name"'))           && !edits.recipientName.trim();
@@ -249,6 +284,10 @@ function fieldHasError(fieldKey: EditableField, row: ErrorRowData, edits: RowEdi
       const n = parseFloat(edits.codAmount.replace(/[^0-9.]/g, ''));
       return isNaN(n) || n > 50000;
     }
+    case 'lengthCm':  return isCustom && !isPosNum(edits.lengthCm);
+    case 'widthCm':   return isCustom && !isPosNum(edits.widthCm);
+    case 'heightCm':  return isCustom && !isPosNum(edits.heightCm);
+    case 'weightKg':  return isCustom && !isPosNum(edits.weightKg);
     default: return false;
   }
 }
@@ -561,7 +600,7 @@ export function BulkUploadSummary() {
               min-w keeps every column readable without truncating values.
             */}
             <div className="overflow-x-auto rounded-lg border border-red-200">
-              <table className="w-full min-w-[2700px] border-collapse text-sm">
+              <table className="w-full min-w-[3230px] border-collapse text-sm">
                 <thead className="bg-red-50 border-b border-red-200">
                   <tr>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 w-12">Row</th>
@@ -575,6 +614,22 @@ export function BulkUploadSummary() {
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[210px]">{L.landmarks}</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[185px]">{L.itemName}</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.pouchSize}</th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
+                      {L.lengthCm}
+                      <span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
+                    </th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
+                      {L.widthCm}
+                      <span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
+                    </th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
+                      {L.heightCm}
+                      <span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
+                    </th>
+                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
+                      {L.weightKg}
+                      <span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
+                    </th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[170px]">{L.cod}</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[130px]">{L.codAmount}</th>
                     <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.declaredValue}</th>
@@ -660,6 +715,50 @@ export function BulkUploadSummary() {
                             {RECEPTACLE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
                           </select>
                           {fe('pouchSize') && <p className="text-xs text-red-600 mt-0.5">Select a valid size</p>}
+                        </td>
+
+                        {/* Length (cm) — required when pouchSize is CUSTOM */}
+                        <td className="px-3 py-2.5">
+                          <ErrInput
+                            value={edits.lengthCm}
+                            onChange={(v) => updateEdit(row.row, 'lengthCm', v)}
+                            error={fe('lengthCm')}
+                            placeholder={edits.pouchSize.toUpperCase() === 'CUSTOM' ? 'e.g. 30' : '—'}
+                          />
+                          {fe('lengthCm') && <p className="text-xs text-red-600 mt-0.5">Required for Custom size</p>}
+                        </td>
+
+                        {/* Width (cm) */}
+                        <td className="px-3 py-2.5">
+                          <ErrInput
+                            value={edits.widthCm}
+                            onChange={(v) => updateEdit(row.row, 'widthCm', v)}
+                            error={fe('widthCm')}
+                            placeholder={edits.pouchSize.toUpperCase() === 'CUSTOM' ? 'e.g. 20' : '—'}
+                          />
+                          {fe('widthCm') && <p className="text-xs text-red-600 mt-0.5">Required for Custom size</p>}
+                        </td>
+
+                        {/* Height (cm) */}
+                        <td className="px-3 py-2.5">
+                          <ErrInput
+                            value={edits.heightCm}
+                            onChange={(v) => updateEdit(row.row, 'heightCm', v)}
+                            error={fe('heightCm')}
+                            placeholder={edits.pouchSize.toUpperCase() === 'CUSTOM' ? 'e.g. 15' : '—'}
+                          />
+                          {fe('heightCm') && <p className="text-xs text-red-600 mt-0.5">Required for Custom size</p>}
+                        </td>
+
+                        {/* Weight (kg) */}
+                        <td className="px-3 py-2.5">
+                          <ErrInput
+                            value={edits.weightKg}
+                            onChange={(v) => updateEdit(row.row, 'weightKg', v)}
+                            error={fe('weightKg')}
+                            placeholder={edits.pouchSize.toUpperCase() === 'CUSTOM' ? 'e.g. 2.5' : '—'}
+                          />
+                          {fe('weightKg') && <p className="text-xs text-red-600 mt-0.5">Required for Custom size</p>}
                         </td>
 
                         {/* COD? — editable Yes/No */}
