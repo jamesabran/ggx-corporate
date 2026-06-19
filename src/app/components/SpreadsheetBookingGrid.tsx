@@ -255,16 +255,33 @@ export function SpreadsheetBookingGrid({
                     const derived =
                       inventoryEnabled && !!row.products?.length &&
                       col.key === 'quantity';
+
+                    // Dimension/weight fields are only active for Custom parcel size.
+                    // For all other sizes they render as disabled so the user can't
+                    // accidentally fill them, and they're excluded from validation and
+                    // pricing for that row.
+                    const isDimField =
+                      col.key === 'lengthCm' || col.key === 'widthCm' ||
+                      col.key === 'heightCm' || col.key === 'weightKg';
+                    const isCustomRow = row.parcelSize.trim().toUpperCase() === 'CUSTOM';
+                    const dimDisabled = isDimField && !isCustomRow;
+
+                    const cellDisabled = derived || dimDisabled;
                     const common = cn(
                       'w-full h-8 px-2 rounded border bg-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500',
-                      err ? 'border-red-400 ring-1 ring-red-300' : 'border-gray-200',
-                      derived && 'bg-gray-50 text-gray-500 cursor-not-allowed',
+                      err && !dimDisabled ? 'border-red-400 ring-1 ring-red-300' : 'border-gray-200',
+                      cellDisabled && 'bg-gray-50 text-gray-500 cursor-not-allowed',
                     );
+                    const cellTitle = derived
+                      ? 'Set by attached products'
+                      : dimDisabled
+                        ? 'Select Custom as the parcel size to enable'
+                        : err;
                     return (
                       <td
                         key={col.key}
                         className="px-1 py-1 align-top"
-                        title={derived ? 'Set by attached products' : err}
+                        title={cellTitle}
                       >
                         {col.options ? (
                           <select
@@ -280,7 +297,7 @@ export function SpreadsheetBookingGrid({
                           <input
                             type="text"
                             value={row[col.key]}
-                            disabled={derived}
+                            disabled={cellDisabled}
                             onChange={(e) => updateCell(row.id, col.key, e.target.value)}
                             onPaste={(e) => handlePaste(e, rIdx, cIdx)}
                             className={common}

@@ -220,21 +220,16 @@ export function validateRow(
     errors.declaredValue = 'Must be a number ≥ 0';
   }
 
-  // Custom parcel size: Length, Width, Height (cm) and Weight (kg) become required
-  // and must be positive numbers. Row is not confirmable until all four are valid.
-  // For non-Custom sizes, the four fields are optional but validated if provided.
-  const isCustomSize = row.parcelSize.trim().toUpperCase() === 'CUSTOM';
-  const isPosNum = (s: string) => { const n = Number(s.trim()); return s.trim() !== '' && !Number.isNaN(n) && n > 0; };
-  if (isCustomSize) {
+  // Custom parcel size: all four dimension/weight fields are required and must be
+  // strictly positive numbers — the row is not confirmable until all four pass.
+  // For any other size the fields are ignored entirely (disabled in the grid UI,
+  // excluded from pricing, not validated here).
+  if (row.parcelSize.trim().toUpperCase() === 'CUSTOM') {
+    const isPosNum = (s: string) => { const n = Number(s.trim()); return s.trim() !== '' && !Number.isNaN(n) && n > 0; };
     if (!isPosNum(row.lengthCm)) errors.lengthCm = row.lengthCm.trim() ? 'Must be a positive number (cm)' : 'Required for Custom size';
     if (!isPosNum(row.widthCm))  errors.widthCm  = row.widthCm.trim()  ? 'Must be a positive number (cm)' : 'Required for Custom size';
     if (!isPosNum(row.heightCm)) errors.heightCm = row.heightCm.trim() ? 'Must be a positive number (cm)' : 'Required for Custom size';
     if (!isPosNum(row.weightKg)) errors.weightKg = row.weightKg.trim() ? 'Must be a positive number (kg)' : 'Required for Custom size';
-  } else {
-    if (row.lengthCm.trim() && !isPosNum(row.lengthCm)) errors.lengthCm = 'Must be a positive number (cm)';
-    if (row.widthCm.trim()  && !isPosNum(row.widthCm))  errors.widthCm  = 'Must be a positive number (cm)';
-    if (row.heightCm.trim() && !isPosNum(row.heightCm)) errors.heightCm = 'Must be a positive number (cm)';
-    if (row.weightKg.trim() && !isPosNum(row.weightKg)) errors.weightKg = 'Must be a positive number (kg)';
   }
 
   // COD: when collecting, a valid collectible amount (≤ template cap) is required.
