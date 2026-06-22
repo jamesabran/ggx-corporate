@@ -45,15 +45,22 @@ const STATUS_CONFIG = {
 
 // Mock file headers and sample data returned when a file is NOT the GGX template.
 // Mirrors the column-mapping screenshot reference.
+// Includes the four dimweight source columns (Length/Width/Height/Weight) after
+// Pouch/box size so they can be mapped to the matching GGX fields. They mirror
+// the GGX template header names exactly so auto-match picks them up. Values are
+// blank here because every sample row uses a standard size (Small) — dimensions
+// are only required for Custom rows (see BulkColumnMapper conditional rule).
 const MOCK_CUSTOM_HEADERS = [
   'Buyer Name', 'CP#', 'Street Address', 'Province', 'City / Town',
-  'Barangay', 'Unit/Floor', 'Item Name', 'Pouch/box size', 'Cash on delivery (COD)',
+  'Barangay', 'Unit/Floor', 'Item Name', 'Pouch/box size',
+  'Length (cm)', 'Width (cm)', 'Height (cm)', 'Weight (kg)',
+  'Cash on delivery (COD)',
   'COD Amount', 'Declared Value', 'Item Protection', 'Recipient Pays', 'Promo', 'Ref ID',
 ];
 const MOCK_SAMPLE_DATA = [
-  ['Jen Ramos',  '+639176543210', '123 Penarubia St.',           'Metro Manila', 'Mandaluyong City', 'Malamig',    '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'No',  '–',      '599.00',  '–', 'No', '–', '–'],
-  ['Ramon Jee',  '+639101234567', '2287 Allegro Center, Chin...', 'Metro Manila', 'Makati City',      'Magallanes', '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'Yes', '500.00', '1200.00', '–', '–', '–', '–'],
-  ['Rena Jams',  '+639123456789', '1234 Harmony Lane St.',       'Metro Manila', 'Quezon City',      'Barangay 1', '–', 'UNO FLIP! Double Sided Ca...', 'Small', 'No',  '–',      '350.00',  '–', '–', '–', '–'],
+  ['Jen Ramos',  '+639176543210', '123 Penarubia St.',           'Metro Manila', 'Mandaluyong City', 'Malamig',    '–', 'UNO FLIP! Double Sided Ca...', 'Small', '–', '–', '–', '–', 'No',  '–',      '599.00',  '–', 'No', '–', '–'],
+  ['Ramon Jee',  '+639101234567', '2287 Allegro Center, Chin...', 'Metro Manila', 'Makati City',      'Magallanes', '–', 'UNO FLIP! Double Sided Ca...', 'Small', '–', '–', '–', '–', 'Yes', '500.00', '1200.00', '–', '–', '–', '–'],
+  ['Rena Jams',  '+639123456789', '1234 Harmony Lane St.',       'Metro Manila', 'Quezon City',      'Barangay 1', '–', 'UNO FLIP! Double Sided Ca...', 'Small', '–', '–', '–', '–', 'No',  '–',      '350.00',  '–', '–', '–', '–'],
 ];
 
 /** Whether the uploaded file already uses GGX template headers (skip mapping). */

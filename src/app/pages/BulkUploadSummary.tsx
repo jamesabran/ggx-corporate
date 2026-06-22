@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
 import {
-  IconArrowLeft, IconCircleCheck, IconCircleX, IconAlertCircle,
+  IconArrowLeft, IconCircleCheck, IconCircleX, IconAlertCircle, IconAlertTriangle,
   IconDownload, IconArrowRight, IconUpload, IconTruckDelivery, IconBuildingStore,
   IconMapPin, IconRefresh, IconInfoCircle, IconClock, IconPhone, IconTrash,
 } from '@tabler/icons-react';
@@ -155,6 +155,50 @@ const INITIAL_ERROR_ROWS: ErrorRowData[] = [
     itemName: 'Custom Package', pouchSize: 'CUSTOM', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
     cod: 'No', codAmount: '', declaredValue: '1500', insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-007',
   },
+];
+
+// ---------------------------------------------------------------------------
+// Non-blocking warnings — rows that are VALID and will proceed, but carry an
+// advisory. A standard parcel size (Small / Medium / Large / Box / Oversized)
+// with dimension values present is the canonical case: the dimensions are noted
+// but ignored for pricing, which uses the fixed standard-size rate. Warnings
+// never block confirmation and are counted as valid orders.
+// ---------------------------------------------------------------------------
+
+const STANDARD_DIM_WARNING = 'Dimensions noted. This parcel will use the selected standard size rate.';
+
+interface WarningRowData {
+  row: number;
+  recipientName: string;
+  itemName: string;
+  pouchSize: string;
+  lengthCm: string;
+  widthCm: string;
+  heightCm: string;
+  weightKg: string;
+}
+
+/**
+ * Returns the advisory message for a standard-size row that includes dimension
+ * values, or null when no warning applies (Custom rows, or no dimensions). Used
+ * to keep the warning rule consistent wherever it is surfaced.
+ */
+function standardSizeDimWarning(row: Pick<WarningRowData, 'pouchSize' | 'lengthCm' | 'widthCm' | 'heightCm' | 'weightKg'>): string | null {
+  const size = row.pouchSize.trim().toUpperCase();
+  const isStandardSize = (RECEPTACLE_SIZES as readonly string[]).includes(size) && size !== 'CUSTOM';
+  const hasDimensions = [row.lengthCm, row.widthCm, row.heightCm, row.weightKg]
+    .some((v) => v.trim() !== '' && v.trim() !== '–');
+  return isStandardSize && hasDimensions ? STANDARD_DIM_WARNING : null;
+}
+
+// One example per standard size, each carrying dimension values — demonstrates
+// that the warning applies across Small, Medium, Large, Box, and Oversized.
+const INITIAL_WARNING_ROWS: WarningRowData[] = [
+  { row: 8,  recipientName: 'Carlo Reyes',     itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SMALL',     lengthCm: '18', widthCm: '12', heightCm: '5',  weightKg: '0.4' },
+  { row: 9,  recipientName: 'Mara Lim',        itemName: 'Board Game Night Bundle',     pouchSize: 'MEDIUM',    lengthCm: '30', widthCm: '22', heightCm: '12', weightKg: '1.2' },
+  { row: 10, recipientName: 'Diego Santos',    itemName: 'Desk Organizer Set',          pouchSize: 'LARGE',     lengthCm: '45', widthCm: '30', heightCm: '20', weightKg: '3.0' },
+  { row: 11, recipientName: 'Ana Villanueva',  itemName: 'Ceramic Dinnerware Box',      pouchSize: 'BOX',       lengthCm: '40', widthCm: '40', heightCm: '25', weightKg: '4.5' },
+  { row: 12, recipientName: 'Paolo Cruz',      itemName: 'Folding Camp Chair',          pouchSize: 'OVERSIZED', lengthCm: '90', widthCm: '20', heightCm: '20', weightKg: '6.0' },
 ];
 
 type EditableField =
@@ -393,7 +437,13 @@ export function BulkUploadSummary() {
   const [showSuccess,   setShowSuccess]   = useState(false);
 
   // ── Derived values ────────────────────────────────────────────────────────
-  const totalValidCount        = validBaseCount + fixedCount;
+  // Non-blocking warnings apply to the uploaded-file review only. Spreadsheet
+  // batches are pre-validated in the grid (dimensions are grid-controlled), so no
+  // warnings are surfaced there. Warning rows are valid and counted as orders.
+  const warningRows = isSpreadsheet
+    ? []
+    : INITIAL_WARNING_ROWS.filter((r) => standardSizeDimWarning(r) !== null);
+  const totalValidCount        = validBaseCount + fixedCount + warningRows.length;
   const shippingFee            = 1200; // mock flat
   const totalItemProtectionFee = parseFloat(
     errorRows.reduce((sum, row) => sum + computeItemProtectionFee(rowEdits[row.row] ?? rowToEdits(row)), 0).toFixed(2)
@@ -573,18 +623,47 @@ export function BulkUploadSummary() {
         </CardContent>
       </Card>
 
-      {/* ── Error rows ── */}
-      {errorRows.length > 0 ? (
-        <Card className="border-red-200">
-          <CardContent className="p-6 space-y-4">
+      {/* ── Review upload results — errors (blocking) + warnings (non-blocking) ── */}
+      {(errorRows.length > 0 || warningRows.length > 0) ? (
+        <Card>
+          <CardContent className="p-6 space-y-5">
+            {/* Section heading + at-a-glance summary */}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Review upload results</h2>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {errorRows.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold px-2.5 py-1">
+                    <IconCircleX className="w-3.5 h-3.5" />
+                    {errorRows.length} {errorRows.length === 1 ? 'error needs' : 'errors need'} attention
+                  </span>
+                )}
+                {warningRows.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-1">
+                    <IconAlertTriangle className="w-3.5 h-3.5" />
+                    {warningRows.length} {warningRows.length === 1 ? 'warning' : 'warnings'}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                {errorRows.length > 0
+                  ? 'Fix the errors below before those rows can be booked. '
+                  : 'No blocking errors. '}
+                {warningRows.length > 0 &&
+                  `Warnings don’t block booking — those rows are included in your ${totalValidCount} valid orders.`}
+              </p>
+            </div>
+
+            {/* Errors — must be fixed */}
+            {errorRows.length > 0 && (
+            <div className="space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
                   <IconCircleX className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-base font-semibold text-gray-900">{errorRows.length} rows found with error</p>
-                  <p className="text-sm text-gray-500">Please check affected rows below and try re-uploading.</p>
+                  <p className="text-base font-semibold text-gray-900">Errors — must be fixed</p>
+                  <p className="text-sm text-gray-500">These rows can’t proceed until corrected.</p>
                 </div>
               </div>
               <Button variant="outline" size="sm">
@@ -842,6 +921,70 @@ export function BulkUploadSummary() {
                 Retry Upload
               </Button>
             </div>
+            </div>
+            )}
+
+            {/* Warnings — will still proceed (non-blocking, included in valid orders) */}
+            {warningRows.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <IconAlertTriangle className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-base font-semibold text-gray-900">Warnings — will still proceed</p>
+                    <p className="text-sm text-gray-500">
+                      These rows are valid and included in your booking. No action needed.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-lg border border-amber-200">
+                  <table className="w-full min-w-[1100px] border-collapse text-sm">
+                    <thead className="bg-amber-50 border-b border-amber-200">
+                      <tr>
+                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 w-12">Row</th>
+                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[360px]">Warning</th>
+                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[160px]">{L.name}</th>
+                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[185px]">{L.itemName}</th>
+                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[120px]">{L.pouchSize}</th>
+                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[90px]">{L.lengthCm}</th>
+                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[90px]">{L.widthCm}</th>
+                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[90px]">{L.heightCm}</th>
+                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[90px]">{L.weightKg}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {warningRows.map((row) => (
+                        <tr
+                          key={row.row}
+                          className="border-b border-amber-100 border-l-4 border-l-amber-400 bg-amber-50/50 align-top"
+                        >
+                          <td className="px-3 py-2.5">
+                            <span className="text-sm font-medium text-gray-900">{row.row}</span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-start gap-2">
+                              <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-0.5 flex-shrink-0">
+                                Warning
+                              </span>
+                              <span className="text-xs text-amber-800">{standardSizeDimWarning(row)}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-sm text-gray-900">{row.recipientName}</td>
+                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.itemName}</td>
+                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.pouchSize}</td>
+                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.lengthCm}</td>
+                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.widthCm}</td>
+                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.heightCm}</td>
+                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.weightKg}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : HAD_ERRORS ? (
