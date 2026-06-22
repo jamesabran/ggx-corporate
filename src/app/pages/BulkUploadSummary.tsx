@@ -339,6 +339,25 @@ function computeDupRows(rows: ReviewRowData[], edits: Record<number, RowEdits>):
   return new Set([...dupes].map((k) => Number(k)));
 }
 
+type SectionKey = 'fix' | 'review' | 'ready';
+
+/** Which section a row belongs to, by priority: fixes → needs review → ready. */
+function sectionFor(v: RowValidationState, isDuplicate: boolean): SectionKey {
+  if (v.blocking.length > 0) return 'fix';
+  if (isDuplicate || v.addressNote) return 'review';
+  return 'ready';
+}
+
+/** Build the full section snapshot for a set of rows from their current edits. */
+function computeSections(rows: ReviewRowData[], edits: Record<number, RowEdits>): Record<number, SectionKey> {
+  const dup = computeDupRows(rows, edits);
+  const out: Record<number, SectionKey> = {};
+  rows.forEach((r) => {
+    out[r.row] = sectionFor(validateRowState(r, edits[r.row] ?? rowToEdits(r)), dup.has(r.row));
+  });
+  return out;
+}
+
 /** Human-readable copy for each payment method type. */
 function paymentCopy(method: SelectedPaymentMethod | null, billingAvailable: boolean): string {
   if (!method) return billingAvailable ? 'To be invoiced after service' : 'To be paid on pick-up';
@@ -362,10 +381,11 @@ interface ReviewConcern { message: string; label: string; }
 interface ReviewRowProps {
   row: ReviewRowData;
   edits: RowEdits;
+  /** Section accent only (snapshot); does not change as the row is edited. */
   variant: 'fix' | 'review';
-  /** Blocking errors (fix variant only). */
+  /** Live blocking errors — shown red whichever section the row is in. */
   errors: string[];
-  /** Non-blocking concerns — primary text in review rows, secondary in fix rows. */
+  /** Live non-blocking concerns — amber (or secondary when errors are present). */
   concerns: ReviewConcern[];
   onEdit: (field: EditableField, value: string) => void;
   onLocation: (province: string, city: string, barangay: string) => void;
@@ -378,7 +398,9 @@ function ReviewRow({ row, edits, variant, errors, concerns, onEdit, onLocation, 
   const isCustom = isCustomParcelSize(edits.pouchSize);
   const dimsDisabled = !isCustom;
   const protectionFee = computeItemProtectionFee(edits);
-  const addrSuspicious = variant === 'review' && !!addressAdvisory(edits.streetAddress);
+  // Field-level hint for a present-but-suspicious address (only when nothing
+  // blocking is on the street field). Independent of which section the row sits in.
+  const addrSuspicious = !fe('streetAddress') && !!addressAdvisory(edits.streetAddress);
   // Discrete controls (size, Yes/No, location) commit immediately with the new
   // value so validation re-runs at once — e.g. switching off Custom clears the
   // dimension error without waiting for Revalidate changes.
@@ -392,10 +414,12 @@ function ReviewRow({ row, edits, variant, errors, concerns, onEdit, onLocation, 
     <tr className={`border-b ${rowTone} align-top`}>
       <td className="px-3 py-2.5"><span className="text-sm font-medium text-gray-900">{row.row}</span></td>
 
-      {/* Issue column — blocking errors are primary; review concerns are secondary
-          on fix rows, and primary (no badge) on review rows. */}
+      {/* Issue column — LIVE: updates the instant the user edits, but never moves
+          the row between sections. Blocking errors (red) take priority; otherwise
+          remaining review concerns (amber). A resolved row shows no message until
+          the user clicks Revalidate changes. */}
       <td className="px-3 py-2.5">
-        {variant === 'fix' ? (
+        {errors.length > 0 ? (
           <div className="space-y-1.5">
             <ul className="space-y-0.5">
               {errors.map((m, i) => (
@@ -410,7 +434,7 @@ function ReviewRow({ row, edits, variant, errors, concerns, onEdit, onLocation, 
               </p>
             )}
           </div>
-        ) : (
+        ) : concerns.length > 0 ? (
           <ul className="space-y-0.5">
             {concerns.map((c, i) => (
               <li key={i} className="text-xs text-amber-700 flex items-start gap-1">
@@ -418,6 +442,8 @@ function ReviewRow({ row, edits, variant, errors, concerns, onEdit, onLocation, 
               </li>
             ))}
           </ul>
+        ) : (
+          <span className="text-xs text-gray-400">—</span>
         )}
       </td>
 
@@ -631,15 +657,22 @@ export function BulkUploadSummary() {
     INITIAL_REVIEW_ROWS.forEach((r) => { initEdits[r.row] = rowToEdits(r); });
     return computeDupRows(INITIAL_REVIEW_ROWS, initEdits);
   });
+  // Snapshot of each row's section. Only Revalidate (and delete/undo) changes it,
+  // so editing a row never moves it out of the section the user is working in.
+  const [sectionAssignment, setSectionAssignment] = useState<Record<number, SectionKey>>(() => {
+    const initEdits: Record<number, RowEdits> = {};
+    INITIAL_REVIEW_ROWS.forEach((r) => { initEdits[r.row] = rowToEdits(r); });
+    return computeSections(INITIAL_REVIEW_ROWS, initEdits);
+  });
 
   // Spreadsheet batches arrive pre-validated, and already-processed (payment)
   // batches have nothing to correct — neither shows the review grids.
   useEffect(() => {
-    if (isSpreadsheet || paymentMode) { setRows([]); setDupRows(new Set()); }
+    if (isSpreadsheet || paymentMode) { setRows([]); setDupRows(new Set()); setSectionAssignment({}); }
   }, [isSpreadsheet, paymentMode]);
 
   // Undo support for row deletion.
-  const [undoState, setUndoState] = useState<{ row: ReviewRowData; edits: RowEdits; validation: RowValidationState } | null>(null);
+  const [undoState, setUndoState] = useState<{ row: ReviewRowData; edits: RowEdits; validation: RowValidationState; section: SectionKey } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
   const showToast = (msg: string) => {
@@ -659,8 +692,12 @@ export function BulkUploadSummary() {
   const [showDropoffs, setShowDropoffs] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // ── Classification (derived) ──────────────────────────────────────────────
-  const classified = rows.map((r) => {
+  // ── Live per-row info (messages) vs. snapshot section membership ──────────
+  // The issue MESSAGES below are recomputed live from the current edits so they
+  // update the instant a user edits a row. The SECTION a row sits in, however, is
+  // a snapshot (`sectionAssignment`) that only changes on Revalidate / delete — so
+  // a row a user is correcting never jumps, re-sorts, or disappears mid-edit.
+  const rowInfo = (r: ReviewRowData) => {
     const e = edits[r.row] ?? rowToEdits(r);
     const v = validation[r.row] ?? validateRowState(r, e);
     const concerns: ReviewConcern[] = [];
@@ -672,22 +709,18 @@ export function BulkUploadSummary() {
       });
     }
     return { data: r, edits: e, blocking: v.blocking, concerns };
-  });
-  // Single-section priority: a row with any blocking error stays only in fixes
-  // (its review concerns become secondary text); otherwise concerns → needs review;
-  // otherwise the row is ready to book.
-  const fixList = classified.filter((c) => c.blocking.length > 0);
-  const reviewList = classified.filter((c) => c.blocking.length === 0 && c.concerns.length > 0);
-  const validFromFlagged = classified.filter((c) => c.blocking.length === 0 && c.concerns.length === 0).length;
+  };
+  const fixList = rows.filter((r) => sectionAssignment[r.row] === 'fix').map(rowInfo);
+  const reviewList = rows.filter((r) => sectionAssignment[r.row] === 'review').map(rowInfo);
+  const readyFromFlagged = rows.filter((r) => sectionAssignment[r.row] === 'ready').length;
 
-  // ── Derived totals ────────────────────────────────────────────────────────
-  // Rows with no errors and no review concerns — the "Ready to book" count.
-  const readyCount = validBaseCount + validFromFlagged;
+  // ── Derived totals (from the snapshot — recalculated on Revalidate/delete) ──
+  const readyCount = validBaseCount + readyFromFlagged;
   // Everything bookable (ready + needs-review): the full batch you continue with.
   const totalValidCount = readyCount + reviewList.length;
   const shippingFee = 1200; // mock flat
   const totalItemProtectionFee = parseFloat(
-    classified.filter((c) => c.blocking.length === 0)
+    [...fixList, ...reviewList].filter((c) => c.blocking.length === 0)
       .reduce((sum, c) => sum + computeItemProtectionFee(c.edits), 0).toFixed(2),
   );
   const totalFees = shippingFee + totalItemProtectionFee;
@@ -727,12 +760,20 @@ export function BulkUploadSummary() {
     });
   };
 
-  /** Full batch revalidation, including cross-row duplicate Reference IDs. */
+  /**
+   * Full batch revalidation. This is the ONLY action that reorganizes rows into
+   * sections: it re-checks every row (incl. cross-row duplicate Reference IDs),
+   * recomputes the snapshot section assignment, and the summary counts follow.
+   */
   const handleRevalidate = () => {
     const nextValidation: Record<number, RowValidationState> = {};
     rows.forEach((r) => { nextValidation[r.row] = validateRowState(r, edits[r.row] ?? rowToEdits(r)); });
+    const nextDup = computeDupRows(rows, edits);
+    const nextSection: Record<number, SectionKey> = {};
+    rows.forEach((r) => { nextSection[r.row] = sectionFor(nextValidation[r.row], nextDup.has(r.row)); });
     setValidation(nextValidation);
-    setDupRows(computeDupRows(rows, edits));
+    setDupRows(nextDup);
+    setSectionAssignment(nextSection);
   };
 
   /** Payment-state CTA — completes payment for an already-processed batch. */
@@ -747,27 +788,31 @@ export function BulkUploadSummary() {
     if (!removed) return;
     const removedEdits = edits[rowNum] ?? rowToEdits(removed);
     const removedValidation = validation[rowNum] ?? validateRowState(removed, removedEdits);
+    const removedSection = sectionAssignment[rowNum] ?? 'fix';
 
     const nextRows = rows.filter((r) => r.row !== rowNum);
     const nextEdits = { ...edits }; delete nextEdits[rowNum];
     setRows(nextRows);
     setEdits(nextEdits);
     setValidation((prev) => { const n = { ...prev }; delete n[rowNum]; return n; });
-    // Removing a row can resolve a duplicate for its partner — recompute.
+    setSectionAssignment((prev) => { const n = { ...prev }; delete n[rowNum]; return n; });
+    // Removing a row can resolve a duplicate for its partner — recompute the live
+    // message set. Other rows keep their section snapshot until Revalidate.
     setDupRows(computeDupRows(nextRows, nextEdits));
 
-    setUndoState({ row: removed, edits: removedEdits, validation: removedValidation });
+    setUndoState({ row: removed, edits: removedEdits, validation: removedValidation, section: removedSection });
     showToast(`Row ${rowNum} removed from this batch.`);
   };
 
   const handleUndo = () => {
     if (!undoState) return;
-    const { row, edits: re, validation: rv } = undoState;
+    const { row, edits: re, validation: rv, section } = undoState;
     const nextRows = [...rows, row].sort((a, b) => a.row - b.row);
     const nextEdits = { ...edits, [row.row]: re };
     setRows(nextRows);
     setEdits(nextEdits);
     setValidation((prev) => ({ ...prev, [row.row]: rv }));
+    setSectionAssignment((prev) => ({ ...prev, [row.row]: section }));
     setDupRows(computeDupRows(nextRows, nextEdits));
     setUndoState(null);
     setToast(null);
@@ -1012,7 +1057,7 @@ export function BulkUploadSummary() {
                       row={c.data}
                       edits={c.edits}
                       variant="review"
-                      errors={[]}
+                      errors={c.blocking}
                       concerns={c.concerns}
                       onEdit={(f, v) => updateEdit(c.data.row, f, v)}
                       onLocation={(p, ci, b) => updateLocation(c.data.row, p, ci, b)}

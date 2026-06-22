@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   IconArrowLeft, IconCircleCheck, IconFileSpreadsheet, IconClock, IconExternalLink,
-  IconPackages, IconReceipt2, IconHourglassHigh,
+  IconPackages, IconReceipt2,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -14,8 +14,9 @@ import { BULK_FIELD_LABELS as L } from '../data/bulkTemplate';
  * Read-only detail page for a COMPLETED bulk upload. Reached from Recent Uploads
  * when a batch has status `completed`. It deliberately contains NO editable grid,
  * review/error sections, or "Revalidate changes" — those belong to the pre-booking
- * review page. Created transactions are presented as "Awaiting payment" (a
- * successful upload is never shown as paid).
+ * review page. A batch only reaches `completed` once it has no remaining review,
+ * error, booking, or payment action — so its transactions are shown as booked &
+ * paid (never "Awaiting payment", which routes to the Review and pay state).
  */
 
 const SOURCE_LABEL: Record<'file' | 'spreadsheet', string> = {
@@ -140,7 +141,7 @@ export function BulkUploadCompleted() {
           <div className="grid sm:grid-cols-3 gap-4">
             <StatCard icon={<IconPackages className="w-5 h-5" />} label="Total rows processed" value={record.totalRows} />
             <StatCard icon={<IconReceipt2 className="w-5 h-5" />} label="Created transactions" value={createdCount} />
-            <StatCard icon={<IconHourglassHigh className="w-5 h-5" />} label="Awaiting payment" value={createdCount} />
+            <StatCard icon={<IconCircleCheck className="w-5 h-5" />} label="Booked & paid" value={createdCount} />
           </div>
 
           {/* Read-only transaction list */}
@@ -150,7 +151,7 @@ export function BulkUploadCompleted() {
                 <div>
                   <p className="text-base font-semibold text-gray-900">Created transactions</p>
                   <p className="text-sm text-gray-500">
-                    These orders were created from this upload and are awaiting payment.
+                    These orders were created from this upload and have been paid — no further action is needed.
                   </p>
                 </div>
                 <a
@@ -182,7 +183,7 @@ export function BulkUploadCompleted() {
                         <TableCell className="text-gray-900">{row.recipient}</TableCell>
                         <TableCell className="text-gray-600">{row.itemName}</TableCell>
                         <TableCell className="text-right text-gray-900">{peso(row.amount)}</TableCell>
-                        <TableCell><Badge variant="pending">Awaiting payment</Badge></TableCell>
+                        <TableCell><Badge variant="success">Booked</Badge></TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
