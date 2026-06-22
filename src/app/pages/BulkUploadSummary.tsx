@@ -14,7 +14,7 @@ import { Dialog } from '../components/ui/Dialog';
 import { PaymentMethodTabs, type SelectedPaymentMethod } from '../components/PaymentMethodTabs';
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
 import { isBillingAccount } from '../services/paymentService';
-import { getBulkUploadById, getSpreadsheetBatchRows, type SpreadsheetBatchRow } from '../services/bulkUploadService';
+import { getBulkUploadById, getSpreadsheetBatchRows, updateUploadStatus, type SpreadsheetBatchRow } from '../services/bulkUploadService';
 import { RECEPTACLE_SIZES, BULK_FIELD_LABELS as L } from '../data/bulkTemplate';
 import {
   COD_MAX, isPosNum, isCustomParcelSize, customParcelDimErrors, addressAdvisory,
@@ -168,7 +168,7 @@ const INITIAL_REVIEW_ROWS: ReviewRowData[] = [
     recipientName: 'Mateo Cruz', mobileNumber: '+639170002233', streetAddress: '88 Sampaguita St.',
     province: 'Metro Manila', cityMunicipality: 'Quezon City', barangay: 'Tandang Sora', landmarks: '',
     itemName: 'Gift Hamper', pouchSize: 'CUSTOM', lengthCm: '30', widthCm: '', heightCm: '', weightKg: '',
-    cod: 'No', codAmount: '', declaredValue: '2000', insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-009',
+    cod: 'No', codAmount: '', declaredValue: '2000', insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-005',
   },
   {
     row: 5,
@@ -356,24 +356,33 @@ function paymentCopy(method: SelectedPaymentMethod | null, billingAvailable: boo
 // identical. `variant` only changes the issue column and the row accent.
 // ---------------------------------------------------------------------------
 
+/** A non-blocking review concern: full message + short label for secondary text. */
+interface ReviewConcern { message: string; label: string; }
+
 interface ReviewRowProps {
   row: ReviewRowData;
   edits: RowEdits;
   variant: 'fix' | 'review';
-  messages: string[];
+  /** Blocking errors (fix variant only). */
+  errors: string[];
+  /** Non-blocking concerns — primary text in review rows, secondary in fix rows. */
+  concerns: ReviewConcern[];
   onEdit: (field: EditableField, value: string) => void;
   onLocation: (province: string, city: string, barangay: string) => void;
-  onCommit: () => void;
+  onCommit: (override?: RowEdits) => void;
   onDelete: () => void;
 }
 
-function ReviewRow({ row, edits, variant, messages, onEdit, onLocation, onCommit, onDelete }: ReviewRowProps) {
+function ReviewRow({ row, edits, variant, errors, concerns, onEdit, onLocation, onCommit, onDelete }: ReviewRowProps) {
   const fe = (f: EditableField) => fieldHasError(f, row, edits);
   const isCustom = isCustomParcelSize(edits.pouchSize);
   const dimsDisabled = !isCustom;
   const protectionFee = computeItemProtectionFee(edits);
   const addrSuspicious = variant === 'review' && !!addressAdvisory(edits.streetAddress);
-  const commitEdit = (f: EditableField, v: string) => { onEdit(f, v); onCommit(); };
+  // Discrete controls (size, Yes/No, location) commit immediately with the new
+  // value so validation re-runs at once — e.g. switching off Custom clears the
+  // dimension error without waiting for Revalidate changes.
+  const commitEdit = (f: EditableField, v: string) => { onEdit(f, v); onCommit({ ...edits, [f]: v }); };
 
   const rowTone = variant === 'fix'
     ? 'border-red-100 bg-white hover:bg-red-50/20'
@@ -383,27 +392,32 @@ function ReviewRow({ row, edits, variant, messages, onEdit, onLocation, onCommit
     <tr className={`border-b ${rowTone} align-top`}>
       <td className="px-3 py-2.5"><span className="text-sm font-medium text-gray-900">{row.row}</span></td>
 
-      {/* Issue column */}
+      {/* Issue column — blocking errors are primary; review concerns are secondary
+          on fix rows, and primary (no badge) on review rows. */}
       <td className="px-3 py-2.5">
         {variant === 'fix' ? (
+          <div className="space-y-1.5">
+            <ul className="space-y-0.5">
+              {errors.map((m, i) => (
+                <li key={i} className="text-xs text-red-600 flex items-start gap-1">
+                  <span className="mt-0.5 shrink-0">•</span>{m}
+                </li>
+              ))}
+            </ul>
+            {concerns.length > 0 && (
+              <p className="text-xs text-amber-600">
+                Also review after fixing: {concerns.map((c) => c.label).join(', ')}
+              </p>
+            )}
+          </div>
+        ) : (
           <ul className="space-y-0.5">
-            {messages.map((m, i) => (
-              <li key={i} className="text-xs text-red-600 flex items-start gap-1">
-                <span className="mt-0.5 shrink-0">•</span>{m}
+            {concerns.map((c, i) => (
+              <li key={i} className="text-xs text-amber-700 flex items-start gap-1">
+                <span className="mt-0.5 shrink-0">•</span>{c.message}
               </li>
             ))}
           </ul>
-        ) : (
-          <div className="space-y-1">
-            {messages.map((m, i) => (
-              <div key={i} className="flex items-start gap-1.5">
-                <span className="inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-medium px-2 py-0.5 flex-shrink-0">
-                  Review
-                </span>
-                <span className="text-xs text-gray-600">{m}</span>
-              </div>
-            ))}
-          </div>
         )}
       </td>
 
@@ -425,7 +439,7 @@ function ReviewRow({ row, edits, variant, messages, onEdit, onLocation, onCommit
         province={edits.province}
         city={edits.cityMunicipality}
         barangay={edits.barangay}
-        onChange={(p, c, b) => { onLocation(p, c, b); onCommit(); }}
+        onChange={(p, c, b) => { onLocation(p, c, b); onCommit({ ...edits, province: p, cityMunicipality: c, barangay: b }); }}
       />
 
       <td className="px-3 py-2.5">
@@ -575,6 +589,9 @@ export function BulkUploadSummary() {
 
   const [batchDate, setBatchDate] = useState('2026-05-19 10:30 AM');
   const [isSpreadsheet, setIsSpreadsheet] = useState(false);
+  // Payment state: a successfully-processed batch that still needs payment opens
+  // this same page as "Review and pay" — no fixes/needs-review, just pay.
+  const [paymentMode, setPaymentMode] = useState(false);
   const [validBaseCount, setValidBaseCount] = useState(TOTAL_VALID_INITIAL);
   const [spreadsheetRows, setSpreadsheetRows] = useState<SpreadsheetBatchRow[]>([]);
   useEffect(() => {
@@ -583,6 +600,10 @@ export function BulkUploadSummary() {
       .then((record) => {
         if (!active || !record) return;
         setBatchDate(record.uploadedAt);
+        if (record.status === 'awaiting-payment') {
+          setPaymentMode(true);
+          setValidBaseCount(record.validRows);
+        }
         if (record.source === 'spreadsheet') {
           setIsSpreadsheet(true);
           setValidBaseCount(record.validRows);
@@ -611,10 +632,11 @@ export function BulkUploadSummary() {
     return computeDupRows(INITIAL_REVIEW_ROWS, initEdits);
   });
 
-  // Spreadsheet batches arrive pre-validated (no review rows to correct).
+  // Spreadsheet batches arrive pre-validated, and already-processed (payment)
+  // batches have nothing to correct — neither shows the review grids.
   useEffect(() => {
-    if (isSpreadsheet) { setRows([]); setDupRows(new Set()); }
-  }, [isSpreadsheet]);
+    if (isSpreadsheet || paymentMode) { setRows([]); setDupRows(new Set()); }
+  }, [isSpreadsheet, paymentMode]);
 
   // Undo support for row deletion.
   const [undoState, setUndoState] = useState<{ row: ReviewRowData; edits: RowEdits; validation: RowValidationState } | null>(null);
@@ -641,14 +663,22 @@ export function BulkUploadSummary() {
   const classified = rows.map((r) => {
     const e = edits[r.row] ?? rowToEdits(r);
     const v = validation[r.row] ?? validateRowState(r, e);
-    const notes: string[] = [];
-    if (dupRows.has(r.row)) notes.push(DUPLICATE_REF_MESSAGE);
-    if (v.addressNote) notes.push(v.addressNote);
-    return { data: r, edits: e, blocking: v.blocking, notes };
+    const concerns: ReviewConcern[] = [];
+    if (dupRows.has(r.row)) concerns.push({ message: DUPLICATE_REF_MESSAGE, label: 'Duplicate Reference ID' });
+    if (v.addressNote) {
+      concerns.push({
+        message: v.addressNote,
+        label: v.addressNote.toLowerCase().includes('incomplete') ? 'Incomplete street address' : 'Unusual street address',
+      });
+    }
+    return { data: r, edits: e, blocking: v.blocking, concerns };
   });
+  // Single-section priority: a row with any blocking error stays only in fixes
+  // (its review concerns become secondary text); otherwise concerns → needs review;
+  // otherwise the row is ready to book.
   const fixList = classified.filter((c) => c.blocking.length > 0);
-  const reviewList = classified.filter((c) => c.blocking.length === 0 && c.notes.length > 0);
-  const validFromFlagged = classified.filter((c) => c.blocking.length === 0 && c.notes.length === 0).length;
+  const reviewList = classified.filter((c) => c.blocking.length === 0 && c.concerns.length > 0);
+  const validFromFlagged = classified.filter((c) => c.blocking.length === 0 && c.concerns.length === 0).length;
 
   // ── Derived totals ────────────────────────────────────────────────────────
   const totalValidCount = validBaseCount + reviewList.length + validFromFlagged;
@@ -678,12 +708,18 @@ export function BulkUploadSummary() {
       [rowNum]: { ...prev[rowNum], province, cityMunicipality: city, barangay },
     }));
 
-  /** Local per-row revalidation (on blur / control change) — no cross-row work. */
-  const commitRow = (rowNum: number) => {
+  /**
+   * Local per-row revalidation (on blur / control change) — no cross-row work.
+   * `override` carries the just-changed edits so discrete controls (parcel size,
+   * Yes/No, location) revalidate against the new value immediately, instead of the
+   * stale state snapshot. Cross-row checks (duplicate Reference ID) are untouched
+   * here, so fixing the dimension error keeps any duplicate/address concern active.
+   */
+  const commitRow = (rowNum: number, override?: RowEdits) => {
     setValidation((prev) => {
       const row = rows.find((r) => r.row === rowNum);
       if (!row) return prev;
-      const e = { ...(edits[rowNum] ?? rowToEdits(row)) };
+      const e = override ?? edits[rowNum] ?? rowToEdits(row);
       return { ...prev, [rowNum]: validateRowState(row, e) };
     });
   };
@@ -694,6 +730,13 @@ export function BulkUploadSummary() {
     rows.forEach((r) => { nextValidation[r.row] = validateRowState(r, edits[r.row] ?? rowToEdits(r)); });
     setValidation(nextValidation);
     setDupRows(computeDupRows(rows, edits));
+  };
+
+  /** Payment-state CTA — completes payment for an already-processed batch. */
+  const handleContinueToPayment = () => {
+    // Best-effort: mark the batch paid (session records only; seed rows are a no-op).
+    if (id) updateUploadStatus(id, 'completed');
+    setShowSuccess(true);
   };
 
   const handleDelete = (rowNum: number) => {
@@ -741,13 +784,22 @@ export function BulkUploadSummary() {
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Review before booking</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{paymentMode ? 'Review and pay' : 'Review before booking'}</h1>
         <p className="text-sm text-gray-500 mt-1">
           Date uploaded: <span className="text-gray-700 font-medium">{batchDate}</span>
           &nbsp;·&nbsp;
           Batch ID: <span className="text-gray-700 font-medium">{id ?? 'UPLOAD-2026-05-19-001'}</span>
         </p>
-        {(fixList.length > 0 || reviewList.length > 0) && (
+        {paymentMode ? (
+          <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+            <p className="text-sm font-semibold text-blue-900">
+              {totalValidCount} {totalValidCount === 1 ? 'booking' : 'bookings'} awaiting payment
+            </p>
+            <p className="text-xs text-blue-800 mt-0.5">
+              Your upload was processed successfully. Review the delivery and payment details, then complete payment for this batch.
+            </p>
+          </div>
+        ) : (fixList.length > 0 || reviewList.length > 0) && (
           <div className="flex flex-wrap items-center gap-2 mt-3">
             {fixList.length > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-semibold px-2.5 py-1">
@@ -756,7 +808,7 @@ export function BulkUploadSummary() {
               </span>
             )}
             {reviewList.length > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold px-2.5 py-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-medium px-2.5 py-1">
                 <IconAlertTriangle className="w-3.5 h-3.5" />
                 {reviewList.length} {reviewList.length === 1 ? 'row needs' : 'rows need'} review
               </span>
@@ -766,7 +818,7 @@ export function BulkUploadSummary() {
       </div>
 
       {/* ── 1. Rows needing fixes (blocking) ── */}
-      {fixList.length > 0 && (
+      {!paymentMode && fixList.length > 0 && (
         <Card className="border-red-200">
           <CardContent className="p-6 space-y-4">
             <div className="flex items-start justify-between gap-4">
@@ -795,10 +847,11 @@ export function BulkUploadSummary() {
                       row={c.data}
                       edits={c.edits}
                       variant="fix"
-                      messages={c.blocking}
+                      errors={c.blocking}
+                      concerns={c.concerns}
                       onEdit={(f, v) => updateEdit(c.data.row, f, v)}
                       onLocation={(p, ci, b) => updateLocation(c.data.row, p, ci, b)}
-                      onCommit={() => commitRow(c.data.row)}
+                      onCommit={(override) => commitRow(c.data.row, override)}
                       onDelete={() => handleDelete(c.data.row)}
                     />
                   ))}
@@ -810,7 +863,7 @@ export function BulkUploadSummary() {
       )}
 
       {/* ── 2. Needs review (non-blocking) ── */}
-      {reviewList.length > 0 && (
+      {!paymentMode && reviewList.length > 0 && (
         <Card className="border-amber-200">
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-3">
@@ -833,10 +886,11 @@ export function BulkUploadSummary() {
                       row={c.data}
                       edits={c.edits}
                       variant="review"
-                      messages={c.notes}
+                      errors={[]}
+                      concerns={c.concerns}
                       onEdit={(f, v) => updateEdit(c.data.row, f, v)}
                       onLocation={(p, ci, b) => updateLocation(c.data.row, p, ci, b)}
-                      onCommit={() => commitRow(c.data.row)}
+                      onCommit={(override) => commitRow(c.data.row, override)}
                       onDelete={() => handleDelete(c.data.row)}
                     />
                   ))}
@@ -848,7 +902,7 @@ export function BulkUploadSummary() {
       )}
 
       {/* ── 3. Revalidation banner + CTA ── */}
-      {(fixList.length > 0 || reviewList.length > 0) && (
+      {!paymentMode && (fixList.length > 0 || reviewList.length > 0) && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
           <div className="flex items-start gap-2.5">
             <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -879,9 +933,17 @@ export function BulkUploadSummary() {
               </div>
               <div>
                 <p className="text-base font-semibold text-gray-900">
-                  {totalValidCount} {totalValidCount === 1 ? 'order' : 'orders'} ready to book
+                  {paymentMode
+                    ? 'Bookings in this batch'
+                    : `${totalValidCount} ${totalValidCount === 1 ? 'order' : 'orders'} ready to book`}
                 </p>
-                <p className="text-sm text-gray-500">Orders are created as <span className="font-medium text-gray-700">Awaiting payment</span>.</p>
+                <p className="text-sm text-gray-500">
+                  {paymentMode ? (
+                    <>{totalValidCount} {totalValidCount === 1 ? 'booking' : 'bookings'} ready for payment.</>
+                  ) : (
+                    <>Orders are created as <span className="font-medium text-gray-700">Awaiting payment</span>.</>
+                  )}
+                </p>
               </div>
             </div>
             <a
@@ -980,7 +1042,7 @@ export function BulkUploadSummary() {
 
       {/* ── Bottom booking section ── */}
       <div className="border-t border-gray-200 pt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Confirm Booking Details</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">{paymentMode ? 'Delivery & Payment Details' : 'Confirm Booking Details'}</h2>
         <div className="grid md:grid-cols-3 gap-6">
 
           {/* Col 1 — Pickup / drop-off */}
@@ -1067,10 +1129,10 @@ export function BulkUploadSummary() {
               </div>
               <p className="text-xs text-gray-500">{paymentCopy(selectedPayment, billingAvailable)}</p>
             </div>
-            <Button className="w-full" disabled={!canBook} onClick={() => setShowSuccess(true)}>
-              Complete Booking
+            <Button className="w-full" disabled={!canBook} onClick={paymentMode ? handleContinueToPayment : () => setShowSuccess(true)}>
+              {paymentMode ? 'Continue to payment' : 'Complete Booking'}
             </Button>
-            {fixList.length > 0 ? (
+            {!paymentMode && fixList.length > 0 ? (
               <p className="text-xs text-red-600 flex items-center gap-1">
                 <IconAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                 Resolve the {fixList.length} {fixList.length === 1 ? 'row' : 'rows'} needing fixes before booking.
@@ -1115,22 +1177,29 @@ export function BulkUploadSummary() {
       {/* ── Booking success dialog ── */}
       <Dialog open={showSuccess} onClose={() => {}} size="sm">
         <div className="text-center space-y-4 py-2">
-          <h3 className="text-base font-bold text-gray-900 uppercase tracking-wide">Your Booking is Complete</h3>
+          <h3 className="text-base font-bold text-gray-900 uppercase tracking-wide">{paymentMode ? 'Payment Complete' : 'Your Booking is Complete'}</h3>
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
             <IconCircleCheck className="w-9 h-9 text-green-600" />
           </div>
           <div>
             <p className="text-base font-semibold text-gray-900">
-              {totalValidCount} {totalValidCount === 1 ? 'order' : 'orders'} scheduled for {firstMile === 'pickup' ? 'pick-up' : 'drop-off'}
+              {paymentMode
+                ? `Payment received for ${totalValidCount} ${totalValidCount === 1 ? 'booking' : 'bookings'}`
+                : `${totalValidCount} ${totalValidCount === 1 ? 'order' : 'orders'} scheduled for ${firstMile === 'pickup' ? 'pick-up' : 'drop-off'}`}
             </p>
-            {firstMile === 'pickup' && pickupDate && (
+            {!paymentMode && firstMile === 'pickup' && pickupDate && (
               <p className="text-sm text-gray-600 mt-1">
                 Est. Pick-up Date: <span className="font-medium">{formattedPickup}</span>
               </p>
             )}
             <p className="text-sm text-gray-600 mt-0.5">
-              Created as <span className="font-medium text-gray-900">Awaiting payment</span> — {paymentCopy(selectedPayment, billingAvailable)}:&nbsp;
-              <span className="font-semibold text-gray-900">{peso(totalFees)}</span>
+              {paymentMode ? (
+                <>Payment for this batch — {paymentCopy(selectedPayment, billingAvailable)}:&nbsp;
+                  <span className="font-semibold text-gray-900">{peso(totalFees)}</span></>
+              ) : (
+                <>Created as <span className="font-medium text-gray-900">Awaiting payment</span> — {paymentCopy(selectedPayment, billingAvailable)}:&nbsp;
+                  <span className="font-semibold text-gray-900">{peso(totalFees)}</span></>
+              )}
             </p>
           </div>
           <div className="space-y-2.5 pt-1">
