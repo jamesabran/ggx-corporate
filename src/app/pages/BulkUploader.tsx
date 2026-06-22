@@ -12,11 +12,10 @@ import { Input } from '../components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import { Dialog } from '../components/ui/Dialog';
 import { AddressBook, type Address } from '../components/AddressBook';
-import { PaymentMethodTabs } from '../components/PaymentMethodTabs';
+import { PaymentPreferenceCard } from '../components/PaymentPreferenceCard';
 import { BulkColumnMapper } from '../components/BulkColumnMapper';
 import { downloadBulkTemplate, BULK_TEMPLATE_COLUMNS } from '../data/bulkTemplate';
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
-import { isBillingAccount } from '../services/paymentService';
 // Bulk upload reads/writes go through the bulkUploadService facade (not the
 // data module directly). The recent-uploads list (session records merged with
 // the seed) is owned by the service. In production this is fronted by the GGX
@@ -75,17 +74,6 @@ export function BulkUploader() {
   // A Manager always uploads under their assigned subaccount; an Admin uploads
   // under the active account/subaccount context.
   const activeAccountName = isManager ? user!.accountName : getCurrentAccountName();
-
-  // Billing eligibility resolved via the service (Contract Manager-owned in the
-  // end state). Defaults to true (the helper's billing fallback) until resolved.
-  const [billingAvailable, setBillingAvailable] = useState(true);
-  useEffect(() => {
-    let active = true;
-    isBillingAccount(activeAccountName)
-      .then((b) => { if (active) setBillingAvailable(b); })
-      .catch(() => { if (active) setBillingAvailable(true); });
-    return () => { active = false; };
-  }, [activeAccountName]);
 
   // Account scope captured on the upload record/notification (parent vs subaccount).
   // accountId is the canonical stable id; accountName is display only.
@@ -419,15 +407,7 @@ export function BulkUploader() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment</CardTitle>
-              <CardDescription>Choose how to pay for GoGo Xpress fees</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PaymentMethodTabs key={activeAccountName} billingAvailable={billingAvailable} />
-            </CardContent>
-          </Card>
+          <PaymentPreferenceCard />
         </div>
 
         {/* Right column — upload */}
