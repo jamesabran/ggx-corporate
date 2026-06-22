@@ -23,14 +23,14 @@ const GGX_FIELDS = [
   { key: 'landmarks',         label: L.landmarks,         required: false },
   { key: 'itemName',          label: L.itemName,          required: true  },
   { key: 'pouchSize',         label: L.pouchSize,         required: true  },
-  // Dimweight fields are required ONLY when the file contains Custom-size rows
-  // (resolved dynamically from the data — see `customInData` / `isFieldRequired`).
-  // For standard-size-only files they stay optional so mapping isn't blocked when
-  // an externally supplied file omits the dimension columns.
-  { key: 'lengthCm',          label: L.lengthCm,          required: false },
-  { key: 'widthCm',           label: L.widthCm,           required: false },
-  { key: 'heightCm',          label: L.heightCm,          required: false },
-  { key: 'weightKg',          label: L.weightKg,          required: false },
+  // Dimweight fields are required mappings: the GGX template always carries these
+  // four columns, so a user uploading the template must be able to map every one
+  // and complete the flow. (Dimensions only affect pricing for Custom rows, but
+  // the columns themselves are always present and therefore always mapped.)
+  { key: 'lengthCm',          label: L.lengthCm,          required: true  },
+  { key: 'widthCm',           label: L.widthCm,           required: true  },
+  { key: 'heightCm',          label: L.heightCm,          required: true  },
+  { key: 'weightKg',          label: L.weightKg,          required: true  },
   { key: 'codAmount',         label: L.codAmount,         required: true  },
   { key: 'cod',               label: L.cod,               required: true  },
   { key: 'declaredValue',     label: L.declaredValue,     required: true  },
@@ -41,9 +41,6 @@ const GGX_FIELDS = [
 ] as const;
 
 type FieldKey = (typeof GGX_FIELDS)[number]['key'];
-
-// Dimweight fields — required only when the uploaded file has Custom-size rows.
-const DIM_KEYS = new Set<FieldKey>(['lengthCm', 'widthCm', 'heightCm', 'weightKg']);
 
 export interface BulkColumnMapperProps {
   fileName: string;
@@ -179,27 +176,11 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
     onConfirm(mapping as Record<FieldKey, string>);
   };
 
-  // Does the uploaded data contain any Custom-size row? Read the values under the
-  // currently-mapped Pouch/box size column. Until that column is mapped we can't
-  // tell, so we treat dimensions as optional (don't block standard-size files).
-  const customInData = useMemo(() => {
-    const sizeHeader = mapping['pouchSize'];
-    if (!sizeHeader) return false;
-    const idx = fileHeaders.indexOf(sizeHeader);
-    if (idx < 0) return false;
-    return sampleData.some((r) => (r[idx] ?? '').trim().toUpperCase() === 'CUSTOM');
-  }, [mapping, fileHeaders, sampleData]);
-
-  // Effective requirement: dimweight fields are required only when Custom rows
-  // are present; every other field uses its static `required` flag.
-  const isFieldRequired = (field: (typeof GGX_FIELDS)[number]) =>
-    DIM_KEYS.has(field.key) ? customInData : field.required;
-
   const requiredMapped = GGX_FIELDS
-    .filter(isFieldRequired)
+    .filter((f) => f.required)
     .every((f) => !!mapping[f.key]);
 
-  const requiredRemaining = GGX_FIELDS.filter((f) => isFieldRequired(f) && !mapping[f.key]).length;
+  const requiredRemaining = GGX_FIELDS.filter((f) => f.required && !mapping[f.key]).length;
   const autoMatchedCount = GGX_FIELDS.filter((f) => autoMatchedKeys.has(f.key) && mapping[f.key]).length;
 
   // Headers currently selected by any field — used to mark dropdown options as
@@ -330,10 +311,8 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
                       : '–';
                   });
 
-                  const required = isFieldRequired(field);
-                  const requiredUnmapped = required && !selectedHeader;
-                  const optionalUnmapped = !required && !selectedHeader;
-                  const isDimField = DIM_KEYS.has(field.key);
+                  const requiredUnmapped = field.required && !selectedHeader;
+                  const optionalUnmapped = !field.required && !selectedHeader;
                   const rowTone = requiredUnmapped
                     ? 'bg-red-50/40 hover:bg-red-50/60'
                     : optionalUnmapped
@@ -347,11 +326,6 @@ export function BulkColumnMapper({ fileName, fileHeaders, sampleData, onConfirm,
                     >
                       <td className="px-4 py-2.5">
                         <span className="text-sm font-medium text-gray-900">{field.label}</span>
-                        {isDimField && (
-                          <span className="block text-xs text-gray-400 leading-tight">
-                            {customInData ? 'Required for Custom rows' : 'Custom rows only'}
-                          </span>
-                        )}
                       </td>
                       <td className="px-4 py-2.5">
                         <Select

@@ -224,14 +224,9 @@ export function validateRow(
   // Custom parcel size: all four dimension/weight fields are required and must be
   // strictly positive numbers — the row is not confirmable until all four pass.
   // For any other size the fields are ignored entirely (disabled in the grid UI,
-  // excluded from pricing, not validated here).
-  if (row.parcelSize.trim().toUpperCase() === 'CUSTOM') {
-    const isPosNum = (s: string) => { const n = Number(s.trim()); return s.trim() !== '' && !Number.isNaN(n) && n > 0; };
-    if (!isPosNum(row.lengthCm)) errors.lengthCm = row.lengthCm.trim() ? 'Must be a positive number (cm)' : 'Required for Custom size';
-    if (!isPosNum(row.widthCm))  errors.widthCm  = row.widthCm.trim()  ? 'Must be a positive number (cm)' : 'Required for Custom size';
-    if (!isPosNum(row.heightCm)) errors.heightCm = row.heightCm.trim() ? 'Must be a positive number (cm)' : 'Required for Custom size';
-    if (!isPosNum(row.weightKg)) errors.weightKg = row.weightKg.trim() ? 'Must be a positive number (kg)' : 'Required for Custom size';
-  }
+  // excluded from pricing, not validated here). Rule is shared with the upload
+  // review page via `customParcelDimErrors`.
+  Object.assign(errors, customParcelDimErrors(row.parcelSize, row));
 
   // COD: when collecting, a valid collectible amount (≤ template cap) is required.
   const codAmount = row.codAmount.trim();
@@ -266,6 +261,104 @@ export function validateRow(
   }
 
   return { rowId: row.id, errors, isValid: Object.keys(errors).length === 0, isEmpty: false };
+}
+
+// ---------------------------------------------------------------------------
+// Shared rule helpers — the single source of truth for the dimweight, parcel
+// size, and non-blocking "needs review" rules. Consumed by the in-app grid and
+// the upload review page so both intake surfaces classify rows identically.
+// ---------------------------------------------------------------------------
+
+/** Strictly-positive numeric string check (shared dimweight rule). */
+export function isPosNum(s: string): boolean {
+  const n = Number(s.trim());
+  return s.trim() !== '' && !Number.isNaN(n) && n > 0;
+}
+
+/** The four dimweight field keys, in canonical order. */
+export const DIM_FIELDS = ['lengthCm', 'widthCm', 'heightCm', 'weightKg'] as const;
+export type DimField = (typeof DIM_FIELDS)[number];
+
+/** Blocking message shown once for a Custom row missing any dimension. */
+export const CUSTOM_DIM_REQUIRED_MESSAGE = 'Custom parcel requires length, width, height, and weight.';
+
+/** True for a standard (fixed-rate, non-Custom) receptacle size. */
+export function isStandardParcelSize(size: string): boolean {
+  const s = size.trim().toUpperCase();
+  return (RECEPTACLE_SIZES as readonly string[]).includes(s) && s !== 'CUSTOM';
+}
+
+export function isCustomParcelSize(size: string): boolean {
+  return size.trim().toUpperCase() === 'CUSTOM';
+}
+
+export interface DimValues {
+  lengthCm: string;
+  widthCm: string;
+  heightCm: string;
+  weightKg: string;
+}
+
+/**
+ * Custom-parcel dimension/weight validation (shared). Returns a per-field
+ * blocking message map. Empty when the size is not Custom (dimensions are
+ * ignored for standard sizes) or when all four values are valid positives.
+ */
+export function customParcelDimErrors(
+  parcelSize: string,
+  dims: DimValues,
+): Partial<Record<DimField, string>> {
+  const out: Partial<Record<DimField, string>> = {};
+  if (!isCustomParcelSize(parcelSize)) return out;
+  if (!isPosNum(dims.lengthCm)) out.lengthCm = dims.lengthCm.trim() ? 'Must be a positive number (cm)' : 'Required for Custom size';
+  if (!isPosNum(dims.widthCm))  out.widthCm  = dims.widthCm.trim()  ? 'Must be a positive number (cm)' : 'Required for Custom size';
+  if (!isPosNum(dims.heightCm)) out.heightCm = dims.heightCm.trim() ? 'Must be a positive number (cm)' : 'Required for Custom size';
+  if (!isPosNum(dims.weightKg)) out.weightKg = dims.weightKg.trim() ? 'Must be a positive number (kg)' : 'Required for Custom size';
+  return out;
+}
+
+/**
+ * Non-blocking address advisory for the "Needs review" group. A BLANK address is
+ * a blocking required-field error handled elsewhere — this only flags a PRESENT
+ * address that looks incomplete or unusual, so the user can confirm before
+ * booking without being blocked.
+ */
+export function addressAdvisory(address: string): string | null {
+  const a = address.trim();
+  if (!a) return null; // blank is a blocking error, not a review note
+  if (a.length < 6 || !/\d/.test(a)) {
+    return 'Street address may be incomplete. Please review before booking.';
+  }
+  if (/(.)\1{4,}/.test(a) || /https?:|@|#{2,}/.test(a)) {
+    return 'Street address looks unusual. Please check the entered address.';
+  }
+  return null;
+}
+
+/** Non-blocking duplicate Reference ID copy (shown in Needs review). */
+export const DUPLICATE_REF_MESSAGE = 'Possible duplicate Reference ID. Please confirm this is intentional.';
+
+/**
+ * Cross-row duplicate Reference ID detection. Returns the set of row keys that
+ * share a non-empty Reference ID with at least one other row. Generic over the
+ * caller's row key + reference accessor so both surfaces can reuse it.
+ */
+export function duplicateReferenceKeys<T>(
+  rows: T[],
+  keyOf: (row: T) => string | number,
+  refOf: (row: T) => string,
+): Set<string | number> {
+  const byRef = new Map<string, (string | number)[]>();
+  for (const row of rows) {
+    const ref = refOf(row).trim();
+    if (!ref || ref === '–') continue;
+    byRef.set(ref, [...(byRef.get(ref) ?? []), keyOf(row)]);
+  }
+  const dupes = new Set<string | number>();
+  for (const keys of byRef.values()) {
+    if (keys.length > 1) keys.forEach((k) => dupes.add(k));
+  }
+  return dupes;
 }
 
 export interface RowsValidationResult {

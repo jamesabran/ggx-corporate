@@ -87,8 +87,11 @@ export function Transactions() {
   );
   const showStoreOrders = commerceEnabled && activeTab === 'store-orders';
 
-  // View mode: flat list vs. grouped by batch
-  const [viewMode, setViewMode] = useState<'all' | 'batches'>('all');
+  // View mode: flat list vs. grouped by batch. A `?batch=<id>` deep link (used by
+  // the Bulk Upload "View transactions" new-tab links) opens the By Batch view
+  // pre-expanded on that batch.
+  const initialBatch = searchParams.get('batch');
+  const [viewMode, setViewMode] = useState<'all' | 'batches'>(initialBatch ? 'batches' : 'all');
 
   // "All Transactions" filter state
   const [statusFilter, setStatusFilter] = useState('all');
@@ -98,7 +101,7 @@ export function Transactions() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // "By Batch" state
-  const [expandedBatch, setExpandedBatch] = useState<string | null>(null);
+  const [expandedBatch, setExpandedBatch] = useState<string | null>(initialBatch);
 
   // Service-backed data
   const [allDeliveries, setAllDeliveries] = useState<TransactionSummary[]>([]);

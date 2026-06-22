@@ -35,6 +35,7 @@ import { TransactionDetails } from './pages/TransactionDetails';
 import { BulkUploader } from './pages/BulkUploader';
 import { BulkSpreadsheet } from './pages/BulkSpreadsheet';
 import { BulkUploadSummary } from './pages/BulkUploadSummary';
+import { BulkUploadCompleted } from './pages/BulkUploadCompleted';
 // Code-split the recharts-heavy analytics page into its own chunk (keeps the
 // main bundle smaller; resolves the long-standing bundle-size warning).
 const DataAnalytics = lazy(() => import('./pages/DataAnalytics').then((m) => ({ default: m.DataAnalytics })));
@@ -179,6 +180,8 @@ export const router = createBrowserRouter([
       // In-app spreadsheet entry — a focused step within Bulk Booking (no sidebar item).
       { path: 'bulk-uploader/spreadsheet', Component: BulkSpreadsheet },
       { path: 'bulk-uploader/summary/:id', Component: BulkUploadSummary },
+      // Completed batches open a read-only detail page (no editable review grid).
+      { path: 'bulk-uploader/completed/:id', Component: BulkUploadCompleted },
       { path: 'bulk-upload-summary', Component: BulkUploadSummary },
       {
         path: 'analytics',

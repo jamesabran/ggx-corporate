@@ -14,7 +14,7 @@ import { Dialog } from '../components/ui/Dialog';
 import { AddressBook, type Address } from '../components/AddressBook';
 import { PaymentPreferenceCard } from '../components/PaymentPreferenceCard';
 import { BulkColumnMapper } from '../components/BulkColumnMapper';
-import { downloadBulkTemplate, BULK_TEMPLATE_COLUMNS } from '../data/bulkTemplate';
+import { downloadBulkTemplate, downloadBulkTemplateXls, BULK_TEMPLATE_COLUMNS } from '../data/bulkTemplate';
 import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
 // Bulk upload reads/writes go through the bulkUploadService facade (not the
 // data module directly). The recent-uploads list (session records merged with
@@ -39,7 +39,7 @@ const MODE_LABELS: Record<'standard' | 'same-day' | 'on-demand', string> = {
 const STATUS_CONFIG = {
   processing:       { variant: 'info'    as const, label: 'Processing'      },
   'needs-review':   { variant: 'warning' as const, label: 'Needs Review'    },
-  'awaiting-payment': { variant: 'pending' as const, label: 'Awaiting Payment' },
+  'awaiting-payment': { variant: 'pending' as const, label: 'Awaiting payment' },
   completed:        { variant: 'success' as const, label: 'Completed'       },
 };
 
@@ -258,10 +258,16 @@ export function BulkUploader() {
             Book multiple transactions (up to 1,000) in one go. Download the template, fill in your order details, then upload the file or paste a sheet link.
           </p>
         </div>
-        <Button variant="outline" className="flex-shrink-0" onClick={downloadBulkTemplate}>
-          <IconDownload className="w-4 h-4 mr-2" />
-          Download Template
-        </Button>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <Button variant="outline" onClick={downloadBulkTemplate}>
+            <IconDownload className="w-4 h-4 mr-2" />
+            Template (CSV)
+          </Button>
+          <Button variant="outline" onClick={downloadBulkTemplateXls}>
+            <IconDownload className="w-4 h-4 mr-2" />
+            Template (XLS)
+          </Button>
+        </div>
       </div>
 
       {/* Mode toggle */}
@@ -509,7 +515,7 @@ export function BulkUploader() {
                   Text + button read as one centered CTA group. */}
               <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-3">
                 <p className="text-xs text-gray-500">No file ready? Enter your orders manually.</p>
-                <Button className="flex-shrink-0" onClick={() => navigate('/dashboard/bulk-uploader/spreadsheet')}>
+                <Button variant="outline" className="flex-shrink-0" onClick={() => navigate('/dashboard/bulk-uploader/spreadsheet')}>
                   <IconFileSpreadsheet className="w-4 h-4 mr-1.5" />
                   Use our in-app spreadsheet
                 </Button>
@@ -559,7 +565,14 @@ export function BulkUploader() {
                   <TableRow
                     key={upload.id}
                     className={`cursor-pointer hover:bg-gray-50 ${upload.status === 'processing' ? 'opacity-70' : ''}`}
-                    onClick={() => upload.status !== 'processing' && navigate(`/dashboard/bulk-uploader/summary/${upload.id}`)}
+                    onClick={() => {
+                      if (upload.status === 'processing') return;
+                      // Completed batches open the read-only detail page; everything
+                      // else opens the editable pre-booking review page.
+                      navigate(upload.status === 'completed'
+                        ? `/dashboard/bulk-uploader/completed/${upload.id}`
+                        : `/dashboard/bulk-uploader/summary/${upload.id}`);
+                    }}
                   >
                     <TableCell className="font-medium text-blue-600">{upload.id}</TableCell>
                     <TableCell>{upload.fileName}</TableCell>

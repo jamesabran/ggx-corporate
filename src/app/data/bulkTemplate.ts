@@ -83,17 +83,45 @@ function buildCsv(): string {
   return lines.join('\r\n');
 }
 
-/** Generate and download the Bulk Upload template as a CSV file. */
-export function downloadBulkTemplate(): void {
-  const csv = buildCsv();
-  // Prepend BOM so Excel opens UTF-8 correctly.
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'GoGo_Xpress_Bulk_Upload_Template.csv';
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/** Generate and download the Bulk Upload template as a CSV file. */
+export function downloadBulkTemplate(): void {
+  const csv = buildCsv();
+  // Prepend BOM so Excel opens UTF-8 correctly.
+  triggerDownload(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }),
+    'GoGo_Xpress_Bulk_Upload_Template.csv');
+}
+
+function htmlCell(value: string): string {
+  const escaped = value
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<td>${escaped}</td>`;
+}
+
+/**
+ * Generate and download the Bulk Upload template as an Excel-openable .xls file.
+ * No spreadsheet library is bundled (and adding one is out of scope), so this
+ * emits an HTML table that Excel opens natively — a documented .xlsx fallback.
+ * Columns come from the SAME `BULK_TEMPLATE_COLUMNS` source as the CSV, so both
+ * formats always carry the identical fields (including the four dimweight ones).
+ */
+export function downloadBulkTemplateXls(): void {
+  const header = `<tr>${BULK_TEMPLATE_COLUMNS.map((c) => `<th>${c}</th>`).join('')}</tr>`;
+  const body = SAMPLE_ROWS.map((row) => `<tr>${row.map(htmlCell).join('')}</tr>`).join('');
+  const html =
+    `<html xmlns:o="urn:schemas-microsoft-com:office:office" ` +
+    `xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8" />` +
+    `</head><body><table border="1">${header}${body}</table></body></html>`;
+  triggerDownload(new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' }),
+    'GoGo_Xpress_Bulk_Upload_Template.xls');
 }

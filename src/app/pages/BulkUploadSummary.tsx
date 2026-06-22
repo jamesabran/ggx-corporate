@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
 import {
   IconArrowLeft, IconCircleCheck, IconCircleX, IconAlertCircle, IconAlertTriangle,
   IconDownload, IconArrowRight, IconUpload, IconTruckDelivery, IconBuildingStore,
-  IconMapPin, IconRefresh, IconInfoCircle, IconClock, IconPhone, IconTrash,
+  IconMapPin, IconRefresh, IconInfoCircle, IconClock, IconPhone, IconTrash, IconX,
+  IconExternalLink,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -15,37 +16,46 @@ import { DROPOFF_LOCATIONS } from '../data/dropoffLocations';
 import { isBillingAccount } from '../services/paymentService';
 import { getBulkUploadById, getSpreadsheetBatchRows, type SpreadsheetBatchRow } from '../services/bulkUploadService';
 import { RECEPTACLE_SIZES, BULK_FIELD_LABELS as L } from '../data/bulkTemplate';
+import {
+  COD_MAX, isPosNum, isCustomParcelSize, customParcelDimErrors, addressAdvisory,
+  duplicateReferenceKeys, CUSTOM_DIM_REQUIRED_MESSAGE, DUPLICATE_REF_MESSAGE,
+} from '../lib/bookingValidation';
 import { LocationCascadeCells } from '../components/LocationCascadeCells';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 
 // ---------------------------------------------------------------------------
-// Shared field styles for the editable error table.
-// Inputs and selects use a smaller, consistent radius (rounded-md) so they
-// read well in compact table cells. Red/invalid state preserved per-field.
+// Shared field styles for the editable review grid.
 // ---------------------------------------------------------------------------
 
-const TABLE_INPUT_BASE  = 'w-full h-8 px-2 rounded-md border text-sm focus:outline-none focus:ring-1';
-const TABLE_SELECT_CLS  = 'w-full h-8 px-2 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed';
+const TABLE_INPUT_BASE = 'w-full h-8 px-2 rounded-md border text-sm focus:outline-none focus:ring-1';
+const TABLE_SELECT_CLS = 'w-full h-8 px-2 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed';
 
-// Compact inline text input for the error table.
-function ErrInput({ value, onChange, error, placeholder }: {
-  value: string; onChange: (v: string) => void; error: boolean; placeholder?: string;
+// Compact inline text input. Supports a disabled/muted state (used for the
+// dimweight fields when the parcel size is not Custom).
+function ErrInput({ value, onChange, error, placeholder, disabled, onBlur }: {
+  value: string; onChange: (v: string) => void; error: boolean;
+  placeholder?: string; disabled?: boolean; onBlur?: () => void;
 }) {
   return (
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur}
+      disabled={disabled}
       placeholder={placeholder}
       className={`${TABLE_INPUT_BASE} ${
-        error ? 'border-red-500 focus:ring-red-500 bg-red-50' : 'border-gray-300 focus:ring-primary'
+        disabled
+          ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+          : error
+            ? 'border-red-500 focus:ring-red-500 bg-red-50'
+            : 'border-gray-300 focus:ring-primary'
       }`}
     />
   );
 }
 
 // Compact segmented Yes/No control used for COD?, Recipient Pays Fees, and
-// Insure full item value?. Supports an unset state (value === '') so required
-// fields can show a red border until the user picks Yes or No.
+// Insure full item value?. Supports an unset state (value === '').
 function YesNoToggle({ value, onChange, error = false }: {
   value: string; onChange: (v: string) => void; error?: boolean;
 }) {
@@ -84,12 +94,16 @@ const VALID_ORDERS = [
 const TOTAL_VALID_INITIAL = 100;
 
 // ---------------------------------------------------------------------------
-// Error row data — all template columns so reviewers see the full row context.
+// Review-row model — one editable row shape shared by BOTH the "Rows needing
+// fixes" and "Needs review" sections, so the two surfaces use identical fields,
+// labels, controls, and validation rules (the only difference is the messages
+// shown and the row theme). `seedErrors` records the originally-detected
+// required-field issues so they clear individually as the user edits.
 // ---------------------------------------------------------------------------
 
-interface ErrorRowData {
+interface ReviewRowData {
   row: number;
-  errors: string[];
+  seedErrors: string[];
   recipientName: string;
   mobileNumber: string;
   streetAddress: string;
@@ -103,37 +117,62 @@ interface ErrorRowData {
   widthCm: string;
   heightCm: string;
   weightKg: string;
-  cod: string;               // 'Yes' | 'No' — editable
+  cod: string;
   codAmount: string;
   declaredValue: string;
-  insureFull: string;        // 'Yes' | 'No' | '' — editable
-  recipientPaysFees: string; // 'Yes' | 'No' — editable
+  insureFull: string;
+  recipientPaysFees: string;
   referenceId: string;
 }
 
-// Rows 5 & 6 are duplicates of each other (shared REF-005), otherwise valid —
-// removing one leaves the other unique so it revalidates into the valid group.
-// Row 7 demos Custom size with missing dimension/weight fields.
-const INITIAL_ERROR_ROWS: ErrorRowData[] = [
+// 5 rows needing fixes (rows 3,4,7,8,9) + 5 rows needing review (rows 5,6,10–12).
+// Fixes: missing required fields, invalid size, COD over cap, and Custom parcels
+// with missing/partial dimensions. Needs review (valid, non-blocking): duplicate
+// Reference IDs and present-but-suspicious street addresses.
+const INITIAL_REVIEW_ROWS: ReviewRowData[] = [
   {
     row: 3,
-    errors: ['"Mobile" field is required', '"Pouch/box size" field is required', '"Insure full item value?" field is required'],
+    seedErrors: ['"Mobile" field is required', '"Pouch/box size" field is required', '"Insure full item value?" field is required'],
     recipientName: 'Jen Ramos', mobileNumber: '', streetAddress: '123 Penarubia St.',
     province: 'Metro Manila', cityMunicipality: 'Mandaluyong City', barangay: 'Malamig', landmarks: '–',
     itemName: 'UNO FLIP! Double Sided Card', pouchSize: '', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
-    cod: 'No', codAmount: '', declaredValue: '', insureFull: '', recipientPaysFees: 'No', referenceId: '',
+    cod: 'No', codAmount: '', declaredValue: '599', insureFull: '', recipientPaysFees: 'No', referenceId: '',
   },
   {
     row: 4,
-    errors: ['Invalid pouch size', 'COD must not exceed ₱50,000.00'],
+    seedErrors: ['Invalid pouch size', 'COD must not exceed ₱50,000.00'],
     recipientName: 'Rome Jans', mobileNumber: '+639101234567', streetAddress: '2287 Allegro Center, Chinatown',
     province: 'Metro Manila', cityMunicipality: 'Makati City', barangay: 'Bel-Air', landmarks: '–',
     itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SUPERSIZED', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
     cod: 'Yes', codAmount: '75000', declaredValue: '75000', insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-004',
   },
   {
+    row: 7,
+    seedErrors: [],
+    recipientName: 'Luz Fernandez', mobileNumber: '+639181234567', streetAddress: '45 Delgado St.',
+    province: 'Metro Manila', cityMunicipality: 'Pasig City', barangay: 'Bagong Ilog', landmarks: '',
+    itemName: 'Custom Package', pouchSize: 'CUSTOM', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
+    cod: 'No', codAmount: '', declaredValue: '1500', insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-007',
+  },
+  {
+    row: 8,
+    seedErrors: ['"Name" field is required', '"Street Address" field is required'],
+    recipientName: '', mobileNumber: '+639170001122', streetAddress: '',
+    province: 'Metro Manila', cityMunicipality: 'Taguig City', barangay: 'Ususan', landmarks: '–',
+    itemName: 'Notebook Set', pouchSize: 'SMALL', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
+    cod: 'No', codAmount: '', declaredValue: '450', insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-008',
+  },
+  {
+    row: 9,
+    seedErrors: [],
+    recipientName: 'Mateo Cruz', mobileNumber: '+639170002233', streetAddress: '88 Sampaguita St.',
+    province: 'Metro Manila', cityMunicipality: 'Quezon City', barangay: 'Tandang Sora', landmarks: '',
+    itemName: 'Gift Hamper', pouchSize: 'CUSTOM', lengthCm: '30', widthCm: '', heightCm: '', weightKg: '',
+    cod: 'No', codAmount: '', declaredValue: '2000', insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-009',
+  },
+  {
     row: 5,
-    errors: ['Possible duplicate of row 6'],
+    seedErrors: [],
     recipientName: 'Rome Jans', mobileNumber: '+639101234567', streetAddress: '2287 Allegro Center, Chinatown',
     province: 'Metro Manila', cityMunicipality: 'Makati City', barangay: 'Bel-Air', landmarks: '–',
     itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SMALL', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
@@ -141,64 +180,36 @@ const INITIAL_ERROR_ROWS: ErrorRowData[] = [
   },
   {
     row: 6,
-    errors: ['Possible duplicate of row 5'],
-    recipientName: 'Rome Jans', mobileNumber: '+639101234567', streetAddress: '2287 Allegro Center, Chinatown',
+    seedErrors: [],
+    recipientName: 'Romeo Jans', mobileNumber: '+639101234567', streetAddress: '2287 Allegro Center, Chinatown',
     province: 'Metro Manila', cityMunicipality: 'Makati City', barangay: 'Bel-Air', landmarks: '–',
     itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SMALL', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
     cod: 'Yes', codAmount: '500', declaredValue: '500', insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-005',
   },
   {
-    row: 7,
-    errors: ['"Length (cm)" is required for Custom size', '"Width (cm)" is required for Custom size', '"Height (cm)" is required for Custom size', '"Weight (kg)" is required for Custom size'],
-    recipientName: 'Luz Fernandez', mobileNumber: '+639181234567', streetAddress: '45 Delgado St.',
-    province: 'Metro Manila', cityMunicipality: 'Pasig City', barangay: 'Bagong Ilog', landmarks: '',
-    itemName: 'Custom Package', pouchSize: 'CUSTOM', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
-    cod: 'No', codAmount: '', declaredValue: '1500', insureFull: 'Yes', recipientPaysFees: 'No', referenceId: 'REF-007',
+    row: 10,
+    seedErrors: [],
+    recipientName: 'Carlo Reyes', mobileNumber: '+639170003344', streetAddress: 'Blk 5',
+    province: 'Metro Manila', cityMunicipality: 'Pasay City', barangay: 'Barangay 76', landmarks: '',
+    itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'MEDIUM', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
+    cod: 'No', codAmount: '', declaredValue: '650', insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-010',
   },
-];
-
-// ---------------------------------------------------------------------------
-// Non-blocking warnings — rows that are VALID and will proceed, but carry an
-// advisory. A standard parcel size (Small / Medium / Large / Box / Oversized)
-// with dimension values present is the canonical case: the dimensions are noted
-// but ignored for pricing, which uses the fixed standard-size rate. Warnings
-// never block confirmation and are counted as valid orders.
-// ---------------------------------------------------------------------------
-
-const STANDARD_DIM_WARNING = 'Dimensions noted. This parcel will use the selected standard size rate.';
-
-interface WarningRowData {
-  row: number;
-  recipientName: string;
-  itemName: string;
-  pouchSize: string;
-  lengthCm: string;
-  widthCm: string;
-  heightCm: string;
-  weightKg: string;
-}
-
-/**
- * Returns the advisory message for a standard-size row that includes dimension
- * values, or null when no warning applies (Custom rows, or no dimensions). Used
- * to keep the warning rule consistent wherever it is surfaced.
- */
-function standardSizeDimWarning(row: Pick<WarningRowData, 'pouchSize' | 'lengthCm' | 'widthCm' | 'heightCm' | 'weightKg'>): string | null {
-  const size = row.pouchSize.trim().toUpperCase();
-  const isStandardSize = (RECEPTACLE_SIZES as readonly string[]).includes(size) && size !== 'CUSTOM';
-  const hasDimensions = [row.lengthCm, row.widthCm, row.heightCm, row.weightKg]
-    .some((v) => v.trim() !== '' && v.trim() !== '–');
-  return isStandardSize && hasDimensions ? STANDARD_DIM_WARNING : null;
-}
-
-// One example per standard size, each carrying dimension values — demonstrates
-// that the warning applies across Small, Medium, Large, Box, and Oversized.
-const INITIAL_WARNING_ROWS: WarningRowData[] = [
-  { row: 8,  recipientName: 'Carlo Reyes',     itemName: 'UNO FLIP! Double Sided Card', pouchSize: 'SMALL',     lengthCm: '18', widthCm: '12', heightCm: '5',  weightKg: '0.4' },
-  { row: 9,  recipientName: 'Mara Lim',        itemName: 'Board Game Night Bundle',     pouchSize: 'MEDIUM',    lengthCm: '30', widthCm: '22', heightCm: '12', weightKg: '1.2' },
-  { row: 10, recipientName: 'Diego Santos',    itemName: 'Desk Organizer Set',          pouchSize: 'LARGE',     lengthCm: '45', widthCm: '30', heightCm: '20', weightKg: '3.0' },
-  { row: 11, recipientName: 'Ana Villanueva',  itemName: 'Ceramic Dinnerware Box',      pouchSize: 'BOX',       lengthCm: '40', widthCm: '40', heightCm: '25', weightKg: '4.5' },
-  { row: 12, recipientName: 'Paolo Cruz',      itemName: 'Folding Camp Chair',          pouchSize: 'OVERSIZED', lengthCm: '90', widthCm: '20', heightCm: '20', weightKg: '6.0' },
+  {
+    row: 11,
+    seedErrors: [],
+    recipientName: 'Mara Lim', mobileNumber: '+639170004455', streetAddress: '123 Mainnnnnn Street',
+    province: 'Metro Manila', cityMunicipality: 'Mandaluyong City', barangay: 'Plainview', landmarks: '',
+    itemName: 'Board Game Night Bundle', pouchSize: 'LARGE', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
+    cod: 'No', codAmount: '', declaredValue: '1200', insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-011',
+  },
+  {
+    row: 12,
+    seedErrors: [],
+    recipientName: 'Diego Santos', mobileNumber: '+639170005566', streetAddress: 'Purok',
+    province: 'Metro Manila', cityMunicipality: 'Marikina City', barangay: 'Concepcion Uno', landmarks: '',
+    itemName: 'Desk Organizer Set', pouchSize: 'BOX', lengthCm: '', widthCm: '', heightCm: '', weightKg: '',
+    cod: 'No', codAmount: '', declaredValue: '900', insureFull: 'No', recipientPaysFees: 'No', referenceId: 'REF-012',
+  },
 ];
 
 type EditableField =
@@ -210,7 +221,7 @@ type EditableField =
 
 type RowEdits = Record<EditableField, string>;
 
-function rowToEdits(row: ErrorRowData): RowEdits {
+function rowToEdits(row: ReviewRowData): RowEdits {
   return {
     recipientName:     row.recipientName,
     mobileNumber:      row.mobileNumber,
@@ -235,10 +246,8 @@ function rowToEdits(row: ErrorRowData): RowEdits {
 }
 
 /**
- * Item Protection Fee.
- * If insured for full value, a fee applies on the declared value above the
- * free ₱500 tier: Fee = (Declared Value − 500) × 0.01
- * Otherwise the free ₱500 coverage applies and the fee is ₱0.
+ * Item Protection Fee. If insured for full value, a fee applies on the declared
+ * value above the free ₱500 tier: Fee = (Declared Value − 500) × 0.01.
  */
 function computeItemProtectionFee(edits: RowEdits): number {
   if (edits.insureFull !== 'Yes') return 0;
@@ -248,85 +257,57 @@ function computeItemProtectionFee(edits: RowEdits): number {
 }
 
 /**
- * Re-validate a row against its edits and the current row set.
- * - Required-field errors clear when filled (mobile, pouch size, insure-full).
- * - "Invalid pouch size" clears when a valid size is chosen.
- * - "COD must not exceed ₱50,000" clears when amount ≤ 50,000.
- * - Duplicate detection is dynamic by Reference ID: a row is a duplicate only
- *   while another row in the current set shares its Reference ID. Removing the
- *   partner makes the survivor unique, so its duplicate error clears.
+ * Blocking errors for a row (these prevent the row from booking). Required-field
+ * issues are gated on the originally-seeded errors so each clears individually as
+ * the user edits; the deterministic rules (invalid size, COD cap, Custom dims)
+ * are always live. Custom-dimension problems collapse to a single message; the
+ * affected fields are highlighted separately via `fieldHasError`.
  */
-/** Returns true when s is a non-empty, strictly positive number string. */
-function isPosNum(s: string): boolean {
-  const n = Number(s.trim());
-  return s.trim() !== '' && !Number.isNaN(n) && n > 0;
-}
-
-function validateEdits(
-  row: ErrorRowData,
-  edits: RowEdits,
-  allRows: ErrorRowData[],
-  allEdits: Record<number, RowEdits>,
-): string[] {
+function rowBlockingErrors(row: ReviewRowData, edits: RowEdits): string[] {
   const errs: string[] = [];
+  const seeded = (frag: string) => row.seedErrors.some((e) => e.includes(frag));
 
-  if (row.errors.some((e) => e.includes('"Mobile"'))         && !edits.mobileNumber.trim())  errs.push('"Mobile" field is required');
-  if (row.errors.some((e) => e.includes('"Name"'))           && !edits.recipientName.trim()) errs.push('"Name" field is required');
-  if (row.errors.some((e) => e.includes('"Street Address"')) && !edits.streetAddress.trim()) errs.push('"Street Address" field is required');
-  if (row.errors.some((e) => e.includes('Pouch/box size') && e.includes('required')) && !edits.pouchSize.trim()) {
-    errs.push('"Pouch/box size" field is required');
-  }
-  // Insure full item value? is now a required, fixable Yes/No field.
-  if (row.errors.some((e) => e.includes('Insure full item value')) && !edits.insureFull.trim()) {
-    errs.push('"Insure full item value?" field is required');
-  }
+  if (seeded('"Mobile"')         && !edits.mobileNumber.trim())  errs.push('"Mobile" field is required');
+  if (seeded('"Name"')           && !edits.recipientName.trim()) errs.push('"Name" field is required');
+  if (seeded('"Street Address"') && !edits.streetAddress.trim()) errs.push('"Street Address" field is required');
+  if (seeded('Insure full item value') && !edits.insureFull.trim()) errs.push('"Insure full item value?" field is required');
+  if (seeded('Pouch/box size')   && !edits.pouchSize.trim())     errs.push('"Pouch/box size" field is required');
 
-  if (row.errors.some((e) => e === 'Invalid pouch size')) {
-    if (!(RECEPTACLE_SIZES as readonly string[]).includes(edits.pouchSize)) errs.push('Invalid pouch size');
+  if (row.seedErrors.some((e) => e === 'Invalid pouch size')
+    && !(RECEPTACLE_SIZES as readonly string[]).includes(edits.pouchSize)) {
+    errs.push('Invalid pouch size');
   }
 
-  if (row.errors.some((e) => e.includes('COD must not exceed'))) {
+  if (seeded('COD must not exceed')) {
     const amt = parseFloat(edits.codAmount.replace(/[^0-9.]/g, ''));
-    if (isNaN(amt) || amt > 50000) errs.push('COD must not exceed ₱50,000.00');
+    if (isNaN(amt) || amt > COD_MAX) errs.push(`COD must not exceed ₱${COD_MAX.toLocaleString()}.00`);
   }
 
-  // Custom parcel size: all four dimension/weight fields are required and must
-  // be positive numbers. This check is always live when pouchSize is CUSTOM so
-  // it re-validates as the user fills in the fields.
-  if (edits.pouchSize.trim().toUpperCase() === 'CUSTOM') {
-    if (!isPosNum(edits.lengthCm)) errs.push(edits.lengthCm.trim() ? '"Length (cm)" must be a positive number' : '"Length (cm)" is required for Custom size');
-    if (!isPosNum(edits.widthCm))  errs.push(edits.widthCm.trim()  ? '"Width (cm)" must be a positive number'  : '"Width (cm)" is required for Custom size');
-    if (!isPosNum(edits.heightCm)) errs.push(edits.heightCm.trim() ? '"Height (cm)" must be a positive number' : '"Height (cm)" is required for Custom size');
-    if (!isPosNum(edits.weightKg)) errs.push(edits.weightKg.trim() ? '"Weight (kg)" must be a positive number' : '"Weight (kg)" is required for Custom size');
-  }
-
-  // Dynamic duplicate check by Reference ID across the current row set.
-  const ref = edits.referenceId.trim();
-  if (ref && ref !== '–') {
-    const partner = allRows.find(
-      (r) => r.row !== row.row && (allEdits[r.row]?.referenceId ?? r.referenceId).trim() === ref,
-    );
-    if (partner) errs.push(`Possible duplicate of row ${partner.row}`);
+  // Custom parcel dimensions (always live) — one combined message.
+  if (Object.keys(customParcelDimErrors(edits.pouchSize, edits)).length > 0) {
+    errs.push(CUSTOM_DIM_REQUIRED_MESSAGE);
   }
 
   return errs;
 }
 
-function fieldHasError(fieldKey: EditableField, row: ErrorRowData, edits: RowEdits): boolean {
-  const isCustom = edits.pouchSize.trim().toUpperCase() === 'CUSTOM';
-  switch (fieldKey) {
-    case 'mobileNumber':  return row.errors.some((e) => e.includes('"Mobile"'))         && !edits.mobileNumber.trim();
-    case 'recipientName': return row.errors.some((e) => e.includes('"Name"'))           && !edits.recipientName.trim();
-    case 'streetAddress': return row.errors.some((e) => e.includes('"Street Address"')) && !edits.streetAddress.trim();
-    case 'insureFull':    return row.errors.some((e) => e.includes('Insure full item value')) && !edits.insureFull.trim();
+/** Whether a specific field should render in its error state. */
+function fieldHasError(field: EditableField, row: ReviewRowData, edits: RowEdits): boolean {
+  const isCustom = isCustomParcelSize(edits.pouchSize);
+  const seeded = (frag: string) => row.seedErrors.some((e) => e.includes(frag));
+  switch (field) {
+    case 'mobileNumber':  return seeded('"Mobile"')         && !edits.mobileNumber.trim();
+    case 'recipientName': return seeded('"Name"')           && !edits.recipientName.trim();
+    case 'streetAddress': return seeded('"Street Address"') && !edits.streetAddress.trim();
+    case 'insureFull':    return seeded('Insure full item value') && !edits.insureFull.trim();
     case 'pouchSize':
-      if (row.errors.some((e) => e.includes('Pouch/box size') && e.includes('required')) && !edits.pouchSize.trim()) return true;
-      if (row.errors.some((e) => e === 'Invalid pouch size') && !(RECEPTACLE_SIZES as readonly string[]).includes(edits.pouchSize)) return true;
+      if (seeded('Pouch/box size') && !edits.pouchSize.trim()) return true;
+      if (row.seedErrors.some((e) => e === 'Invalid pouch size') && !(RECEPTACLE_SIZES as readonly string[]).includes(edits.pouchSize)) return true;
       return false;
     case 'codAmount': {
-      if (!row.errors.some((e) => e.includes('COD must not exceed'))) return false;
+      if (!seeded('COD must not exceed')) return false;
       const n = parseFloat(edits.codAmount.replace(/[^0-9.]/g, ''));
-      return isNaN(n) || n > 50000;
+      return isNaN(n) || n > COD_MAX;
     }
     case 'lengthCm':  return isCustom && !isPosNum(edits.lengthCm);
     case 'widthCm':   return isCustom && !isPosNum(edits.widthCm);
@@ -336,17 +317,26 @@ function fieldHasError(fieldKey: EditableField, row: ErrorRowData, edits: RowEdi
   }
 }
 
-/** Re-validate the whole set; returns rows still in error + how many became valid. */
-function revalidateAll(rows: ErrorRowData[], edits: Record<number, RowEdits>) {
-  const remaining: ErrorRowData[] = [];
-  let fixed = 0;
-  for (const row of rows) {
-    const e = edits[row.row] ?? rowToEdits(row);
-    const newErr = validateEdits(row, e, rows, edits);
-    if (newErr.length === 0) fixed++;
-    else remaining.push({ ...row, errors: newErr });
-  }
-  return { remaining, fixed };
+interface RowValidationState {
+  blocking: string[];
+  addressNote: string | null;
+}
+
+function validateRowState(row: ReviewRowData, edits: RowEdits): RowValidationState {
+  return {
+    blocking: rowBlockingErrors(row, edits),
+    addressNote: addressAdvisory(edits.streetAddress),
+  };
+}
+
+/** Recompute the cross-row duplicate Reference ID set from current edits. */
+function computeDupRows(rows: ReviewRowData[], edits: Record<number, RowEdits>): Set<number> {
+  const dupes = duplicateReferenceKeys(
+    rows,
+    (r) => r.row,
+    (r) => (edits[r.row]?.referenceId ?? r.referenceId),
+  );
+  return new Set([...dupes].map((k) => Number(k)));
 }
 
 /** Human-readable copy for each payment method type. */
@@ -361,7 +351,203 @@ function paymentCopy(method: SelectedPaymentMethod | null, billingAvailable: boo
   }
 }
 
-const HAD_ERRORS = INITIAL_ERROR_ROWS.length > 0;
+// ---------------------------------------------------------------------------
+// One editable review row — used by BOTH sections so fields/labels/controls are
+// identical. `variant` only changes the issue column and the row accent.
+// ---------------------------------------------------------------------------
+
+interface ReviewRowProps {
+  row: ReviewRowData;
+  edits: RowEdits;
+  variant: 'fix' | 'review';
+  messages: string[];
+  onEdit: (field: EditableField, value: string) => void;
+  onLocation: (province: string, city: string, barangay: string) => void;
+  onCommit: () => void;
+  onDelete: () => void;
+}
+
+function ReviewRow({ row, edits, variant, messages, onEdit, onLocation, onCommit, onDelete }: ReviewRowProps) {
+  const fe = (f: EditableField) => fieldHasError(f, row, edits);
+  const isCustom = isCustomParcelSize(edits.pouchSize);
+  const dimsDisabled = !isCustom;
+  const protectionFee = computeItemProtectionFee(edits);
+  const addrSuspicious = variant === 'review' && !!addressAdvisory(edits.streetAddress);
+  const commitEdit = (f: EditableField, v: string) => { onEdit(f, v); onCommit(); };
+
+  const rowTone = variant === 'fix'
+    ? 'border-red-100 bg-white hover:bg-red-50/20'
+    : 'border-amber-100 border-l-4 border-l-amber-300 bg-white hover:bg-amber-50/30';
+
+  return (
+    <tr className={`border-b ${rowTone} align-top`}>
+      <td className="px-3 py-2.5"><span className="text-sm font-medium text-gray-900">{row.row}</span></td>
+
+      {/* Issue column */}
+      <td className="px-3 py-2.5">
+        {variant === 'fix' ? (
+          <ul className="space-y-0.5">
+            {messages.map((m, i) => (
+              <li key={i} className="text-xs text-red-600 flex items-start gap-1">
+                <span className="mt-0.5 shrink-0">•</span>{m}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="space-y-1">
+            {messages.map((m, i) => (
+              <div key={i} className="flex items-start gap-1.5">
+                <span className="inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-medium px-2 py-0.5 flex-shrink-0">
+                  Review
+                </span>
+                <span className="text-xs text-gray-600">{m}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </td>
+
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.recipientName} onChange={(v) => onEdit('recipientName', v)} onBlur={onCommit} error={fe('recipientName')} />
+        {fe('recipientName') && <p className="text-xs text-red-600 mt-0.5">Name is required</p>}
+      </td>
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.mobileNumber} onChange={(v) => onEdit('mobileNumber', v)} onBlur={onCommit} error={fe('mobileNumber')} placeholder="e.g. +639170000000" />
+        {fe('mobileNumber') && <p className="text-xs text-red-600 mt-0.5">Mobile is required</p>}
+      </td>
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.streetAddress} onChange={(v) => onEdit('streetAddress', v)} onBlur={onCommit} error={fe('streetAddress')} />
+        {fe('streetAddress') && <p className="text-xs text-red-600 mt-0.5">Street Address is required</p>}
+        {addrSuspicious && <p className="text-xs text-amber-600 mt-0.5">Review this address</p>}
+      </td>
+
+      <LocationCascadeCells
+        province={edits.province}
+        city={edits.cityMunicipality}
+        barangay={edits.barangay}
+        onChange={(p, c, b) => { onLocation(p, c, b); onCommit(); }}
+      />
+
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.landmarks} onChange={(v) => onEdit('landmarks', v)} onBlur={onCommit} error={false} placeholder="Optional" />
+      </td>
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.itemName} onChange={(v) => onEdit('itemName', v)} onBlur={onCommit} error={false} />
+      </td>
+
+      {/* Pouch/box size */}
+      <td className="px-3 py-2.5">
+        <select
+          value={edits.pouchSize}
+          onChange={(e) => commitEdit('pouchSize', e.target.value)}
+          className={`${TABLE_SELECT_CLS} ${fe('pouchSize') ? 'border-red-500 ring-1 ring-red-500 bg-red-50' : ''}`}
+        >
+          <option value="">Select size</option>
+          {RECEPTACLE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        {fe('pouchSize') && <p className="text-xs text-red-600 mt-0.5">Select a valid size</p>}
+      </td>
+
+      {/* Dimweight fields — enabled + required only for Custom; muted otherwise */}
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.lengthCm} onChange={(v) => onEdit('lengthCm', v)} onBlur={onCommit} error={fe('lengthCm')} disabled={dimsDisabled} placeholder={isCustom ? 'e.g. 30' : '—'} />
+      </td>
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.widthCm} onChange={(v) => onEdit('widthCm', v)} onBlur={onCommit} error={fe('widthCm')} disabled={dimsDisabled} placeholder={isCustom ? 'e.g. 20' : '—'} />
+      </td>
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.heightCm} onChange={(v) => onEdit('heightCm', v)} onBlur={onCommit} error={fe('heightCm')} disabled={dimsDisabled} placeholder={isCustom ? 'e.g. 15' : '—'} />
+      </td>
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.weightKg} onChange={(v) => onEdit('weightKg', v)} onBlur={onCommit} error={fe('weightKg')} disabled={dimsDisabled} placeholder={isCustom ? 'e.g. 2.5' : '—'} />
+      </td>
+
+      <td className="px-3 py-2.5">
+        <YesNoToggle value={edits.cod} onChange={(v) => commitEdit('cod', v)} />
+      </td>
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.codAmount} onChange={(v) => onEdit('codAmount', v)} onBlur={onCommit} error={fe('codAmount')} placeholder="0.00" />
+        {fe('codAmount') && <p className="text-xs text-red-600 mt-0.5">Exceeds ₱50,000 limit</p>}
+      </td>
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.declaredValue} onChange={(v) => onEdit('declaredValue', v)} onBlur={onCommit} error={false} placeholder="0.00" />
+      </td>
+      <td className="px-3 py-2.5">
+        <YesNoToggle value={edits.insureFull} onChange={(v) => commitEdit('insureFull', v)} error={fe('insureFull')} />
+        {fe('insureFull') && <p className="text-xs text-red-600 mt-0.5">Select Yes or No</p>}
+      </td>
+      <td className="px-3 py-2.5">
+        <span className={`text-sm font-medium ${protectionFee > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+          ₱{protectionFee.toFixed(2)}
+        </span>
+        {edits.insureFull !== 'Yes' && <p className="text-xs text-gray-400 mt-0.5">Free ₱500 coverage</p>}
+      </td>
+      <td className="px-3 py-2.5">
+        <YesNoToggle value={edits.recipientPaysFees} onChange={(v) => commitEdit('recipientPaysFees', v)} />
+      </td>
+      <td className="px-3 py-2.5">
+        <ErrInput value={edits.referenceId} onChange={(v) => onEdit('referenceId', v)} onBlur={onCommit} error={false} placeholder="Optional" />
+      </td>
+
+      {/* Actions — every row is removable */}
+      <td className="px-3 py-2.5">
+        <button
+          onClick={onDelete}
+          title="Remove row from this batch"
+          aria-label={`Remove row ${row.row}`}
+          className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+        >
+          <IconTrash className="w-4 h-4" />
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+/** Shared header row for both review grids. */
+function ReviewGridHead({ issueLabel, theme }: { issueLabel: string; theme: 'red' | 'amber' }) {
+  const head = theme === 'red' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200';
+  return (
+    <thead className={`${head} border-b`}>
+      <tr>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 w-12">Row</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[280px]">{issueLabel}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[160px]">{L.name}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">{L.mobile}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[200px]">{L.streetAddress}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">{L.province}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[190px]">{L.cityMunicipality}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">{L.barangay}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[210px]">{L.landmarks}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[185px]">{L.itemName}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.pouchSize}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
+          {L.lengthCm}<span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
+        </th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
+          {L.widthCm}<span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
+        </th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
+          {L.heightCm}<span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
+        </th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
+          {L.weightKg}<span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
+        </th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[170px]">{L.cod}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[130px]">{L.codAmount}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.declaredValue}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.insureFull}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[145px]">
+          Item Protection Fee
+          <span className="font-normal text-gray-400 block text-xs leading-tight">Auto-calculated · (Declared − ₱500) × 1%</span>
+        </th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.recipientPaysFees}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[160px]">{L.referenceId}</th>
+        <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[80px]">Actions</th>
+      </tr>
+    </thead>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -374,8 +560,10 @@ export function BulkUploadSummary() {
 
   const activeAccountName = getCurrentAccountName();
 
-  // Billing eligibility resolved via the service (Contract Manager-owned in the
-  // end state). Defaults to true (the helper's billing fallback) until resolved.
+  // Batch-filtered transactions deep link (opens in a new tab; uploader stays open).
+  const txnUrl = `/dashboard/transactions?view=batches&batch=${encodeURIComponent(id ?? '')}`;
+
+  // Billing eligibility (Contract Manager-owned in the end state).
   const [billingAvailable, setBillingAvailable] = useState(true);
   useEffect(() => {
     let active = true;
@@ -385,17 +573,9 @@ export function BulkUploadSummary() {
     return () => { active = false; };
   }, [activeAccountName]);
 
-  // Batch date looked up via the service facade; falls back to the mock default
-  // when the batch is unknown (preserves the prior synchronous fallback).
   const [batchDate, setBatchDate] = useState('2026-05-19 10:30 AM');
-  // Source-aware review: spreadsheet batches were validated in the grid before
-  // submit, so only valid rows arrive here — use the real count and skip the mock
-  // error-correction table (which models uploaded-file parsing errors). The Upload
-  // File path is unchanged (source absent/'file').
   const [isSpreadsheet, setIsSpreadsheet] = useState(false);
   const [validBaseCount, setValidBaseCount] = useState(TOTAL_VALID_INITIAL);
-  // Actual rows entered in the in-app spreadsheet (data-driven review). Empty
-  // after a hard reload (session-only handoff) → falls back to a count note.
   const [spreadsheetRows, setSpreadsheetRows] = useState<SpreadsheetBatchRow[]>([]);
   useEffect(() => {
     let active = true;
@@ -413,42 +593,72 @@ export function BulkUploadSummary() {
     return () => { active = false; };
   }, [id]);
 
-  // ── Error rows state ──────────────────────────────────────────────────────
-  const [errorRows, setErrorRows] = useState<ErrorRowData[]>(INITIAL_ERROR_ROWS);
-  const [rowEdits,  setRowEdits]  = useState<Record<number, RowEdits>>(() => {
+  // ── Review-row state ──────────────────────────────────────────────────────
+  const [rows, setRows] = useState<ReviewRowData[]>(INITIAL_REVIEW_ROWS);
+  const [edits, setEdits] = useState<Record<number, RowEdits>>(() => {
     const init: Record<number, RowEdits> = {};
-    INITIAL_ERROR_ROWS.forEach((r) => { init[r.row] = rowToEdits(r); });
+    INITIAL_REVIEW_ROWS.forEach((r) => { init[r.row] = rowToEdits(r); });
     return init;
   });
-  const [fixedCount, setFixedCount] = useState(0);
-  const [retried,    setRetried]    = useState(false);
+  const [validation, setValidation] = useState<Record<number, RowValidationState>>(() => {
+    const init: Record<number, RowValidationState> = {};
+    INITIAL_REVIEW_ROWS.forEach((r) => { init[r.row] = validateRowState(r, rowToEdits(r)); });
+    return init;
+  });
+  const [dupRows, setDupRows] = useState<Set<number>>(() => {
+    const initEdits: Record<number, RowEdits> = {};
+    INITIAL_REVIEW_ROWS.forEach((r) => { initEdits[r.row] = rowToEdits(r); });
+    return computeDupRows(INITIAL_REVIEW_ROWS, initEdits);
+  });
 
-  // Spreadsheet batches arrive pre-validated (no mock error rows to review).
-  useEffect(() => { if (isSpreadsheet) setErrorRows([]); }, [isSpreadsheet]);
+  // Spreadsheet batches arrive pre-validated (no review rows to correct).
+  useEffect(() => {
+    if (isSpreadsheet) { setRows([]); setDupRows(new Set()); }
+  }, [isSpreadsheet]);
+
+  // Undo support for row deletion.
+  const [undoState, setUndoState] = useState<{ row: ReviewRowData; edits: RowEdits; validation: RowValidationState } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<number | undefined>(undefined);
+  const showToast = (msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => { setToast(null); setUndoState(null); }, 6000);
+  };
+  useEffect(() => () => { if (toastTimer.current) window.clearTimeout(toastTimer.current); }, []);
 
   // ── Booking / bottom section state ────────────────────────────────────────
-  const [firstMile,     setFirstMile]     = useState<'pickup' | 'dropoff'>('pickup');
-  const [pickupDate,    setPickupDate]    = useState(() => {
+  const [firstMile, setFirstMile] = useState<'pickup' | 'dropoff'>('pickup');
+  const [pickupDate, setPickupDate] = useState(() => {
     const d = new Date(); d.setDate(d.getDate() + 1);
     return d.toISOString().split('T')[0];
   });
   const [selectedPayment, setSelectedPayment] = useState<SelectedPaymentMethod | null>(null);
-  const [showDropoffs,  setShowDropoffs]  = useState(false);
-  const [showSuccess,   setShowSuccess]   = useState(false);
+  const [showDropoffs, setShowDropoffs] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  // ── Derived values ────────────────────────────────────────────────────────
-  // Non-blocking warnings apply to the uploaded-file review only. Spreadsheet
-  // batches are pre-validated in the grid (dimensions are grid-controlled), so no
-  // warnings are surfaced there. Warning rows are valid and counted as orders.
-  const warningRows = isSpreadsheet
-    ? []
-    : INITIAL_WARNING_ROWS.filter((r) => standardSizeDimWarning(r) !== null);
-  const totalValidCount        = validBaseCount + fixedCount + warningRows.length;
-  const shippingFee            = 1200; // mock flat
+  // ── Classification (derived) ──────────────────────────────────────────────
+  const classified = rows.map((r) => {
+    const e = edits[r.row] ?? rowToEdits(r);
+    const v = validation[r.row] ?? validateRowState(r, e);
+    const notes: string[] = [];
+    if (dupRows.has(r.row)) notes.push(DUPLICATE_REF_MESSAGE);
+    if (v.addressNote) notes.push(v.addressNote);
+    return { data: r, edits: e, blocking: v.blocking, notes };
+  });
+  const fixList = classified.filter((c) => c.blocking.length > 0);
+  const reviewList = classified.filter((c) => c.blocking.length === 0 && c.notes.length > 0);
+  const validFromFlagged = classified.filter((c) => c.blocking.length === 0 && c.notes.length === 0).length;
+
+  // ── Derived totals ────────────────────────────────────────────────────────
+  const totalValidCount = validBaseCount + reviewList.length + validFromFlagged;
+  const shippingFee = 1200; // mock flat
   const totalItemProtectionFee = parseFloat(
-    errorRows.reduce((sum, row) => sum + computeItemProtectionFee(rowEdits[row.row] ?? rowToEdits(row)), 0).toFixed(2)
+    classified.filter((c) => c.blocking.length === 0)
+      .reduce((sum, c) => sum + computeItemProtectionFee(c.edits), 0).toFixed(2),
   );
   const totalFees = shippingFee + totalItemProtectionFee;
+  const canBook = totalValidCount > 0 && fixList.length === 0;
 
   const formatDate = (iso: string) => {
     if (!iso) return 'Tomorrow';
@@ -457,41 +667,68 @@ export function BulkUploadSummary() {
   const formattedPickup = formatDate(pickupDate);
   const peso = (n: number) => `₱${n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const updateEdit = (rowNum: number, field: EditableField, value: string) =>
-    setRowEdits((prev) => ({ ...prev, [rowNum]: { ...prev[rowNum], [field]: value } }));
+    setEdits((prev) => ({ ...prev, [rowNum]: { ...prev[rowNum], [field]: value } }));
 
   const updateLocation = (rowNum: number, province: string, city: string, barangay: string) =>
-    setRowEdits((prev) => ({
+    setEdits((prev) => ({
       ...prev,
       [rowNum]: { ...prev[rowNum], province, cityMunicipality: city, barangay },
     }));
 
-  const handleRetryUpload = () => {
-    setRetried(true);
-    const { remaining, fixed } = revalidateAll(errorRows, rowEdits);
-    setFixedCount((c) => c + fixed);
-    setErrorRows(remaining);
+  /** Local per-row revalidation (on blur / control change) — no cross-row work. */
+  const commitRow = (rowNum: number) => {
+    setValidation((prev) => {
+      const row = rows.find((r) => r.row === rowNum);
+      if (!row) return prev;
+      const e = { ...(edits[rowNum] ?? rowToEdits(row)) };
+      return { ...prev, [rowNum]: validateRowState(row, e) };
+    });
   };
 
-  /**
-   * Remove a duplicate row, then immediately revalidate the remaining rows.
-   * The removed row is discarded (not counted as fixed). Any remaining row that
-   * is now valid (e.g. a duplicate that became unique) moves to the valid group.
-   */
-  const handleRemoveRow = (rowNum: number) => {
-    const nextEdits = { ...rowEdits };
-    delete nextEdits[rowNum];
-    const nextRows = errorRows.filter((r) => r.row !== rowNum);
-    const { remaining, fixed } = revalidateAll(nextRows, nextEdits);
-    setRowEdits(nextEdits);
-    setErrorRows(remaining);
-    setFixedCount((c) => c + fixed);
-    setRetried(true);
+  /** Full batch revalidation, including cross-row duplicate Reference IDs. */
+  const handleRevalidate = () => {
+    const nextValidation: Record<number, RowValidationState> = {};
+    rows.forEach((r) => { nextValidation[r.row] = validateRowState(r, edits[r.row] ?? rowToEdits(r)); });
+    setValidation(nextValidation);
+    setDupRows(computeDupRows(rows, edits));
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  const handleDelete = (rowNum: number) => {
+    const removed = rows.find((r) => r.row === rowNum);
+    if (!removed) return;
+    const removedEdits = edits[rowNum] ?? rowToEdits(removed);
+    const removedValidation = validation[rowNum] ?? validateRowState(removed, removedEdits);
+
+    const nextRows = rows.filter((r) => r.row !== rowNum);
+    const nextEdits = { ...edits }; delete nextEdits[rowNum];
+    setRows(nextRows);
+    setEdits(nextEdits);
+    setValidation((prev) => { const n = { ...prev }; delete n[rowNum]; return n; });
+    // Removing a row can resolve a duplicate for its partner — recompute.
+    setDupRows(computeDupRows(nextRows, nextEdits));
+
+    setUndoState({ row: removed, edits: removedEdits, validation: removedValidation });
+    showToast(`Row ${rowNum} removed from this batch.`);
+  };
+
+  const handleUndo = () => {
+    if (!undoState) return;
+    const { row, edits: re, validation: rv } = undoState;
+    const nextRows = [...rows, row].sort((a, b) => a.row - b.row);
+    const nextEdits = { ...edits, [row.row]: re };
+    setRows(nextRows);
+    setEdits(nextEdits);
+    setValidation((prev) => ({ ...prev, [row.row]: rv }));
+    setDupRows(computeDupRows(nextRows, nextEdits));
+    setUndoState(null);
+    setToast(null);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────
 
   return (
     <div className="p-6 space-y-6">
@@ -504,15 +741,135 @@ export function BulkUploadSummary() {
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Review Upload Details</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Review before booking</h1>
         <p className="text-sm text-gray-500 mt-1">
           Date uploaded: <span className="text-gray-700 font-medium">{batchDate}</span>
           &nbsp;·&nbsp;
           Batch ID: <span className="text-gray-700 font-medium">{id ?? 'UPLOAD-2026-05-19-001'}</span>
         </p>
+        {(fixList.length > 0 || reviewList.length > 0) && (
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            {fixList.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-semibold px-2.5 py-1">
+                <IconCircleX className="w-3.5 h-3.5" />
+                {fixList.length} {fixList.length === 1 ? 'row needs' : 'rows need'} fixes
+              </span>
+            )}
+            {reviewList.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold px-2.5 py-1">
+                <IconAlertTriangle className="w-3.5 h-3.5" />
+                {reviewList.length} {reviewList.length === 1 ? 'row needs' : 'rows need'} review
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ── Valid orders ── */}
+      {/* ── 1. Rows needing fixes (blocking) ── */}
+      {fixList.length > 0 && (
+        <Card className="border-red-200">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                  <IconCircleX className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-gray-900">Rows needing fixes</p>
+                  <p className="text-sm text-gray-500">These rows cannot be uploaded until the listed issues are resolved.</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm">
+                <IconDownload className="w-3.5 h-3.5 mr-1.5" />
+                Download Failed Orders
+              </Button>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-red-200">
+              <table className="w-full min-w-[3230px] border-collapse text-sm">
+                <ReviewGridHead issueLabel="Issue" theme="red" />
+                <tbody>
+                  {fixList.map((c) => (
+                    <ReviewRow
+                      key={c.data.row}
+                      row={c.data}
+                      edits={c.edits}
+                      variant="fix"
+                      messages={c.blocking}
+                      onEdit={(f, v) => updateEdit(c.data.row, f, v)}
+                      onLocation={(p, ci, b) => updateLocation(c.data.row, p, ci, b)}
+                      onCommit={() => commitRow(c.data.row)}
+                      onDelete={() => handleDelete(c.data.row)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── 2. Needs review (non-blocking) ── */}
+      {reviewList.length > 0 && (
+        <Card className="border-amber-200">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+                <IconAlertTriangle className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-base font-semibold text-gray-900">Needs review</p>
+                <p className="text-sm text-gray-500">These rows can still be uploaded. Review or edit them if needed.</p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-amber-200">
+              <table className="w-full min-w-[3230px] border-collapse text-sm">
+                <ReviewGridHead issueLabel="Needs review" theme="amber" />
+                <tbody>
+                  {reviewList.map((c) => (
+                    <ReviewRow
+                      key={c.data.row}
+                      row={c.data}
+                      edits={c.edits}
+                      variant="review"
+                      messages={c.notes}
+                      onEdit={(f, v) => updateEdit(c.data.row, f, v)}
+                      onLocation={(p, ci, b) => updateLocation(c.data.row, p, ci, b)}
+                      onCommit={() => commitRow(c.data.row)}
+                      onDelete={() => handleDelete(c.data.row)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── 3. Revalidation banner + CTA ── */}
+      {(fixList.length > 0 || reviewList.length > 0) && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+          <div className="flex items-start gap-2.5">
+            <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-800">
+              Edits validate as you go. Use <strong>Revalidate changes</strong> to re-check the whole batch,
+              including cross-row checks like duplicate Reference IDs. Use the <strong>trash icon</strong> to
+              remove a row from this batch (you can undo).
+            </p>
+          </div>
+          <Button
+            variant="outline" size="sm"
+            className="flex-shrink-0 border-blue-300 text-blue-700 hover:bg-blue-100"
+            onClick={handleRevalidate}
+          >
+            <IconRefresh className="w-3.5 h-3.5 mr-1.5" />
+            Revalidate changes
+          </Button>
+        </div>
+      )}
+
+      {/* ── 4. Valid orders / confirmation ── */}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between gap-4 mb-4">
@@ -520,18 +877,22 @@ export function BulkUploadSummary() {
               <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                 <IconCircleCheck className="w-5 h-5 text-green-600" />
               </div>
-              <p className="text-base font-semibold text-gray-900">
-                {totalValidCount} {totalValidCount === 1 ? 'order' : 'orders'} uploaded successfully
-              </p>
+              <div>
+                <p className="text-base font-semibold text-gray-900">
+                  {totalValidCount} {totalValidCount === 1 ? 'order' : 'orders'} ready to book
+                </p>
+                <p className="text-sm text-gray-500">Orders are created as <span className="font-medium text-gray-700">Awaiting payment</span>.</p>
+              </div>
             </div>
-            <Button
-              variant="ghost" size="sm"
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-              onClick={() => navigate('/dashboard/transactions')}
+            <a
+              href={txnUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
             >
               View all in Transactions
-              <IconArrowRight className="w-3.5 h-3.5 ml-1" />
-            </Button>
+              <IconExternalLink className="w-3.5 h-3.5" />
+            </a>
           </div>
 
           {!isSpreadsheet ? (
@@ -614,403 +975,8 @@ export function BulkUploadSummary() {
               complete booking — you can view them in Transactions afterwards.
             </p>
           )}
-          {retried && fixedCount > 0 && (
-            <p className="text-xs text-green-700 mt-2 flex items-center gap-1">
-              <IconCircleCheck className="w-4 h-4 flex-shrink-0" />
-              {fixedCount} previously-errored {fixedCount === 1 ? 'row was' : 'rows were'} fixed and added to valid orders.
-            </p>
-          )}
         </CardContent>
       </Card>
-
-      {/* ── Review upload results — errors (blocking) + warnings (non-blocking) ── */}
-      {(errorRows.length > 0 || warningRows.length > 0) ? (
-        <Card>
-          <CardContent className="p-6 space-y-5">
-            {/* Section heading + at-a-glance summary */}
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Review upload results</h2>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                {errorRows.length > 0 && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold px-2.5 py-1">
-                    <IconCircleX className="w-3.5 h-3.5" />
-                    {errorRows.length} {errorRows.length === 1 ? 'error needs' : 'errors need'} attention
-                  </span>
-                )}
-                {warningRows.length > 0 && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-1">
-                    <IconAlertTriangle className="w-3.5 h-3.5" />
-                    {warningRows.length} {warningRows.length === 1 ? 'warning' : 'warnings'}
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-gray-500 mt-2">
-                {errorRows.length > 0
-                  ? 'Fix the errors below before those rows can be booked. '
-                  : 'No blocking errors. '}
-                {warningRows.length > 0 &&
-                  `Warnings don’t block booking — those rows are included in your ${totalValidCount} valid orders.`}
-              </p>
-            </div>
-
-            {/* Errors — must be fixed */}
-            {errorRows.length > 0 && (
-            <div className="space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                  <IconCircleX className="w-5 h-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-base font-semibold text-gray-900">Errors — must be fixed</p>
-                  <p className="text-sm text-gray-500">These rows can’t proceed until corrected.</p>
-                </div>
-              </div>
-              <Button variant="outline" size="sm">
-                <IconDownload className="w-3.5 h-3.5 mr-1.5" />
-                Download Failed Orders
-              </Button>
-            </div>
-
-            {/*
-              Horizontally scrollable editable table. Province / City / Barangay
-              are separate columns (cascade selects). Scroll is scoped to this
-              card via overflow-x-auto — the page itself does not scroll.
-              min-w keeps every column readable without truncating values.
-            */}
-            <div className="overflow-x-auto rounded-lg border border-red-200">
-              <table className="w-full min-w-[3230px] border-collapse text-sm">
-                <thead className="bg-red-50 border-b border-red-200">
-                  <tr>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 w-12">Row</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[190px]">Error</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[160px]">{L.name}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">{L.mobile}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[200px]">{L.streetAddress}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">{L.province}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[190px]">{L.cityMunicipality}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[175px]">{L.barangay}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[210px]">{L.landmarks}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[185px]">{L.itemName}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.pouchSize}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
-                      {L.lengthCm}
-                      <span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
-                    </th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
-                      {L.widthCm}
-                      <span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
-                    </th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
-                      {L.heightCm}
-                      <span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
-                    </th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[120px]">
-                      {L.weightKg}
-                      <span className="font-normal text-gray-400 block text-xs leading-tight">Custom size only</span>
-                    </th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[170px]">{L.cod}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[130px]">{L.codAmount}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.declaredValue}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.insureFull}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[145px]">
-                      Item Protection Fee
-                      <span className="font-normal text-gray-400 block text-xs leading-tight">Auto-calculated · (Declared − ₱500) × 1%</span>
-                    </th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[150px]">{L.recipientPaysFees}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[160px]">{L.referenceId}</th>
-                    <th className="text-left text-xs font-semibold text-gray-600 px-3 py-2.5 min-w-[80px]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {errorRows.map((row) => {
-                    const edits         = rowEdits[row.row] ?? rowToEdits(row);
-                    const fe            = (f: EditableField) => fieldHasError(f, row, edits);
-                    const isDuplicate   = row.errors.some((e) => e.includes('duplicate') || e.includes('Possible'));
-                    const protectionFee = computeItemProtectionFee(edits);
-
-                    return (
-                      <tr key={row.row} className="border-b border-red-100 bg-white hover:bg-red-50/20 align-top">
-                        {/* Row # */}
-                        <td className="px-3 py-2.5">
-                          <span className="text-sm font-medium text-gray-900">{row.row}</span>
-                        </td>
-
-                        {/* Error list */}
-                        <td className="px-3 py-2.5">
-                          <ul className="space-y-0.5">
-                            {row.errors.map((e, i) => (
-                              <li key={i} className="text-xs text-red-600 flex items-start gap-1">
-                                <span className="mt-0.5 shrink-0">•</span>{e}
-                              </li>
-                            ))}
-                          </ul>
-                        </td>
-
-                        {/* Recipient Name */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput value={edits.recipientName} onChange={(v) => updateEdit(row.row, 'recipientName', v)} error={fe('recipientName')} />
-                          {fe('recipientName') && <p className="text-xs text-red-600 mt-0.5">Name is required</p>}
-                        </td>
-
-                        {/* Mobile Number */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput value={edits.mobileNumber} onChange={(v) => updateEdit(row.row, 'mobileNumber', v)} error={fe('mobileNumber')} placeholder="e.g. +639170000000" />
-                          {fe('mobileNumber') && <p className="text-xs text-red-600 mt-0.5">Mobile is required</p>}
-                        </td>
-
-                        {/* Street Address */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput value={edits.streetAddress} onChange={(v) => updateEdit(row.row, 'streetAddress', v)} error={fe('streetAddress')} />
-                          {fe('streetAddress') && <p className="text-xs text-red-600 mt-0.5">Street Address is required</p>}
-                        </td>
-
-                        {/* Province / City/Municipality / Barangay — 3 cascade cells */}
-                        <LocationCascadeCells
-                          province={edits.province}
-                          city={edits.cityMunicipality}
-                          barangay={edits.barangay}
-                          onChange={(p, c, b) => updateLocation(row.row, p, c, b)}
-                        />
-
-                        {/* Landmarks / Unit # */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput value={edits.landmarks} onChange={(v) => updateEdit(row.row, 'landmarks', v)} error={false} placeholder="Optional" />
-                        </td>
-
-                        {/* Item Name */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput value={edits.itemName} onChange={(v) => updateEdit(row.row, 'itemName', v)} error={false} />
-                        </td>
-
-                        {/* Pouch/box size */}
-                        <td className="px-3 py-2.5">
-                          <select
-                            value={edits.pouchSize}
-                            onChange={(e) => updateEdit(row.row, 'pouchSize', e.target.value)}
-                            className={`${TABLE_SELECT_CLS} ${fe('pouchSize') ? 'border-red-500 ring-1 ring-red-500 bg-red-50' : ''}`}
-                          >
-                            <option value="">Select size</option>
-                            {RECEPTACLE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                          {fe('pouchSize') && <p className="text-xs text-red-600 mt-0.5">Select a valid size</p>}
-                        </td>
-
-                        {/* Length (cm) — required when pouchSize is CUSTOM */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput
-                            value={edits.lengthCm}
-                            onChange={(v) => updateEdit(row.row, 'lengthCm', v)}
-                            error={fe('lengthCm')}
-                            placeholder={edits.pouchSize.toUpperCase() === 'CUSTOM' ? 'e.g. 30' : '—'}
-                          />
-                          {fe('lengthCm') && <p className="text-xs text-red-600 mt-0.5">Required for Custom size</p>}
-                        </td>
-
-                        {/* Width (cm) */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput
-                            value={edits.widthCm}
-                            onChange={(v) => updateEdit(row.row, 'widthCm', v)}
-                            error={fe('widthCm')}
-                            placeholder={edits.pouchSize.toUpperCase() === 'CUSTOM' ? 'e.g. 20' : '—'}
-                          />
-                          {fe('widthCm') && <p className="text-xs text-red-600 mt-0.5">Required for Custom size</p>}
-                        </td>
-
-                        {/* Height (cm) */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput
-                            value={edits.heightCm}
-                            onChange={(v) => updateEdit(row.row, 'heightCm', v)}
-                            error={fe('heightCm')}
-                            placeholder={edits.pouchSize.toUpperCase() === 'CUSTOM' ? 'e.g. 15' : '—'}
-                          />
-                          {fe('heightCm') && <p className="text-xs text-red-600 mt-0.5">Required for Custom size</p>}
-                        </td>
-
-                        {/* Weight (kg) */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput
-                            value={edits.weightKg}
-                            onChange={(v) => updateEdit(row.row, 'weightKg', v)}
-                            error={fe('weightKg')}
-                            placeholder={edits.pouchSize.toUpperCase() === 'CUSTOM' ? 'e.g. 2.5' : '—'}
-                          />
-                          {fe('weightKg') && <p className="text-xs text-red-600 mt-0.5">Required for Custom size</p>}
-                        </td>
-
-                        {/* COD? — editable Yes/No */}
-                        <td className="px-3 py-2.5">
-                          <YesNoToggle value={edits.cod} onChange={(v) => updateEdit(row.row, 'cod', v)} />
-                        </td>
-
-                        {/* COD Amount */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput value={edits.codAmount} onChange={(v) => updateEdit(row.row, 'codAmount', v)} error={fe('codAmount')} placeholder="0.00" />
-                          {fe('codAmount') && <p className="text-xs text-red-600 mt-0.5">Exceeds ₱50,000 limit</p>}
-                        </td>
-
-                        {/* Declared Value */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput value={edits.declaredValue} onChange={(v) => updateEdit(row.row, 'declaredValue', v)} error={false} placeholder="0.00" />
-                        </td>
-
-                        {/* Insure full item value? — editable Yes/No (required) */}
-                        <td className="px-3 py-2.5">
-                          <YesNoToggle value={edits.insureFull} onChange={(v) => updateEdit(row.row, 'insureFull', v)} error={fe('insureFull')} />
-                          {fe('insureFull') && <p className="text-xs text-red-600 mt-0.5">Select Yes or No</p>}
-                        </td>
-
-                        {/* Item Protection Fee — calculated display */}
-                        <td className="px-3 py-2.5">
-                          <span className={`text-sm font-medium ${protectionFee > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
-                            ₱{protectionFee.toFixed(2)}
-                          </span>
-                          {edits.insureFull !== 'Yes' && (
-                            <p className="text-xs text-gray-400 mt-0.5">Free ₱500 coverage</p>
-                          )}
-                        </td>
-
-                        {/* Recipient Pays Fees — editable Yes/No */}
-                        <td className="px-3 py-2.5">
-                          <YesNoToggle value={edits.recipientPaysFees} onChange={(v) => updateEdit(row.row, 'recipientPaysFees', v)} />
-                        </td>
-
-                        {/* Reference ID */}
-                        <td className="px-3 py-2.5">
-                          <ErrInput value={edits.referenceId} onChange={(v) => updateEdit(row.row, 'referenceId', v)} error={false} placeholder="Optional" />
-                        </td>
-
-                        {/* Actions — remove for duplicate rows */}
-                        <td className="px-3 py-2.5">
-                          {isDuplicate && (
-                            <button
-                              onClick={() => handleRemoveRow(row.row)}
-                              title="Remove duplicate row"
-                              aria-label={`Remove duplicate row ${row.row}`}
-                              className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            >
-                              <IconTrash className="w-4 h-4" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Info banner + retry */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
-              <div className="flex items-start gap-2.5">
-                <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-800">
-                  Fix affected rows above and click <strong>Retry Upload</strong> to re-validate.
-                  For duplicate rows, use the <strong>trash icon</strong> to remove and discard the duplicate —
-                  the remaining row revalidates automatically. You can also proceed with the {totalValidCount} valid orders below.
-                </p>
-              </div>
-              <Button
-                variant="outline" size="sm"
-                className="flex-shrink-0 border-blue-300 text-blue-700 hover:bg-blue-100"
-                onClick={handleRetryUpload}
-              >
-                <IconRefresh className="w-3.5 h-3.5 mr-1.5" />
-                Retry Upload
-              </Button>
-            </div>
-            </div>
-            )}
-
-            {/* Warnings — will still proceed (non-blocking, included in valid orders) */}
-            {warningRows.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                    <IconAlertTriangle className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-base font-semibold text-gray-900">Warnings — will still proceed</p>
-                    <p className="text-sm text-gray-500">
-                      These rows are valid and included in your booking. No action needed.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto rounded-lg border border-amber-200">
-                  <table className="w-full min-w-[1100px] border-collapse text-sm">
-                    <thead className="bg-amber-50 border-b border-amber-200">
-                      <tr>
-                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 w-12">Row</th>
-                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[360px]">Warning</th>
-                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[160px]">{L.name}</th>
-                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[185px]">{L.itemName}</th>
-                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[120px]">{L.pouchSize}</th>
-                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[90px]">{L.lengthCm}</th>
-                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[90px]">{L.widthCm}</th>
-                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[90px]">{L.heightCm}</th>
-                        <th className="text-left text-xs font-semibold text-amber-900 px-3 py-2.5 min-w-[90px]">{L.weightKg}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {warningRows.map((row) => (
-                        <tr
-                          key={row.row}
-                          className="border-b border-amber-100 border-l-4 border-l-amber-400 bg-amber-50/50 align-top"
-                        >
-                          <td className="px-3 py-2.5">
-                            <span className="text-sm font-medium text-gray-900">{row.row}</span>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <div className="flex items-start gap-2">
-                              <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-0.5 flex-shrink-0">
-                                Warning
-                              </span>
-                              <span className="text-xs text-amber-800">{standardSizeDimWarning(row)}</span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-sm text-gray-900">{row.recipientName}</td>
-                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.itemName}</td>
-                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.pouchSize}</td>
-                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.lengthCm}</td>
-                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.widthCm}</td>
-                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.heightCm}</td>
-                          <td className="px-3 py-2.5 text-sm text-gray-600">{row.weightKg}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ) : HAD_ERRORS ? (
-        /* Positive empty state once all error rows are fixed or removed. */
-        <Card className="border-green-200">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                <IconCircleCheck className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-base font-semibold text-gray-900">No rows with errors</p>
-                <p className="text-sm text-gray-500">
-                  All affected rows have been fixed or removed. You can proceed with the valid orders below.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {/* ── Duplicate rows — deferred ── */}
-      {/* TODO: A dedicated "Duplicate Reference IDs" section will go here once
-           server-side reference-ID deduplication is available. Inline duplicate
-           detection + removal (trash icon, dynamic by Reference ID) is already
-           wired for the current frontend-only check. */}
 
       {/* ── Bottom booking section ── */}
       <div className="border-t border-gray-200 pt-6">
@@ -1101,15 +1067,20 @@ export function BulkUploadSummary() {
               </div>
               <p className="text-xs text-gray-500">{paymentCopy(selectedPayment, billingAvailable)}</p>
             </div>
-            <Button className="w-full" disabled={totalValidCount === 0} onClick={() => setShowSuccess(true)}>
+            <Button className="w-full" disabled={!canBook} onClick={() => setShowSuccess(true)}>
               Complete Booking
             </Button>
-            {totalValidCount === 0 && (
+            {fixList.length > 0 ? (
               <p className="text-xs text-red-600 flex items-center gap-1">
                 <IconAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                No valid orders to book. Fix errors above first.
+                Resolve the {fixList.length} {fixList.length === 1 ? 'row' : 'rows'} needing fixes before booking.
               </p>
-            )}
+            ) : totalValidCount === 0 ? (
+              <p className="text-xs text-red-600 flex items-center gap-1">
+                <IconAlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                No valid orders to book.
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -1158,7 +1129,7 @@ export function BulkUploadSummary() {
               </p>
             )}
             <p className="text-sm text-gray-600 mt-0.5">
-              Total fees — {paymentCopy(selectedPayment, billingAvailable)}:&nbsp;
+              Created as <span className="font-medium text-gray-900">Awaiting payment</span> — {paymentCopy(selectedPayment, billingAvailable)}:&nbsp;
               <span className="font-semibold text-gray-900">{peso(totalFees)}</span>
             </p>
           </div>
@@ -1167,15 +1138,39 @@ export function BulkUploadSummary() {
               <IconUpload className="w-4 h-4 mr-2" />
               Upload Another Batch
             </Button>
-            <Button variant="outline" className="w-full" onClick={() => setShowSuccess(false)}>
-              Go to Batch Details
-            </Button>
+            <a
+              href={txnUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              View transactions
+              <IconExternalLink className="w-4 h-4" />
+            </a>
             <Link to="/dashboard" className="block w-full text-center text-sm font-medium text-blue-600 hover:text-blue-700 py-1">
               Go to Home
             </Link>
           </div>
         </div>
       </Dialog>
+
+      {/* ── Undo toast (row deletion) ── */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[70] max-w-sm">
+          <div className="flex items-center gap-3 rounded-xl bg-gray-900 text-white shadow-xl px-4 py-3">
+            <IconTrash className="w-4 h-4 text-gray-300 flex-shrink-0" />
+            <p className="text-sm flex-1">{toast}</p>
+            {undoState && (
+              <button onClick={handleUndo} className="text-sm font-semibold text-blue-300 hover:text-blue-200">
+                Undo
+              </button>
+            )}
+            <button onClick={() => { setToast(null); setUndoState(null); }} className="text-gray-400 hover:text-white" aria-label="Dismiss">
+              <IconX className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
