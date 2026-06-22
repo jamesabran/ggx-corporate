@@ -126,7 +126,15 @@
       "Bash(gh repo *)",
       "Bash(echo \"exit:$?\")",
       "PowerShell(npm run *)",
-      "PowerShell(git *)"
+      "PowerShell(git *)",
+      "PowerShell(Start-Process -NoNewWindow -FilePath \"npm\" -ArgumentList \"run\",\"dev\" -PassThru | Select-Object Id)",
+      "Bash(node -e \"try{require.resolve\\('playwright'\\);console.log\\('present'\\)}catch\\(e\\){console.log\\('missing'\\)}\")",
+      "Bash(npx playwright *)",
+      "Bash(node _qa_responsive.mjs)",
+      "Bash(node _qa_verify.mjs)",
+      "Read(//tmp/**)",
+      "WebFetch(domain:app.staging.gogoxpress.com)",
+      "Bash(python _build_feature_doc.py)"
     ]
   }
 }
