@@ -681,7 +681,10 @@ export function BulkUploadSummary() {
   const validFromFlagged = classified.filter((c) => c.blocking.length === 0 && c.concerns.length === 0).length;
 
   // ── Derived totals ────────────────────────────────────────────────────────
-  const totalValidCount = validBaseCount + reviewList.length + validFromFlagged;
+  // Rows with no errors and no review concerns — the "Ready to book" count.
+  const readyCount = validBaseCount + validFromFlagged;
+  // Everything bookable (ready + needs-review): the full batch you continue with.
+  const totalValidCount = readyCount + reviewList.length;
   const shippingFee = 1200; // mock flat
   const totalItemProtectionFee = parseFloat(
     classified.filter((c) => c.blocking.length === 0)
@@ -799,132 +802,34 @@ export function BulkUploadSummary() {
               Your upload was processed successfully. Review the delivery and payment details, then complete payment for this batch.
             </p>
           </div>
-        ) : (fixList.length > 0 || reviewList.length > 0) && (
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            {fixList.length > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-semibold px-2.5 py-1">
-                <IconCircleX className="w-3.5 h-3.5" />
-                {fixList.length} {fixList.length === 1 ? 'row needs' : 'rows need'} fixes
-              </span>
-            )}
-            {reviewList.length > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-medium px-2.5 py-1">
-                <IconAlertTriangle className="w-3.5 h-3.5" />
-                {reviewList.length} {reviewList.length === 1 ? 'row needs' : 'rows need'} review
-              </span>
+        ) : (
+          <div className="mt-3 space-y-1.5">
+            {/* Lead with the positive ready-to-book count (restrained, not a banner). */}
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+              <IconCircleCheck className="w-4 h-4 text-green-600 flex-shrink-0" />
+              {readyCount} {readyCount === 1 ? 'row' : 'rows'} ready to book
+            </p>
+            {(fixList.length > 0 || reviewList.length > 0) && (
+              <>
+                <p className="text-sm text-gray-600">
+                  {[
+                    fixList.length > 0 ? `${fixList.length} ${fixList.length === 1 ? 'row needs' : 'rows need'} fixes` : null,
+                    reviewList.length > 0 ? `${reviewList.length} ${reviewList.length === 1 ? 'row needs' : 'rows need'} review` : null,
+                  ].filter(Boolean).join(' · ')}
+                </p>
+                {fixList.length > 0 && (
+                  <p className="text-sm text-gray-500">
+                    Most of your upload is ready. Resolve the rows needing fixes, then you can continue with the full batch.
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
       </div>
 
-      {/* ── 1. Rows needing fixes (blocking) ── */}
-      {!paymentMode && fixList.length > 0 && (
-        <Card className="border-red-200">
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
-                  <IconCircleX className="w-5 h-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-base font-semibold text-gray-900">Rows needing fixes</p>
-                  <p className="text-sm text-gray-500">These rows cannot be uploaded until the listed issues are resolved.</p>
-                </div>
-              </div>
-              <Button variant="outline" size="sm">
-                <IconDownload className="w-3.5 h-3.5 mr-1.5" />
-                Download Failed Orders
-              </Button>
-            </div>
-
-            <div className="overflow-x-auto rounded-lg border border-red-200">
-              <table className="w-full min-w-[3230px] border-collapse text-sm">
-                <ReviewGridHead issueLabel="Issue" theme="red" />
-                <tbody>
-                  {fixList.map((c) => (
-                    <ReviewRow
-                      key={c.data.row}
-                      row={c.data}
-                      edits={c.edits}
-                      variant="fix"
-                      errors={c.blocking}
-                      concerns={c.concerns}
-                      onEdit={(f, v) => updateEdit(c.data.row, f, v)}
-                      onLocation={(p, ci, b) => updateLocation(c.data.row, p, ci, b)}
-                      onCommit={(override) => commitRow(c.data.row, override)}
-                      onDelete={() => handleDelete(c.data.row)}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── 2. Needs review (non-blocking) ── */}
-      {!paymentMode && reviewList.length > 0 && (
-        <Card className="border-amber-200">
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
-                <IconAlertTriangle className="w-5 h-5 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-base font-semibold text-gray-900">Needs review</p>
-                <p className="text-sm text-gray-500">These rows can still be uploaded. Review or edit them if needed.</p>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto rounded-lg border border-amber-200">
-              <table className="w-full min-w-[3230px] border-collapse text-sm">
-                <ReviewGridHead issueLabel="Needs review" theme="amber" />
-                <tbody>
-                  {reviewList.map((c) => (
-                    <ReviewRow
-                      key={c.data.row}
-                      row={c.data}
-                      edits={c.edits}
-                      variant="review"
-                      errors={[]}
-                      concerns={c.concerns}
-                      onEdit={(f, v) => updateEdit(c.data.row, f, v)}
-                      onLocation={(p, ci, b) => updateLocation(c.data.row, p, ci, b)}
-                      onCommit={(override) => commitRow(c.data.row, override)}
-                      onDelete={() => handleDelete(c.data.row)}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── 3. Revalidation banner + CTA ── */}
-      {!paymentMode && (fixList.length > 0 || reviewList.length > 0) && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
-          <div className="flex items-start gap-2.5">
-            <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-800">
-              Edits validate as you go. Use <strong>Revalidate changes</strong> to re-check the whole batch,
-              including cross-row checks like duplicate Reference IDs. Use the <strong>trash icon</strong> to
-              remove a row from this batch (you can undo).
-            </p>
-          </div>
-          <Button
-            variant="outline" size="sm"
-            className="flex-shrink-0 border-blue-300 text-blue-700 hover:bg-blue-100"
-            onClick={handleRevalidate}
-          >
-            <IconRefresh className="w-3.5 h-3.5 mr-1.5" />
-            Revalidate changes
-          </Button>
-        </div>
-      )}
-
-      {/* ── 4. Valid orders / confirmation ── */}
-      <Card>
+      {/* ── 1. Ready to book (valid orders) — always first, even with issues ── */}
+      <Card className="border-green-100">
         <CardContent className="p-6">
           <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
@@ -933,15 +838,13 @@ export function BulkUploadSummary() {
               </div>
               <div>
                 <p className="text-base font-semibold text-gray-900">
-                  {paymentMode
-                    ? 'Bookings in this batch'
-                    : `${totalValidCount} ${totalValidCount === 1 ? 'order' : 'orders'} ready to book`}
+                  {paymentMode ? 'Bookings in this batch' : 'Ready to book'}
                 </p>
                 <p className="text-sm text-gray-500">
                   {paymentMode ? (
                     <>{totalValidCount} {totalValidCount === 1 ? 'booking' : 'bookings'} ready for payment.</>
                   ) : (
-                    <>Orders are created as <span className="font-medium text-gray-700">Awaiting payment</span>.</>
+                    <>{readyCount} {readyCount === 1 ? 'order' : 'orders'} with no issues · created as <span className="font-medium text-gray-700">Awaiting payment</span>.</>
                   )}
                 </p>
               </div>
@@ -984,9 +887,9 @@ export function BulkUploadSummary() {
                 </Table>
               </div>
 
-              {totalValidCount > VALID_ORDERS.length && (
+              {readyCount > VALID_ORDERS.length && (
                 <p className="text-center text-sm text-blue-600 mt-3 font-medium">
-                  View all {totalValidCount} in transactions page
+                  View all {readyCount} in transactions page
                 </p>
               )}
             </>
@@ -1039,6 +942,112 @@ export function BulkUploadSummary() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── 2. Rows needing fixes (blocking) ── */}
+      {!paymentMode && fixList.length > 0 && (
+        <Card className="border-red-200">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                  <IconCircleX className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-gray-900">Rows needing fixes</p>
+                  <p className="text-sm text-gray-500">These rows cannot be uploaded until the listed issues are resolved.</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm">
+                <IconDownload className="w-3.5 h-3.5 mr-1.5" />
+                Download Failed Orders
+              </Button>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-red-200">
+              <table className="w-full min-w-[3230px] border-collapse text-sm">
+                <ReviewGridHead issueLabel="Issue" theme="red" />
+                <tbody>
+                  {fixList.map((c) => (
+                    <ReviewRow
+                      key={c.data.row}
+                      row={c.data}
+                      edits={c.edits}
+                      variant="fix"
+                      errors={c.blocking}
+                      concerns={c.concerns}
+                      onEdit={(f, v) => updateEdit(c.data.row, f, v)}
+                      onLocation={(p, ci, b) => updateLocation(c.data.row, p, ci, b)}
+                      onCommit={(override) => commitRow(c.data.row, override)}
+                      onDelete={() => handleDelete(c.data.row)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── 3. Needs review (non-blocking) ── */}
+      {!paymentMode && reviewList.length > 0 && (
+        <Card className="border-amber-200">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+                <IconAlertTriangle className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-base font-semibold text-gray-900">Needs review</p>
+                <p className="text-sm text-gray-500">These rows can still be uploaded. Review or edit them if needed.</p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-amber-200">
+              <table className="w-full min-w-[3230px] border-collapse text-sm">
+                <ReviewGridHead issueLabel="Needs review" theme="amber" />
+                <tbody>
+                  {reviewList.map((c) => (
+                    <ReviewRow
+                      key={c.data.row}
+                      row={c.data}
+                      edits={c.edits}
+                      variant="review"
+                      errors={[]}
+                      concerns={c.concerns}
+                      onEdit={(f, v) => updateEdit(c.data.row, f, v)}
+                      onLocation={(p, ci, b) => updateLocation(c.data.row, p, ci, b)}
+                      onCommit={(override) => commitRow(c.data.row, override)}
+                      onDelete={() => handleDelete(c.data.row)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── 4. Revalidation banner + CTA ── */}
+      {!paymentMode && (fixList.length > 0 || reviewList.length > 0) && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+          <div className="flex items-start gap-2.5">
+            <IconInfoCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-800">
+              Edits validate as you go. Use <strong>Revalidate changes</strong> to re-check the whole batch,
+              including cross-row checks like duplicate Reference IDs. Use the <strong>trash icon</strong> to
+              remove a row from this batch (you can undo).
+            </p>
+          </div>
+          <Button
+            variant="outline" size="sm"
+            className="flex-shrink-0 border-blue-300 text-blue-700 hover:bg-blue-100"
+            onClick={handleRevalidate}
+          >
+            <IconRefresh className="w-3.5 h-3.5 mr-1.5" />
+            Revalidate changes
+          </Button>
+        </div>
+      )}
 
       {/* ── Bottom booking section ── */}
       <div className="border-t border-gray-200 pt-6">
