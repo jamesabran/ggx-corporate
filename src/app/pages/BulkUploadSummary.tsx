@@ -40,7 +40,7 @@ function ErrInput({ value, onChange, error, placeholder, disabled, onBlur }: {
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      onBlur={onBlur}
+      onBlur={onBlur ? () => onBlur() : undefined}
       disabled={disabled}
       placeholder={placeholder}
       className={`${TABLE_INPUT_BASE} ${
@@ -389,7 +389,7 @@ interface ReviewRowProps {
   concerns: ReviewConcern[];
   onEdit: (field: EditableField, value: string) => void;
   onLocation: (province: string, city: string, barangay: string) => void;
-  onCommit: (override?: RowEdits) => void;
+  onCommit: (patch?: Partial<RowEdits>) => void;
   onDelete: () => void;
 }
 
@@ -404,7 +404,7 @@ function ReviewRow({ row, edits, variant, errors, concerns, onEdit, onLocation, 
   // Discrete controls (size, Yes/No, location) commit immediately with the new
   // value so validation re-runs at once — e.g. switching off Custom clears the
   // dimension error without waiting for Revalidate changes.
-  const commitEdit = (f: EditableField, v: string) => { onEdit(f, v); onCommit({ ...edits, [f]: v }); };
+  const commitEdit = (f: EditableField, v: string) => { onEdit(f, v); onCommit({ [f]: v }); };
 
   const rowTone = variant === 'fix'
     ? 'border-red-100 bg-white hover:bg-red-50/20'
@@ -465,7 +465,7 @@ function ReviewRow({ row, edits, variant, errors, concerns, onEdit, onLocation, 
         province={edits.province}
         city={edits.cityMunicipality}
         barangay={edits.barangay}
-        onChange={(p, c, b) => { onLocation(p, c, b); onCommit({ ...edits, province: p, cityMunicipality: c, barangay: b }); }}
+        onChange={(p, c, b) => { onLocation(p, c, b); onCommit({ province: p, cityMunicipality: c, barangay: b }); }}
       />
 
       <td className="px-3 py-2.5">
@@ -647,6 +647,10 @@ export function BulkUploadSummary() {
     INITIAL_REVIEW_ROWS.forEach((r) => { init[r.row] = rowToEdits(r); });
     return init;
   });
+  // Always-current view of `edits` so an on-blur commit validates the latest typed
+  // values (not a render-time snapshot) and never clobbers a concurrent field edit.
+  const editsRef = useRef(edits);
+  editsRef.current = edits;
   const [validation, setValidation] = useState<Record<number, RowValidationState>>(() => {
     const init: Record<number, RowValidationState> = {};
     INITIAL_REVIEW_ROWS.forEach((r) => { init[r.row] = validateRowState(r, rowToEdits(r)); });
@@ -745,17 +749,22 @@ export function BulkUploadSummary() {
     }));
 
   /**
-   * Local per-row revalidation (on blur / control change) — no cross-row work.
-   * `override` carries the just-changed edits so discrete controls (parcel size,
-   * Yes/No, location) revalidate against the new value immediately, instead of the
-   * stale state snapshot. Cross-row checks (duplicate Reference ID) are untouched
-   * here, so fixing the dimension error keeps any duplicate/address concern active.
+   * Local per-row revalidation (on blur / control change) — no cross-row work, no
+   * section movement. `override` carries the just-changed value for discrete
+   * controls (parcel size, Yes/No, location) so they revalidate immediately; text
+   * fields commit on blur and read the LATEST edits from the ref (never a stale
+   * render snapshot, never overwriting another field). This only refreshes the
+   * row's own inline messages — section membership stays put until Revalidate, and
+   * the row/input elements are not recreated, so focus and cursor are preserved.
    */
-  const commitRow = (rowNum: number, override?: RowEdits) => {
+  const commitRow = (rowNum: number, patch?: Partial<RowEdits>) => {
     setValidation((prev) => {
       const row = rows.find((r) => r.row === rowNum);
       if (!row) return prev;
-      const e = override ?? edits[rowNum] ?? rowToEdits(row);
+      // Merge the just-changed value (patch) onto the LATEST edits — so a discrete
+      // control validates with its new value while every other field keeps its
+      // current typed value.
+      const e = { ...(editsRef.current[rowNum] ?? rowToEdits(row)), ...(patch ?? {}) };
       return { ...prev, [rowNum]: validateRowState(row, e) };
     });
   };
@@ -1022,7 +1031,7 @@ export function BulkUploadSummary() {
                       concerns={c.concerns}
                       onEdit={(f, v) => updateEdit(c.data.row, f, v)}
                       onLocation={(p, ci, b) => updateLocation(c.data.row, p, ci, b)}
-                      onCommit={(override) => commitRow(c.data.row, override)}
+                      onCommit={(patch) => commitRow(c.data.row, patch)}
                       onDelete={() => handleDelete(c.data.row)}
                     />
                   ))}
@@ -1061,7 +1070,7 @@ export function BulkUploadSummary() {
                       concerns={c.concerns}
                       onEdit={(f, v) => updateEdit(c.data.row, f, v)}
                       onLocation={(p, ci, b) => updateLocation(c.data.row, p, ci, b)}
-                      onCommit={(override) => commitRow(c.data.row, override)}
+                      onCommit={(patch) => commitRow(c.data.row, patch)}
                       onDelete={() => handleDelete(c.data.row)}
                     />
                   ))}
