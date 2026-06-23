@@ -21,6 +21,7 @@ import {
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Progress } from '../components/ui/Progress';
 import { Badge } from '../components/ui/Badge';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -378,9 +379,7 @@ export function Dashboard() {
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${row.dot}`} />
                   <p className="text-sm text-gray-700 flex-1 leading-none">{row.label}</p>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden hidden sm:block">
-                      <div className={`h-full rounded-full ${row.dot}`} style={{ width: `${row.pct}%` }} />
-                    </div>
+                    <Progress value={row.pct} barClassName={row.dot} className="w-16 hidden sm:block" aria-label={row.label} />
                     <p className="text-sm font-bold text-gray-900 w-12 text-right tabular-nums">{row.value.toLocaleString()}</p>
                   </div>
                 </div>

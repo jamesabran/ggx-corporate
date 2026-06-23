@@ -39,6 +39,15 @@ export function OverviewSection() {
         <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-700">/design-system</code> and
         changes no production screen or flow.
       </p>
+
+      <div className="rounded-xl border border-gray-200 p-5">
+        <p className="text-sm font-semibold text-gray-900">On the roadmap</p>
+        <p className="mt-1 text-sm text-gray-600">
+          These exist in GGX-SHADCN but aren’t yet a reusable coded component, so they’re intentionally not documented
+          here (no lookalikes): <span className="text-gray-800">Popover, Combobox, Calendar, Native Select, Scroll-area</span>.
+          They’ll be added once extracted from real usage or built to spec.
+        </p>
+      </div>
     </Section>
   );
 }

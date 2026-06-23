@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Pagination } from '../components/ui/Pagination';
 import { SearchInput } from '../components/SearchInput';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
@@ -151,12 +153,10 @@ export function Transactions() {
   return (
     <div className="p-6 space-y-6">
       {/* Page header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
-          <p className="text-gray-600 mt-1">Track all your bookings and deliveries</p>
-        </div>
-        {!showStoreOrders && (
+      <PageHeader
+        title="Transactions"
+        subtitle="Track all your bookings and deliveries"
+        action={!showStoreOrders && (
           <div className="flex items-center gap-2">
             {/* View mode toggle */}
             <SegmentedControl
@@ -173,7 +173,7 @@ export function Transactions() {
             </Button>
           </div>
         )}
-      </div>
+      />
 
       {/* Commerce tabs — Store Orders vs Deliveries. Only when commerce is on. */}
       {commerceEnabled && (
@@ -331,15 +331,12 @@ export function Transactions() {
               </TableBody>
             </Table>
 
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-              <p className="text-sm text-gray-600">
-                Showing {filtered.length} of {allDeliveries.length} transactions
-              </p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled>Previous</Button>
-                <Button variant="outline" size="sm" disabled>Next</Button>
-              </div>
-            </div>
+            <Pagination
+              className="mt-6 border-t border-gray-200 pt-6"
+              summary={`Showing ${filtered.length} of ${allDeliveries.length} transactions`}
+              previousDisabled
+              nextDisabled
+            />
           </CardContent>
         </Card>
       )}

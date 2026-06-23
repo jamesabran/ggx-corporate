@@ -16,16 +16,25 @@ import { IconContainerSection } from '../sections/IconContainerSection';
 import { AvatarSection } from '../sections/AvatarSection';
 import { AlertSection } from '../sections/AlertSection';
 import { SeparatorSection } from '../sections/SeparatorSection';
+import { ProgressSection } from '../sections/ProgressSection';
+import { FieldSection } from '../sections/FieldSection';
+import { TooltipSection } from '../sections/TooltipSection';
+import { AccordionSection } from '../sections/AccordionSection';
 import { TabsSection } from '../sections/TabsSection';
 import { TableSection } from '../sections/TableSection';
 import { DialogSection } from '../sections/DialogSection';
 import { OtpDialogSection } from '../sections/OtpDialogSection';
+// Layout & Navigation
+import { PageHeaderSection } from '../sections/PageHeaderSection';
+import { BreadcrumbSection } from '../sections/BreadcrumbSection';
+import { PaginationSection } from '../sections/PaginationSection';
 // Forms
 import { FormFieldSection } from '../sections/FormFieldSection';
 import { TextareaSection } from '../sections/TextareaSection';
 import { SelectSection } from '../sections/SelectSection';
 import { SearchInputSection } from '../sections/SearchInputSection';
 import { CheckboxSection } from '../sections/CheckboxSection';
+import { RadioGroupSection } from '../sections/RadioGroupSection';
 import { SwitchSection } from '../sections/SwitchSection';
 import { SegmentedControlSection } from '../sections/SegmentedControlSection';
 // Patterns
@@ -67,17 +76,26 @@ export function DesignSystemPage() {
       <IconContainerSection />
       <AvatarSection />
       <AlertSection />
+      <ProgressSection />
       <SeparatorSection />
+      <FieldSection />
+      <TooltipSection />
+      <AccordionSection />
       <TabsSection />
       <TableSection />
       <DialogSection />
       <OtpDialogSection />
+      {/* Layout & Navigation */}
+      <PageHeaderSection />
+      <BreadcrumbSection />
+      <PaginationSection />
       {/* Forms */}
       <FormFieldSection />
       <TextareaSection />
       <SelectSection />
       <SearchInputSection />
       <CheckboxSection />
+      <RadioGroupSection />
       <SwitchSection />
       <SegmentedControlSection />
       {/* Patterns */}
