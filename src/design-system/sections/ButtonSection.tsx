@@ -1,5 +1,15 @@
 import { IconLoader2, IconPlus } from '@tabler/icons-react';
-import { Section, Subsection, PreviewBox, CodeBlock, DoDont, SourceNote, SpecTable } from '../components/DocPrimitives';
+import {
+  Section,
+  Subsection,
+  PreviewBox,
+  ResponsivePreview,
+  CodeBlock,
+  DoDont,
+  SpecTable,
+  ImplementationMeta,
+  AccessibilityNotes,
+} from '../components/DocPrimitives';
 import { Button } from '../../app/components/ui/Button';
 
 const CODE = `import { Button } from '@/app/components/ui/Button';
@@ -16,6 +26,26 @@ export function ButtonSection() {
       title="Button"
       intro="The shared Button drives every call to action. It follows the GGX CTA hierarchy: one primary (blue) action per view, secondary and ghost for supporting actions."
     >
+      <ImplementationMeta
+        status="production"
+        source="src/app/components/ui/Button.tsx"
+        usedIn={[
+          { label: 'Across the dashboard', where: '/dashboard/*' },
+          { label: 'RootLayout (logout, nav)', where: 'layouts/RootLayout.tsx' },
+        ]}
+        note="The previews below import and render this exact component — no copy."
+      />
+
+      <Subsection title="Live implementation" description="Rendered from the production Button. Toggle the preview width.">
+        <ResponsivePreview>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button>Book delivery</Button>
+            <Button variant="secondary">Save draft</Button>
+            <Button variant="ghost">Cancel</Button>
+          </div>
+        </ResponsivePreview>
+      </Subsection>
+
       <Subsection title="Variants" description="Primary for the main action; secondary and ghost for lower-emphasis choices; link for inline navigation.">
         <PreviewBox className="flex flex-wrap items-center gap-3">
           <Button>Primary</Button>
@@ -36,12 +66,15 @@ export function ButtonSection() {
         </PreviewBox>
       </Subsection>
 
-      <Subsection title="States" description="Disabled drops to 50% opacity and blocks pointer events. Show a spinner for in-flight actions.">
+      <Subsection
+        title="States & interaction"
+        description="The component ships default + disabled (native). There is no loading prop — a busy action is composed by placing a spinner in the children and setting disabled."
+      >
         <PreviewBox className="flex flex-wrap items-center gap-3">
           <Button>Default</Button>
           <Button disabled>Disabled</Button>
           <Button disabled>
-            <IconLoader2 className="h-4 w-4 animate-spin" /> Loading
+            <IconLoader2 className="h-4 w-4 animate-spin" /> Saving…
           </Button>
         </PreviewBox>
       </Subsection>
@@ -60,6 +93,15 @@ export function ButtonSection() {
         />
       </Subsection>
 
+      <AccessibilityNotes
+        items={[
+          'Renders a native <button>; Enter and Space activate it and it is in the tab order by default.',
+          <>Focus shows a visible ring (<code>focus-visible:ring-2 ring-primary</code> with an offset).</>,
+          'Disabled sets the native disabled attribute — removed from the tab order and pointer events blocked, at 50% opacity.',
+          <>Icon-only buttons (<code>size="icon"</code>) must pass an <code>aria-label</code>, as shown in the Sizes example.</>,
+        ]}
+      />
+
       <Subsection title="Usage">
         <DoDont
           dos={[
@@ -77,9 +119,6 @@ export function ButtonSection() {
 
       <Subsection title="Code">
         <CodeBlock code={CODE} />
-        <div className="mt-3">
-          <SourceNote path="src/app/components/ui/Button.tsx" />
-        </div>
       </Subsection>
     </Section>
   );

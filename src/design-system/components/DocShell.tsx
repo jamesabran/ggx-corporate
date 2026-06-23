@@ -27,6 +27,7 @@ export const DS_NAV: NavGroup[] = [
     items: [
       { id: 'button', label: 'Button' },
       { id: 'delivery-status-badge', label: 'Delivery Status Badge' },
+      { id: 'input-field', label: 'Input / Form Field' },
     ],
   },
   {

@@ -7,6 +7,7 @@ import { SpacingSection } from '../sections/SpacingSection';
 import { IconsSection } from '../sections/IconsSection';
 import { ButtonSection } from '../sections/ButtonSection';
 import { BadgeSection } from '../sections/BadgeSection';
+import { FormFieldSection } from '../sections/FormFieldSection';
 import { PaymentSection } from '../sections/PaymentSection';
 
 /**
@@ -34,6 +35,7 @@ export function DesignSystemPage() {
       <IconsSection />
       <ButtonSection />
       <BadgeSection />
+      <FormFieldSection />
       <PaymentSection />
     </DocShell>
   );

@@ -1,8 +1,6 @@
+import { Badge } from '../../app/components/ui/Badge';
 import { cn } from '../../app/lib/utils';
-import {
-  DELIVERY_STATUSES,
-  type DeliveryStatusKey,
-} from '../data/deliveryStatus';
+import { DELIVERY_STATUSES, type DeliveryStatusKey } from '../data/deliveryStatus';
 
 export interface DeliveryStatusBadgeProps {
   status: DeliveryStatusKey;
@@ -13,33 +11,26 @@ export interface DeliveryStatusBadgeProps {
 }
 
 /**
- * Compact, semantic badge for a delivery's current status.
+ * Sample wrapper: maps a delivery status to the production `Badge` component.
  *
- * Intended for transaction lists (one per row) and transaction detail headers.
- * Wording is fixed and concrete per status — do not pass free text, and never
- * collapse states into a vague "Completed".
+ * It supplies the status → variant/label/icon mapping (sample data + layout)
+ * and renders the canonical `Badge` (app/components/ui/Badge.tsx) for all
+ * visuals — it does not recreate badge styling. Intended for transaction lists
+ * (one per row) and transaction detail headers. Wording per status is fixed and
+ * concrete — never collapse states into a vague "Completed".
  */
-export function DeliveryStatusBadge({
-  status,
-  withIcon = true,
-  size = 'md',
-  className,
-}: DeliveryStatusBadgeProps) {
+export function DeliveryStatusBadge({ status, withIcon = true, size = 'md', className }: DeliveryStatusBadgeProps) {
   const def = DELIVERY_STATUSES[status];
   const Icon = def.icon;
 
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full font-medium ring-1 ring-inset whitespace-nowrap',
-        size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs',
-        def.className,
-        className,
-      )}
+    <Badge
+      variant={def.variant}
+      className={cn('gap-1', size === 'sm' && 'px-2 py-0.5 text-[11px]', className)}
     >
       {withIcon && <Icon className={size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5'} stroke={2} />}
       {def.label}
-    </span>
+    </Badge>
   );
 }
 

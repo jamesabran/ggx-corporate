@@ -1,4 +1,14 @@
-import { Section, Subsection, PreviewBox, CodeBlock, DoDont, SourceNote, SpecTable } from '../components/DocPrimitives';
+import {
+  Section,
+  Subsection,
+  PreviewBox,
+  ResponsivePreview,
+  CodeBlock,
+  DoDont,
+  SpecTable,
+  ImplementationMeta,
+  AccessibilityNotes,
+} from '../components/DocPrimitives';
 import { DeliveryStatusBadge } from '../components/DeliveryStatusBadge';
 import { DELIVERY_STATUSES, DELIVERY_STATUS_ORDER } from '../data/deliveryStatus';
 
@@ -15,15 +25,32 @@ export function BadgeSection() {
       title="Delivery Status Badge"
       intro="A compact, semantic badge for a delivery's current status. Used once per row in transaction lists and in the header of a transaction's detail view."
     >
-      <Subsection title="Variants" description="Six concrete statuses. Each has a fixed label, color, and icon — never substitute free text or a vague 'Completed'.">
-        <PreviewBox className="flex flex-wrap items-center gap-3">
-          {DELIVERY_STATUS_ORDER.map((key) => (
-            <DeliveryStatusBadge key={key} status={key} />
-          ))}
-        </PreviewBox>
+      <ImplementationMeta
+        status="sample"
+        source="src/design-system/components/DeliveryStatusBadge.tsx"
+        usedIn={[{ label: 'Transactions list & detail (via Badge)', where: '/dashboard/transactions' }]}
+        note={
+          <>
+            Sample wrapper. It maps each status to a <strong>variant</strong> of the production{' '}
+            <code className="font-mono">Badge</code> (<code className="font-mono">src/app/components/ui/Badge.tsx</code>),
+            which is the canonical component used in the live Transactions list — it does not recreate badge visuals.
+            Color comes from the Badge semantic palette; the icon and label distinguish statuses that share a family
+            (e.g. For Pickup and In Transit are both <code className="font-mono">info</code>).
+          </>
+        }
+      />
+
+      <Subsection title="Live implementation" description="Each badge below renders the production Badge component.">
+        <ResponsivePreview>
+          <div className="flex flex-wrap items-center gap-3">
+            {DELIVERY_STATUS_ORDER.map((key) => (
+              <DeliveryStatusBadge key={key} status={key} />
+            ))}
+          </div>
+        </ResponsivePreview>
       </Subsection>
 
-      <Subsection title="Sizes & options">
+      <Subsection title="Sizes & options" description="The supported props are status, size ('sm' | 'md'), and withIcon. Nothing else.">
         <PreviewBox className="flex flex-wrap items-center gap-3">
           <DeliveryStatusBadge status="in_transit" size="md" />
           <DeliveryStatusBadge status="in_transit" size="sm" />
@@ -33,10 +60,14 @@ export function BadgeSection() {
 
       <Subsection title="Semantic meaning">
         <SpecTable
-          columns={['Status', 'Tone', 'Meaning']}
+          columns={['Status', 'Badge variant', 'Meaning']}
           rows={DELIVERY_STATUS_ORDER.map((key) => {
             const d = DELIVERY_STATUSES[key];
-            return [<DeliveryStatusBadge key={key} status={key} size="sm" />, d.tone, d.meaning];
+            return [
+              <DeliveryStatusBadge key={key} status={key} size="sm" />,
+              <code key={`${key}-v`} className="font-mono text-xs">{d.variant}</code>,
+              d.meaning,
+            ];
           })}
         />
       </Subsection>
@@ -60,6 +91,15 @@ export function BadgeSection() {
         </PreviewBox>
       </Subsection>
 
+      <AccessibilityNotes
+        items={[
+          'Status is conveyed by the text label, not color alone — readable for color-blind users.',
+          'The leading icon is decorative; the label carries the meaning.',
+          'Non-interactive by design (no focus or keyboard handling) — it is a status indicator, not a control.',
+          'Keep contrast intact by using the defined variant rather than custom colors.',
+        ]}
+      />
+
       <Subsection title="Usage">
         <DoDont
           dos={[
@@ -77,9 +117,6 @@ export function BadgeSection() {
 
       <Subsection title="Code">
         <CodeBlock code={CODE} />
-        <div className="mt-3">
-          <SourceNote path="src/design-system/components/DeliveryStatusBadge.tsx" />
-        </div>
       </Subsection>
     </Section>
   );

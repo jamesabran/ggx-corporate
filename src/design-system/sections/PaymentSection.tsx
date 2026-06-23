@@ -1,118 +1,123 @@
-import { useState } from 'react';
-import { IconCash, IconWallet, IconCreditCard, IconReceipt2, IconBuildingBank } from '@tabler/icons-react';
-import { Section, Subsection, PreviewBox, CodeBlock, DoDont, SourceNote } from '../components/DocPrimitives';
-import { PaymentOptionCard } from '../components/PaymentOptionCard';
+import {
+  Section,
+  Subsection,
+  ResponsivePreview,
+  CodeBlock,
+  DoDont,
+  ImplementationMeta,
+  AccessibilityNotes,
+} from '../components/DocPrimitives';
+import { PaymentMethodTabs } from '../../app/components/PaymentMethodTabs';
+import { CheckoutPaymentOptions } from '../../app/components/CheckoutPaymentOptions';
 
-const CODE = `import { PaymentOptionCard } from '@/design-system/components/PaymentOptionCard';
-import { IconCash } from '@tabler/icons-react';
+const SENDER_CODE = `import { PaymentMethodTabs } from '@/app/components/PaymentMethodTabs';
 
-<PaymentOptionCard
-  icon={IconCash}
-  title="Cash on pickup"
-  description="Hand cash to the rider at pickup."
-  state={selected === 'cash' ? 'selected' : 'available'}
-  onSelect={() => setSelected('cash')}
-/>`;
+// Eligible (billing-enabled) account — billing is the default option:
+<PaymentMethodTabs
+  billingAvailable
+  onPaymentMethodChange={(method) => setMethod(method)}
+/>
 
-function DefaultTag() {
-  return (
-    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">Default</span>
-  );
-}
+// Standard account — Cash / E-wallets / Card / Online banking only:
+<PaymentMethodTabs onPaymentMethodChange={(method) => setMethod(method)} />`;
+
+const BUYER_CODE = `import { CheckoutPaymentOptions } from '@/app/components/CheckoutPaymentOptions';
+
+// Buyer checkout — no props, no fee-payer control. Cash on Delivery is the
+// only live method; the rest are shown as "coming soon".
+<CheckoutPaymentOptions />`;
 
 export function PaymentSection() {
-  const [selected, setSelected] = useState('cash');
-
   return (
     <Section
       id="payment-option-card"
-      title="Payment Option Card"
-      intro="A composed pattern for choosing how a delivery is paid. It renders one payment method as a selectable row in one of four states: selected, available, unavailable, or coming soon."
+      title="Payment Options"
+      intro="How a delivery is paid for. Sender booking and buyer checkout use different, real components — they are not one generic card. Both are documented and previewed from their production source."
     >
-      <Subsection title="States">
-        <PreviewBox className="grid gap-2 sm:max-w-md">
-          <PaymentOptionCard icon={IconCash} title="Cash on pickup" description="Hand cash to the rider at pickup." state="selected" />
-          <PaymentOptionCard icon={IconWallet} title="E-wallet" description="GCash, Maya, and more." state="available" />
-          <PaymentOptionCard icon={IconCreditCard} title="Card" description="Visa or Mastercard." state="coming_soon" />
-          <PaymentOptionCard icon={IconBuildingBank} title="Online banking" state="unavailable" />
-        </PreviewBox>
+      {/* ── Sender booking variant ─────────────────────────────────────────── */}
+      <Subsection
+        title="Sender booking — PaymentMethodTabs"
+        description="Used when the account holder books and pays. Eligible (billing-enabled) accounts get billing as the default; everyone gets Cash / E-wallets / Card / Online banking. May carry fee-responsibility logic upstream."
+      >
+        <ImplementationMeta
+          status="production"
+          source="src/app/components/PaymentMethodTabs.tsx"
+          usedIn={[
+            { label: 'Bulk Upload review', where: '/dashboard/bulk-uploader/summary/:id' },
+            { label: 'In-app spreadsheet booking', where: '/dashboard/bulk-uploader/spreadsheet' },
+          ]}
+          note="The previews render this exact component. billingAvailable is contract-driven — only pass it for eligible accounts."
+        />
+        <ResponsivePreview>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs font-medium text-gray-500">Eligible account (billingAvailable)</p>
+              <PaymentMethodTabs billingAvailable />
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-medium text-gray-500">Standard account</p>
+              <PaymentMethodTabs />
+            </div>
+          </div>
+        </ResponsivePreview>
+        <CodeBlock code={SENDER_CODE} />
       </Subsection>
 
-      <Subsection title="Anatomy" description="Radio indicator · method icon · title (+ optional tag) · concise supporting line · trailing state chip when disabled.">
-        <PreviewBox className="sm:max-w-md">
-          <PaymentOptionCard icon={IconReceipt2} title="Pay via billing" description="Invoiced to your account after the service." state="selected" trailing={<DefaultTag />} />
-        </PreviewBox>
+      {/* ── Buyer checkout variant ─────────────────────────────────────────── */}
+      <Subsection
+        title="Buyer checkout — CheckoutPaymentOptions"
+        description="Used at public checkout when a buyer pays. No billing and no delivery-fee-payer control — who covers the fee is seller/store configuration, not a buyer choice."
+      >
+        <ImplementationMeta
+          status="production"
+          source="src/app/components/CheckoutPaymentOptions.tsx"
+          usedIn={[
+            { label: 'Single-product checkout', where: '/buy/:productId' },
+            { label: 'Cart checkout', where: '/checkout' },
+          ]}
+          note="Cash on Delivery is the only live method; other tabs are present but disabled (coming soon)."
+        />
+        <ResponsivePreview defaultView="mobile">
+          <CheckoutPaymentOptions />
+        </ResponsivePreview>
+        <CodeBlock code={BUYER_CODE} />
       </Subsection>
 
-      <Subsection title="Sender booking — interactive" description="A sender choosing how they pay. Eligible billing accounts see billing as a normal default option.">
-        <PreviewBox className="grid gap-2 sm:max-w-md">
-          <PaymentOptionCard
-            icon={IconReceipt2}
-            title="Pay via billing"
-            description="Invoiced to your account after the service."
-            state={selected === 'billing' ? 'selected' : 'available'}
-            trailing={selected === 'billing' ? undefined : <DefaultTag />}
-            onSelect={() => setSelected('billing')}
-          />
-          <PaymentOptionCard
-            icon={IconCash}
-            title="Cash on pickup"
-            description="Hand cash to the rider at pickup."
-            state={selected === 'cash' ? 'selected' : 'available'}
-            onSelect={() => setSelected('cash')}
-          />
-          <PaymentOptionCard
-            icon={IconWallet}
-            title="E-wallet"
-            description="GCash, Maya, and more."
-            state={selected === 'ewallet' ? 'selected' : 'available'}
-            onSelect={() => setSelected('ewallet')}
-          />
-        </PreviewBox>
-      </Subsection>
-
-      <Subsection title="Buyer checkout" description="A buyer paying at checkout. No billing, and no delivery-fee-payer control — that is a sender-side concern only.">
-        <PreviewBox className="grid gap-2 sm:max-w-md">
-          <PaymentOptionCard icon={IconCash} title="Cash on delivery" description="Pay when your order arrives." state="selected" />
-          <PaymentOptionCard icon={IconWallet} title="E-wallet" description="GCash, Maya, and more." state="coming_soon" />
-        </PreviewBox>
-      </Subsection>
-
+      {/* ── Shared rules ──────────────────────────────────────────────────── */}
       <Subsection title="Rules">
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
           <li>Show only payment methods actually available to the user.</li>
-          <li>Don’t mention billing or other special arrangements unless they’re enabled for that account.</li>
-          <li>For eligible accounts, billing appears as a normal available/default option — not a special callout.</li>
-          <li>Buyer checkout must not show a delivery-fee-payer control.</li>
-          <li>Sender booking may include fee-responsibility rules where applicable.</li>
+          <li>Don’t mention billing unless it is enabled for that account.</li>
+          <li>For eligible accounts, billing appears as a normal default option — not a special callout.</li>
+          <li>Buyer checkout must not expose a delivery-fee-payer control.</li>
+          <li>Sender booking may include fee-responsibility logic where applicable.</li>
           <li>Don’t make early booking screens payment-heavy — keep payment late and light.</li>
-          <li>Keep labels concise; avoid unnecessary explanatory copy.</li>
+          <li>Keep supporting copy concise.</li>
         </ul>
       </Subsection>
+
+      <AccessibilityNotes
+        items={[
+          'Options and tabs are native <button>s — reachable by Tab and activated with Enter/Space.',
+          'Unavailable / coming-soon methods set the native disabled attribute and are skipped in the tab order.',
+          'Selected state is shown with both a filled radio/active tab and color — not color alone.',
+          'In sender booking, the normal payment card is disabled until "Other payment options" is chosen, so focus stays on the active choice.',
+        ]}
+      />
 
       <Subsection title="Content guidance">
         <DoDont
           dos={[
             'Lead with the method name; keep the supporting line to one short sentence.',
-            'Surface billing as "Default" only for accounts where it is enabled.',
-            'Disable (not hide) a method that exists but isn’t ready, labelled "Coming soon".',
+            'Surface billing as the default only for accounts where it is enabled.',
+            'Disable (not hide) a method that exists but isn’t ready, labelled "coming soon".',
           ]}
           donts={[
             'Don’t list methods the account can’t use.',
-            'Don’t add fee-payer toggles to buyer checkout.',
+            'Don’t add a fee-payer toggle to buyer checkout.',
             'Don’t front-load booking with a wall of payment options.',
           ]}
         />
-      </Subsection>
-
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-        <div className="mt-3 space-y-1">
-          <SourceNote path="src/design-system/components/PaymentOptionCard.tsx" />
-          <p className="text-xs text-gray-400">
-            Related: <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-600">components/PaymentMethodTabs.tsx</code> (the live booking payment surface).
-          </p>
-        </div>
       </Subsection>
     </Section>
   );

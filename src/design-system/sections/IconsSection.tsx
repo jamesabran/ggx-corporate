@@ -1,4 +1,4 @@
-import { Section, Subsection, SourceNote } from '../components/DocPrimitives';
+import { Section, Subsection, Copyable } from '../components/DocPrimitives';
 import { ICON_CATEGORIES, CUSTOM_ASSETS, ASSET_IMPORT_HINT } from '../data/icons';
 
 export function IconsSection() {
@@ -39,8 +39,8 @@ export function IconsSection() {
             </div>
           ))}
         </div>
-        <div className="mt-3">
-          <SourceNote path={ASSET_IMPORT_HINT} />
+        <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+          Import: <Copyable value={ASSET_IMPORT_HINT} />
         </div>
       </Subsection>
     </Section>

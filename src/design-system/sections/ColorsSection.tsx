@@ -1,4 +1,4 @@
-import { Section, Subsection } from '../components/DocPrimitives';
+import { Section, Subsection, CopyButton } from '../components/DocPrimitives';
 import { COLOR_GROUPS } from '../data/colors';
 
 export function ColorsSection() {
@@ -17,9 +17,15 @@ export function ColorsSection() {
                 <div className="space-y-1 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-gray-900">{s.name}</span>
-                    <code className="font-mono text-xs text-gray-500">{s.value}</code>
+                    <span className="flex items-center gap-0.5">
+                      <code className="font-mono text-xs text-gray-500">{s.value}</code>
+                      <CopyButton value={s.value} label={`Copy ${s.name} value ${s.value}`} />
+                    </span>
                   </div>
-                  <code className="block font-mono text-[11px] text-gray-400">{s.token}</code>
+                  <div className="flex items-center gap-0.5">
+                    <code className="font-mono text-[11px] text-gray-400">{s.token}</code>
+                    <CopyButton value={s.token} label={`Copy token ${s.token}`} />
+                  </div>
                   <p className="text-xs text-gray-600">{s.usage}</p>
                 </div>
               </div>
