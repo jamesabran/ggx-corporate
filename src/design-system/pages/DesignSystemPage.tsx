@@ -24,6 +24,8 @@ import { TabsSection } from '../sections/TabsSection';
 import { TableSection } from '../sections/TableSection';
 import { DialogSection } from '../sections/DialogSection';
 import { OtpDialogSection } from '../sections/OtpDialogSection';
+import { PopoverSection } from '../sections/PopoverSection';
+import { ScrollAreaSection } from '../sections/ScrollAreaSection';
 // Layout & Navigation
 import { PageHeaderSection } from '../sections/PageHeaderSection';
 import { BreadcrumbSection } from '../sections/BreadcrumbSection';
@@ -33,10 +35,12 @@ import { FormFieldSection } from '../sections/FormFieldSection';
 import { TextareaSection } from '../sections/TextareaSection';
 import { SelectSection } from '../sections/SelectSection';
 import { SearchInputSection } from '../sections/SearchInputSection';
+import { ComboboxSection } from '../sections/ComboboxSection';
 import { CheckboxSection } from '../sections/CheckboxSection';
 import { RadioGroupSection } from '../sections/RadioGroupSection';
 import { SwitchSection } from '../sections/SwitchSection';
 import { SegmentedControlSection } from '../sections/SegmentedControlSection';
+import { CalendarSection } from '../sections/CalendarSection';
 // Patterns
 import { PaymentSection } from '../sections/PaymentSection';
 import { CheckoutDeliveryOptionsSection } from '../sections/CheckoutDeliveryOptionsSection';
@@ -85,6 +89,8 @@ export function DesignSystemPage() {
       <TableSection />
       <DialogSection />
       <OtpDialogSection />
+      <PopoverSection />
+      <ScrollAreaSection />
       {/* Layout & Navigation */}
       <PageHeaderSection />
       <BreadcrumbSection />
@@ -94,10 +100,12 @@ export function DesignSystemPage() {
       <TextareaSection />
       <SelectSection />
       <SearchInputSection />
+      <ComboboxSection />
       <CheckboxSection />
       <RadioGroupSection />
       <SwitchSection />
       <SegmentedControlSection />
+      <CalendarSection />
       {/* Patterns */}
       <PaymentSection />
       <CheckoutDeliveryOptionsSection />

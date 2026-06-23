@@ -44,6 +44,8 @@ export const DS_NAV: NavGroup[] = [
       { id: 'table', label: 'Table' },
       { id: 'dialog', label: 'Dialog' },
       { id: 'otp-dialog', label: 'OTP Dialog' },
+      { id: 'popover', label: 'Popover' },
+      { id: 'scroll-area', label: 'Scroll Area' },
     ],
   },
   {
@@ -60,11 +62,13 @@ export const DS_NAV: NavGroup[] = [
       { id: 'input-field', label: 'Input / Form Field' },
       { id: 'textarea', label: 'Textarea' },
       { id: 'select', label: 'Select' },
+      { id: 'combobox', label: 'Combobox' },
       { id: 'search-input', label: 'Search Input' },
       { id: 'checkbox', label: 'Checkbox' },
       { id: 'radio-group', label: 'Radio Group' },
       { id: 'switch', label: 'Switch' },
       { id: 'segmented-control', label: 'Segmented Control' },
+      { id: 'calendar', label: 'Calendar' },
     ],
   },
   {

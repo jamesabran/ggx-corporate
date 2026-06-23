@@ -41,11 +41,13 @@ export function OverviewSection() {
       </p>
 
       <div className="rounded-xl border border-gray-200 p-5">
-        <p className="text-sm font-semibold text-gray-900">On the roadmap</p>
+        <p className="text-sm font-semibold text-gray-900">Coverage</p>
         <p className="mt-1 text-sm text-gray-600">
-          These exist in GGX-SHADCN but aren’t yet a reusable coded component, so they’re intentionally not documented
-          here (no lookalikes): <span className="text-gray-800">Popover, Combobox, Calendar, Native Select, Scroll-area</span>.
-          They’ll be added once extracted from real usage or built to spec.
+          The documented set now spans essentially the whole GGX-SHADCN primitive library. Components marked{' '}
+          <span className="font-medium text-amber-700">In progress</span> are real, exported components that are still
+          rolling out into app screens. <span className="text-gray-800">Native Select</span> is represented by the
+          documented <span className="text-gray-800">Select</span> (which wraps a native <code className="font-mono text-xs">&lt;select&gt;</code>),
+          so it isn’t listed separately.
         </p>
       </div>
     </Section>

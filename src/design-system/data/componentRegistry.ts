@@ -364,6 +364,39 @@ export const COMPONENT_META: Record<string, ComponentMeta> = {
     figma: { name: 'Breadcrumb', key: '285aa5c49785f3d51af9abfc5890a573d5020e87' },
     blurb: 'Navigation trail to the current page.',
   },
+  // ── Fourth wave: overlays + advanced inputs ───────────────────────────────
+  popover: {
+    id: 'popover',
+    title: 'Popover',
+    status: 'in-progress',
+    source: 'src/app/components/ui/Popover.tsx',
+    figma: { name: 'Popover', key: '0ee5ecd12eeac0e458e131ff176bf88ef68ec922' },
+    blurb: 'Click-to-open floating panel anchored to a trigger.',
+  },
+  combobox: {
+    id: 'combobox',
+    title: 'Combobox',
+    status: 'in-progress',
+    source: 'src/app/components/ui/Combobox.tsx',
+    figma: { name: 'Combobox', key: 'c68c579d7dd454e65a4a57282236ea2f0b6c3dc3' },
+    blurb: 'Searchable single-select with a filter field.',
+  },
+  calendar: {
+    id: 'calendar',
+    title: 'Calendar',
+    status: 'in-progress',
+    source: 'src/app/components/ui/Calendar.tsx',
+    figma: { name: 'Calendar', key: 'f6aba76c62200bee37be0958b5390ddd78e1e492' },
+    blurb: 'Single-date month picker (no date library).',
+  },
+  'scroll-area': {
+    id: 'scroll-area',
+    title: 'Scroll Area',
+    status: 'in-progress',
+    source: 'src/app/components/ui/ScrollArea.tsx',
+    figma: { name: 'Scroll-area', key: 'b44b4d28f9ab653668d30816a8e6d3997e2350ad' },
+    blurb: 'Scrollable region with a slim, subtle scrollbar.',
+  },
   // Per-variant meta for the two real payment components (not separate index entries).
   'payment-sender': {
     id: 'payment-sender',
