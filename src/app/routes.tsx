@@ -39,6 +39,9 @@ import { BulkUploadCompleted } from './pages/BulkUploadCompleted';
 // Code-split the recharts-heavy analytics page into its own chunk (keeps the
 // main bundle smaller; resolves the long-standing bundle-size warning).
 const DataAnalytics = lazy(() => import('./pages/DataAnalytics').then((m) => ({ default: m.DataAnalytics })));
+// Isolated, sample-only Design System reference at /design-system. Code-split so
+// it never weighs on the app bundle. Reuses existing tokens/components/assets.
+const DesignSystemPage = lazy(() => import('../design-system/pages/DesignSystemPage').then((m) => ({ default: m.DesignSystemPage })));
 import { Earnings } from './pages/Earnings';
 import { EarningsSettlementDetail } from './pages/EarningsSettlementDetail';
 import { BillingStatement } from './pages/BillingStatement';
@@ -130,6 +133,16 @@ export const router = createBrowserRouter([
       { path: 'delivery/booking',       Component: BasicV2BookingScreen },
       { path: 'delivery/success',       Component: BasicV2BookingSuccess },
     ],
+  },
+  {
+    // Sample-only GoGo Xpress Design System reference. Standalone route; does
+    // not touch primary navigation or any production flow.
+    path: '/design-system',
+    element: (
+      <Suspense fallback={<div className="p-6 text-sm text-gray-500">Loading design system…</div>}>
+        <DesignSystemPage />
+      </Suspense>
+    ),
   },
   {
     path: '/track',
