@@ -6,16 +6,26 @@ import { TypographySection } from '../sections/TypographySection';
 import { SpacingSection } from '../sections/SpacingSection';
 import { IconsSection } from '../sections/IconsSection';
 import { ButtonSection } from '../sections/ButtonSection';
+import { BadgeBaseSection } from '../sections/BadgeBaseSection';
 import { BadgeSection } from '../sections/BadgeSection';
+import { CardSection } from '../sections/CardSection';
+import { StatCardSection } from '../sections/StatCardSection';
+import { IconContainerSection } from '../sections/IconContainerSection';
 import { FormFieldSection } from '../sections/FormFieldSection';
+import { SelectSection } from '../sections/SelectSection';
+import { SearchInputSection } from '../sections/SearchInputSection';
+import { SegmentedControlSection } from '../sections/SegmentedControlSection';
+import { TabsSection } from '../sections/TabsSection';
+import { TableSection } from '../sections/TableSection';
+import { DialogSection } from '../sections/DialogSection';
 import { PaymentSection } from '../sections/PaymentSection';
 
 /**
- * GoGo Xpress Design System — sample reference page.
+ * GoGo Xpress Design System — living reference page.
  *
- * Isolated at /design-system. Reuses existing tokens, components, icons, and
- * assets; changes no production screen, flow, or global component. Safe to
- * remove by deleting src/design-system/ and its route entry.
+ * Isolated at /design-system. Cross-references the GGX-SHADCN Figma file and the
+ * production code, and renders the actual coded components. Changes no production
+ * screen, flow, or global component.
  */
 export function DesignSystemPage() {
   useEffect(() => {
@@ -29,13 +39,26 @@ export function DesignSystemPage() {
   return (
     <DocShell>
       <OverviewSection />
+      {/* Foundations */}
       <ColorsSection />
       <TypographySection />
       <SpacingSection />
       <IconsSection />
+      {/* Components */}
       <ButtonSection />
+      <BadgeBaseSection />
       <BadgeSection />
+      <CardSection />
+      <StatCardSection />
+      <IconContainerSection />
       <FormFieldSection />
+      <SelectSection />
+      <SearchInputSection />
+      <SegmentedControlSection />
+      <TabsSection />
+      <TableSection />
+      <DialogSection />
+      {/* Patterns */}
       <PaymentSection />
     </DocShell>
   );

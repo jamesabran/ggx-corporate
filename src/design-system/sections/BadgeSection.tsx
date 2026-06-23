@@ -26,16 +26,14 @@ export function BadgeSection() {
       intro="A compact, semantic badge for a delivery's current status. Used once per row in transaction lists and in the header of a transaction's detail view."
     >
       <ImplementationMeta
-        status="sample"
-        source="src/design-system/components/DeliveryStatusBadge.tsx"
-        usedIn={[{ label: 'Transactions list & detail (via Badge)', where: '/dashboard/transactions' }]}
+        id="delivery-status-badge"
         note={
           <>
-            Sample wrapper. It maps each status to a <strong>variant</strong> of the production{' '}
-            <code className="font-mono">Badge</code> (<code className="font-mono">src/app/components/ui/Badge.tsx</code>),
-            which is the canonical component used in the live Transactions list — it does not recreate badge visuals.
-            Color comes from the Badge semantic palette; the icon and label distinguish statuses that share a family
-            (e.g. For Pickup and In Transit are both <code className="font-mono">info</code>).
+            Maps each status to a <strong>variant</strong> of the production <code className="font-mono">Badge</code>{' '}
+            (<code className="font-mono">src/app/components/ui/Badge.tsx</code>), the canonical component used in the live
+            Transactions list — it does not recreate badge visuals. Color comes from the Badge semantic palette; the icon
+            and label distinguish statuses that share a family (e.g. For Pickup and In Transit are both{' '}
+            <code className="font-mono">info</code>).
           </>
         }
       />

@@ -40,12 +40,7 @@ export function PaymentSection() {
         description="Used when the account holder books and pays. Eligible (billing-enabled) accounts get billing as the default; everyone gets Cash / E-wallets / Card / Online banking. May carry fee-responsibility logic upstream."
       >
         <ImplementationMeta
-          status="production"
-          source="src/app/components/PaymentMethodTabs.tsx"
-          usedIn={[
-            { label: 'Bulk Upload review', where: '/dashboard/bulk-uploader/summary/:id' },
-            { label: 'In-app spreadsheet booking', where: '/dashboard/bulk-uploader/spreadsheet' },
-          ]}
+          id="payment-sender"
           note="The previews render this exact component. billingAvailable is contract-driven — only pass it for eligible accounts."
         />
         <ResponsivePreview>
@@ -69,12 +64,7 @@ export function PaymentSection() {
         description="Used at public checkout when a buyer pays. No billing and no delivery-fee-payer control — who covers the fee is seller/store configuration, not a buyer choice."
       >
         <ImplementationMeta
-          status="production"
-          source="src/app/components/CheckoutPaymentOptions.tsx"
-          usedIn={[
-            { label: 'Single-product checkout', where: '/buy/:productId' },
-            { label: 'Cart checkout', where: '/checkout' },
-          ]}
+          id="payment-buyer"
           note="Cash on Delivery is the only live method; other tabs are present but disabled (coming soon)."
         />
         <ResponsivePreview defaultView="mobile">

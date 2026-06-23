@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { IconSearch, IconX } from '@tabler/icons-react';
 import { cn } from '../../app/lib/utils';
 
 export interface NavLeaf {
@@ -26,13 +27,23 @@ export const DS_NAV: NavGroup[] = [
     label: 'Components',
     items: [
       { id: 'button', label: 'Button' },
+      { id: 'badge', label: 'Badge' },
       { id: 'delivery-status-badge', label: 'Delivery Status Badge' },
+      { id: 'card', label: 'Card' },
+      { id: 'stat-card', label: 'Stat Card' },
+      { id: 'icon-container', label: 'Icon Container' },
       { id: 'input-field', label: 'Input / Form Field' },
+      { id: 'select', label: 'Select' },
+      { id: 'search-input', label: 'Search Input' },
+      { id: 'segmented-control', label: 'Segmented Control' },
+      { id: 'tabs', label: 'Tabs' },
+      { id: 'table', label: 'Table' },
+      { id: 'dialog', label: 'Dialog' },
     ],
   },
   {
     label: 'Patterns',
-    items: [{ id: 'payment-option-card', label: 'Payment Option Card' }],
+    items: [{ id: 'payment-option-card', label: 'Payment Options' }],
   },
 ];
 
@@ -64,6 +75,16 @@ function useScrollSpy(): string {
 
 export function DocShell({ children }: { children: ReactNode }) {
   const active = useScrollSpy();
+  const [query, setQuery] = useState('');
+
+  // Filter nav leaves by label; hide groups with no matches.
+  const filteredNav = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return DS_NAV;
+    return DS_NAV.map((g) => ({ ...g, items: g.items.filter((i) => i.label.toLowerCase().includes(q)) })).filter(
+      (g) => g.items.length > 0,
+    );
+  }, [query]);
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -75,21 +96,40 @@ export function DocShell({ children }: { children: ReactNode }) {
           className="h-7 w-auto"
         />
         <span className="text-[15px] font-medium text-gray-700">Design System</span>
-        <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-[#0088C9]">
-          Sample
-        </span>
       </header>
 
       <div className="mx-auto flex max-w-6xl gap-10 px-5">
         {/* Sidebar */}
         <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 flex-shrink-0 overflow-y-auto py-8 lg:block">
+          {/* Component index / filter */}
+          <div className="relative mb-5">
+            <IconSearch className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Filter components…"
+              aria-label="Filter components"
+              className="h-8 w-full rounded-lg border border-gray-200 bg-white pl-8 pr-7 text-xs text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                aria-label="Clear filter"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <IconX className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
           <nav className="space-y-6">
-            {DS_NAV.map((group, gi) => (
+            {filteredNav.length === 0 && <p className="px-3 text-xs text-gray-400">No matches.</p>}
+            {filteredNav.map((group, gi) => (
               <div key={gi}>
                 {group.label && (
-                  <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                    {group.label}
-                  </p>
+                  <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">{group.label}</p>
                 )}
                 <ul className="space-y-0.5">
                   {group.items.map((item) => (
@@ -117,7 +157,7 @@ export function DocShell({ children }: { children: ReactNode }) {
         <main className="min-w-0 flex-1 py-10">
           <div className="space-y-12">{children}</div>
           <footer className="mt-16 border-t border-gray-100 pt-6 text-xs text-gray-400">
-            GoGo Xpress Design System · Sample reference · Not a complete system.
+            GoGo Xpress Design System · Living reference aligned to GGX-SHADCN and production code.
           </footer>
         </main>
       </div>

@@ -34,14 +34,8 @@ export function FormFieldSection() {
       intro="The text input used across forms, with a thin field wrapper that adds a label, helper text, and validation messaging. Validation messages stay directly below the field they describe."
     >
       <ImplementationMeta
-        status="production"
-        source="src/app/components/ui/Input.tsx"
-        usedIn={[
-          { label: 'Login', where: '/' },
-          { label: 'Tracking lookup', where: '/track' },
-          { label: 'Buyer & cart checkout', where: '/buy/:productId, /checkout' },
-        ]}
-        note="The control is the production Input. The label/helper/error layout around it is a sample wrapper (src/design-system/components/SampleFormField.tsx) — it adds no new control visuals, only the standard red-border error state and ARIA wiring."
+        id="input-field"
+        note="The control is the production Input. The label/helper/error layout around it is a thin wrapper (src/design-system/components/SampleFormField.tsx) — it adds no new control visuals, only the standard red-border error state and ARIA wiring."
       />
 
       <Subsection title="Live implementation — states" description="Default, filled, required, helper text, validation error, and disabled. Each renders the production Input.">

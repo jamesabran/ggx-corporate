@@ -26,15 +26,7 @@ export function ButtonSection() {
       title="Button"
       intro="The shared Button drives every call to action. It follows the GGX CTA hierarchy: one primary (blue) action per view, secondary and ghost for supporting actions."
     >
-      <ImplementationMeta
-        status="production"
-        source="src/app/components/ui/Button.tsx"
-        usedIn={[
-          { label: 'Across the dashboard', where: '/dashboard/*' },
-          { label: 'RootLayout (logout, nav)', where: 'layouts/RootLayout.tsx' },
-        ]}
-        note="The previews below import and render this exact component — no copy."
-      />
+      <ImplementationMeta id="button" note="The previews below import and render this exact production component — no lookalike." />
 
       <Subsection title="Live implementation" description="Rendered from the production Button. Toggle the preview width.">
         <ResponsivePreview>

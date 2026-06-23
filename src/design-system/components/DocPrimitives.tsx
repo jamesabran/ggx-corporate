@@ -5,8 +5,10 @@ import {
   IconCopy,
   IconDeviceDesktop,
   IconDeviceMobile,
+  IconExternalLink,
 } from '@tabler/icons-react';
 import { cn } from '../../app/lib/utils';
+import { COMPONENT_META, GGX_SHADCN_URL, type LifecycleStatus } from '../data/componentRegistry';
 
 /* ------------------------------------------------------------------ */
 /* Copy-to-clipboard                                                   */
@@ -139,61 +141,69 @@ export function CodeBlock({ code }: { code: string }) {
   );
 }
 
-export interface UsedInRef {
-  label: string;
-  /** Route or file the component is used in. */
-  where: string;
-}
+const STATUS_STYLE: Record<LifecycleStatus, { label: string; cls: string; dot: string }> = {
+  'in-use': { label: 'In use', cls: 'bg-green-100 text-green-800', dot: 'bg-green-600' },
+  'in-progress': { label: 'In progress', cls: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500' },
+  deprecated: { label: 'Deprecated', cls: 'bg-gray-200 text-gray-600', dot: 'bg-gray-400' },
+};
 
 /**
- * Implementation-fidelity metadata for a documented component.
- *
- * `status` is honest about whether the preview renders a production component or
- * a sample. `source` is the real file path. `usedIn` lists live screens/routes.
+ * Cross-source metadata for a documented component: lifecycle status, the
+ * GGX-SHADCN Figma reference, the production source path, and live app usage.
+ * Driven by `COMPONENT_META` so the three sources stay aligned in one place.
  */
-export function ImplementationMeta({
-  status,
-  source,
-  usedIn,
-  note,
-}: {
-  status: 'production' | 'sample';
-  source: string;
-  usedIn?: UsedInRef[];
-  note?: ReactNode;
-}) {
-  const isProd = status === 'production';
+export function ImplementationMeta({ id, note }: { id: string; note?: ReactNode }) {
+  const meta = COMPONENT_META[id];
+  if (!meta) return null;
+  const status = STATUS_STYLE[meta.status];
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Implementation</p>
-          <span
-            className={cn(
-              'mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
-              isProd ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800',
-            )}
-          >
-            <span className={cn('h-1.5 w-1.5 rounded-full', isProd ? 'bg-green-600' : 'bg-amber-500')} />
-            {isProd ? 'Production component' : 'Sample component'}
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Status</p>
+          <span className={cn('mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium', status.cls)}>
+            <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
+            {status.label}
           </span>
         </div>
 
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Source</p>
           <div className="mt-1 flex items-center gap-1">
-            <code className="truncate font-mono text-xs text-gray-700">{source}</code>
-            <CopyButton value={source} label="Copy source path" />
+            <code className="truncate font-mono text-xs text-gray-700">{meta.source}</code>
+            <CopyButton value={meta.source} label="Copy source path" />
           </div>
         </div>
 
-        {usedIn && usedIn.length > 0 && (
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Figma · GGX-SHADCN</p>
+          {meta.figma.needsVerification ? (
+            <a
+              href={GGX_SHADCN_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 hover:underline"
+            >
+              {meta.figma.name} · needs verification <IconExternalLink className="h-3 w-3" />
+            </a>
+          ) : (
+            <div className="mt-1 flex items-center gap-1">
+              <a href={GGX_SHADCN_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-[#0088C9]">
+                {meta.figma.name} <IconExternalLink className="h-3 w-3" />
+              </a>
+              {meta.figma.key && <CopyButton value={meta.figma.key} label={`Copy Figma key for ${meta.figma.name}`} />}
+            </div>
+          )}
+        </div>
+
+        {meta.usedIn && meta.usedIn.length > 0 && (
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Used in</p>
             <ul className="mt-1 space-y-0.5">
-              {usedIn.map((u) => (
-                <li key={u.label} className="flex items-center gap-1.5 text-xs text-gray-600">
-                  <span className="font-medium text-gray-800">{u.label}</span>
+              {meta.usedIn.map((u) => (
+                <li key={u.label} className="text-xs text-gray-600">
+                  <span className="font-medium text-gray-800">{u.label}</span>{' '}
                   <code className="font-mono text-[11px] text-gray-400">{u.where}</code>
                 </li>
               ))}
