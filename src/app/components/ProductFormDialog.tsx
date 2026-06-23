@@ -4,6 +4,7 @@ import { Dialog } from './ui/Dialog';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { Textarea } from './ui/Textarea';
 import { cn } from '../lib/utils';
 import { PRODUCT_CATEGORIES, type InventoryProduct, type ProductInput, type ProductStatus } from '../services/inventoryService';
 
@@ -158,12 +159,11 @@ export function ProductFormDialog({
 
         <div>
           <Label>Description</Label>
-          <textarea
+          <Textarea
             value={form.description}
             onChange={(e) => set('description', e.target.value)}
             rows={2}
             placeholder="Short product description"
-            className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           />
         </div>
 

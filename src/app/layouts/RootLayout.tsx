@@ -36,6 +36,7 @@ import {
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from '../components/ui/Button';
+import { Avatar } from '../components/ui/Avatar';
 import { Dialog, ConfirmDialog } from '../components/ui/Dialog';
 import { useSubAccounts } from '../contexts/SubAccountContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -554,9 +555,7 @@ export function RootLayout() {
                 subaccountExpanded ? 'bg-gray-50' : 'hover:bg-gray-50'
               )}
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0">
-                <span className="text-[11px] font-bold text-white leading-none">{initials}</span>
-              </div>
+              <Avatar initials={initials} shape="square" size="base" />
               <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{currentAccountName}</p>
                 <p className="text-xs text-gray-500 leading-tight mt-0.5">{currentAccountType}</p>

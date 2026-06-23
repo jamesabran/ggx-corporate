@@ -5,6 +5,7 @@ import { Dialog } from '../components/ui/Dialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Switch } from '../components/ui/Switch';
 import { AddressDisplayCard } from '../components/AddressDisplayCard';
 import type { Address } from '../components/AddressBook';
 import { useSubAccounts } from '../contexts/SubAccountContext';
@@ -202,15 +203,11 @@ export function Settings() {
               return (
                 <div key={item.id} className="flex items-center justify-between gap-3">
                   <span className="text-sm text-gray-700">{item.label}</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={on}
-                    onClick={() => setNotifPrefs((p) => ({ ...p, [item.id]: !p[item.id] }))}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${on ? 'bg-blue-600' : 'bg-gray-300'}`}
-                  >
-                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                  </button>
+                  <Switch
+                    checked={on}
+                    onCheckedChange={() => setNotifPrefs((p) => ({ ...p, [item.id]: !p[item.id] }))}
+                    aria-label={item.label}
+                  />
                 </div>
               );
             })}

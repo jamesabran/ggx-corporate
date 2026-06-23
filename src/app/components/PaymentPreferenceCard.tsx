@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { IconCreditCard } from '@tabler/icons-react';
 import { Card, CardContent } from './ui/Card';
 import { Badge } from './ui/Badge';
+import { Separator } from './ui/Separator';
 import { cn } from '../lib/utils';
 
 /**
@@ -82,7 +83,7 @@ export function PaymentPreferenceCard() {
         </div>
 
         {/* Subtle divider */}
-        <div className="my-3 border-t border-gray-100" />
+        <Separator className="my-3 bg-gray-100" />
 
         {/* Supporting line — other options available during review */}
         <p className="text-xs text-gray-500">{content.supporting}</p>

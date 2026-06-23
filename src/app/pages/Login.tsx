@@ -5,6 +5,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Card, CardContent } from '../components/ui/Card';
+import { Checkbox } from '../components/ui/Checkbox';
+import { Alert } from '../components/ui/Alert';
 import { useAuth } from '../contexts/AuthContext';
 import { loginMockUser } from '../services/authService';
 
@@ -135,18 +137,18 @@ export function Login() {
 
                   <div className="flex items-center justify-between text-sm">
                     <label className="flex items-center gap-2">
-                      <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600" />
+                      <Checkbox />
                       <span className="text-gray-700">Remember me</span>
                     </label>
                     <button type="button" onClick={() => setShowForgotHelp(!showForgotHelp)} className="text-blue-600 hover:text-blue-700 font-medium">Forgot password?</button>
                   </div>
 
                   {showForgotHelp && (
-                    <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-sm text-blue-900">
+                    <Alert variant="info">
                       Password resets aren&apos;t available yet. Please email{' '}
                       <a href="mailto:support@gogoxpress.com" className="font-medium underline hover:text-blue-700">support@gogoxpress.com</a>{' '}
                       and our team will help you regain access.
-                    </div>
+                    </Alert>
                   )}
 
                   <Button type="submit" className="w-full">Sign in</Button>

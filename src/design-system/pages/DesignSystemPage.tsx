@@ -5,20 +5,33 @@ import { ColorsSection } from '../sections/ColorsSection';
 import { TypographySection } from '../sections/TypographySection';
 import { SpacingSection } from '../sections/SpacingSection';
 import { IconsSection } from '../sections/IconsSection';
+// Components
 import { ButtonSection } from '../sections/ButtonSection';
 import { BadgeBaseSection } from '../sections/BadgeBaseSection';
 import { BadgeSection } from '../sections/BadgeSection';
 import { CardSection } from '../sections/CardSection';
 import { StatCardSection } from '../sections/StatCardSection';
+import { ModuleCardSection } from '../sections/ModuleCardSection';
 import { IconContainerSection } from '../sections/IconContainerSection';
-import { FormFieldSection } from '../sections/FormFieldSection';
-import { SelectSection } from '../sections/SelectSection';
-import { SearchInputSection } from '../sections/SearchInputSection';
-import { SegmentedControlSection } from '../sections/SegmentedControlSection';
+import { AvatarSection } from '../sections/AvatarSection';
+import { AlertSection } from '../sections/AlertSection';
+import { SeparatorSection } from '../sections/SeparatorSection';
 import { TabsSection } from '../sections/TabsSection';
 import { TableSection } from '../sections/TableSection';
 import { DialogSection } from '../sections/DialogSection';
+import { OtpDialogSection } from '../sections/OtpDialogSection';
+// Forms
+import { FormFieldSection } from '../sections/FormFieldSection';
+import { TextareaSection } from '../sections/TextareaSection';
+import { SelectSection } from '../sections/SelectSection';
+import { SearchInputSection } from '../sections/SearchInputSection';
+import { CheckboxSection } from '../sections/CheckboxSection';
+import { SwitchSection } from '../sections/SwitchSection';
+import { SegmentedControlSection } from '../sections/SegmentedControlSection';
+// Patterns
 import { PaymentSection } from '../sections/PaymentSection';
+import { CheckoutDeliveryOptionsSection } from '../sections/CheckoutDeliveryOptionsSection';
+import { AddressDisplayCardSection } from '../sections/AddressDisplayCardSection';
 
 /**
  * GoGo Xpress Design System — living reference page.
@@ -50,16 +63,27 @@ export function DesignSystemPage() {
       <BadgeSection />
       <CardSection />
       <StatCardSection />
+      <ModuleCardSection />
       <IconContainerSection />
-      <FormFieldSection />
-      <SelectSection />
-      <SearchInputSection />
-      <SegmentedControlSection />
+      <AvatarSection />
+      <AlertSection />
+      <SeparatorSection />
       <TabsSection />
       <TableSection />
       <DialogSection />
+      <OtpDialogSection />
+      {/* Forms */}
+      <FormFieldSection />
+      <TextareaSection />
+      <SelectSection />
+      <SearchInputSection />
+      <CheckboxSection />
+      <SwitchSection />
+      <SegmentedControlSection />
       {/* Patterns */}
       <PaymentSection />
+      <CheckoutDeliveryOptionsSection />
+      <AddressDisplayCardSection />
     </DocShell>
   );
 }
