@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -41,13 +41,9 @@ export function AvatarSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Initials are decorative shorthand — always show the full name nearby (the avatar shouldn’t be the only identifier).',
-          'When using an image, pass a meaningful alt; the initials fallback has no alt (it’s decorative).',
-          'Keep enough contrast — white initials on the blue gradient meet contrast at these sizes.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -56,9 +52,15 @@ export function AvatarSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Initials are decorative shorthand — always show the full name nearby (the avatar shouldn’t be the only identifier).',
+          'When using an image, pass a meaningful alt; the initials fallback has no alt (it’s decorative).',
+          'Keep enough contrast — white initials on the blue gradient meet contrast at these sizes.',
+        ]}
+      />
+
+
     </Section>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Section,
   Subsection,
@@ -45,6 +45,17 @@ export function OtpDialogSection() {
         </PreviewBox>
       </Subsection>
 
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
+
+      <Subsection title="Usage">
+        <DoDont
+          dos={['Require it before any irreversible financial change.', 'Pass actionLabel so the user knows what they’re authorizing.', 'Treat onVerified as the only success path.']}
+          donts={['Don’t skip OTP for admins.', 'Don’t proceed on close/cancel.', 'Don’t reuse it for non-sensitive confirmations — use ConfirmDialog.']}
+        />
+      </Subsection>
+
       <AccessibilityNotes
         items={[
           'The code field autofocuses on open and accepts Enter to submit once 6 digits are entered.',
@@ -54,16 +65,7 @@ export function OtpDialogSection() {
         ]}
       />
 
-      <Subsection title="Usage">
-        <DoDont
-          dos={['Require it before any irreversible financial change.', 'Pass actionLabel so the user knows what they’re authorizing.', 'Treat onVerified as the only success path.']}
-          donts={['Don’t skip OTP for admins.', 'Don’t proceed on close/cancel.', 'Don’t reuse it for non-sensitive confirmations — use ConfirmDialog.']}
-        />
-      </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
     </Section>
   );
 }

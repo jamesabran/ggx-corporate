@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Section,
   Subsection,
@@ -78,6 +78,17 @@ export function DialogSection() {
         </PreviewBox>
       </Subsection>
 
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
+
+      <Subsection title="Usage">
+        <DoDont
+          dos={['Use ConfirmDialog for destructive/irreversible actions.', 'Keep dialog content short and focused.', 'Give every dialog a title and a way out.']}
+          donts={['Don’t stack many dialogs (use elevated only when layering is required).', 'Don’t put long multi-step flows in a small modal.', 'Don’t rely on the scrim as the only way to close.']}
+        />
+      </Subsection>
+
       <AccessibilityNotes
         items={[
           'Clicking the scrim closes the dialog; the panel stops click propagation so inner clicks don’t dismiss it.',
@@ -87,16 +98,7 @@ export function DialogSection() {
         ]}
       />
 
-      <Subsection title="Usage">
-        <DoDont
-          dos={['Use ConfirmDialog for destructive/irreversible actions.', 'Keep dialog content short and focused.', 'Give every dialog a title and a way out.']}
-          donts={['Don’t stack many dialogs (use elevated only when layering is required).', 'Don’t put long multi-step flows in a small modal.', 'Don’t rely on the scrim as the only way to close.']}
-        />
-      </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
     </Section>
   );
 }

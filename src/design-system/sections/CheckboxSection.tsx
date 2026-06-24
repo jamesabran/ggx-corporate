@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Section,
   Subsection,
@@ -45,13 +45,9 @@ export function CheckboxSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Uses a native checkbox: keyboard toggling (Space), form participation, and indeterminate support come for free.',
-          'Wrap with a <label> (or use htmlFor/id) so the text is a clickable target.',
-          'Focus shows the standard ring; disabled uses the native attribute.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -60,9 +56,15 @@ export function CheckboxSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Uses a native checkbox: keyboard toggling (Space), form participation, and indeterminate support come for free.',
+          'Wrap with a <label> (or use htmlFor/id) so the text is a clickable target.',
+          'Focus shows the standard ring; disabled uses the native attribute.',
+        ]}
+      />
+
+
     </Section>
   );
 }

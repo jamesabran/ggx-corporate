@@ -1,4 +1,4 @@
-import { IconPackage, IconTrendingUp, IconClock, IconCash } from '@tabler/icons-react';
+﻿import { IconPackage, IconTrendingUp, IconClock, IconCash } from '@tabler/icons-react';
 import {
   Section,
   Subsection,
@@ -42,13 +42,9 @@ export function StatCardSection() {
         </ResponsivePreview>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Label and value are plain text, read in order — no special roles needed.',
-          'The icon is decorative; the label states what the value means.',
-          'Use tabular-nums (built in) so values align — already handled by the component.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -57,9 +53,15 @@ export function StatCardSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Label and value are plain text, read in order — no special roles needed.',
+          'The icon is decorative; the label states what the value means.',
+          'Use tabular-nums (built in) so values align — already handled by the component.',
+        ]}
+      />
+
+
     </Section>
   );
 }

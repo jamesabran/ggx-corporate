@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -62,13 +62,9 @@ export function AddressDisplayCardSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Display-only content; the label badge conveys type by text, not color alone.',
-          'In the compact variant, the Change control is a real button with an accessible label.',
-          'Keep the address line readable; the map-pin icon is decorative.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -77,9 +73,15 @@ export function AddressDisplayCardSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Display-only content; the label badge conveys type by text, not color alone.',
+          'In the compact variant, the Change control is a real button with an accessible label.',
+          'Keep the address line readable; the map-pin icon is decorative.',
+        ]}
+      />
+
+
     </Section>
   );
 }

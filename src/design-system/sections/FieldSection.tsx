@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -39,13 +39,9 @@ export function FieldSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Renders a <dt>/<dd> pair — group Fields inside a <dl> for correct description-list semantics.',
-          'The label is the accessible name for its value; keep labels concise.',
-          'Display-only: use Input/Form Field for editable values.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -54,9 +50,15 @@ export function FieldSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Renders a <dt>/<dd> pair — group Fields inside a <dl> for correct description-list semantics.',
+          'The label is the accessible name for its value; keep labels concise.',
+          'Display-only: use Input/Form Field for editable values.',
+        ]}
+      />
+
+
     </Section>
   );
 }

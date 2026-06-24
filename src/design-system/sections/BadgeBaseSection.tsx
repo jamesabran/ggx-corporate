@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -52,13 +52,9 @@ export function BadgeBaseSection() {
         />
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'A badge is non-interactive; its text carries the meaning, not color alone.',
-          'Keep labels short (one or two words) so the pill stays readable.',
-          'For status, prefer a fixed label set over free text to stay consistent.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -67,9 +63,15 @@ export function BadgeBaseSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'A badge is non-interactive; its text carries the meaning, not color alone.',
+          'Keep labels short (one or two words) so the pill stays readable.',
+          'For status, prefer a fixed label set over free text to stay consistent.',
+        ]}
+      />
+
+
     </Section>
   );
 }

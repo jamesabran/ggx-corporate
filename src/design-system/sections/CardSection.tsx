@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -76,13 +76,9 @@ export function CardSection() {
         </div>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'A Card is a presentational container — it adds no roles or focus behavior of its own.',
-          'CardTitle renders an <h3>; keep the heading order sensible within the page outline.',
-          'Interactive content inside a card (buttons, links) keeps its own semantics and focus ring.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -91,9 +87,15 @@ export function CardSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'A Card is a presentational container — it adds no roles or focus behavior of its own.',
+          'CardTitle renders an <h3>; keep the heading order sensible within the page outline.',
+          'Interactive content inside a card (buttons, links) keeps its own semantics and focus ring.',
+        ]}
+      />
+
+
     </Section>
   );
 }

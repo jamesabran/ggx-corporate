@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Section,
   Subsection,
@@ -39,13 +39,9 @@ export function CalendarSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Month navigation buttons have aria-labels; day cells are buttons with aria-pressed for the selection.',
-          'Today is visually distinct from the selected day so both are clear.',
-          'For a typed date, pair it with an input so keyboard users can enter a date directly.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -54,9 +50,15 @@ export function CalendarSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Month navigation buttons have aria-labels; day cells are buttons with aria-pressed for the selection.',
+          'Today is visually distinct from the selected day so both are clear.',
+          'For a typed date, pair it with an input so keyboard users can enter a date directly.',
+        ]}
+      />
+
+
     </Section>
   );
 }

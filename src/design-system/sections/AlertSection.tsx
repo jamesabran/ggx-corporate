@@ -1,4 +1,4 @@
-import { IconInfoCircle, IconAlertTriangle, IconCircleCheck, IconAlertOctagon } from '@tabler/icons-react';
+﻿import { IconInfoCircle, IconAlertTriangle, IconCircleCheck, IconAlertOctagon } from '@tabler/icons-react';
 import {
   Section,
   Subsection,
@@ -49,13 +49,9 @@ export function AlertSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Renders role="status" so the message is announced politely when it appears.',
-          'The icon is decorative; the text carries the meaning (don’t rely on color alone).',
-          'For urgent/error messages tied to an action, place the alert next to the relevant control.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -64,9 +60,15 @@ export function AlertSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Renders role="status" so the message is announced politely when it appears.',
+          'The icon is decorative; the text carries the meaning (don’t rely on color alone).',
+          'For urgent/error messages tied to an action, place the alert next to the relevant control.',
+        ]}
+      />
+
+
     </Section>
   );
 }

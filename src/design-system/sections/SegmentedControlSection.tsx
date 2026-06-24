@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { IconLayoutGrid, IconList, IconPackage, IconBuildingStore } from '@tabler/icons-react';
 import {
   Section,
@@ -70,13 +70,9 @@ export function SegmentedControlSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Each segment is a native <button> — reachable by Tab and activated with Enter/Space.',
-          'The active segment is shown with a filled pill and shadow, not color alone.',
-          'For many options or long labels, prefer Tabs or a Select instead.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -85,9 +81,15 @@ export function SegmentedControlSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Each segment is a native <button> — reachable by Tab and activated with Enter/Space.',
+          'The active segment is shown with a filled pill and shadow, not color alone.',
+          'For many options or long labels, prefer Tabs or a Select instead.',
+        ]}
+      />
+
+
     </Section>
   );
 }

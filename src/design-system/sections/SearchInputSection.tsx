@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Section,
   Subsection,
@@ -43,6 +43,17 @@ export function SearchInputSection() {
         </ResponsivePreview>
       </Subsection>
 
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
+
+      <Subsection title="Usage">
+        <DoDont
+          dos={['Use for filtering lists and the global topbar search.', 'Keep placeholder text specific ("Search transactions…").', 'Debounce expensive queries upstream if needed.']}
+          donts={['Don’t use as a generic text field — use Input.', 'Don’t hide what is being searched.', 'Don’t remove the clear affordance.']}
+        />
+      </Subsection>
+
       <AccessibilityNotes
         items={[
           'The clear button has an aria-label ("Clear search") and is keyboard-reachable.',
@@ -52,16 +63,7 @@ export function SearchInputSection() {
         ]}
       />
 
-      <Subsection title="Usage">
-        <DoDont
-          dos={['Use for filtering lists and the global topbar search.', 'Keep placeholder text specific ("Search transactions…").', 'Debounce expensive queries upstream if needed.']}
-          donts={['Don’t use as a generic text field — use Input.', 'Don’t hide what is being searched.', 'Don’t remove the clear affordance.']}
-        />
-      </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
     </Section>
   );
 }

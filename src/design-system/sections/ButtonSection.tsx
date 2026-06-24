@@ -1,4 +1,4 @@
-import { IconLoader2, IconPlus } from '@tabler/icons-react';
+﻿import { IconLoader2, IconPlus } from '@tabler/icons-react';
 import {
   Section,
   Subsection,
@@ -85,14 +85,9 @@ export function ButtonSection() {
         />
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Renders a native <button>; Enter and Space activate it and it is in the tab order by default.',
-          <>Focus shows a visible ring (<code>focus-visible:ring-2 ring-primary</code> with an offset).</>,
-          'Disabled sets the native disabled attribute — removed from the tab order and pointer events blocked, at 50% opacity.',
-          <>Icon-only buttons (<code>size="icon"</code>) must pass an <code>aria-label</code>, as shown in the Sizes example.</>,
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -109,9 +104,16 @@ export function ButtonSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Renders a native <button>; Enter and Space activate it and it is in the tab order by default.',
+          <>Focus shows a visible ring (<code>focus-visible:ring-2 ring-primary</code> with an offset).</>,
+          'Disabled sets the native disabled attribute — removed from the tab order and pointer events blocked, at 50% opacity.',
+          <>Icon-only buttons (<code>size="icon"</code>) must pass an <code>aria-label</code>, as shown in the Sizes example.</>,
+        ]}
+      />
+
+
     </Section>
   );
 }

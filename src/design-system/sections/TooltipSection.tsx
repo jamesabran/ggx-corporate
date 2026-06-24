@@ -1,4 +1,4 @@
-import { IconInfoCircle } from '@tabler/icons-react';
+﻿import { IconInfoCircle } from '@tabler/icons-react';
 import {
   Section,
   Subsection,
@@ -45,6 +45,17 @@ export function TooltipSection() {
         </PreviewBox>
       </Subsection>
 
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
+
+      <Subsection title="Usage">
+        <DoDont
+          dos={['Use for brief, supplementary hints.', 'Attach to a focusable trigger.', 'Keep the text to a few words.']}
+          donts={['Don’t hide essential info only in a tooltip.', 'Don’t put buttons/links inside.', 'Don’t use on non-focusable elements for key info.']}
+        />
+      </Subsection>
+
       <AccessibilityNotes
         items={[
           'The tooltip appears on hover and on keyboard focus (group-focus-within), so keyboard users get it too.',
@@ -54,16 +65,7 @@ export function TooltipSection() {
         ]}
       />
 
-      <Subsection title="Usage">
-        <DoDont
-          dos={['Use for brief, supplementary hints.', 'Attach to a focusable trigger.', 'Keep the text to a few words.']}
-          donts={['Don’t hide essential info only in a tooltip.', 'Don’t put buttons/links inside.', 'Don’t use on non-focusable elements for key info.']}
-        />
-      </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
     </Section>
   );
 }

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -88,6 +88,17 @@ export function TableSection() {
         </PreviewBox>
       </Subsection>
 
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
+
+      <Subsection title="Usage">
+        <DoDont
+          dos={['Use real <th> headers for every column.', 'Compose badges/buttons inside cells.', 'Provide an explicit empty state.']}
+          donts={['Don’t fake a table with divs.', 'Don’t cram too many columns on mobile — prioritize.', 'Don’t remove the hover affordance on interactive rows.']}
+        />
+      </Subsection>
+
       <AccessibilityNotes
         items={[
           'Renders semantic <table>/<thead>/<tbody>/<th>/<td>, so screen readers announce rows and headers.',
@@ -97,16 +108,7 @@ export function TableSection() {
         ]}
       />
 
-      <Subsection title="Usage">
-        <DoDont
-          dos={['Use real <th> headers for every column.', 'Compose badges/buttons inside cells.', 'Provide an explicit empty state.']}
-          donts={['Don’t fake a table with divs.', 'Don’t cram too many columns on mobile — prioritize.', 'Don’t remove the hover affordance on interactive rows.']}
-        />
-      </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
     </Section>
   );
 }

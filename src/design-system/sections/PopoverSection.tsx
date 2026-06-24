@@ -1,4 +1,4 @@
-import { IconDotsVertical, IconBell } from '@tabler/icons-react';
+﻿import { IconDotsVertical, IconBell } from '@tabler/icons-react';
 import {
   Section,
   Subsection,
@@ -51,6 +51,17 @@ export function PopoverSection() {
         </PreviewBox>
       </Subsection>
 
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
+
+      <Subsection title="Usage">
+        <DoDont
+          dos={['Use for menus, filters, and small overflow panels.', 'Align end for right-edge triggers.', 'Keep the panel content compact.']}
+          donts={['Don’t put long forms or critical flows in a popover — use Dialog.', 'Don’t nest popovers.', 'Don’t use it for hover-only hints — that’s Tooltip.']}
+        />
+      </Subsection>
+
       <AccessibilityNotes
         items={[
           'The trigger is a button with aria-haspopup="dialog" and aria-expanded.',
@@ -60,16 +71,7 @@ export function PopoverSection() {
         ]}
       />
 
-      <Subsection title="Usage">
-        <DoDont
-          dos={['Use for menus, filters, and small overflow panels.', 'Align end for right-edge triggers.', 'Keep the panel content compact.']}
-          donts={['Don’t put long forms or critical flows in a popover — use Dialog.', 'Don’t nest popovers.', 'Don’t use it for hover-only hints — that’s Tooltip.']}
-        />
-      </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
     </Section>
   );
 }

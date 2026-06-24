@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Section,
   Subsection,
@@ -57,13 +57,9 @@ export function CheckoutDeliveryOptionsSection() {
         </ResponsivePreview>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Each option is a native <button>; disabled options set the native disabled attribute and are skipped in the tab order.',
-          'Selected state shows an accent border + tint, not color alone.',
-          'Disabled options keep a visible reason ("Available for Metro Manila deliveries only.").',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -72,9 +68,15 @@ export function CheckoutDeliveryOptionsSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Each option is a native <button>; disabled options set the native disabled attribute and are skipped in the tab order.',
+          'Selected state shows an accent border + tint, not color alone.',
+          'Disabled options keep a visible reason ("Available for Metro Manila deliveries only.").',
+        ]}
+      />
+
+
     </Section>
   );
 }

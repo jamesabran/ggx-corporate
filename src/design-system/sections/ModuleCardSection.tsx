@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   ResponsivePreview,
@@ -64,13 +64,9 @@ export function ModuleCardSection() {
         </ResponsivePreview>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'The CTA is the shared Button — keyboard-activatable with a visible focus ring.',
-          'Disabled CTAs (coming soon / role-blocked) use the native disabled attribute.',
-          'The status badge conveys access by text + variant, not color alone.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -79,9 +75,15 @@ export function ModuleCardSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'The CTA is the shared Button — keyboard-activatable with a visible focus ring.',
+          'Disabled CTAs (coming soon / role-blocked) use the native disabled attribute.',
+          'The status badge conveys access by text + variant, not color alone.',
+        ]}
+      />
+
+
     </Section>
   );
 }

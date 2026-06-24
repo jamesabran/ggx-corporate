@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -54,6 +54,17 @@ export function SelectSection() {
         </PreviewBox>
       </Subsection>
 
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
+
+      <Subsection title="Usage">
+        <DoDont
+          dos={['Use a disabled empty first option as the placeholder.', 'Keep option labels short and scannable.', 'Use for short, known option sets.']}
+          donts={['Don’t use for free-text entry — use Input.', 'Don’t build a custom dropdown when the native one fits.', 'Don’t hide the label.']}
+        />
+      </Subsection>
+
       <AccessibilityNotes
         items={[
           'Uses a native <select>, so keyboard, screen-reader, and mobile native pickers all work out of the box.',
@@ -63,16 +74,7 @@ export function SelectSection() {
         ]}
       />
 
-      <Subsection title="Usage">
-        <DoDont
-          dos={['Use a disabled empty first option as the placeholder.', 'Keep option labels short and scannable.', 'Use for short, known option sets.']}
-          donts={['Don’t use for free-text entry — use Input.', 'Don’t build a custom dropdown when the native one fits.', 'Don’t hide the label.']}
-        />
-      </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
     </Section>
   );
 }

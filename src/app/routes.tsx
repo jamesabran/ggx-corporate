@@ -39,9 +39,9 @@ import { BulkUploadCompleted } from './pages/BulkUploadCompleted';
 // Code-split the recharts-heavy analytics page into its own chunk (keeps the
 // main bundle smaller; resolves the long-standing bundle-size warning).
 const DataAnalytics = lazy(() => import('./pages/DataAnalytics').then((m) => ({ default: m.DataAnalytics })));
-// Isolated, sample-only Design System reference at /design-system. Code-split so
-// it never weighs on the app bundle. Reuses existing tokens/components/assets.
-const DesignSystemPage = lazy(() => import('../design-system/pages/DesignSystemPage').then((m) => ({ default: m.DesignSystemPage })));
+// Routed Design System reference. Code-split into a single DS bundle via lazy().
+// All DS pages live inside DSAppShell which handles its own nested routing.
+const DSAppShell = lazy(() => import('../design-system/DSAppShell').then((m) => ({ default: m.DSAppShell })));
 import { Earnings } from './pages/Earnings';
 import { EarningsSettlementDetail } from './pages/EarningsSettlementDetail';
 import { BillingStatement } from './pages/BillingStatement';
@@ -135,12 +135,12 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    // Sample-only GoGo Xpress Design System reference. Standalone route; does
-    // not touch primary navigation or any production flow.
-    path: '/design-system',
+    // Routed GGX Design System reference. The /* wildcard lets DSAppShell handle
+    // all sub-paths internally. Does not touch any production flow.
+    path: '/design-system/*',
     element: (
       <Suspense fallback={<div className="p-6 text-sm text-gray-500">Loading design system…</div>}>
-        <DesignSystemPage />
+        <DSAppShell />
       </Suspense>
     ),
   },

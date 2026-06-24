@@ -1,4 +1,4 @@
-import { IconTruck, IconWallet, IconBell, IconBuildingStore } from '@tabler/icons-react';
+﻿import { IconTruck, IconWallet, IconBell, IconBuildingStore } from '@tabler/icons-react';
 import {
   Section,
   Subsection,
@@ -58,12 +58,9 @@ export function IconContainerSection() {
         />
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'The framed icon is decorative; convey meaning with adjacent text, not the icon alone.',
-          'Keep enough contrast between the tinted background and the icon color.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -72,9 +69,14 @@ export function IconContainerSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'The framed icon is decorative; convey meaning with adjacent text, not the icon alone.',
+          'Keep enough contrast between the tinted background and the icon color.',
+        ]}
+      />
+
+
     </Section>
   );
 }

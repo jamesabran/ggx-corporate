@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Section,
   Subsection,
@@ -38,6 +38,17 @@ export function SwitchSection() {
         </PreviewBox>
       </Subsection>
 
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
+
+      <Subsection title="Usage">
+        <DoDont
+          dos={['Use for instant on/off settings.', 'Label the switch (visible text or aria-label).', 'Reflect the saved state immediately.']}
+          donts={['Don’t use for actions that need a separate Save — use a Checkbox.', 'Don’t use unlabeled switches.', 'Don’t use for mutually exclusive choices — use Radio/Segmented Control.']}
+        />
+      </Subsection>
+
       <AccessibilityNotes
         items={[
           'Renders role="switch" with aria-checked reflecting state.',
@@ -47,16 +58,7 @@ export function SwitchSection() {
         ]}
       />
 
-      <Subsection title="Usage">
-        <DoDont
-          dos={['Use for instant on/off settings.', 'Label the switch (visible text or aria-label).', 'Reflect the saved state immediately.']}
-          donts={['Don’t use for actions that need a separate Save — use a Checkbox.', 'Don’t use unlabeled switches.', 'Don’t use for mutually exclusive choices — use Radio/Segmented Control.']}
-        />
-      </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
     </Section>
   );
 }

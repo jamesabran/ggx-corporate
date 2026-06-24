@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -50,13 +50,9 @@ export function TabsSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Radix provides full keyboard support: arrow keys move between tabs, Home/End jump to ends.',
-          'Roles (tablist / tab / tabpanel) and aria-selected are handled by Radix.',
-          'The active trigger shows a white pill + shadow and a focus-visible ring.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -65,9 +61,15 @@ export function TabsSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Radix provides full keyboard support: arrow keys move between tabs, Home/End jump to ends.',
+          'Roles (tablist / tab / tabpanel) and aria-selected are handled by Radix.',
+          'The active trigger shows a white pill + shadow and a focus-visible ring.',
+        ]}
+      />
+
+
     </Section>
   );
 }

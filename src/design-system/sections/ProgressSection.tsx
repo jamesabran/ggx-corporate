@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -33,13 +33,9 @@ export function ProgressSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Renders role="progressbar" with aria-valuenow / min / max.',
-          'Pass an aria-label (or aria-labelledby) so the bar is named.',
-          'When the bar encodes a category, pair it with a visible value/label — don’t rely on color alone.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -48,9 +44,15 @@ export function ProgressSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Renders role="progressbar" with aria-valuenow / min / max.',
+          'Pass an aria-label (or aria-labelledby) so the bar is named.',
+          'When the bar encodes a category, pair it with a visible value/label — don’t rely on color alone.',
+        ]}
+      />
+
+
     </Section>
   );
 }

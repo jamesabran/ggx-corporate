@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -49,6 +49,17 @@ export function AccordionSection() {
         </PreviewBox>
       </Subsection>
 
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
+
+      <Subsection title="Usage">
+        <DoDont
+          dos={['Use for FAQs and optional/advanced detail.', 'Keep headers short and descriptive.', 'Open the most relevant item by default where helpful.']}
+          donts={['Don’t hide essential primary content behind it.', 'Don’t nest accordions deeply.', 'Don’t use for step-by-step flows.']}
+        />
+      </Subsection>
+
       <AccessibilityNotes
         items={[
           'Each header is a <button> with aria-expanded reflecting its state.',
@@ -58,16 +69,7 @@ export function AccordionSection() {
         ]}
       />
 
-      <Subsection title="Usage">
-        <DoDont
-          dos={['Use for FAQs and optional/advanced detail.', 'Keep headers short and descriptive.', 'Open the most relevant item by default where helpful.']}
-          donts={['Don’t hide essential primary content behind it.', 'Don’t nest accordions deeply.', 'Don’t use for step-by-step flows.']}
-        />
-      </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
     </Section>
   );
 }

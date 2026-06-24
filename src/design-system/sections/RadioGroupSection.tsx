@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Section,
   Subsection,
@@ -53,6 +53,17 @@ export function RadioGroupSection() {
         </PreviewBox>
       </Subsection>
 
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
+
+      <Subsection title="Usage">
+        <DoDont
+          dos={['Use for one-of-many among a small set.', 'Give each option a clear label (and description if helpful).', 'Default to the safest/most common option.']}
+          donts={['Don’t use for multi-select — use Checkboxes.', 'Don’t use for instant toggles — use Switch.', 'Don’t use for long option lists — use Select.']}
+        />
+      </Subsection>
+
       <AccessibilityNotes
         items={[
           'Wrapped in role="radiogroup"; each option is a native radio inside a <label> (clickable label + arrow-key navigation).',
@@ -62,16 +73,7 @@ export function RadioGroupSection() {
         ]}
       />
 
-      <Subsection title="Usage">
-        <DoDont
-          dos={['Use for one-of-many among a small set.', 'Give each option a clear label (and description if helpful).', 'Default to the safest/most common option.']}
-          donts={['Don’t use for multi-select — use Checkboxes.', 'Don’t use for instant toggles — use Switch.', 'Don’t use for long option lists — use Select.']}
-        />
-      </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
     </Section>
   );
 }

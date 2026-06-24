@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Section,
   Subsection,
@@ -48,13 +48,9 @@ export function PaginationSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Wrapped in <nav aria-label="Pagination"> so assistive tech can find it.',
-          'Previous/Next are real buttons; disable them at the first/last page.',
-          'Keep a visible summary so users know where they are in the list.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -63,9 +59,15 @@ export function PaginationSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Wrapped in <nav aria-label="Pagination"> so assistive tech can find it.',
+          'Previous/Next are real buttons; disable them at the first/last page.',
+          'Keep a visible summary so users know where they are in the list.',
+        ]}
+      />
+
+
     </Section>
   );
 }

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -89,14 +89,9 @@ export function BadgeSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Status is conveyed by the text label, not color alone — readable for color-blind users.',
-          'The leading icon is decorative; the label carries the meaning.',
-          'Non-interactive by design (no focus or keyboard handling) — it is a status indicator, not a control.',
-          'Keep contrast intact by using the defined variant rather than custom colors.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -113,9 +108,16 @@ export function BadgeSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Status is conveyed by the text label, not color alone — readable for color-blind users.',
+          'The leading icon is decorative; the label carries the meaning.',
+          'Non-interactive by design (no focus or keyboard handling) — it is a status indicator, not a control.',
+          'Keep contrast intact by using the defined variant rather than custom colors.',
+        ]}
+      />
+
+
     </Section>
   );
 }

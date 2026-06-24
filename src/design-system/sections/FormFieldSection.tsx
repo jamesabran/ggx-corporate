@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   ResponsivePreview,
@@ -64,15 +64,9 @@ export function FormFieldSection() {
         </div>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          <>Every field has a <code>&lt;label&gt;</code> associated by <code>htmlFor</code>/<code>id</code>, so clicking the label focuses the input.</>,
-          <>The error state sets <code>aria-invalid</code> and links the message with <code>aria-describedby</code>, so screen readers announce it.</>,
-          'Required fields use the native required attribute plus a visible asterisk — not color alone.',
-          'Disabled uses the native disabled attribute (removed from the tab order, 50% opacity); focus shows the standard primary ring.',
-          'The validation message sits immediately below its field — never in a separate summary far from the input.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -89,9 +83,17 @@ export function FormFieldSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          <>Every field has a <code>&lt;label&gt;</code> associated by <code>htmlFor</code>/<code>id</code>, so clicking the label focuses the input.</>,
+          <>The error state sets <code>aria-invalid</code> and links the message with <code>aria-describedby</code>, so screen readers announce it.</>,
+          'Required fields use the native required attribute plus a visible asterisk — not color alone.',
+          'Disabled uses the native disabled attribute (removed from the tab order, 50% opacity); focus shows the standard primary ring.',
+          'The validation message sits immediately below its field — never in a separate summary far from the input.',
+        ]}
+      />
+
+
     </Section>
   );
 }

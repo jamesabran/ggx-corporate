@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -42,13 +42,9 @@ export function ScrollAreaSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'A scrollable region is keyboard-scrollable when it contains focusable items or has tabindex.',
-          'Don’t hide content solely behind scroll without making it discoverable.',
-          'The slim scrollbar still responds to the OS pointer; it doesn’t remove native scrolling.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -57,9 +53,15 @@ export function ScrollAreaSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'A scrollable region is keyboard-scrollable when it contains focusable items or has tabindex.',
+          'Don’t hide content solely behind scroll without making it discoverable.',
+          'The slim scrollbar still responds to the OS pointer; it doesn’t remove native scrolling.',
+        ]}
+      />
+
+
     </Section>
   );
 }

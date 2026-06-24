@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -44,13 +44,9 @@ export function PageHeaderSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Renders the page <h1>; keep exactly one PageHeader (one h1) per page.',
-          'Action controls keep their own button semantics and focus ring.',
-          'Subtitle is supporting text — don’t put essential-only info there.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -59,9 +55,15 @@ export function PageHeaderSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Renders the page <h1>; keep exactly one PageHeader (one h1) per page.',
+          'Action controls keep their own button semantics and focus ring.',
+          'Subtitle is supporting text — don’t put essential-only info there.',
+        ]}
+      />
+
+
     </Section>
   );
 }

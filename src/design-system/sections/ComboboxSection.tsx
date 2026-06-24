@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Section,
   Subsection,
@@ -53,6 +53,17 @@ export function ComboboxSection() {
         </PreviewBox>
       </Subsection>
 
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
+
+      <Subsection title="Usage">
+        <DoDont
+          dos={['Use when the list is long enough to need search.', 'Keep option labels concise and scannable.', 'Show the selected value in the trigger.']}
+          donts={['Don’t use for 2–5 options — use Select.', 'Don’t use for multi-select.', 'Don’t hide what is being searched.']}
+        />
+      </Subsection>
+
       <AccessibilityNotes
         items={[
           'The trigger is a button with aria-haspopup="listbox" / aria-expanded; options use role="option" with aria-selected.',
@@ -62,16 +73,7 @@ export function ComboboxSection() {
         ]}
       />
 
-      <Subsection title="Usage">
-        <DoDont
-          dos={['Use when the list is long enough to need search.', 'Keep option labels concise and scannable.', 'Show the selected value in the trigger.']}
-          donts={['Don’t use for 2–5 options — use Select.', 'Don’t use for multi-select.', 'Don’t hide what is being searched.']}
-        />
-      </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
     </Section>
   );
 }

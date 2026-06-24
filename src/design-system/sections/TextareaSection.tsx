@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -40,13 +40,9 @@ export function TextareaSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Renders a native <textarea>; associate a <label> via htmlFor/id.',
-          'For validation, mirror the Input field pattern (aria-invalid + aria-describedby).',
-          'Focus shows the standard primary ring; disabled uses the native attribute.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -55,9 +51,15 @@ export function TextareaSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Renders a native <textarea>; associate a <label> via htmlFor/id.',
+          'For validation, mirror the Input field pattern (aria-invalid + aria-describedby).',
+          'Focus shows the standard primary ring; disabled uses the native attribute.',
+        ]}
+      />
+
+
     </Section>
   );
 }

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -41,12 +41,9 @@ export function SeparatorSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Renders role="separator" with aria-orientation so assistive tech announces the divide.',
-          'Purely visual structure — it holds no content and isn’t focusable.',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -55,9 +52,14 @@ export function SeparatorSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Renders role="separator" with aria-orientation so assistive tech announces the divide.',
+          'Purely visual structure — it holds no content and isn’t focusable.',
+        ]}
+      />
+
+
     </Section>
   );
 }

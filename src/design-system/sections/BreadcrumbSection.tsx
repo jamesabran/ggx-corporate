@@ -1,4 +1,4 @@
-import {
+﻿import {
   Section,
   Subsection,
   PreviewBox,
@@ -48,13 +48,9 @@ export function BreadcrumbSection() {
         </PreviewBox>
       </Subsection>
 
-      <AccessibilityNotes
-        items={[
-          'Wrapped in <nav aria-label="Breadcrumb">.',
-          'The current page is marked with aria-current="page" and isn’t a link.',
-          'Separators are decorative chevrons (not announced as content).',
-        ]}
-      />
+      <Subsection title="Code">
+        <CodeBlock code={CODE} />
+      </Subsection>
 
       <Subsection title="Usage">
         <DoDont
@@ -63,9 +59,15 @@ export function BreadcrumbSection() {
         />
       </Subsection>
 
-      <Subsection title="Code">
-        <CodeBlock code={CODE} />
-      </Subsection>
+      <AccessibilityNotes
+        items={[
+          'Wrapped in <nav aria-label="Breadcrumb">.',
+          'The current page is marked with aria-current="page" and isn’t a link.',
+          'Separators are decorative chevrons (not announced as content).',
+        ]}
+      />
+
+
     </Section>
   );
 }
