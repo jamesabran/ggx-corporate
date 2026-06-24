@@ -10,6 +10,7 @@
 
 export const GGX_SHADCN_FILE_KEY = '9zwtAL4RU3Y8WVRJAsSulX';
 export const GGX_SHADCN_URL = 'https://www.figma.com/design/9zwtAL4RU3Y8WVRJAsSulX/GGX-SHADCN';
+export const GGX_REPO_URL = 'https://github.com/jabranux/ggx-corporate';
 
 export type LifecycleStatus = 'in-use' | 'in-progress' | 'deprecated';
 

@@ -55,17 +55,17 @@ export const DS_NAV_GROUPS: DSNavGroup[] = [
     label: 'GGX Components',
     items: [
       { label: 'Address Display Card', path: 'ggx-components/address-display-card' },
+      { label: 'Checkout Delivery Options', path: 'ggx-components/checkout-delivery-options' },
       { label: 'Delivery Status Badge', path: 'ggx-components/delivery-status-badge' },
       { label: 'Module Card', path: 'ggx-components/module-card' },
       { label: 'OTP Dialog', path: 'ggx-components/otp-dialog' },
-      { label: 'Payment Options', path: 'ggx-components/payment-options' },
       { label: 'Stat Card', path: 'ggx-components/stat-card' },
     ],
   },
   {
     label: 'GGX Patterns & Templates',
     items: [
-      { label: 'Checkout Delivery Options', path: 'patterns/checkout-delivery-options' },
+      { label: 'Payment Options', path: 'patterns/payment-options' },
     ],
   },
   {

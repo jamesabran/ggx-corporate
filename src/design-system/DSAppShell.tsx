@@ -42,14 +42,14 @@ import { TooltipPage } from './pages/components/TooltipPage';
 
 // GGX Components
 import { AddressDisplayCardPage } from './pages/ggx-components/AddressDisplayCardPage';
+import { CheckoutDeliveryOptionsPage } from './pages/ggx-components/CheckoutDeliveryOptionsPage';
 import { DeliveryStatusBadgePage } from './pages/ggx-components/DeliveryStatusBadgePage';
 import { ModuleCardPage } from './pages/ggx-components/ModuleCardPage';
 import { OtpDialogPage } from './pages/ggx-components/OtpDialogPage';
-import { PaymentOptionsPage } from './pages/ggx-components/PaymentOptionsPage';
 import { StatCardPage } from './pages/ggx-components/StatCardPage';
 
 // GGX Patterns & Templates
-import { CheckoutDeliveryOptionsPage } from './pages/patterns/CheckoutDeliveryOptionsPage';
+import { PaymentOptionsPage } from './pages/patterns/PaymentOptionsPage';
 
 // Icons
 import { IconsPage } from './pages/icons/IconsPage';
@@ -104,14 +104,14 @@ export function DSAppShell() {
 
         {/* GGX Components */}
         <Route path="ggx-components/address-display-card" element={<AddressDisplayCardPage />} />
+        <Route path="ggx-components/checkout-delivery-options" element={<CheckoutDeliveryOptionsPage />} />
         <Route path="ggx-components/delivery-status-badge" element={<DeliveryStatusBadgePage />} />
         <Route path="ggx-components/module-card" element={<ModuleCardPage />} />
         <Route path="ggx-components/otp-dialog" element={<OtpDialogPage />} />
-        <Route path="ggx-components/payment-options" element={<PaymentOptionsPage />} />
         <Route path="ggx-components/stat-card" element={<StatCardPage />} />
 
         {/* GGX Patterns & Templates */}
-        <Route path="patterns/checkout-delivery-options" element={<CheckoutDeliveryOptionsPage />} />
+        <Route path="patterns/payment-options" element={<PaymentOptionsPage />} />
 
         {/* Icons */}
         <Route path="icons" element={<IconsPage />} />
