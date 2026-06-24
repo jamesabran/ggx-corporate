@@ -48,7 +48,6 @@ import { DeliveryStatusBadgePage } from './pages/ggx-components/DeliveryStatusBa
 import { EnablementGatePage } from './pages/ggx-components/EnablementGatePage';
 import { LocationCascadePage } from './pages/ggx-components/LocationCascadePage';
 import { ModuleCardPage } from './pages/ggx-components/ModuleCardPage';
-import { OnDemandTrackerPage } from './pages/ggx-components/OnDemandTrackerPage';
 import { OtpDialogPage } from './pages/ggx-components/OtpDialogPage';
 import { PaymentOptionsPage } from './pages/patterns/PaymentOptionsPage';
 import { StatCardPage } from './pages/ggx-components/StatCardPage';
@@ -112,7 +111,6 @@ export function DSAppShell() {
         <Route path="ggx-components/enablement-gate" element={<EnablementGatePage />} />
         <Route path="ggx-components/location-cascade" element={<LocationCascadePage />} />
         <Route path="ggx-components/module-card" element={<ModuleCardPage />} />
-        <Route path="ggx-components/on-demand-tracker" element={<OnDemandTrackerPage />} />
         <Route path="ggx-components/otp-dialog" element={<OtpDialogPage />} />
         <Route path="patterns/payment-options" element={<PaymentOptionsPage />} />
         <Route path="ggx-components/stat-card" element={<StatCardPage />} />

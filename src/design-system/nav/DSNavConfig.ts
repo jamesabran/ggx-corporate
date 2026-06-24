@@ -61,7 +61,6 @@ export const DS_NAV_GROUPS: DSNavGroup[] = [
       { label: 'Enablement Gate', path: 'ggx-components/enablement-gate' },
       { label: 'Location Cascade', path: 'ggx-components/location-cascade' },
       { label: 'Module Card', path: 'ggx-components/module-card' },
-      { label: 'On-Demand Tracker', path: 'ggx-components/on-demand-tracker' },
       { label: 'OTP Dialog', path: 'ggx-components/otp-dialog' },
       { label: 'Payment Options', path: 'patterns/payment-options' },
       { label: 'Stat Card', path: 'ggx-components/stat-card' },
