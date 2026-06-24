@@ -52,20 +52,19 @@ export const DS_NAV_GROUPS: DSNavGroup[] = [
     ],
   },
   {
-    label: 'GGX Components',
+    label: 'GGX Components & Patterns',
     items: [
+      { label: 'Access Denied', path: 'ggx-components/access-denied' },
       { label: 'Address Display Card', path: 'ggx-components/address-display-card' },
       { label: 'Checkout Delivery Options', path: 'ggx-components/checkout-delivery-options' },
       { label: 'Delivery Status Badge', path: 'ggx-components/delivery-status-badge' },
+      { label: 'Enablement Gate', path: 'ggx-components/enablement-gate' },
+      { label: 'Location Cascade', path: 'ggx-components/location-cascade' },
       { label: 'Module Card', path: 'ggx-components/module-card' },
+      { label: 'On-Demand Tracker', path: 'ggx-components/on-demand-tracker' },
       { label: 'OTP Dialog', path: 'ggx-components/otp-dialog' },
-      { label: 'Stat Card', path: 'ggx-components/stat-card' },
-    ],
-  },
-  {
-    label: 'GGX Patterns & Templates',
-    items: [
       { label: 'Payment Options', path: 'patterns/payment-options' },
+      { label: 'Stat Card', path: 'ggx-components/stat-card' },
     ],
   },
   {

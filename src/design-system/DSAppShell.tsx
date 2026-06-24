@@ -40,16 +40,18 @@ import { TabsPage } from './pages/components/TabsPage';
 import { TextareaPage } from './pages/components/TextareaPage';
 import { TooltipPage } from './pages/components/TooltipPage';
 
-// GGX Components
+// GGX Components & Patterns
+import { AccessDeniedPage } from './pages/ggx-components/AccessDeniedPage';
 import { AddressDisplayCardPage } from './pages/ggx-components/AddressDisplayCardPage';
 import { CheckoutDeliveryOptionsPage } from './pages/ggx-components/CheckoutDeliveryOptionsPage';
 import { DeliveryStatusBadgePage } from './pages/ggx-components/DeliveryStatusBadgePage';
+import { EnablementGatePage } from './pages/ggx-components/EnablementGatePage';
+import { LocationCascadePage } from './pages/ggx-components/LocationCascadePage';
 import { ModuleCardPage } from './pages/ggx-components/ModuleCardPage';
+import { OnDemandTrackerPage } from './pages/ggx-components/OnDemandTrackerPage';
 import { OtpDialogPage } from './pages/ggx-components/OtpDialogPage';
-import { StatCardPage } from './pages/ggx-components/StatCardPage';
-
-// GGX Patterns & Templates
 import { PaymentOptionsPage } from './pages/patterns/PaymentOptionsPage';
+import { StatCardPage } from './pages/ggx-components/StatCardPage';
 
 // Icons
 import { IconsPage } from './pages/icons/IconsPage';
@@ -102,16 +104,18 @@ export function DSAppShell() {
         <Route path="components/textarea" element={<TextareaPage />} />
         <Route path="components/tooltip" element={<TooltipPage />} />
 
-        {/* GGX Components */}
+        {/* GGX Components & Patterns */}
+        <Route path="ggx-components/access-denied" element={<AccessDeniedPage />} />
         <Route path="ggx-components/address-display-card" element={<AddressDisplayCardPage />} />
         <Route path="ggx-components/checkout-delivery-options" element={<CheckoutDeliveryOptionsPage />} />
         <Route path="ggx-components/delivery-status-badge" element={<DeliveryStatusBadgePage />} />
+        <Route path="ggx-components/enablement-gate" element={<EnablementGatePage />} />
+        <Route path="ggx-components/location-cascade" element={<LocationCascadePage />} />
         <Route path="ggx-components/module-card" element={<ModuleCardPage />} />
+        <Route path="ggx-components/on-demand-tracker" element={<OnDemandTrackerPage />} />
         <Route path="ggx-components/otp-dialog" element={<OtpDialogPage />} />
-        <Route path="ggx-components/stat-card" element={<StatCardPage />} />
-
-        {/* GGX Patterns & Templates */}
         <Route path="patterns/payment-options" element={<PaymentOptionsPage />} />
+        <Route path="ggx-components/stat-card" element={<StatCardPage />} />
 
         {/* Icons */}
         <Route path="icons" element={<IconsPage />} />
