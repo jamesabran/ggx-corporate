@@ -80,6 +80,16 @@ export function OverviewSection() {
           so it isn't listed separately.
         </p>
       </div>
+
+      <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-5 space-y-2">
+        <p className="text-sm font-semibold text-gray-800">Adding a component</p>
+        <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600">
+          <li>Create <code className="font-mono text-xs">src/design-system/sections/YourComponentSection.tsx</code> — render the real component, include a CodeBlock, DoDont, and AccessibilityNotes.</li>
+          <li>Create <code className="font-mono text-xs">src/design-system/pages/[group]/YourComponentPage.tsx</code> wrapping the section.</li>
+          <li>Add a route in <code className="font-mono text-xs">DSAppShell.tsx</code> and a nav entry in <code className="font-mono text-xs">DSNavConfig.ts</code>.</li>
+          <li>Run <code className="font-mono text-xs">npx tsc --noEmit && npm run build</code> to confirm no type errors.</li>
+        </ol>
+      </div>
     </Section>
   );
 }

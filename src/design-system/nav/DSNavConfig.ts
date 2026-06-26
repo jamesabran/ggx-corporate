@@ -13,6 +13,7 @@ export const DS_NAV_GROUPS: DSNavGroup[] = [
     label: 'Foundations',
     items: [
       { label: 'Colors', path: 'foundations/colors' },
+      { label: 'Design Tokens', path: 'foundations/design-tokens' },
       { label: 'Spacing & Layout', path: 'foundations/spacing' },
       { label: 'Typography', path: 'foundations/typography' },
     ],
@@ -58,7 +59,9 @@ export const DS_NAV_GROUPS: DSNavGroup[] = [
       { label: 'Address Display Card', path: 'ggx-components/address-display-card' },
       { label: 'Checkout Delivery Options', path: 'ggx-components/checkout-delivery-options' },
       { label: 'Delivery Status Badge', path: 'ggx-components/delivery-status-badge' },
+      { label: 'Empty State', path: 'ggx-components/empty-state' },
       { label: 'Enablement Gate', path: 'ggx-components/enablement-gate' },
+      { label: 'Filter Bar', path: 'ggx-components/filter-bar' },
       { label: 'Location Cascade', path: 'ggx-components/location-cascade' },
       { label: 'Module Card', path: 'ggx-components/module-card' },
       { label: 'OTP Dialog', path: 'ggx-components/otp-dialog' },

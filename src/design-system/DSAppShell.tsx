@@ -6,6 +6,7 @@ import { DSOverviewPage } from './pages/DSOverviewPage';
 
 // Foundations
 import { ColorsPage } from './pages/foundations/ColorsPage';
+import { DesignTokensPage } from './pages/foundations/DesignTokensPage';
 import { TypographyPage } from './pages/foundations/TypographyPage';
 import { SpacingPage } from './pages/foundations/SpacingPage';
 
@@ -45,7 +46,9 @@ import { AccessDeniedPage } from './pages/ggx-components/AccessDeniedPage';
 import { AddressDisplayCardPage } from './pages/ggx-components/AddressDisplayCardPage';
 import { CheckoutDeliveryOptionsPage } from './pages/ggx-components/CheckoutDeliveryOptionsPage';
 import { DeliveryStatusBadgePage } from './pages/ggx-components/DeliveryStatusBadgePage';
+import { EmptyStatePage } from './pages/ggx-components/EmptyStatePage';
 import { EnablementGatePage } from './pages/ggx-components/EnablementGatePage';
+import { FilterBarPage } from './pages/ggx-components/FilterBarPage';
 import { LocationCascadePage } from './pages/ggx-components/LocationCascadePage';
 import { ModuleCardPage } from './pages/ggx-components/ModuleCardPage';
 import { OtpDialogPage } from './pages/ggx-components/OtpDialogPage';
@@ -69,6 +72,7 @@ export function DSAppShell() {
 
         {/* Foundations */}
         <Route path="foundations/colors" element={<ColorsPage />} />
+        <Route path="foundations/design-tokens" element={<DesignTokensPage />} />
         <Route path="foundations/typography" element={<TypographyPage />} />
         <Route path="foundations/spacing" element={<SpacingPage />} />
 
@@ -108,7 +112,9 @@ export function DSAppShell() {
         <Route path="ggx-components/address-display-card" element={<AddressDisplayCardPage />} />
         <Route path="ggx-components/checkout-delivery-options" element={<CheckoutDeliveryOptionsPage />} />
         <Route path="ggx-components/delivery-status-badge" element={<DeliveryStatusBadgePage />} />
+        <Route path="ggx-components/empty-state" element={<EmptyStatePage />} />
         <Route path="ggx-components/enablement-gate" element={<EnablementGatePage />} />
+        <Route path="ggx-components/filter-bar" element={<FilterBarPage />} />
         <Route path="ggx-components/location-cascade" element={<LocationCascadePage />} />
         <Route path="ggx-components/module-card" element={<ModuleCardPage />} />
         <Route path="ggx-components/otp-dialog" element={<OtpDialogPage />} />
