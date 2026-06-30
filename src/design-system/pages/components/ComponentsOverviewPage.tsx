@@ -96,7 +96,7 @@ export function ComponentsOverviewPage() {
 
           <div>
             <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-              GGX Components
+              GoGo Xpress Components
             </p>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {GGX_IDS.map((id) => (

@@ -7,7 +7,7 @@ export function BulkUploadPage() {
       <Section
         id="bulk-upload"
         title="Bulk upload"
-        intro="The primary data-entry pattern for GGX Corporate. Senders upload a CSV or use the in-app spreadsheet to create multiple deliveries in one operation."
+        intro="The primary data-entry pattern for GGX Business+. Senders upload a CSV or use the in-app spreadsheet to create multiple deliveries in one operation."
       >
         <Subsection title="Steps">
           <SpecTable

@@ -16,10 +16,10 @@ export function OverviewSection() {
           className="mb-6 h-8 w-auto dark:brightness-0 dark:invert"
         />
         <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-gray-50 sm:text-5xl">
-          GGX Design System
+          GoGo Xpress Design System
         </h1>
         <p className="mt-4 max-w-2xl text-lg leading-relaxed text-gray-600 dark:text-gray-400">
-          The unified reference for GGX Corporate's foundations, components, and patterns — connecting
+          The unified reference for GoGo Xpress foundations, components, and patterns — connecting
           Figma design, production code, and documentation in one living source.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
@@ -88,7 +88,7 @@ export function OverviewSection() {
             </div>
             <p className="text-sm font-semibold text-white">Production code</p>
             <p className="mt-1 text-sm text-white/80">
-              The real implementation shipped in GGX Corporate — React + TypeScript + Tailwind.
+              The real implementation shipped in GGX Business+ — React + TypeScript + Tailwind.
             </p>
           </a>
 

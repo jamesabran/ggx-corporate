@@ -16,7 +16,7 @@ export function ResponsiveBehaviorPage() {
       <Section
         id="breakpoints"
         title="Breakpoints"
-        intro="GGX Corporate uses Tailwind's default breakpoint scale with a mobile-first approach — all base styles apply at mobile width; breakpoint prefixes add progressively wider layouts."
+        intro="GGX Business+ uses Tailwind's default breakpoint scale with a mobile-first approach — all base styles apply at mobile width; breakpoint prefixes add progressively wider layouts."
       >
         <SpecTable
           columns={['Prefix', 'Min-width', 'Name', 'GGX usage']}

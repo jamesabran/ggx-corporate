@@ -8,7 +8,7 @@ export function BookingFlowsPage() {
       <Section
         id="booking-flows"
         title="Booking flows"
-        intro="GGX Corporate supports two booking entry points: Bulk Upload (CSV/spreadsheet) and the Bulk Spreadsheet inline editor. Both follow a multi-step review-then-confirm pattern."
+        intro="GGX Business+ supports two booking entry points: Bulk Upload (CSV/spreadsheet) and the Bulk Spreadsheet inline editor. Both follow a multi-step review-then-confirm pattern."
       >
         <Subsection title="Entry points">
           <SpecTable
@@ -55,7 +55,7 @@ export function BookingFlowsPage() {
       <Section id="conventions" title="Design conventions">
         <Subsection title="Bulk-first language">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            GGX Corporate is a bulk-first product. All booking UI uses plural terminology ("deliveries", "batches",
+            GGX Business+ is a bulk-first product. All booking UI uses plural terminology ("deliveries", "batches",
             "rows") by default. Individual delivery language ("book a delivery") is for Basic / self-serve contexts only.
           </p>
         </Subsection>

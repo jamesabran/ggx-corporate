@@ -77,7 +77,7 @@ export const DS_NAV_GROUPS: DSNavGroup[] = [
       { label: 'Textarea', path: 'components/textarea' },
       { label: 'Tooltip', path: 'components/tooltip' },
 
-      { type: 'divider', label: 'GGX Components' },
+      { type: 'divider', label: 'GoGo Xpress Components' },
       { label: 'Access Denied', path: 'ggx-components/access-denied' },
       { label: 'Address Display Card', path: 'ggx-components/address-display-card' },
       { label: 'Checkout Delivery Options', path: 'ggx-components/checkout-delivery-options' },

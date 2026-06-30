@@ -7,7 +7,7 @@ export function HowThisWorksPage() {
       <Section
         id="purpose"
         title="Purpose"
-        intro="This reference documents the approved, implemented GGX design system — it does not reinvent it. Every page describes something that already exists in the codebase or in GGX-SHADCN."
+        intro="This reference documents the approved, implemented GoGo Xpress design system — it does not reinvent it. Every page describes something that already exists in the codebase or in GGX-SHADCN."
       >
         <Subsection title="What it is">
           <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400">

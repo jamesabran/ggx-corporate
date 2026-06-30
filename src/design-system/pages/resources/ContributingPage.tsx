@@ -7,7 +7,7 @@ export function ContributingPage() {
       <Section
         id="contributing"
         title="Contributing"
-        intro="The workflow for adding a component or pattern to the GGX Design System: Figma first, then implementation, then documentation, then verification."
+        intro="The workflow for adding a component or pattern to the GoGo Xpress Design System: Figma first, then implementation, then documentation, then verification."
       >
         <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
           <p className="text-sm text-[#0088C9] dark:text-blue-400 font-medium">

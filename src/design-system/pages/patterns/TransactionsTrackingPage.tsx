@@ -8,7 +8,7 @@ export function TransactionsTrackingPage() {
       <Section
         id="transactions"
         title="Transactions & tracking"
-        intro="The Transactions screen is the primary operational view in GGX Corporate — a filterable, paginated table of all deliveries across Deliveries and Store Orders tabs."
+        intro="The Transactions screen is the primary operational view in GGX Business+ — a filterable, paginated table of all deliveries across Deliveries and Store Orders tabs."
       >
         <Subsection title="Page structure">
           <SpecTable

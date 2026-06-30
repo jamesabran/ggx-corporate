@@ -36,7 +36,7 @@ export function PatternsOverviewPage() {
       <Section
         id="patterns-overview"
         title="Patterns"
-        intro="Recurring multi-component compositions that solve specific GGX Corporate workflows. Patterns document how components work together — not as new constraints, but as documented precedent."
+        intro="Recurring multi-component compositions that solve specific GGX Business+ workflows. Patterns document how components work together — not as new constraints, but as documented precedent."
       >
         <div className="grid gap-3 sm:grid-cols-2">
           {PATTERNS.map((p) => (

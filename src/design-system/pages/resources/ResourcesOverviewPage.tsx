@@ -31,7 +31,7 @@ export function ResourcesOverviewPage() {
       <Section
         id="resources-overview"
         title="Resources"
-        intro="Supporting materials for maintaining and contributing to the GGX Design System."
+        intro="Supporting materials for maintaining and contributing to the GoGo Xpress Design System."
       >
         <div className="grid gap-3 sm:grid-cols-2">
           {RESOURCES.map((r) => (

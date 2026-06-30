@@ -522,34 +522,38 @@ function DSLayoutInner() {
             </div>
           </main>
 
-          {/* Right TOC sidebar – shown only on xl+ when 2+ sections exist */}
-          {showRightSidebar && (
+          {/* Right TOC sidebar – rail always reserved on xl+ for non-landing pages */}
+          {!isLandingPage && (
             <aside
               className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[220px] flex-shrink-0 overflow-y-auto py-10 pl-2 pr-4 xl:block"
-              aria-label="On this page"
+              aria-label={showRightSidebar ? 'On this page' : undefined}
             >
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                On this page
-              </p>
-              <nav>
-                <ul className="space-y-0.5">
-                  {tocItems.map((item) => (
-                    <li key={item.id}>
-                      <a
-                        href={`#${item.id}`}
-                        className={cn(
-                          'block rounded py-1 pl-2 text-sm transition-colors',
-                          tocActive === item.id
-                            ? 'font-medium text-[#0088C9] dark:text-blue-400'
-                            : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100',
-                        )}
-                      >
-                        {item.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
+              {showRightSidebar && (
+                <>
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                    On this page
+                  </p>
+                  <nav>
+                    <ul className="space-y-0.5">
+                      {tocItems.map((item) => (
+                        <li key={item.id}>
+                          <a
+                            href={`#${item.id}`}
+                            className={cn(
+                              'block rounded py-1 pl-2 text-sm transition-colors',
+                              tocActive === item.id
+                                ? 'font-medium text-[#0088C9] dark:text-blue-400'
+                                : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100',
+                            )}
+                          >
+                            {item.label}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </nav>
+                </>
+              )}
             </aside>
           )}
         </div>
