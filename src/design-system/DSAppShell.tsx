@@ -1,16 +1,24 @@
-import { Route, Routes } from 'react-router';
+import { Route, Routes, Navigate } from 'react-router';
 import { DSLayout } from './layout/DSLayout';
 
-// Overview
+// Getting Started
 import { DSOverviewPage } from './pages/DSOverviewPage';
+import { HowThisWorksPage } from './pages/getting-started/HowThisWorksPage';
 
 // Foundations
+import { FoundationsOverviewPage } from './pages/foundations/FoundationsOverviewPage';
 import { ColorsPage } from './pages/foundations/ColorsPage';
 import { DesignTokensPage } from './pages/foundations/DesignTokensPage';
 import { TypographyPage } from './pages/foundations/TypographyPage';
 import { SpacingPage } from './pages/foundations/SpacingPage';
+import { ElevationShadowsPage } from './pages/foundations/ElevationShadowsPage';
+import { ResponsiveBehaviorPage } from './pages/foundations/ResponsiveBehaviorPage';
+
+// Icons
+import { IconsPage } from './pages/icons/IconsPage';
 
 // Components
+import { ComponentsOverviewPage } from './pages/components/ComponentsOverviewPage';
 import { AccordionPage } from './pages/components/AccordionPage';
 import { AlertPage } from './pages/components/AlertPage';
 import { AvatarPage } from './pages/components/AvatarPage';
@@ -41,7 +49,7 @@ import { TabsPage } from './pages/components/TabsPage';
 import { TextareaPage } from './pages/components/TextareaPage';
 import { TooltipPage } from './pages/components/TooltipPage';
 
-// GGX Components & Patterns
+// GGX Components
 import { AccessDeniedPage } from './pages/ggx-components/AccessDeniedPage';
 import { AddressDisplayCardPage } from './pages/ggx-components/AddressDisplayCardPage';
 import { CheckoutDeliveryOptionsPage } from './pages/ggx-components/CheckoutDeliveryOptionsPage';
@@ -52,31 +60,50 @@ import { FilterBarPage } from './pages/ggx-components/FilterBarPage';
 import { LocationCascadePage } from './pages/ggx-components/LocationCascadePage';
 import { ModuleCardPage } from './pages/ggx-components/ModuleCardPage';
 import { OtpDialogPage } from './pages/ggx-components/OtpDialogPage';
-import { PaymentOptionsPage } from './pages/patterns/PaymentOptionsPage';
 import { StatCardPage } from './pages/ggx-components/StatCardPage';
 
-// Icons
-import { IconsPage } from './pages/icons/IconsPage';
+// Patterns
+import { PatternsOverviewPage } from './pages/patterns/PatternsOverviewPage';
+import { BookingFlowsPage } from './pages/patterns/BookingFlowsPage';
+import { BulkUploadPage } from './pages/patterns/BulkUploadPage';
+import { PaymentOptionsPage } from './pages/patterns/PaymentOptionsPage';
+import { TransactionsTrackingPage } from './pages/patterns/TransactionsTrackingPage';
+import { FormsValidationPage } from './pages/patterns/FormsValidationPage';
+import { EmptyLoadingErrorPage } from './pages/patterns/EmptyLoadingErrorPage';
+
+// Resources
+import { ResourcesOverviewPage } from './pages/resources/ResourcesOverviewPage';
+import { TraceabilityPage } from './pages/resources/TraceabilityPage';
+import { ChangelogPage } from './pages/resources/ChangelogPage';
+import { ContributingPage } from './pages/resources/ContributingPage';
+import { DocumentationStandardsPage } from './pages/resources/DocumentationStandardsPage';
 
 /**
  * Single lazy-loaded entry point for the GGX Design System docs.
- * All DS code bundles here — routes are handled internally via nested <Routes>.
- * Mounted at `/design-system/*` in the app router.
+ * All DS code bundles here — routes handled internally via nested <Routes>.
+ * Mounted at /design-system/* in the app router.
  */
 export function DSAppShell() {
   return (
     <Routes>
       <Route element={<DSLayout />}>
-        {/* Overview */}
+
+        {/* Getting Started */}
         <Route index element={<DSOverviewPage />} />
+        <Route path="getting-started/how-this-works" element={<HowThisWorksPage />} />
 
         {/* Foundations */}
+        <Route path="foundations/overview" element={<FoundationsOverviewPage />} />
         <Route path="foundations/colors" element={<ColorsPage />} />
-        <Route path="foundations/design-tokens" element={<DesignTokensPage />} />
         <Route path="foundations/typography" element={<TypographyPage />} />
         <Route path="foundations/spacing" element={<SpacingPage />} />
+        <Route path="foundations/design-tokens" element={<DesignTokensPage />} />
+        <Route path="foundations/elevation-shadows" element={<ElevationShadowsPage />} />
+        <Route path="foundations/responsive-behavior" element={<ResponsiveBehaviorPage />} />
+        <Route path="icons" element={<IconsPage />} />
 
         {/* Components */}
+        <Route path="components/overview" element={<ComponentsOverviewPage />} />
         <Route path="components/accordion" element={<AccordionPage />} />
         <Route path="components/alert" element={<AlertPage />} />
         <Route path="components/avatar" element={<AvatarPage />} />
@@ -107,7 +134,7 @@ export function DSAppShell() {
         <Route path="components/textarea" element={<TextareaPage />} />
         <Route path="components/tooltip" element={<TooltipPage />} />
 
-        {/* GGX Components & Patterns */}
+        {/* GGX Components */}
         <Route path="ggx-components/access-denied" element={<AccessDeniedPage />} />
         <Route path="ggx-components/address-display-card" element={<AddressDisplayCardPage />} />
         <Route path="ggx-components/checkout-delivery-options" element={<CheckoutDeliveryOptionsPage />} />
@@ -118,11 +145,30 @@ export function DSAppShell() {
         <Route path="ggx-components/location-cascade" element={<LocationCascadePage />} />
         <Route path="ggx-components/module-card" element={<ModuleCardPage />} />
         <Route path="ggx-components/otp-dialog" element={<OtpDialogPage />} />
-        <Route path="patterns/payment-options" element={<PaymentOptionsPage />} />
         <Route path="ggx-components/stat-card" element={<StatCardPage />} />
 
-        {/* Icons */}
-        <Route path="icons" element={<IconsPage />} />
+        {/* Patterns */}
+        <Route path="patterns/overview" element={<PatternsOverviewPage />} />
+        <Route path="patterns/booking-flows" element={<BookingFlowsPage />} />
+        <Route path="patterns/bulk-upload" element={<BulkUploadPage />} />
+        <Route path="patterns/payment-options" element={<PaymentOptionsPage />} />
+        <Route path="patterns/transactions-tracking" element={<TransactionsTrackingPage />} />
+        <Route path="patterns/forms-validation" element={<FormsValidationPage />} />
+        <Route path="patterns/empty-loading-error" element={<EmptyLoadingErrorPage />} />
+
+        {/* Resources */}
+        <Route path="resources/overview" element={<ResourcesOverviewPage />} />
+        <Route path="resources/traceability" element={<TraceabilityPage />} />
+        <Route path="resources/changelog" element={<ChangelogPage />} />
+        <Route path="resources/contributing" element={<ContributingPage />} />
+        <Route path="resources/documentation-standards" element={<DocumentationStandardsPage />} />
+
+        {/* Legacy redirects — old single-page routes now have dedicated pages */}
+        <Route path="foundations" element={<Navigate to="/design-system/foundations/overview" replace />} />
+        <Route path="components" element={<Navigate to="/design-system/components/overview" replace />} />
+        <Route path="patterns" element={<Navigate to="/design-system/patterns/overview" replace />} />
+        <Route path="resources" element={<Navigate to="/design-system/resources/overview" replace />} />
+
       </Route>
     </Routes>
   );

@@ -10,11 +10,8 @@ import {
 import { cn } from '../../app/lib/utils';
 import { COMPONENT_META, GGX_SHADCN_URL, type LifecycleStatus } from '../data/componentRegistry';
 
-/* ------------------------------------------------------------------ */
-/* Copy-to-clipboard                                                   */
-/* ------------------------------------------------------------------ */
+// ── Copy to clipboard ─────────────────────────────────────────────────────────
 
-/** Small icon button that copies `value` and shows a temporary "Copied" state. */
 export function CopyButton({ value, label, className }: { value: string; label?: string; className?: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -23,9 +20,7 @@ export function CopyButton({ value, label, className }: { value: string; label?:
       await navigator.clipboard.writeText(value);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* Clipboard unavailable (e.g. insecure context) — fail quietly, no toast. */
-    }
+    } catch { /* clipboard unavailable */ }
   }, [value]);
 
   return (
@@ -34,36 +29,35 @@ export function CopyButton({ value, label, className }: { value: string; label?:
       onClick={copy}
       aria-label={copied ? 'Copied' : label ?? `Copy ${value}`}
       className={cn(
-        'inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-        copied && 'text-green-600 hover:text-green-600',
+        'inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:hover:bg-gray-700 dark:hover:text-gray-200',
+        copied && 'text-green-600 hover:text-green-600 dark:text-green-400',
         className,
       )}
     >
-      {copied ? <IconCheck className="h-3.5 w-3.5" stroke={2.5} /> : <IconCopy className="h-3.5 w-3.5" stroke={1.8} />}
+      {copied
+        ? <IconCheck className="h-3.5 w-3.5" stroke={2.5} />
+        : <IconCopy className="h-3.5 w-3.5" stroke={1.8} />}
       <span aria-live="polite" className="sr-only">{copied ? 'Copied' : ''}</span>
     </button>
   );
 }
 
-/** Inline value (hex, token, class) with a trailing copy button. */
 export function Copyable({ value, mono = true, className }: { value: string; mono?: boolean; className?: string }) {
   return (
     <span className={cn('inline-flex items-center gap-1', className)}>
-      <code className={cn('text-xs text-gray-600', mono && 'font-mono')}>{value}</code>
+      <code className={cn('text-xs text-gray-600 dark:text-gray-300', mono && 'font-mono')}>{value}</code>
       <CopyButton value={value} />
     </span>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Layout primitives                                                   */
-/* ------------------------------------------------------------------ */
+// ── Layout primitives ─────────────────────────────────────────────────────────
 
 export function Section({ id, title, intro, children }: { id: string; title: string; intro?: ReactNode; children: ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24 border-b border-gray-100 pb-12 last:border-0">
-      <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{title}</h2>
-      {intro && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-600">{intro}</p>}
+    <section id={id} className="scroll-mt-20 border-b border-gray-100 pb-12 last:border-0 dark:border-gray-800">
+      <h2 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">{title}</h2>
+      {intro && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-600 dark:text-gray-400">{intro}</p>}
       <div className="mt-6 space-y-8">{children}</div>
     </section>
   );
@@ -73,8 +67,8 @@ export function Subsection({ title, description, children }: { title: string; de
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">{title}</h3>
-        {description && <p className="mt-1 max-w-2xl text-sm text-gray-600">{description}</p>}
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{title}</h3>
+        {description && <p className="mt-1 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{description}</p>}
       </div>
       {children}
     </div>
@@ -82,20 +76,25 @@ export function Subsection({ title, description, children }: { title: string; de
 }
 
 export function PreviewBox({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('rounded-xl border border-gray-200 bg-gray-50/60 p-6', className)}>{children}</div>;
+  return (
+    <div className={cn('rounded-xl border border-gray-200 bg-gray-50/60 p-6 dark:border-gray-700 dark:bg-gray-800/40', className)}>
+      {children}
+    </div>
+  );
 }
 
-/* ------------------------------------------------------------------ */
-/* Responsive preview (Desktop / Mobile)                               */
-/* ------------------------------------------------------------------ */
+// ── Responsive preview toggle ─────────────────────────────────────────────────
 
-/** Frames a live preview with a Desktop/Mobile width toggle. */
 export function ResponsivePreview({ children, defaultView = 'desktop' }: { children: ReactNode; defaultView?: 'desktop' | 'mobile' }) {
   const [view, setView] = useState<'desktop' | 'mobile'>(defaultView);
 
   return (
     <div>
-      <div className="mb-2 inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-0.5" role="group" aria-label="Preview width">
+      <div
+        className="mb-2 inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-0.5 dark:border-gray-700 dark:bg-gray-900"
+        role="group"
+        aria-label="Preview width"
+      >
         {([
           { id: 'desktop', label: 'Desktop', Icon: IconDeviceDesktop },
           { id: 'mobile', label: 'Mobile', Icon: IconDeviceMobile },
@@ -107,7 +106,9 @@ export function ResponsivePreview({ children, defaultView = 'desktop' }: { child
             aria-pressed={view === id}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-              view === id ? 'bg-blue-50 text-[#0088C9]' : 'text-gray-500 hover:text-gray-700',
+              view === id
+                ? 'bg-blue-50 text-[#0088C9] dark:bg-blue-950/60 dark:text-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
             )}
           >
             <Icon className="h-3.5 w-3.5" stroke={1.8} /> {label}
@@ -115,17 +116,16 @@ export function ResponsivePreview({ children, defaultView = 'desktop' }: { child
         ))}
       </div>
       <PreviewBox>
-        <div className={cn('mx-auto transition-all', view === 'mobile' ? 'max-w-[390px]' : 'w-full')}>{children}</div>
+        <div className={cn('mx-auto transition-all', view === 'mobile' ? 'max-w-[390px]' : 'w-full')}>
+          {children}
+        </div>
       </PreviewBox>
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Code + source metadata                                              */
-/* ------------------------------------------------------------------ */
+// ── Code block ────────────────────────────────────────────────────────────────
 
-/** Monospace code sample with a copy button. */
 export function CodeBlock({ code }: { code: string }) {
   return (
     <div className="relative">
@@ -134,34 +134,31 @@ export function CodeBlock({ code }: { code: string }) {
         label="Copy code"
         className="absolute right-2 top-2 text-gray-400 hover:bg-white/10 hover:text-white"
       />
-      <pre className="overflow-x-auto rounded-lg border border-gray-200 bg-gray-900 p-4 pr-10 text-xs leading-relaxed text-gray-100">
+      <pre className="overflow-x-auto rounded-lg border border-gray-200 bg-gray-900 p-4 pr-10 text-xs leading-relaxed text-gray-100 dark:border-gray-700 dark:bg-gray-950">
         <code>{code}</code>
       </pre>
     </div>
   );
 }
 
+// ── Implementation metadata ───────────────────────────────────────────────────
+
 const STATUS_STYLE: Record<LifecycleStatus, { label: string; cls: string; dot: string }> = {
-  'in-use': { label: 'In use', cls: 'bg-green-100 text-green-800', dot: 'bg-green-600' },
-  'in-progress': { label: 'In progress', cls: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500' },
-  deprecated: { label: 'Deprecated', cls: 'bg-gray-200 text-gray-600', dot: 'bg-gray-400' },
+  'in-use':      { label: 'In use',       cls: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',  dot: 'bg-green-600 dark:bg-green-400' },
+  'in-progress': { label: 'In progress',  cls: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',  dot: 'bg-amber-500 dark:bg-amber-400' },
+  deprecated:    { label: 'Deprecated',   cls: 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400',          dot: 'bg-gray-400' },
 };
 
-/**
- * Cross-source metadata for a documented component: lifecycle status, the
- * GGX-SHADCN Figma reference, the production source path, and live app usage.
- * Driven by `COMPONENT_META` so the three sources stay aligned in one place.
- */
 export function ImplementationMeta({ id, note }: { id: string; note?: ReactNode }) {
   const meta = COMPONENT_META[id];
   if (!meta) return null;
   const status = STATUS_STYLE[meta.status];
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
       <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Status</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Status</p>
           <span className={cn('mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium', status.cls)}>
             <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
             {status.label}
@@ -169,27 +166,32 @@ export function ImplementationMeta({ id, note }: { id: string; note?: ReactNode 
         </div>
 
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Source</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Source</p>
           <div className="mt-1 flex items-center gap-1">
-            <code className="truncate font-mono text-xs text-gray-700">{meta.source}</code>
+            <code className="truncate font-mono text-xs text-gray-700 dark:text-gray-300">{meta.source}</code>
             <CopyButton value={meta.source} label="Copy source path" />
           </div>
         </div>
 
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Figma · GGX-SHADCN</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Figma · GGX-SHADCN</p>
           {meta.figma.needsVerification ? (
             <a
               href={GGX_SHADCN_URL}
               target="_blank"
               rel="noreferrer"
-              className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 hover:underline"
+              className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 hover:underline dark:bg-amber-900/30 dark:text-amber-400"
             >
               {meta.figma.name} · needs verification <IconExternalLink className="h-3 w-3" />
             </a>
           ) : (
             <div className="mt-1 flex items-center gap-1">
-              <a href={GGX_SHADCN_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-[#0088C9]">
+              <a
+                href={GGX_SHADCN_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-[#0088C9] dark:text-gray-300 dark:hover:text-blue-400"
+              >
                 {meta.figma.name} <IconExternalLink className="h-3 w-3" />
               </a>
               {meta.figma.key && <CopyButton value={meta.figma.key} label={`Copy Figma key for ${meta.figma.name}`} />}
@@ -199,80 +201,79 @@ export function ImplementationMeta({ id, note }: { id: string; note?: ReactNode 
 
         {meta.usedIn && meta.usedIn.length > 0 && (
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Used in</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Used in</p>
             <ul className="mt-1 space-y-0.5">
               {meta.usedIn.map((u) => (
-                <li key={u.label} className="text-xs text-gray-600">
-                  <span className="font-medium text-gray-800">{u.label}</span>{' '}
-                  <code className="font-mono text-[11px] text-gray-400">{u.where}</code>
+                <li key={u.label} className="text-xs text-gray-600 dark:text-gray-400">
+                  <span className="font-medium text-gray-800 dark:text-gray-200">{u.label}</span>{' '}
+                  <code className="font-mono text-[11px] text-gray-400 dark:text-gray-500">{u.where}</code>
                 </li>
               ))}
             </ul>
           </div>
         )}
       </div>
-      {note && <p className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500">{note}</p>}
+      {note && <p className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">{note}</p>}
     </div>
   );
 }
 
-/** Accessibility notes block. */
+// ── Accessibility notes ───────────────────────────────────────────────────────
+
 export function AccessibilityNotes({ items }: { items: ReactNode[] }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-4">
-      <p className="mb-2 text-sm font-semibold text-gray-700">Accessibility</p>
-      <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-600">
-        {items.map((it, i) => (
-          <li key={i}>{it}</li>
-        ))}
+    <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-4 dark:border-gray-700 dark:bg-gray-800/40">
+      <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Accessibility</p>
+      <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-600 dark:text-gray-400">
+        {items.map((it, i) => <li key={i}>{it}</li>)}
       </ul>
     </div>
   );
 }
 
+// ── Do / Don't ───────────────────────────────────────────────────────────────
+
 export function DoDont({ dos, donts }: { dos: string[]; donts: string[] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <div className="rounded-lg border border-green-200 bg-green-50/50 p-4">
-        <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-green-700">
+      <div className="rounded-lg border border-green-200 bg-green-50/50 p-4 dark:border-green-900/50 dark:bg-green-950/30">
+        <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-green-700 dark:text-green-400">
           <IconCheck className="h-4 w-4" stroke={2.5} /> Do
         </div>
         <ul className="space-y-1.5">
-          {dos.map((d) => (
-            <li key={d} className="text-sm text-gray-700">{d}</li>
-          ))}
+          {dos.map((d) => <li key={d} className="text-sm text-gray-700 dark:text-gray-300">{d}</li>)}
         </ul>
       </div>
-      <div className="rounded-lg border border-red-200 bg-red-50/40 p-4">
-        <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700">
+      <div className="rounded-lg border border-red-200 bg-red-50/40 p-4 dark:border-red-900/50 dark:bg-red-950/30">
+        <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700 dark:text-red-400">
           <IconX className="h-4 w-4" stroke={2.5} /> Don&apos;t
         </div>
         <ul className="space-y-1.5">
-          {donts.map((d) => (
-            <li key={d} className="text-sm text-gray-700">{d}</li>
-          ))}
+          {donts.map((d) => <li key={d} className="text-sm text-gray-700 dark:text-gray-300">{d}</li>)}
         </ul>
       </div>
     </div>
   );
 }
 
+// ── Spec table ────────────────────────────────────────────────────────────────
+
 export function SpecTable({ columns, rows }: { columns: string[]; rows: ReactNode[][] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
+    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
       <table className="w-full text-left text-sm">
-        <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+        <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400">
           <tr>
             {columns.map((c) => (
               <th key={c} className="px-4 py-2.5 font-semibold">{c}</th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
           {rows.map((row, i) => (
-            <tr key={i} className="align-top">
+            <tr key={i} className="align-top dark:bg-gray-900/30">
               {row.map((cell, j) => (
-                <td key={j} className="px-4 py-2.5 text-gray-700">{cell}</td>
+                <td key={j} className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{cell}</td>
               ))}
             </tr>
           ))}
