@@ -63,9 +63,14 @@ export function Section({ id, title, intro, children }: { id: string; title: str
   );
 }
 
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/, '');
+}
+
 export function Subsection({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
+  const id = slugify(title);
   return (
-    <div className="space-y-3">
+    <div id={id} data-toc className="scroll-mt-20 space-y-3">
       <div>
         <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{title}</h3>
         {description && <p className="mt-1 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{description}</p>}

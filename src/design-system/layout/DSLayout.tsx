@@ -35,18 +35,29 @@ function useToc(pathname: string): { items: TocItem[]; active: string } {
   const [active, setActive] = useState('');
 
   useEffect(() => {
-    // Wait for the page to render before scanning headings.
     const t = setTimeout(() => {
+      // Level 1: section[id] → h2-level items (multi-section pages like Foundations, Resources)
       const sections = Array.from(document.querySelectorAll<HTMLElement>('section[id]'));
-      const toc = sections
-        .map((s) => {
-          const id = s.getAttribute('id') ?? '';
-          const label = s.querySelector('h2')?.textContent?.trim() ?? '';
-          return { id, label };
-        })
+      const sectionItems = sections
+        .map((s) => ({ id: s.getAttribute('id') ?? '', label: s.querySelector('h2')?.textContent?.trim() ?? '' }))
         .filter((i) => i.id && i.label);
-      setItems(toc);
-      if (toc.length > 0) setActive(toc[0].id);
+
+      if (sectionItems.length >= 2) {
+        setItems(sectionItems);
+        setActive(sectionItems[0].id);
+        return;
+      }
+
+      // Level 2: single-section pages (component detail pages) — h2 + Subsection h3s
+      const allItems: TocItem[] = [...sectionItems];
+      Array.from(document.querySelectorAll<HTMLElement>('[data-toc][id]')).forEach((el) => {
+        const id = el.getAttribute('id') ?? '';
+        const label = el.querySelector('h3')?.textContent?.trim() ?? '';
+        if (id && label) allItems.push({ id, label });
+      });
+
+      setItems(allItems);
+      if (allItems.length > 0) setActive(allItems[0].id);
     }, 120);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -316,7 +327,7 @@ function DSLayoutInner() {
   // Active section for header nav highlight
   const activeSection = (() => {
     if (pathname.startsWith('/design-system/foundations/') || pathname === '/design-system/icons') return 'Foundations';
-    if (pathname.startsWith('/design-system/components/') || pathname.startsWith('/design-system/ggx-components/')) return 'Components';
+    if (pathname.startsWith('/design-system/components/') || pathname.startsWith('/design-system/ggx-components/') || pathname === '/design-system/patterns/payment-options') return 'Components';
     if (pathname.startsWith('/design-system/patterns/')) return 'Patterns';
     if (pathname.startsWith('/design-system/resources/')) return 'Resources';
     return '';

@@ -14,11 +14,6 @@ const PATTERNS = [
     description: 'Multi-step upload flow: file selection, row validation, error review, summary, and payment.',
   },
   {
-    label: 'Payment options',
-    path: '/design-system/patterns/payment-options',
-    description: 'Payment method selection for both sender billing and buyer checkout contexts.',
-  },
-  {
     label: 'Transactions & tracking',
     path: '/design-system/patterns/transactions-tracking',
     description: 'Transaction list with tabs, filters, pagination, and per-row tracking status.',

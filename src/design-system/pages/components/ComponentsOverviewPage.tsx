@@ -4,43 +4,30 @@ import { Section, SpecTable } from '../../components/DocPrimitives';
 import { COMPONENT_META } from '../../data/componentRegistry';
 import { cn } from '../../../app/lib/utils';
 
-const CATEGORIES: { label: string; paths: string[]; description: string }[] = [
-  {
-    label: 'Display',
-    paths: ['alert', 'avatar', 'badge', 'icon-container', 'progress', 'separator', 'tooltip'],
-    description: 'Non-interactive elements that communicate status, identity, or structure.',
-  },
-  {
-    label: 'Actions',
-    paths: ['button'],
-    description: 'Interactive controls that trigger operations.',
-  },
-  {
-    label: 'Inputs',
-    paths: ['calendar', 'checkbox', 'combobox', 'field', 'input', 'radio-group', 'search-input', 'segmented-control', 'select', 'switch', 'textarea'],
-    description: 'Form controls for capturing user input.',
-  },
-  {
-    label: 'Structure',
-    paths: ['accordion', 'breadcrumb', 'card', 'page-header', 'pagination', 'scroll-area', 'tabs'],
-    description: 'Layout and navigation building blocks.',
-  },
-  {
-    label: 'Overlays',
-    paths: ['dialog', 'otp-dialog', 'popover'],
-    description: 'Floating and modal layers.',
-  },
-  {
-    label: 'Data',
-    paths: ['table'],
-    description: 'Structured data display.',
-  },
-  {
-    label: 'GGX Components',
-    paths: ['access-denied', 'address-display-card', 'checkout-delivery-options', 'delivery-status-badge', 'empty-state', 'enablement-gate', 'filter-bar', 'location-cascade', 'module-card', 'stat-card'],
-    description: 'GGX-specific compositions built on top of the primitive library.',
-  },
+// Alphabetical lists matching the nav order.
+const SHARED_IDS = [
+  'accordion', 'alert', 'avatar', 'badge', 'breadcrumb', 'button',
+  'calendar', 'card', 'checkbox', 'combobox', 'dialog', 'field',
+  'icon-container', 'input', 'page-header', 'pagination', 'popover',
+  'progress', 'radio-group', 'scroll-area', 'search-input',
+  'segmented-control', 'select', 'separator', 'switch', 'table',
+  'tabs', 'textarea', 'tooltip',
 ];
+
+const GGX_IDS = [
+  'access-denied', 'address-display-card', 'checkout-delivery-options',
+  'delivery-status-badge', 'empty-state', 'enablement-gate', 'filter-bar',
+  'location-cascade', 'module-card', 'otp-dialog', 'payment-option-card', 'stat-card',
+];
+
+// Routes that differ from the default /design-system/ggx-components/:id pattern.
+const GGX_ROUTE_OVERRIDES: Record<string, string> = {
+  'payment-option-card': '/design-system/patterns/payment-options',
+};
+
+function ggxHref(id: string): string {
+  return GGX_ROUTE_OVERRIDES[id] ?? `/design-system/ggx-components/${id}`;
+}
 
 const STATUS_COLORS: Record<string, string> = {
   'in-use':      'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
@@ -50,6 +37,29 @@ const STATUS_COLORS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   'in-use': 'In use', 'in-progress': 'In progress', deprecated: 'Deprecated',
 };
+
+function ComponentCard({ id, href }: { id: string; href: string }) {
+  const meta = COMPONENT_META[id];
+  if (!meta) return null;
+  return (
+    <Link
+      to={href}
+      className="group flex flex-col gap-1 rounded-lg border border-gray-200 p-3 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800/50"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium text-gray-900 group-hover:text-[#0088C9] dark:text-gray-100 dark:group-hover:text-blue-400 transition-colors">
+          {meta.title}
+        </span>
+        <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium flex-shrink-0', STATUS_COLORS[meta.status])}>
+          {STATUS_LABELS[meta.status]}
+        </span>
+      </div>
+      {meta.blurb && (
+        <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{meta.blurb}</span>
+      )}
+    </Link>
+  );
+}
 
 export function ComponentsOverviewPage() {
   const allMeta = Object.values(COMPONENT_META);
@@ -73,45 +83,27 @@ export function ComponentsOverviewPage() {
         </div>
 
         <div className="space-y-8">
-          {CATEGORIES.map((cat) => (
-            <div key={cat.label}>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">{cat.label}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{cat.description}</p>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {cat.paths.map((id) => {
-                  const meta = COMPONENT_META[id];
-                  if (!meta) return null;
-                  const href = id.startsWith('otp-dialog') || cat.label === 'GGX Components'
-                    ? `/design-system/ggx-components/${id}`
-                    : `/design-system/components/${id}`;
-                  const ggxPaths = ['access-denied','address-display-card','checkout-delivery-options','delivery-status-badge','empty-state','enablement-gate','filter-bar','location-cascade','module-card','otp-dialog','stat-card'];
-                  const resolvedHref = ggxPaths.includes(id)
-                    ? `/design-system/ggx-components/${id}`
-                    : `/design-system/components/${id}`;
-
-                  return (
-                    <Link
-                      key={id}
-                      to={resolvedHref}
-                      className="group flex flex-col gap-1 rounded-lg border border-gray-200 p-3 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800/50"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900 group-hover:text-[#0088C9] dark:text-gray-100 dark:group-hover:text-blue-400 transition-colors">
-                          {meta.title}
-                        </span>
-                        <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium', STATUS_COLORS[meta.status])}>
-                          {STATUS_LABELS[meta.status]}
-                        </span>
-                      </div>
-                      {meta.blurb && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{meta.blurb}</span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
+          <div>
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+              Shared Components
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {SHARED_IDS.map((id) => (
+                <ComponentCard key={id} id={id} href={`/design-system/components/${id}`} />
+              ))}
             </div>
-          ))}
+          </div>
+
+          <div>
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+              GGX Components
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {GGX_IDS.map((id) => (
+                <ComponentCard key={id} id={id} href={ggxHref(id)} />
+              ))}
+            </div>
+          </div>
         </div>
       </Section>
 

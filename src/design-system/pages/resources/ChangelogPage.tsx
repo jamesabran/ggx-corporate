@@ -11,6 +11,21 @@ interface ChangeEntry {
 const CHANGELOG: ChangeEntry[] = [
   {
     date: '2026-06-30',
+    title: 'IA correction: flat component nav, right sidebar on detail pages',
+    type: 'minor',
+    changes: [
+      'Replaced type-based component category dividers (Display, Actions, Inputs, Structure, Overlays, Data) with two flat lists: Shared Components and GGX Components — both alphabetical.',
+      'Moved OTP Dialog and Payment Options from Shared/Patterns nav positions into the GGX Components list.',
+      'Removed Payment options from the Patterns nav group; it is a component, not a pattern.',
+      'Updated ComponentsOverviewPage to match the new flat structure.',
+      'Right "On this page" sidebar now appears on all substantial pages including component detail pages (Button, Alert, etc.).',
+      'Subsection headings are now discoverable as TOC anchors via IntersectionObserver on single-section component pages.',
+      'Header active-section highlight correctly maps patterns/payment-options to the Components section.',
+      'Prev/Next footer navigation recalculated to reflect new nav order.',
+    ],
+  },
+  {
+    date: '2026-06-30',
     title: 'Navigation and layout rebuild',
     type: 'major',
     changes: [
