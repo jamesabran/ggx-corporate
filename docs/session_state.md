@@ -58,6 +58,22 @@
 
 **Next:** Figma alignment pass — sync new DS patterns and verify token values in GGX-SHADCN.
 
+### Bank Logos (2026-07-10)
+
+- GGX-SHADCN "Bank Logos" page reorganized into the standard doc pattern:
+  `_header` (title/description/meta) + a wrapped grid of 38 labeled entry cards
+  (proper brand name, gray preview cell with the untouched logo component,
+  "Download ↓" affordance), sorted A–Z. Original `Bank=<key>` component names
+  kept (they mirror payout-module asset keys).
+- Web DS: new Foundations page `/design-system/foundations/bank-logos`
+  (`pages/foundations/BankLogosPage.tsx` + `data/bankLogos.ts`), nav entry after
+  Icons, Foundations overview card, search, per-entry SVG download.
+- 38 approved SVGs exported clean from Figma into `src/assets/banks/`
+  (150×150 viewBox, transparent bg, kebab-case filenames). Imported with
+  `?no-inline` so every logo ships as a real downloadable file.
+- Brand names verified (notable: `maribank` = MariBank, formerly SeaBank PH;
+  `lulu` = LuLu Money; `chinatrust` = CTBC Bank (Philippines)).
+
 ---
 
 ## Most Recent Feature Work — Basic User Demo

@@ -34,6 +34,11 @@ const FOUNDATIONS = [
     description: 'Tabler Icons library as used across GGX — search and copy class names.',
   },
   {
+    label: 'Bank Logos',
+    path: '/design-system/foundations/bank-logos',
+    description: 'Approved SVG logos of the payout module banks and e-wallets, with downloads.',
+  },
+  {
     label: 'Responsive behavior',
     path: '/design-system/foundations/responsive-behavior',
     description: 'Breakpoint system, layout patterns, and mobile-first conventions.',

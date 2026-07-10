@@ -13,6 +13,7 @@ import { TypographyPage } from './pages/foundations/TypographyPage';
 import { SpacingPage } from './pages/foundations/SpacingPage';
 import { ElevationShadowsPage } from './pages/foundations/ElevationShadowsPage';
 import { ResponsiveBehaviorPage } from './pages/foundations/ResponsiveBehaviorPage';
+import { BankLogosPage } from './pages/foundations/BankLogosPage';
 
 // Icons
 import { IconsPage } from './pages/icons/IconsPage';
@@ -100,6 +101,7 @@ export function DSAppShell() {
         <Route path="foundations/design-tokens" element={<DesignTokensPage />} />
         <Route path="foundations/elevation-shadows" element={<ElevationShadowsPage />} />
         <Route path="foundations/responsive-behavior" element={<ResponsiveBehaviorPage />} />
+        <Route path="foundations/bank-logos" element={<BankLogosPage />} />
         <Route path="icons" element={<IconsPage />} />
 
         {/* Components */}

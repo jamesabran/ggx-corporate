@@ -1,0 +1,39 @@
+<svg width="150" height="150" viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Bank Logos/sterling">
+<g id="sterling">
+<g id="Asset 1 1" clip-path="url(#clip0_3421_74)">
+<g id="Layer 2">
+<g id="Layer 1">
+<path id="Vector" fill-rule="evenodd" clip-rule="evenodd" d="M62.7535 35.8394C-24.5253 27.0246 14.5235 142.652 51.8221 115.891C76.1332 98.4437 49.3451 77.2115 44.3433 70.6579C29.2804 50.9012 47.2985 41.5882 62.7535 35.8394Z" fill="url(#paint0_linear_3421_74)"/>
+<path id="Vector_2" fill-rule="evenodd" clip-rule="evenodd" d="M63.8249 64.2959C47.4039 37.9952 82.9332 -0.694209 118.635 21.7069C156.039 45.1716 138.499 90.7499 110.582 119.187C97.518 132.496 71.7915 143.84 33.7852 120.615C53.869 127.245 78.8208 124.524 82.3594 101.673C84.2052 85.9018 74.0772 79.5781 63.8249 64.2959Z" fill="url(#paint1_linear_3421_74)"/>
+<path id="Vector_3" fill-rule="evenodd" clip-rule="evenodd" d="M49.2594 38.0431C41.704 37.5353 9.81846 42.393 13.5292 85.3365C14.4186 70.6675 15.9488 56.0847 34.4355 48.3717C34.4355 48.3717 40.9963 41.3295 49.2594 38.0431Z" fill="white"/>
+<path id="Vector_4" fill-rule="evenodd" clip-rule="evenodd" d="M129.203 35.3603C103.868 -1.03914 44.9077 26.8233 68.3388 65.1678C73.8476 24.3418 118.204 24.0927 129.203 35.3603Z" fill="white"/>
+<path id="Vector_5" fill-rule="evenodd" clip-rule="evenodd" d="M24.9385 110.909C46.8586 131.787 74.4213 100.207 50.8849 82.922C63.4039 102.276 40.6039 119.178 24.9385 110.909Z" fill="white"/>
+<path id="Vector_6" fill-rule="evenodd" clip-rule="evenodd" d="M134.577 77.5277C116.578 116.064 83.8894 137.995 49.2017 126.392C96.9343 145.977 125.205 103.359 134.577 77.5277Z" fill="white"/>
+</g>
+</g>
+</g>
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_3421_74" x1="9.99987" y1="77.6427" x2="62.7535" y2="77.6427" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F8BE52"/>
+<stop offset="1" stop-color="#F5A807"/>
+</linearGradient>
+<linearGradient id="paint1_linear_3421_74" x1="59.6073" y1="29.0941" x2="106.608" y2="124.264" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FFD694"/>
+<stop offset="0.21" stop-color="#FDC663"/>
+<stop offset="0.43" stop-color="#FCB635"/>
+<stop offset="0.54" stop-color="#FAB326"/>
+<stop offset="0.69" stop-color="#F9AF16"/>
+<stop offset="0.81" stop-color="#F8AE11"/>
+<stop offset="0.84" stop-color="#F8B225"/>
+<stop offset="0.9" stop-color="#F9B739"/>
+<stop offset="0.95" stop-color="#F9B944"/>
+<stop offset="1" stop-color="#F9BA48"/>
+</linearGradient>
+<clipPath id="clip0_3421_74">
+<rect width="130" height="119" fill="white" transform="translate(10 15)"/>
+</clipPath>
+</defs>
+</svg>

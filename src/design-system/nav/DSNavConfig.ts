@@ -38,6 +38,7 @@ export const DS_NAV_GROUPS: DSNavGroup[] = [
       { label: 'Design Tokens', path: 'foundations/design-tokens' },
       { label: 'Elevation & Shadows', path: 'foundations/elevation-shadows' },
       { label: 'Icons', path: 'icons' },
+      { label: 'Bank Logos', path: 'foundations/bank-logos' },
       { label: 'Responsive behavior', path: 'foundations/responsive-behavior' },
     ],
   },
