@@ -3,6 +3,35 @@
 > Lightweight resume/checkpoint file. Detailed June 2026 history was archived to
 > `docs/archive/session_log_2026-06.md`.
 
+## Most Recent Work — HeyQ support integration (2026-07-15)
+
+Support now runs on **HeyQ**, connected through a mock adapter. Full contract:
+`docs/heyq_integration.md`.
+
+- **OMS equivalent reused:** `services/transactionService.ts` (its docblock already
+  names OMS as the source system). Stable order id = the **tracking number**. No
+  new order abstraction was created.
+- **The seam:** `services/heyqService.ts` — the only Business+ ↔ HeyQ integration
+  point, over a mock HeyQ backend (`data/heyqTickets.ts`). Swap its bodies for
+  `fetch()` when HeyQ ships an API; callers don't change.
+- **Transaction details:** the existing `Need Help?` banner now hands the order off
+  to HeyQ (`/contact?order=<tracking>`); `Send a Report` → `Get Help With This
+  Order`. The in-app report modal is gone (HeyQ owns ticket capture).
+- **Support Tickets page:** extended in place. `Submit a Ticket` opens HeyQ with no
+  order; the table/cards/search/filters read real HeyQ tickets; `View` opens the
+  token-scoped HeyQ requester portal. Statuses aligned to HeyQ's six.
+- **Removed:** `data/supportTickets.ts` (the old Zendesk-era local ticket store).
+  Business+ now holds no ticket state of its own.
+- **Boundary enforced:** internal notes, agent identity, escalation, tier and SLA
+  never cross into Business+ (asserted in tests). Delivery status, ticket status
+  and escalation are three independent dimensions.
+- **Tests:** `tests/` — Node's built-in runner (`npm test`) driving the existing
+  `playwright` dep. 31 tests: adapter contract + full cross-system lifecycle +
+  responsive. **No new test framework or dependency.**
+- **HeyQ:** one additive compat change (Business+ order rows appended to its mock
+  catalogue) + 2 brittle assertions made seed-derived. HeyQ stays 169/169 green.
+- **Note:** this repo has **no ESLint** (no config/dep/script), so no lint step ran.
+
 ## Current State - Updated 2026-06-26
 
 - **Stage:** `/design-system` documentation site is complete. All component/pattern gaps

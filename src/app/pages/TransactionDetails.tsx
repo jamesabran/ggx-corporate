@@ -28,7 +28,10 @@ import {
   getClaimByTrackingNumber, fileClaim, cancelBooking, isBookingCancelled,
   claimEligible, cancelEligible, CLAIM_STATUS_META, CLAIM_REASONS, type Claim,
 } from '../services/claimsService';
-import { createTicket } from '../services/ticketsService';
+// Support runs on HeyQ. The banner hands the order off to HeyQ's contact form
+// with its stable OMS id (`startOrderHandoff`), so the customer never re-enters
+// details we already hold. Business+ does not create tickets itself.
+import { startOrderHandoff } from '../services/ticketsService';
 
 export function TransactionDetails() {
   const navigate = useNavigate();
@@ -41,10 +44,9 @@ export function TransactionDetails() {
   // undefined = loading, null = not found, Transaction = loaded.
   const [transaction, setTransaction] = useState<Transaction | null | undefined>(undefined);
 
-  // Report ticket modal state.
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportForm, setReportForm] = useState({ issueType: 'failed', description: '' });
-  const [reportSubmittedId, setReportSubmittedId] = useState<string | null>(null);
+  // HeyQ handoff state. 'refused' covers an order the signed-in account isn't
+  // authorized to raise support on; 'unavailable' covers HeyQ being unreachable.
+  const [handoff, setHandoff] = useState<'idle' | 'opened' | 'refused' | 'unavailable'>('idle');
 
   // Claims & cancellation (frontend/mock) — local view state, loaded via the
   // claimsService facade keyed off the id route param.
@@ -70,6 +72,20 @@ export function TransactionDetails() {
     isBookingCancelled(id).then((c) => { if (!cancelledLoad) setCancelled(c); }).catch(() => {});
     return () => { cancelledLoad = true; };
   }, [id]);
+
+  /**
+   * Hand this order off to HeyQ. The order is read and authorized through the
+   * OMS service boundary (not from this page's state), then HeyQ opens at
+   * /contact?order=<stable OMS order id> with the order already linked — the
+   * customer re-enters nothing.
+   */
+  const handleGetHelp = async () => {
+    if (!id) return;
+    const res = await startOrderHandoff(id);
+    if (res.status === 'ok') setHandoff('opened');
+    else if (res.status === 'unavailable') setHandoff('unavailable');
+    else setHandoff('refused'); // forbidden | not_found
+  };
 
   // Loading state — brief async fetch from the service facade.
   if (transaction === undefined) {
@@ -245,7 +261,7 @@ export function TransactionDetails() {
                       <IconMapPin className="w-4 h-4 mr-2" />
                       Track live delivery
                     </Button>
-                    <Button variant="outline" className="flex-1" onClick={() => setShowReportModal(true)}>
+                    <Button variant="outline" className="flex-1" onClick={handleGetHelp}>
                       <IconHeadset className="w-4 h-4 mr-2" />
                       Contact support
                     </Button>
@@ -529,21 +545,35 @@ export function TransactionDetails() {
                   <p className="text-sm text-blue-800 mb-3">
                     Have questions or issues with this delivery? Our support team is ready to assist you.
                   </p>
-                  {reportSubmittedId ? (
-                    <div className="flex items-center gap-2 text-sm text-emerald-700">
-                      <IconCircleCheck className="w-4 h-4" />
-                      Ticket submitted.{' '}
+                  {handoff === 'opened' ? (
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-emerald-700">
+                      <IconCircleCheck className="w-4 h-4 flex-shrink-0" />
+                      <span>
+                        We opened GGX Support with order {transaction.trackingNumber} attached.
+                      </span>
                       <button
                         className="underline hover:text-emerald-900"
-                        onClick={() => navigate(`/dashboard/support-tickets/${reportSubmittedId}`)}
+                        onClick={() => navigate('/dashboard/support-tickets')}
                       >
-                        View {reportSubmittedId}
+                        View your tickets
                       </button>
                     </div>
+                  ) : handoff === 'refused' ? (
+                    <p className="text-sm text-red-700">
+                      This order isn’t available for support on your account. Check you’re in the
+                      right account, or{' '}
+                      <button className="underline" onClick={() => navigate('/dashboard/support-tickets')}>
+                        submit a ticket without an order
+                      </button>.
+                    </p>
+                  ) : handoff === 'unavailable' ? (
+                    <p className="text-sm text-red-700">
+                      GGX Support is temporarily unreachable. Please try again shortly.
+                    </p>
                   ) : (
-                    <Button size="sm" onClick={() => setShowReportModal(true)}>
-                      <IconFileText className="w-4 h-4 mr-2" />
-                      Send a Report
+                    <Button size="sm" onClick={handleGetHelp}>
+                      <IconHeadset className="w-4 h-4 mr-2" />
+                      Get Help With This Order
                     </Button>
                   )}
                 </div>
@@ -701,60 +731,8 @@ export function TransactionDetails() {
         </div>
       </Dialog>
 
-      {/* Send a Report — inline ticket modal */}
-      <Dialog open={showReportModal} onClose={() => setShowReportModal(false)} size="md" title="Send a Report">
-        <p className="text-sm text-gray-500 mb-4">
-          Tracking: <span className="font-medium text-gray-700">{transaction.trackingNumber}</span>.
-          A support ticket will be created and our team will follow up.
-        </p>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Issue type <span className="text-red-500">*</span>
-            </label>
-            <Select
-              value={reportForm.issueType}
-              onChange={(e) => setReportForm({ ...reportForm, issueType: e.target.value })}
-            >
-              <option value="failed">Delivery Failed</option>
-              <option value="delayed">Delayed Delivery</option>
-              <option value="damaged">Package Damaged</option>
-              <option value="missing">Missing Package</option>
-              <option value="wrong-address">Wrong Address</option>
-              <option value="billing">Billing Inquiry</option>
-              <option value="other">Other</option>
-            </Select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-            <textarea
-              className="w-full h-24 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="Describe the issue (optional)..."
-              value={reportForm.description}
-              onChange={(e) => setReportForm({ ...reportForm, description: e.target.value })}
-            />
-          </div>
-        </div>
-        <div className="flex gap-2.5 justify-end pt-5">
-          <Button variant="outline" size="sm" onClick={() => setShowReportModal(false)}>Cancel</Button>
-          <Button
-            size="sm"
-            onClick={async () => {
-              const created = await createTicket({
-                trackingNumber: transaction.trackingNumber,
-                issueType: reportForm.issueType,
-                description: reportForm.description,
-              });
-              setReportSubmittedId(created.id);
-              setShowReportModal(false);
-              setReportForm({ issueType: 'failed', description: '' });
-            }}
-          >
-            <IconFileText className="w-3.5 h-3.5 mr-1.5" />
-            Submit Ticket
-          </Button>
-        </div>
-      </Dialog>
+      {/* Ticket capture lives in HeyQ — the banner above hands off to its contact
+          form with the order attached, so there is no in-app report form here. */}
 
       {/* Proof of delivery / pickup mock */}
       <Dialog open={!!proofModal} onClose={() => setProofModal(null)} size="md" title={`Proof of ${proofModal ?? ''}`}>

@@ -1,82 +1,141 @@
 /**
- * ticketsService — support tickets facade.
- *
- * Data-returning functions are async to match a real API contract.
- * Currently backed by `data/supportTickets.ts` (module state; Zendesk boundary
- * stubbed inside the data module).
+ * ticketsService — support-tickets façade for Business+ pages.
  *
  * ── Architecture / ownership ───────────────────────────────────────────────
- * Frontend-facing facade. Tickets are owned by the support system (Zendesk) and
- * surfaced via the GGX Corporate BFF. Ticket status/assignee/priority are
- * backend-owned. Per MOCK_SERVICE_LAYER.md §1c, submitting a ticket today also
- * pushes a notification + "syncs to Zendesk" synchronously inside the data
- * layer — that is a DEMO STAND-IN for backend-emitted events; in production the
- * BFF/Zendesk/NS emit those. The frontend only issues the submit/reply intent.
+ * Tickets are owned by HEYQ, not by Business+. This façade shapes HeyQ's
+ * requester-facing data for the existing Support Tickets surfaces (list table,
+ * ticket detail, topbar search) and forwards every write to HeyQ through the
+ * adapter in `heyqService` — the single integration seam.
  *
- * Future API endpoints:
- *   GET  /tickets               → getTickets
- *   GET  /tickets/:id           → getTicketById
- *   GET  /tickets/:id/messages  → getTicketMessages
- *   POST /tickets               → createTicket
- *   POST /tickets/:id/messages  → replyToTicket
+ * Business+ holds NO ticket state of its own: there is no local ticket store to
+ * drift out of sync. Status, assignment, escalation, replies, resolution, and
+ * reopening all happen in HeyQ; we read what HeyQ says and render it.
+ *
+ * Ticket CREATION is not here on purpose. The product flow hands the user off to
+ * HeyQ's own contact form (`openHeyQContact` / `startOrderHandoff`), which is
+ * where HeyQ collects and validates the submission.
+ *
+ * Order data comes from OMS via `transactionService`, never from HeyQ.
  */
 
 import {
-  getTickets,
-  getTicket,
-  getTicketMessages,
-  addTicketReply,
-  submitTicket,
-  type SupportTicket,
-  type SubmitTicketInput,
-  type TicketMessage,
-  type TicketAttachment,
-  type TicketStatus,
-  type TicketPriority,
-} from '../data/supportTickets';
+  listMyTickets,
+  getMyTicket,
+  getMyTicketRecord,
+  replyToMyTicket,
+  reopenMyTicket,
+  openRequesterTicket,
+  buildRequesterTicketUrl,
+  TICKET_STATUS_META,
+  TICKET_PRIORITY_META,
+  TICKET_STATUS_OPTIONS,
+  type CustomerTicket,
+  type CustomerTicketMessage,
+  type HeyQTicketStatus,
+  type HeyQLinkedOrder,
+  type HeyQResult,
+} from './heyqService';
 
 export type {
-  SupportTicket,
-  SubmitTicketInput,
-  TicketMessage,
-  TicketAttachment,
-  TicketStatus,
-  TicketPriority,
+  CustomerTicket,
+  CustomerTicketMessage,
+  HeyQTicketStatus,
+  HeyQLinkedOrder,
+  HeyQResult,
 };
 
+export {
+  TICKET_STATUS_META,
+  TICKET_PRIORITY_META,
+  TICKET_STATUS_OPTIONS,
+  buildRequesterTicketUrl,
+};
+
+// Re-exported so pages have one import site for the HeyQ handoff actions.
+export { openHeyQContact, startOrderHandoff, getLiveOrderStatus } from './heyqService';
+
+/**
+ * List-row shape for the existing Support Tickets table and topbar search.
+ * `trackingNumber` is the linked OMS order id, or '—' for a general ticket.
+ */
+export interface SupportTicket {
+  id: string;
+  reference: string;
+  /** Linked OMS order (stable order id). '—' when the ticket has no order. */
+  trackingNumber: string;
+  issueType: string;
+  subject: string;
+  /** SUPPORT status — not the order's delivery status. */
+  status: HeyQTicketStatus;
+  priority: CustomerTicket['priority'];
+  /** Handling team. Agent identity is never exposed to Business+. */
+  supportTeam: string;
+  created: string;
+  lastUpdate: string;
+  canReopen: boolean;
+}
+
+function toRow(t: CustomerTicket): SupportTicket {
+  return {
+    id: t.id,
+    reference: t.reference,
+    trackingNumber: t.linkedOrder?.trackingNumber ?? '—',
+    issueType: t.issueType,
+    subject: t.subject,
+    status: t.status,
+    priority: t.priority,
+    supportTeam: t.supportTeam,
+    created: t.createdAt,
+    lastUpdate: t.updatedAt,
+    canReopen: t.canReopen,
+  };
+}
+
 export interface TicketFilters {
-  status?: TicketStatus | 'all';
+  status?: HeyQTicketStatus | 'all';
+  issueType?: string | 'all';
+  search?: string;
 }
 
-/** Return all support tickets, with an optional status filter. */
+/** The signed-in user's tickets from HeyQ, with optional presentation filters. */
 export async function getTicketsList(filters?: TicketFilters): Promise<SupportTicket[]> {
-  let result = [...getTickets()];
-  if (filters?.status && filters.status !== 'all') {
-    result = result.filter((t) => t.status === filters.status);
+  let rows = (await listMyTickets()).map(toRow);
+  if (!filters) return rows;
+
+  const { status, issueType, search } = filters;
+  if (status && status !== 'all') rows = rows.filter((t) => t.status === status);
+  if (issueType && issueType !== 'all') rows = rows.filter((t) => t.issueType === issueType);
+  if (search && search.trim().length >= 2) {
+    const q = search.trim().toLowerCase();
+    rows = rows.filter(
+      (t) =>
+        t.id.toLowerCase().includes(q) ||
+        t.trackingNumber.toLowerCase().includes(q) ||
+        t.subject.toLowerCase().includes(q),
+    );
   }
-  return result;
+  return rows;
 }
 
-/** Return a single ticket by id, or null. */
-export async function getTicketById(id: string): Promise<SupportTicket | null> {
-  return getTicket(id) ?? null;
+/** Full customer-visible ticket (thread, linked order, resolution state). */
+export async function getTicketById(id: string): Promise<HeyQResult<CustomerTicket>> {
+  return getMyTicket(id);
 }
 
-/** Return the message thread for a ticket. */
-export async function getTicketThread(id: string): Promise<TicketMessage[]> {
-  return [...getTicketMessages(id)];
+/** Post a public reply. In HeyQ this reopens a resolved/closed ticket. */
+export async function replyToTicket(id: string, body: string): Promise<HeyQResult<CustomerTicket>> {
+  return replyToMyTicket(id, body);
 }
 
-/** Create a support ticket (backend persists + emits events in production). */
-export async function createTicket(input: SubmitTicketInput): Promise<SupportTicket> {
-  return submitTicket(input);
+/** Reopen a resolved/closed ticket. */
+export async function reopenTicket(id: string): Promise<HeyQResult<CustomerTicket>> {
+  return reopenMyTicket(id);
 }
 
-/** Append a customer reply to a ticket thread. */
-export async function replyToTicket(
-  id: string,
-  body: string,
-  attachments?: TicketAttachment[]
-): Promise<TicketMessage | null> {
-  return addTicketReply(id, body, attachments);
+/** Open this ticket in HeyQ's token-scoped requester portal. */
+export async function openTicketInHeyQ(id: string): Promise<boolean> {
+  const record = await getMyTicketRecord(id);
+  if (!record) return false;
+  openRequesterTicket(record);
+  return true;
 }

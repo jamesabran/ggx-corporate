@@ -142,12 +142,14 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     href: '/dashboard/reports', meta: { reportId: 'RPT-2026-05' },
   },
   {
+    // Deep-links to a real HeyQ ticket (see data/heyqTickets.ts). In production
+    // this notification is emitted when HeyQ posts a public reply.
     id: 'ntf-sup-1', category: 'support',
     title: 'Support ticket update',
-    body: 'Ticket TCK-1043 has a new response from the support team.',
+    body: 'Ticket HQ-10241 has a new response from the support team.',
     timestamp: minsAgo(1440), read: true,
     scope: 'subaccount', accountId: 'acme-corporation', accountName: 'Acme Corporation',
-    href: '/dashboard/support-tickets/TCK-1043', meta: { ticketId: 'TCK-1043' },
+    href: '/dashboard/support-tickets/HQ-10241', meta: { ticketId: 'HQ-10241' },
   },
 ];
 
