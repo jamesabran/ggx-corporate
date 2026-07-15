@@ -44,6 +44,7 @@ in `services/heyqCustomerApi.ts` behind it. Callers (pages) go through the
 |---|---|
 | `listMyTickets()` | `GET /api/customer/tickets?externalUserId&externalOrgId` |
 | `getMyTicket(id)` | `GET /api/customer/tickets/:id?externalUserId&externalOrgId` |
+| `submitOrderReport(input)` | `POST /api/customer/tickets` (create; returns the customer projection) |
 | `replyToMyTicket(id, body)` | `POST /api/tickets/:id/messages` → re-read customer view |
 | `reopenMyTicket(id)` | `POST /api/tickets/:id/reopen` → re-read customer view |
 | `buildContactUrl(orderId?)` | The HeyQ handoff link (opens HeyQ's contact form) |
@@ -57,8 +58,18 @@ hands out a portal access token (a reference must not grant access). Business+
 therefore shows each ticket in its own in-app detail page (the mirror), with a
 working reply box and Reopen; there is no "open the HeyQ portal by token" action.
 
-Ticket **creation** is not an adapter call: the product hands off to HeyQ's own
-`/contact` form, which creates the ticket server-side against the HeyQ API.
+Ticket **creation** happens two ways, both server-side in HeyQ:
+
+- **In-app report drawer** (Transaction Details → "Report an issue"): submits
+  directly to `POST /api/customer/tickets` via `submitOrderReport`, staying inside
+  Business+. The order is authorized through the OMS boundary FIRST, then the
+  identity + OMS snapshot are sent; HeyQ trusts them (Business+ owns order
+  authorization) and returns the customer projection. The created ticket is
+  order-linked and immediately visible in Support Tickets (same identity scope).
+- **General "Submit a Ticket"** (Support Tickets page, no order): still hands off
+  to HeyQ's own `/contact` form via `buildContactUrl`.
+
+The standalone HeyQ contact form is unchanged for direct HeyQ users.
 
 ## Handoff
 

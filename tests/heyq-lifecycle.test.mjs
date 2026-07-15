@@ -89,31 +89,40 @@ after(async () => {
   stopDevServer(server);
 });
 
-describe('transaction → HeyQ handoff', () => {
-  it('the Need Help banner hands the stable OMS order id to HeyQ', async () => {
+describe('transaction → in-app report drawer', () => {
+  it('submits an order-linked ticket to HeyQ without leaving Business+', async () => {
     await page.goto(`${server.base}/dashboard/transactions/${ORDER}`, { waitUntil: 'networkidle' });
+    const before = (await handoffs()).length;
 
-    const cta = page.getByRole('button', { name: /get help with this order/i });
-    await cta.waitFor({ state: 'visible', timeout: 10_000 });
-    await cta.click();
+    // Open the drawer from the Need Help banner.
+    await page.getByRole('button', { name: /report an issue/i }).first().click();
+    await page.getByRole('dialog', { name: /report an issue/i }).waitFor({ state: 'visible', timeout: 10_000 });
+    // The drawer carries the order context.
+    await page.getByRole('dialog').getByText(ORDER).waitFor();
 
-    const url = (await handoffs()).at(-1);
-    assert.match(url, /\/contact\?order=GGX-2026-90008$/);
+    // Fill and submit — the create call is served by the stubbed customer API.
+    await page.locator('#report-description').fill('The rider marked this failed but nobody came.');
+    await page.getByRole('button', { name: /submit report/i }).click();
 
-    await page.getByText(/we opened ggx support with order ggx-2026-90008/i)
-      .waitFor({ state: 'visible', timeout: 5_000 });
-    assert.equal(await page.getByRole('heading', { name: 'Need Help?' }).count(), 1);
+    // Success state, in place — no external HeyQ tab was opened.
+    await page.getByText(/report submitted/i).waitFor({ state: 'visible', timeout: 10_000 });
+    await page.getByRole('button', { name: /open ticket/i }).waitFor();
+    assert.equal((await handoffs()).length, before, 'must not open an external HeyQ page');
+    // Still on the transaction view.
+    assert.match(page.url(), /\/dashboard\/transactions\/GGX-2026-90008$/);
   });
 
-  it('refuses to hand off an order the account is not authorized for', async () => {
+  it('refuses to submit for an order the account is not authorized for', async () => {
     const mgr = await signIn(server.base, 'manager');
     try {
+      await addHeyQApiStubScript(mgr.page, TICKETS);
       await mgr.page.goto(`${server.base}/dashboard/transactions/${ORDER}`, { waitUntil: 'networkidle' });
-      const cta = mgr.page.getByRole('button', { name: /get help with this order/i });
-      await cta.waitFor({ state: 'visible', timeout: 10_000 });
-      await cta.click();
+      await mgr.page.getByRole('button', { name: /report an issue/i }).first().click();
+      await mgr.page.locator('#report-description').fill('Please check this order.');
+      await mgr.page.getByRole('button', { name: /submit report/i }).click();
+      // OMS authorization is the gate — it fails before any ticket is created.
       await mgr.page.getByText(/isn.t available for support on your account/i)
-        .waitFor({ state: 'visible', timeout: 5_000 });
+        .waitFor({ state: 'visible', timeout: 10_000 });
     } finally {
       await mgr.browser.close();
     }

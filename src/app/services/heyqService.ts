@@ -36,6 +36,7 @@ import {
   apiGetMyTicket,
   apiReplyToMyTicket,
   apiReopenMyTicket,
+  apiCreateTicket,
 } from './heyqCustomerApi';
 
 // ── HeyQ contract types (owned by HeyQ; mirrored here for the adapter) ────────
@@ -212,6 +213,14 @@ export const TICKET_STATUS_OPTIONS: { value: HeyQTicketStatus; label: string }[]
   ['new', 'open', 'in_progress', 'on_hold', 'resolved', 'closed'] as HeyQTicketStatus[]
 ).map((s) => ({ value: s, label: TICKET_STATUS_META[s].label }));
 
+/** Concern options for the in-app report drawer. */
+export const REPORT_CONCERN_OPTIONS: { value: HeyQConcernType; label: string }[] = (
+  [
+    'delivery_delay', 'failed_delivery', 'missing_parcel', 'damaged_parcel',
+    'cod_concern', 'billing_issue', 'address_correction', 'general_inquiry',
+  ] as HeyQConcernType[]
+).map((c) => ({ value: c, label: HEYQ_CONCERN_LABELS[c] }));
+
 // ── Identity ─────────────────────────────────────────────────────────────────
 
 /**
@@ -322,6 +331,49 @@ export async function startOrderHandoff(
   const url = buildContactUrl(externalOrderId);
   openExternal(url);
   return { status: 'ok', data: { url } };
+}
+
+// ── Embedded report submission (creates a ticket via the HeyQ customer API) ──
+
+export interface OrderReportInput {
+  externalOrderId: string;
+  concernType: HeyQConcernType;
+  subject: string;
+  description: string;
+}
+
+/**
+ * Submit an order-linked report from inside Business+ (the report drawer). The
+ * order is authorized through the OMS boundary FIRST — an out-of-scope order is
+ * refused, never submitted — then the ticket is created via HeyQ's customer API
+ * with the identity and the OMS-captured snapshot. Returns the created customer
+ * ticket so the caller can link straight to it.
+ */
+export async function submitOrderReport(input: OrderReportInput): Promise<HeyQResult<CustomerTicket>> {
+  const session = await getSessionContext();
+  if (!session.isAuthenticated || !session.user || !session.accountId) return { status: 'forbidden' };
+  const who: HeyQRequesterIdentity = {
+    externalUserId: session.user.email,
+    externalOrgId: session.accountId,
+  };
+
+  // OMS authorization is the gate — Business+ owns it.
+  const authorized = await getAuthorizedOrder(who, input.externalOrderId);
+  if (authorized.status !== 'ok') return authorized;
+
+  return apiCreateTicket(who, {
+    name: session.user.name,
+    email: session.user.email,
+    concernType: input.concernType,
+    subject: input.subject,
+    description: input.description,
+    linkedOrder: {
+      externalOrderId: input.externalOrderId,
+      trackingNumber: authorized.data.trackingNumber,
+      snapshot: authorized.data.snapshot,
+      capturedAt: new Date().toISOString(),
+    },
+  });
 }
 
 // ── Requester-facing ticket reads + writes (HeyQ customer API) ────────────────

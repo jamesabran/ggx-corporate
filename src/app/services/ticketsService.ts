@@ -47,8 +47,9 @@ export {
   TICKET_STATUS_OPTIONS,
 };
 
-// Re-exported so pages have one import site for the HeyQ handoff actions.
-export { openHeyQContact, startOrderHandoff, getLiveOrderStatus } from './heyqService';
+// Re-exported so pages have one import site for the HeyQ handoff + report actions.
+export { openHeyQContact, startOrderHandoff, getLiveOrderStatus, submitOrderReport, REPORT_CONCERN_OPTIONS } from './heyqService';
+export type { OrderReportInput, HeyQConcernType } from './heyqService';
 
 /**
  * List-row shape for the existing Support Tickets table and topbar search.

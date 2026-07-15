@@ -98,23 +98,35 @@ export async function captureHandoffs(page) {
 export async function addHeyQApiStubScript(page, tickets) {
   await page.addInitScript((tickets) => {
     const orig = window.fetch.bind(window);
+    const json = (data, status = 200) =>
+      new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
     window.fetch = async (url, init) => {
       const u = String(url);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      const path = new URL(u, 'http://x').pathname;
+
+      // Create (embedded report drawer).
+      if (method === 'POST' && path.endsWith('/api/customer/tickets')) {
+        const body = init?.body ? JSON.parse(init.body) : {};
+        const now = new Date().toISOString();
+        return json({
+          id: 'tkt-created-1', reference: 'HQ-2026-9001', subject: body.subject,
+          concernType: body.concernType, issueType: 'Reported issue', status: 'open',
+          priority: 'normal', supportTeam: 'Customer Support', createdAt: now, updatedAt: now,
+          openedBySupport: false, canReopen: false, linkedOrder: body.linkedOrder,
+          messages: [{ id: 'm1', from: 'you', authorLabel: 'You', body: body.description, createdAt: now }],
+        });
+      }
+
+      // Reads.
       if (u.includes('/api/customer/tickets')) {
-        const path = new URL(u, 'http://x').pathname;
         const m = path.match(/\/api\/customer\/tickets\/([^/]+)$/);
         if (m) {
           const id = decodeURIComponent(m[1]);
           const t = tickets.find((x) => x.id === id || x.reference === id);
-          return new Response(JSON.stringify(t ?? { error: 'Ticket not found' }), {
-            status: t ? 200 : 404,
-            headers: { 'Content-Type': 'application/json' },
-          });
+          return json(t ?? { error: 'Ticket not found' }, t ? 200 : 404);
         }
-        return new Response(JSON.stringify(tickets), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return json(tickets);
       }
       return orig(url, init);
     };

@@ -130,6 +130,28 @@ const SHIPMENT_FROM_HEYQ: Record<string, { key: string; label: string }> = {
   on_hold: { key: 'pending', label: 'On Hold' },
 };
 
+/** OMS delivery-status key → HeyQ shipment status (for the create payload). */
+const SHIPMENT_TO_HEYQ: Record<string, string> = {
+  pending: 'booked',
+  'picked-up': 'picked_up',
+  'in-transit': 'in_transit',
+  delivered: 'delivered',
+  failed: 'failed_delivery',
+  returned: 'returned',
+};
+
+/** Business+ concern → HeyQ concern (HeyQ owns the taxonomy; unknowns default). */
+const CONCERN_TO_HEYQ: Record<HeyQConcernType, string> = {
+  delivery_delay: 'delivery_delay',
+  failed_delivery: 'delivery_delay',
+  missing_parcel: 'missing_parcel',
+  damaged_parcel: 'damaged_parcel',
+  cod_concern: 'cod_concern',
+  billing_issue: 'payment_issue',
+  address_correction: 'address_correction',
+  general_inquiry: 'general_inquiry',
+};
+
 function toSnapshot(s: HeyQApiSnapshot): HeyQOrderSnapshot {
   const mapped = SHIPMENT_FROM_HEYQ[s.shipmentStatus] ?? { key: s.shipmentStatus, label: s.shipmentStatus };
   return {
@@ -228,6 +250,22 @@ async function post(path: string, body?: unknown): Promise<
   }
 }
 
+async function postJson(path: string, body: unknown): Promise<
+  { ok: true; data: unknown } | { ok: false; result: 'forbidden' | 'not_found' | 'unavailable' }
+> {
+  try {
+    const res = await fetch(`${getHeyQApiBaseUrl()}/api${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return { ok: false, result: resultForStatus(res.status) };
+    return { ok: true, data: await res.json() };
+  } catch {
+    return { ok: false, result: 'unavailable' };
+  }
+}
+
 // ── Public operations (consumed by heyqService) ───────────────────────────────
 
 /** The signed-in requester's tickets. Any failure degrades to an empty list. */
@@ -269,4 +307,59 @@ export async function apiReopenMyTicket(
   const posted = await post(`/tickets/${encodeURIComponent(id)}/reopen`);
   if (!posted.ok) return { status: posted.result };
   return apiGetMyTicket(who, id);
+}
+
+export interface CreateCustomerTicketInput {
+  /** Requester display fields for the ticket's guest requester record. */
+  name: string;
+  email: string;
+  concernType: HeyQConcernType;
+  subject: string;
+  description: string;
+  /** Linked order (Business+ OMS shape); mapped to HeyQ's snapshot on the wire. */
+  linkedOrder?: {
+    externalOrderId: string;
+    trackingNumber: string;
+    snapshot: HeyQOrderSnapshot;
+    capturedAt: string;
+  };
+}
+
+/**
+ * Create a ticket via the HeyQ customer surface and return the mapped
+ * CustomerTicket. The Business+ (OMS) snapshot is translated to HeyQ's linked-
+ * order shape here; the response comes back already customer-projected.
+ */
+export async function apiCreateTicket(
+  who: HeyQRequesterIdentity,
+  input: CreateCustomerTicketInput,
+): Promise<HeyQResult<CustomerTicket>> {
+  const linkedOrder = input.linkedOrder
+    ? {
+        externalOrderId: input.linkedOrder.externalOrderId,
+        trackingNumber: input.linkedOrder.trackingNumber,
+        capturedAt: input.linkedOrder.capturedAt,
+        snapshot: {
+          shipmentStatus:
+            SHIPMENT_TO_HEYQ[input.linkedOrder.snapshot.deliveryStatus] ?? input.linkedOrder.snapshot.deliveryStatus,
+          bookingDate: input.linkedOrder.snapshot.bookedOn,
+          serviceType: input.linkedOrder.snapshot.serviceType,
+          deliverySummary: input.linkedOrder.snapshot.deliverySummary,
+          route: input.linkedOrder.snapshot.route,
+        },
+      }
+    : undefined;
+
+  const res = await postJson('/customer/tickets', {
+    externalUserId: who.externalUserId,
+    externalOrgId: who.externalOrgId,
+    name: input.name,
+    email: input.email,
+    concernType: CONCERN_TO_HEYQ[input.concernType] ?? 'general_inquiry',
+    subject: input.subject,
+    description: input.description,
+    linkedOrder,
+  });
+  if (!res.ok) return { status: res.result };
+  return { status: 'ok', data: toCustomerTicket(res.data as HeyQApiCustomerTicket) };
 }

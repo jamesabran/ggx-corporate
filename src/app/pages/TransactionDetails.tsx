@@ -28,10 +28,10 @@ import {
   getClaimByTrackingNumber, fileClaim, cancelBooking, isBookingCancelled,
   claimEligible, cancelEligible, CLAIM_STATUS_META, CLAIM_REASONS, type Claim,
 } from '../services/claimsService';
-// Support runs on HeyQ. The banner hands the order off to HeyQ's contact form
-// with its stable OMS id (`startOrderHandoff`), so the customer never re-enters
-// details we already hold. Business+ does not create tickets itself.
-import { startOrderHandoff } from '../services/ticketsService';
+// Support runs on HeyQ. "Report an issue" opens an in-app drawer that submits the
+// ticket DIRECTLY to HeyQ's customer API with the order attached — the user stays
+// on this page and is never redirected to HeyQ's Contact Us form.
+import { ReportIssueDrawer } from '../components/ReportIssueDrawer';
 
 export function TransactionDetails() {
   const navigate = useNavigate();
@@ -44,9 +44,8 @@ export function TransactionDetails() {
   // undefined = loading, null = not found, Transaction = loaded.
   const [transaction, setTransaction] = useState<Transaction | null | undefined>(undefined);
 
-  // HeyQ handoff state. 'refused' covers an order the signed-in account isn't
-  // authorized to raise support on; 'unavailable' covers HeyQ being unreachable.
-  const [handoff, setHandoff] = useState<'idle' | 'opened' | 'refused' | 'unavailable'>('idle');
+  // In-app "Report an issue" drawer (submits to HeyQ's customer API in place).
+  const [reportOpen, setReportOpen] = useState(false);
 
   // Claims & cancellation (frontend/mock) — local view state, loaded via the
   // claimsService facade keyed off the id route param.
@@ -73,19 +72,8 @@ export function TransactionDetails() {
     return () => { cancelledLoad = true; };
   }, [id]);
 
-  /**
-   * Hand this order off to HeyQ. The order is read and authorized through the
-   * OMS service boundary (not from this page's state), then HeyQ opens at
-   * /contact?order=<stable OMS order id> with the order already linked — the
-   * customer re-enters nothing.
-   */
-  const handleGetHelp = async () => {
-    if (!id) return;
-    const res = await startOrderHandoff(id);
-    if (res.status === 'ok') setHandoff('opened');
-    else if (res.status === 'unavailable') setHandoff('unavailable');
-    else setHandoff('refused'); // forbidden | not_found
-  };
+  /** Open the in-app report drawer for this order (no external navigation). */
+  const openReport = () => setReportOpen(true);
 
   // Loading state — brief async fetch from the service facade.
   if (transaction === undefined) {
@@ -261,7 +249,7 @@ export function TransactionDetails() {
                       <IconMapPin className="w-4 h-4 mr-2" />
                       Track live delivery
                     </Button>
-                    <Button variant="outline" className="flex-1" onClick={handleGetHelp}>
+                    <Button variant="outline" className="flex-1" onClick={openReport}>
                       <IconHeadset className="w-4 h-4 mr-2" />
                       Contact support
                     </Button>
@@ -543,39 +531,13 @@ export function TransactionDetails() {
                 <div className="flex-1">
                   <h4 className="font-semibold text-blue-900 mb-1">Need Help?</h4>
                   <p className="text-sm text-blue-800 mb-3">
-                    Have questions or issues with this delivery? Our support team is ready to assist you.
+                    Have questions or issues with this delivery? Report it here and we’ll open a
+                    support ticket for this order — without leaving this page.
                   </p>
-                  {handoff === 'opened' ? (
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-emerald-700">
-                      <IconCircleCheck className="w-4 h-4 flex-shrink-0" />
-                      <span>
-                        We opened GGX Support with order {transaction.trackingNumber} attached.
-                      </span>
-                      <button
-                        className="underline hover:text-emerald-900"
-                        onClick={() => navigate('/dashboard/support-tickets')}
-                      >
-                        View your tickets
-                      </button>
-                    </div>
-                  ) : handoff === 'refused' ? (
-                    <p className="text-sm text-red-700">
-                      This order isn’t available for support on your account. Check you’re in the
-                      right account, or{' '}
-                      <button className="underline" onClick={() => navigate('/dashboard/support-tickets')}>
-                        submit a ticket without an order
-                      </button>.
-                    </p>
-                  ) : handoff === 'unavailable' ? (
-                    <p className="text-sm text-red-700">
-                      GGX Support is temporarily unreachable. Please try again shortly.
-                    </p>
-                  ) : (
-                    <Button size="sm" onClick={handleGetHelp}>
-                      <IconHeadset className="w-4 h-4 mr-2" />
-                      Get Help With This Order
-                    </Button>
-                  )}
+                  <Button size="sm" onClick={openReport}>
+                    <IconHeadset className="w-4 h-4 mr-2" />
+                    Report an issue
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -731,8 +693,17 @@ export function TransactionDetails() {
         </div>
       </Dialog>
 
-      {/* Ticket capture lives in HeyQ — the banner above hands off to its contact
-          form with the order attached, so there is no in-app report form here. */}
+      {/* In-app report drawer — submits an order-linked ticket to HeyQ's customer
+          API without leaving this page. HeyQ still owns the ticket lifecycle. */}
+      <ReportIssueDrawer
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        order={{
+          externalOrderId: transaction.trackingNumber,
+          trackingNumber: transaction.trackingNumber,
+          statusLabel: status.label,
+        }}
+      />
 
       {/* Proof of delivery / pickup mock */}
       <Dialog open={!!proofModal} onClose={() => setProofModal(null)} size="md" title={`Proof of ${proofModal ?? ''}`}>

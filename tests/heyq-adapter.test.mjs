@@ -116,11 +116,17 @@ after(async () => {
   stopDevServer(server);
 });
 
+// The page is a live dashboard whose shell also polls the ticket list, so the
+// stub sees background calls too — assert on the RELEVANT request, not the count.
+const customerReads = (calls) => calls.filter((c) => c.method === 'GET' && c.url.includes('/api/customer/tickets'));
+const creates = (calls) => calls.filter((c) => c.method === 'POST' && c.url.endsWith('/api/customer/tickets'));
+
 describe('configuration', () => {
   it('reads tickets from the deployed HeyQ API by default, under /api/customer', async () => {
     const { calls } = await withStub((svc) => svc.listMyTickets(), { response: [] });
-    assert.equal(calls.length, 1);
-    assert.ok(calls[0].url.startsWith(`${API_DEFAULT}/api/customer/tickets`), calls[0].url);
+    const reads = customerReads(calls);
+    assert.ok(reads.length >= 1, 'a customer read must be issued');
+    assert.ok(reads[0].url.startsWith(`${API_DEFAULT}/api/customer/tickets`), reads[0].url);
   });
 
   it('exposes the API base url override point', async () => {
@@ -135,7 +141,7 @@ describe('configuration', () => {
 describe('requester identity', () => {
   it('scopes the read to the signed-in identity via query params', async () => {
     const { calls } = await withStub((svc) => svc.listMyTickets(), { response: [] });
-    const url = new URL(calls[0].url);
+    const url = new URL(customerReads(calls)[0].url);
     // Admin session: max@email.com / main (the account scope).
     assert.equal(url.searchParams.get('externalUserId'), 'max@email.com');
     assert.equal(url.searchParams.get('externalOrgId'), 'main');
@@ -215,19 +221,18 @@ describe('requester writes go to HeyQ, then re-read the customer view', () => {
       response: HEYQ_TICKET,
     });
     assert.equal(result.status, 'ok');
-    assert.equal(calls[0].method, 'POST');
-    assert.match(calls[0].url, /\/api\/tickets\/tkt_abc123\/messages$/);
-    assert.match(String(calls[0].body), /Any update\?/);
-    assert.equal(calls[1].method, 'GET');
-    assert.match(calls[1].url, /\/api\/customer\/tickets\/tkt_abc123\?/);
+    const post = calls.find((c) => c.method === 'POST' && /\/api\/tickets\/tkt_abc123\/messages$/.test(c.url));
+    assert.ok(post, 'a reply POST must be issued');
+    assert.match(String(post.body), /Any update\?/);
+    const reread = calls.find((c) => c.method === 'GET' && /\/api\/customer\/tickets\/tkt_abc123\?/.test(c.url));
+    assert.ok(reread, 'the customer view must be re-read after the reply');
   });
 
   it('reopen posts to /tickets/:id/reopen then re-reads the customer view', async () => {
     const { result, calls } = await withStub((svc) => svc.reopenMyTicket('tkt_abc123'), { response: HEYQ_TICKET });
     assert.equal(result.status, 'ok');
-    assert.equal(calls[0].method, 'POST');
-    assert.match(calls[0].url, /\/api\/tickets\/tkt_abc123\/reopen$/);
-    assert.match(calls[1].url, /\/api\/customer\/tickets\/tkt_abc123\?/);
+    assert.ok(calls.find((c) => c.method === 'POST' && /\/api\/tickets\/tkt_abc123\/reopen$/.test(c.url)));
+    assert.ok(calls.find((c) => c.method === 'GET' && /\/api\/customer\/tickets\/tkt_abc123\?/.test(c.url)));
   });
 
   it('a failed reply surfaces the failure without re-reading', async () => {
@@ -236,7 +241,61 @@ describe('requester writes go to HeyQ, then re-read the customer view', () => {
       status: 403,
     });
     assert.equal(result.status, 'forbidden');
-    assert.equal(calls.length, 1); // POST only — no re-read after a failed write
+    // POST issued, but no re-read of this ticket after the failed write.
+    assert.ok(calls.find((c) => c.method === 'POST' && /\/api\/tickets\/tkt_x\/messages$/.test(c.url)));
+    assert.ok(!calls.find((c) => c.method === 'GET' && /\/api\/customer\/tickets\/tkt_x\?/.test(c.url)));
+  });
+});
+
+describe('submitting an order report (create via the customer API)', () => {
+  const CREATED = {
+    id: 'tkt-created-1', reference: 'HQ-2026-9001', subject: 'Delivery failed',
+    concernType: 'delivery_delay', issueType: 'Delivery delay', status: 'open',
+    priority: 'normal', supportTeam: 'Customer Support',
+    createdAt: '2026-07-15T00:00:00Z', updatedAt: '2026-07-15T00:00:00Z',
+    openedBySupport: false, canReopen: false,
+    linkedOrder: {
+      externalOrderId: 'GGX-2026-90008', trackingNumber: 'GGX-2026-90008', capturedAt: '2026-07-15T00:00:00Z',
+      snapshot: { shipmentStatus: 'failed_delivery', bookingDate: '2026-05-31', route: 'Metro Manila → Pasig City' },
+    },
+    messages: [{ id: 'm1', from: 'you', authorLabel: 'You', body: 'Recipient was available.', createdAt: '2026-07-15T00:00:00Z' }],
+  };
+
+  it('authorizes the order via OMS, then POSTs a mapped payload to /customer/tickets', async () => {
+    const { result, calls } = await withStub(
+      (svc) => svc.submitOrderReport({
+        externalOrderId: 'GGX-2026-90008',
+        concernType: 'failed_delivery', // Business+ concern → HeyQ delivery_delay
+        subject: 'Delivery failed',
+        description: 'Recipient was available.',
+      }),
+      { response: CREATED },
+    );
+    assert.equal(result.status, 'ok');
+    assert.equal(result.data.reference, 'HQ-2026-9001');
+    const posts = creates(calls);
+    assert.equal(posts.length, 1, 'exactly one create must be issued');
+    const body = JSON.parse(posts[0].body);
+    assert.equal(body.externalUserId, 'max@email.com');
+    assert.equal(body.externalOrgId, 'main');
+    assert.equal(body.concernType, 'delivery_delay'); // mapped from failed_delivery
+    assert.equal(body.subject, 'Delivery failed');
+    assert.equal(body.linkedOrder.trackingNumber, 'GGX-2026-90008');
+    assert.equal(body.linkedOrder.snapshot.shipmentStatus, 'failed_delivery'); // OMS 'failed' → HeyQ
+  });
+
+  it('refuses an out-of-scope / unknown order at the OMS gate — no ticket is created', async () => {
+    const { result, calls } = await withStub(
+      (svc) => svc.submitOrderReport({
+        externalOrderId: 'GGX-9999-00000',
+        concernType: 'general_inquiry',
+        subject: 'x',
+        description: 'y',
+      }),
+      { response: CREATED },
+    );
+    assert.equal(result.status, 'not_found');
+    assert.equal(creates(calls).length, 0, 'no create request may be sent when the order is not authorized');
   });
 });
 
