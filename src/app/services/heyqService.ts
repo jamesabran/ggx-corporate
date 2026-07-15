@@ -60,13 +60,13 @@ export { HEYQ_CONCERN_LABELS };
 
 /**
  * Where the HeyQ app lives. Override with VITE_HEYQ_URL; the default matches
- * HeyQ's dev server when Business+ already holds port 5173 (`PORT=5174 npm run
+ * HeyQ's dev server when Business+ already holds port 18010 (`PORT=18020 npm run
  * dev` in the HeyQ repo).
  */
 export function getHeyQBaseUrl(): string {
   const configured =
     typeof import.meta !== 'undefined' ? import.meta.env?.VITE_HEYQ_URL : undefined;
-  return (configured || 'http://localhost:5174').replace(/\/$/, '');
+  return (configured || 'http://localhost:18020').replace(/\/$/, '');
 }
 
 // ── Result unions ────────────────────────────────────────────────────────────

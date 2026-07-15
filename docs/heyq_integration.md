@@ -51,7 +51,7 @@ product flow hands off to HeyQ's own contact form, which performs the submission
 ## Handoff
 
 Business+ → HeyQ is a link: `<HEYQ_BASE>/contact?order=<stable OMS order id>`.
-Configure the base with `VITE_HEYQ_URL` (default `http://localhost:5174`).
+Configure the base with `VITE_HEYQ_URL` (default `http://localhost:18020`).
 
 Before handing off, the order is read and authorized **through the OMS service
 boundary**, never from page state. An out-of-scope order is refused with an
