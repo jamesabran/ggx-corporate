@@ -142,8 +142,9 @@ const MOCK_NOTIFICATIONS: AppNotification[] = [
     href: '/dashboard/reports', meta: { reportId: 'RPT-2026-05' },
   },
   {
-    // Deep-links to a real HeyQ ticket (see data/heyqTickets.ts). In production
-    // this notification is emitted when HeyQ posts a public reply.
+    // A seeded support notification. In production this is emitted by HeyQ when
+    // it posts a public reply (HeyQ owns ticket notifications; see the
+    // heyqService seam).
     id: 'ntf-sup-1', category: 'support',
     title: 'Support ticket update',
     body: 'Ticket HQ-10241 has a new response from the support team.',

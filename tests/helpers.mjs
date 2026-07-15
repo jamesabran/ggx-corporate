@@ -88,10 +88,41 @@ export async function captureHandoffs(page) {
   return async () => page.evaluate(() => window.__handoffs ?? []);
 }
 
-/** Reset the mock HeyQ backend so each test starts from the seed. */
-export async function resetHeyQ(page) {
-  await page.evaluate(async () => {
-    const store = await import('/src/app/data/heyqTickets.ts');
-    store.__resetHeyQStore();
-  });
+/**
+ * Add a HeyQ-customer-API fetch stub to a page, so the UI renders real API-shaped
+ * tickets without a live HeyQ. Intercepts GET /api/customer/tickets (list) and
+ * /api/customer/tickets/:id (detail); everything else falls through to the real
+ * fetch. Registered as an init script, so it must be added BEFORE the navigation
+ * it should affect (no reload here).
+ */
+export async function addHeyQApiStubScript(page, tickets) {
+  await page.addInitScript((tickets) => {
+    const orig = window.fetch.bind(window);
+    window.fetch = async (url, init) => {
+      const u = String(url);
+      if (u.includes('/api/customer/tickets')) {
+        const path = new URL(u, 'http://x').pathname;
+        const m = path.match(/\/api\/customer\/tickets\/([^/]+)$/);
+        if (m) {
+          const id = decodeURIComponent(m[1]);
+          const t = tickets.find((x) => x.id === id || x.reference === id);
+          return new Response(JSON.stringify(t ?? { error: 'Ticket not found' }), {
+            status: t ? 200 : 404,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(JSON.stringify(tickets), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return orig(url, init);
+    };
+  }, tickets);
+}
+
+/** Add the stub and reload so it takes effect on the current page. */
+export async function installHeyQApiStub(page, tickets) {
+  await addHeyQApiStubScript(page, tickets);
+  await page.reload({ waitUntil: 'networkidle' });
 }

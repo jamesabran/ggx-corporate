@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { IconPlus, IconMessage, IconEye, IconCircleCheck, IconPlayerPause, IconExternalLink, IconProgress } from '@tabler/icons-react';
+import { IconPlus, IconMessage, IconEye, IconCircleCheck, IconPlayerPause, IconProgress } from '@tabler/icons-react';
 import { StatCard } from '../components/StatCard';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -14,7 +14,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import {
   getTicketsList,
   openHeyQContact,
-  openTicketInHeyQ,
   TICKET_STATUS_META,
   TICKET_PRIORITY_META,
   TICKET_STATUS_OPTIONS,
@@ -187,12 +186,11 @@ export function SupportTickets() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          title="Open this ticket in GGX Support"
-                          onClick={(e) => { e.stopPropagation(); openTicketInHeyQ(ticket.id); }}
+                          title="View this ticket"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/support-tickets/${ticket.id}`); }}
                         >
                           <IconEye className="w-4 h-4 mr-1" />
                           View
-                          <IconExternalLink className="w-3 h-3 ml-1 text-gray-400" />
                         </Button>
                       </TableCell>
                     </TableRow>

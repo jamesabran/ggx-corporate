@@ -8,65 +8,122 @@
  *   • Business+ owns neither. It is a REQUESTER CLIENT of HeyQ and a read
  *     consumer of OMS.
  *
- * Every Business+ ↔ HeyQ interaction goes through this module. Today it is
- * backed by the mock HeyQ backend (`data/heyqTickets.ts`); when HeyQ exposes a
- * real API, only the bodies below change — callers do not.
+ * Every Business+ ↔ HeyQ interaction goes through this module. The requester
+ * reads and writes now hit the deployed HeyQ mock API over its CUSTOMER surface
+ * (see `heyqCustomerApi`); HeyQ enforces visibility server-side. The OMS side
+ * (order authorization, the customer-safe snapshot, live delivery status) is read
+ * through `transactionService`, never from HeyQ and never from page state.
  *
- * Future HeyQ endpoints (requester-scoped; a session token replaces the identity
- * we pass explicitly today):
- *   GET  /requester/tickets            → listMyTickets
- *   GET  /requester/tickets/:id        → getMyTicket
- *   POST /requester/tickets/:id/replies→ replyToMyTicket
- *   POST /requester/tickets/:id/reopen → reopenMyTicket
+ * HeyQ customer endpoints used (requester-scoped):
+ *   GET  /api/customer/tickets            → listMyTickets
+ *   GET  /api/customer/tickets/:id        → getMyTicket
+ *   POST /api/tickets/:id/messages        → replyToMyTicket
+ *   POST /api/tickets/:id/reopen          → reopenMyTicket
  *   (ticket creation happens in HeyQ's own /contact form — we hand off to it)
  *
  * ── What this adapter deliberately does NOT do ─────────────────────────────
  * It exposes no agent/internal surface. Internal notes, assignee identity, team
- * queue, SLA policy, support tier and escalation state exist on the HeyQ record
- * and are dropped in `toCustomerView` — they must never reach a Business+ page.
- * Agent actions belong to the HeyQ agent app.
+ * queue, SLA policy, support tier and escalation state are dropped by HeyQ's
+ * server-side projection and are never requested here — they must never reach a
+ * Business+ page. Agent actions belong to the HeyQ agent app.
  */
 
-import {
-  listTicketsForRequester,
-  getTicketForRequester,
-  addRequesterReply,
-  reopenTicketForRequester,
-  createTicketForRequester,
-  heyqServiceState,
-  HEYQ_CONCERN_LABELS,
-  type HeyQTicketRecord,
-  type HeyQTicketStatus,
-  type HeyQRequesterIdentity,
-  type HeyQLinkedOrder,
-  type HeyQOrderSnapshot,
-  type HeyQConcernType,
-  type HeyQMessage,
-} from '../data/heyqTickets';
 import { getTransactionById, statusConfig, serviceTypeLabel } from './transactionService';
 import { getSessionContext } from './authService';
 import { getAccountIdByName } from '../data/accounts';
+import {
+  apiListMyTickets,
+  apiGetMyTicket,
+  apiReplyToMyTicket,
+  apiReopenMyTicket,
+} from './heyqCustomerApi';
 
-export type {
-  HeyQTicketStatus,
-  HeyQOrderSnapshot,
-  HeyQLinkedOrder,
-  HeyQConcernType,
-  HeyQRequesterIdentity,
+// ── HeyQ contract types (owned by HeyQ; mirrored here for the adapter) ────────
+// HeyQ's requester-facing vocabulary. Previously shared from the in-process mock;
+// with reads/writes now served by the real HeyQ API, the adapter carries them.
+
+export type HeyQTicketStatus =
+  | 'new'
+  | 'open'
+  | 'in_progress'
+  | 'on_hold'
+  | 'resolved'
+  | 'closed';
+
+export type HeyQConcernType =
+  | 'delivery_delay'
+  | 'failed_delivery'
+  | 'missing_parcel'
+  | 'damaged_parcel'
+  | 'cod_concern'
+  | 'billing_issue'
+  | 'address_correction'
+  | 'general_inquiry';
+
+export const HEYQ_CONCERN_LABELS: Record<HeyQConcernType, string> = {
+  delivery_delay: 'Delayed Delivery',
+  failed_delivery: 'Delivery Failed',
+  missing_parcel: 'Missing Package',
+  damaged_parcel: 'Package Damaged',
+  cod_concern: 'COD Concern',
+  billing_issue: 'Billing Inquiry',
+  address_correction: 'Wrong Address',
+  general_inquiry: 'General Inquiry',
 };
-export { HEYQ_CONCERN_LABELS };
+
+/**
+ * The signed-in Business+ user, as HeyQ's requester identity. `externalOrgId` is
+ * the ACCOUNT SCOPE — Admin is `main` (sees everything), a Manager is their
+ * subaccount — and is also what scopes order authorization.
+ */
+export interface HeyQRequesterIdentity {
+  externalUserId: string;
+  externalOrgId: string;
+}
+
+/**
+ * The minimal, customer-safe order context. OMS-derived and captured at
+ * submission; delivery status here is independent of the ticket's own status.
+ */
+export interface HeyQOrderSnapshot {
+  /** OMS delivery status key at capture time (e.g. 'in-transit'). */
+  deliveryStatus: string;
+  /** Display label for the delivery status at capture time. */
+  deliveryStatusLabel: string;
+  /** Standard / Same-Day / On-Demand. */
+  serviceType: string;
+  /** Short, non-identifying summary (e.g. "Express delivery"). */
+  deliverySummary: string;
+  /** City-level route only (e.g. "Makati City → Quezon City"). */
+  route: string;
+  /** Booking date (the relevant date for support context). */
+  bookedOn: string;
+}
+
+/** A ticket's link to an OMS order: stable id + snapshot. Reference data only. */
+export interface HeyQLinkedOrder {
+  /** Stable OMS order id (Business+ tracking number). Never a HeyQ primary key. */
+  externalOrderId: string;
+  trackingNumber: string;
+  /** Captured at submission. Absent when the snapshot could not be taken. */
+  snapshot?: HeyQOrderSnapshot;
+  /** When the snapshot was captured — makes snapshot age explicit. */
+  capturedAt: string;
+}
 
 // ── Configuration ────────────────────────────────────────────────────────────
 
 /**
- * Where the HeyQ app lives. Override with VITE_HEYQ_URL; the default matches
- * HeyQ's dev server when Business+ already holds port 18010 (`PORT=18020 npm run
- * dev` in the HeyQ repo).
+ * Where the HeyQ FRONTEND lives — used to OPEN HeyQ pages (the contact form and
+ * the requester portal). This is NOT the API origin; API calls go through
+ * `heyqCustomerApi` (`VITE_HEYQ_API_URL`). Override the frontend with
+ * `VITE_HEYQ_URL`; the default is the deployed HeyQ app. For local development
+ * against a local HeyQ, set `VITE_HEYQ_URL=http://localhost:18020`.
  */
 export function getHeyQBaseUrl(): string {
   const configured =
     typeof import.meta !== 'undefined' ? import.meta.env?.VITE_HEYQ_URL : undefined;
-  return (configured || 'http://localhost:18020').replace(/\/$/, '');
+  return (configured || 'https://heyq.vercel.app').replace(/\/$/, '');
 }
 
 // ── Result unions ────────────────────────────────────────────────────────────
@@ -161,9 +218,6 @@ export const TICKET_STATUS_OPTIONS: { value: HeyQTicketStatus; label: string }[]
  * The signed-in Business+ user, as HeyQ's requester identity. In production the
  * handoff carries a verifiable session (e.g. a signed token) that resolves to
  * this on HeyQ's side; today we pass the external ids explicitly.
- *
- * `externalOrgId` is the ACCOUNT SCOPE — Admin is `main` (sees everything),
- * a Manager is their subaccount. It is also what scopes order authorization.
  */
 export async function getRequesterIdentity(): Promise<HeyQRequesterIdentity | null> {
   const session = await getSessionContext();
@@ -209,8 +263,7 @@ type OmsTransaction = NonNullable<Awaited<ReturnType<typeof getTransactionById>>
  *
  * Passed: delivery status, service type, a short delivery summary, a city-level
  * route, and the booking date. Withheld: recipient name/contact/address, payment
- * and COD values, parcel contents, fees, batch/internal attribution. HeyQ shows
- * exactly what it is given, so what we withhold here is withheld for good.
+ * and COD values, parcel contents, fees, batch/internal attribution.
  */
 function buildOrderSnapshot(tx: OmsTransaction): HeyQOrderSnapshot {
   const meta = statusConfig[tx.status];
@@ -242,11 +295,6 @@ export function buildContactUrl(externalOrderId?: string): string {
     : base;
 }
 
-/** HeyQ's token-scoped requester portal. A reference alone does not grant access. */
-export function buildRequesterTicketUrl(accessToken: string): string {
-  return `${getHeyQBaseUrl()}/t/${encodeURIComponent(accessToken)}`;
-}
-
 function openExternal(url: string): void {
   if (typeof window === 'undefined') return;
   window.open(url, '_blank', 'noopener,noreferrer');
@@ -265,8 +313,6 @@ export function openHeyQContact(): void {
 export async function startOrderHandoff(
   externalOrderId: string,
 ): Promise<HeyQResult<{ url: string }>> {
-  if (!heyqServiceState.available) return { status: 'unavailable' };
-
   const who = await getRequesterIdentity();
   if (!who) return { status: 'forbidden' };
 
@@ -278,68 +324,20 @@ export async function startOrderHandoff(
   return { status: 'ok', data: { url } };
 }
 
-/** Open the HeyQ requester portal for one of the caller's own tickets. */
-export function openRequesterTicket(ticket: Pick<HeyQTicketRecord, 'accessToken'>): void {
-  openExternal(buildRequesterTicketUrl(ticket.accessToken));
-}
-
-// ── Requester-facing ticket reads ────────────────────────────────────────────
-
-/**
- * Project a HeyQ record down to what a customer may see.
- *
- * This function IS the privacy boundary: assignee identity, escalation state,
- * support tier, SLA policy, and internal notes are dropped here and have no
- * route into Business+.
- */
-function toCustomerView(t: HeyQTicketRecord): CustomerTicket {
-  return {
-    id: t.id,
-    reference: t.reference,
-    subject: t.subject,
-    concernType: t.concernType,
-    issueType: HEYQ_CONCERN_LABELS[t.concernType],
-    status: t.status,
-    priority: t.priority,
-    supportTeam: t.teamName,
-    createdAt: t.createdAt,
-    updatedAt: t.updatedAt,
-    resolvedAt: t.resolvedAt,
-    reopenedAt: t.reopenedAt,
-    linkedOrder: t.linkedOrder,
-    messages: t.messages.map(toCustomerMessage),
-    canReopen: t.status === 'resolved' || t.status === 'closed',
-  };
-}
-
-function toCustomerMessage(m: HeyQMessage): CustomerTicketMessage {
-  const from = m.authorType === 'requester' ? 'you' : m.authorType === 'agent' ? 'support' : 'system';
-  return { id: m.id, from, authorLabel: m.authorName, body: m.body, createdAt: m.createdAt };
-}
+// ── Requester-facing ticket reads + writes (HeyQ customer API) ────────────────
 
 /** The signed-in user's tickets. Scoped by HeyQ to their identity. */
 export async function listMyTickets(): Promise<CustomerTicket[]> {
-  if (!heyqServiceState.available) return [];
   const who = await getRequesterIdentity();
   if (!who) return [];
-  return listTicketsForRequester(who).map(toCustomerView);
+  return apiListMyTickets(who);
 }
 
 /** One of the signed-in user's tickets. Another user's ticket is `not_found`. */
 export async function getMyTicket(id: string): Promise<HeyQResult<CustomerTicket>> {
-  if (!heyqServiceState.available) return { status: 'unavailable' };
   const who = await getRequesterIdentity();
   if (!who) return { status: 'forbidden' };
-  const t = getTicketForRequester(who, id);
-  if (!t) return { status: 'not_found' };
-  return { status: 'ok', data: toCustomerView(t) };
-}
-
-/** The raw record, for actions that need the access token (portal handoff). */
-export async function getMyTicketRecord(id: string): Promise<HeyQTicketRecord | null> {
-  const who = await getRequesterIdentity();
-  if (!who) return null;
-  return getTicketForRequester(who, id) ?? null;
+  return apiGetMyTicket(who, id);
 }
 
 /** Post a public reply. Replying to a resolved/closed ticket reopens it in HeyQ. */
@@ -347,64 +345,16 @@ export async function replyToMyTicket(
   id: string,
   body: string,
 ): Promise<HeyQResult<CustomerTicket>> {
-  if (!heyqServiceState.available) return { status: 'unavailable' };
   const who = await getRequesterIdentity();
   if (!who) return { status: 'forbidden' };
-  const t = addRequesterReply(who, id, body);
-  if (!t) return { status: 'not_found' };
-  return { status: 'ok', data: toCustomerView(t) };
+  return apiReplyToMyTicket(who, id, body);
 }
 
 /** Reopen a resolved/closed ticket. HeyQ owns the resulting state transition. */
 export async function reopenMyTicket(id: string): Promise<HeyQResult<CustomerTicket>> {
-  if (!heyqServiceState.available) return { status: 'unavailable' };
   const who = await getRequesterIdentity();
   if (!who) return { status: 'forbidden' };
-  const t = reopenTicketForRequester(who, id);
-  if (!t) return { status: 'not_found' };
-  return { status: 'ok', data: toCustomerView(t) };
-}
-
-/**
- * Submit a ticket to HeyQ on the requester's behalf.
- *
- * The product flow hands the user off to HeyQ's own /contact form — this exists
- * because the mock HeyQ backend is in-process, so tests (and the demo seam) need
- * a way to perform the submission HeyQ would perform itself. Authorization on
- * the linked order is re-checked HERE, at the service boundary, not just in the
- * picker: an out-of-scope order aborts the submission rather than half-creating
- * a ticket.
- */
-export async function submitTicketToHeyQ(input: {
-  subject: string;
-  description: string;
-  concernType: HeyQConcernType;
-  externalOrderId?: string;
-}): Promise<HeyQResult<CustomerTicket>> {
-  if (!heyqServiceState.available) return { status: 'unavailable' };
-  const who = await getRequesterIdentity();
-  if (!who) return { status: 'forbidden' };
-
-  let linkedOrder: HeyQLinkedOrder | undefined;
-  if (input.externalOrderId) {
-    const authorized = await getAuthorizedOrder(who, input.externalOrderId);
-    if (authorized.status !== 'ok') return authorized;
-    linkedOrder = {
-      externalOrderId: input.externalOrderId,
-      trackingNumber: authorized.data.trackingNumber,
-      snapshot: authorized.data.snapshot,
-      capturedAt: new Date().toISOString(),
-    };
-  }
-
-  const created = createTicketForRequester({
-    who,
-    subject: input.subject,
-    description: input.description,
-    concernType: input.concernType,
-    linkedOrder,
-  });
-  return { status: 'ok', data: toCustomerView(created) };
+  return apiReopenMyTicket(who, id);
 }
 
 // ── Live order status (OMS, not HeyQ) ────────────────────────────────────────

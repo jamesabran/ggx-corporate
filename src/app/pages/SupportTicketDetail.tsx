@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
 import {
   IconArrowLeft, IconSend, IconUser, IconHeadset, IconPackage, IconCalendar,
-  IconUsersGroup, IconExternalLink, IconRefresh, IconInfoCircle, IconRotateClockwise,
+  IconUsersGroup, IconRefresh, IconInfoCircle, IconRotateClockwise,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -12,7 +12,7 @@ import { Alert } from '../components/ui/Alert';
 // write (reply, reopen) goes back to HeyQ through the ticketsService façade —
 // Business+ keeps no ticket state of its own. Order data comes from OMS.
 import {
-  getTicketById, replyToTicket, reopenTicket, openTicketInHeyQ, getLiveOrderStatus,
+  getTicketById, replyToTicket, reopenTicket, getLiveOrderStatus,
   TICKET_STATUS_META, TICKET_PRIORITY_META,
   type CustomerTicket,
 } from '../services/ticketsService';
@@ -122,10 +122,6 @@ export function SupportTicketDetail() {
             Ticket {ticket.reference} · {ticket.issueType}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => openTicketInHeyQ(ticket.id)}>
-          <IconExternalLink className="w-4 h-4 mr-2" />
-          Open in GGX Support
-        </Button>
       </div>
 
       {ticket.status === 'resolved' && (

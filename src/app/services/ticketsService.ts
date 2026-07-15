@@ -21,11 +21,8 @@
 import {
   listMyTickets,
   getMyTicket,
-  getMyTicketRecord,
   replyToMyTicket,
   reopenMyTicket,
-  openRequesterTicket,
-  buildRequesterTicketUrl,
   TICKET_STATUS_META,
   TICKET_PRIORITY_META,
   TICKET_STATUS_OPTIONS,
@@ -48,7 +45,6 @@ export {
   TICKET_STATUS_META,
   TICKET_PRIORITY_META,
   TICKET_STATUS_OPTIONS,
-  buildRequesterTicketUrl,
 };
 
 // Re-exported so pages have one import site for the HeyQ handoff actions.
@@ -130,12 +126,4 @@ export async function replyToTicket(id: string, body: string): Promise<HeyQResul
 /** Reopen a resolved/closed ticket. */
 export async function reopenTicket(id: string): Promise<HeyQResult<CustomerTicket>> {
   return reopenMyTicket(id);
-}
-
-/** Open this ticket in HeyQ's token-scoped requester portal. */
-export async function openTicketInHeyQ(id: string): Promise<boolean> {
-  const record = await getMyTicketRecord(id);
-  if (!record) return false;
-  openRequesterTicket(record);
-  return true;
 }

@@ -1,10 +1,16 @@
 # GGX Business+ ↔ HeyQ Integration (Business+ side)
 
-Business+ half of the support integration. HeyQ's half is already built (its
-milestone M22); its contract lives in `HeyQ/docs/business-plus-integration.md`.
+Business+ half of the support integration. HeyQ's half is already built and
+**deployed** (Vercel frontend + standalone Railway API); its contract lives in
+`HeyQ/docs/business-plus-integration.md`.
 
-Everything here is a **mock behind an adapter**. No backend, no webhooks, no
-shared database, no production auth.
+The requester **reads and writes now hit the deployed HeyQ API** over its
+customer surface (`heyqCustomerApi` behind the `heyqService` seam). What remains
+local to Business+: the OMS order side (authorization, the customer-safe
+snapshot, live delivery status — all from `transactionService`) and the ticket
+**submission handoff** (a link into HeyQ's own contact form, which creates the
+ticket server-side). No shared database, no webhooks, no production auth — the
+identity is still passed as external ids until HeyQ ships a real session.
 
 ## Ownership
 
@@ -30,28 +36,42 @@ sees only their subaccount. `heyqService.getAuthorizedOrder` enforces it.
 
 ## The seam
 
-`services/heyqService.ts` is the single integration point. Swap its bodies for
-`fetch()` when HeyQ exposes an API; callers do not change.
+`services/heyqService.ts` is the single integration point; the HTTP client lives
+in `services/heyqCustomerApi.ts` behind it. Callers (pages) go through the
+`ticketsService` façade and never change.
 
-| Adapter call | Becomes |
+| Adapter call | HeyQ endpoint (real) |
 |---|---|
-| `listMyTickets()` | `GET /requester/tickets` |
-| `getMyTicket(id)` | `GET /requester/tickets/:id` |
-| `replyToMyTicket(id, body)` | `POST /requester/tickets/:id/replies` |
-| `reopenMyTicket(id)` | `POST /requester/tickets/:id/reopen` |
-| `buildContactUrl(orderId?)` | The HeyQ handoff link (already final) |
-| `buildRequesterTicketUrl(token)` | The token-scoped portal link (already final) |
+| `listMyTickets()` | `GET /api/customer/tickets?externalUserId&externalOrgId` |
+| `getMyTicket(id)` | `GET /api/customer/tickets/:id?externalUserId&externalOrgId` |
+| `replyToMyTicket(id, body)` | `POST /api/tickets/:id/messages` → re-read customer view |
+| `reopenMyTicket(id)` | `POST /api/tickets/:id/reopen` → re-read customer view |
+| `buildContactUrl(orderId?)` | The HeyQ handoff link (opens HeyQ's contact form) |
 
 Results are production-shaped unions — `ok` / `forbidden` / `not_found` /
-`unavailable` — so authorization failure and downtime are handled today.
+`unavailable`. `heyqCustomerApi` maps HTTP outcomes onto them: `403 → forbidden`,
+`404 → not_found`, network/5xx → `unavailable`.
 
-`submitTicketToHeyQ` exists because the mock HeyQ backend is in-process; the real
-product flow hands off to HeyQ's own contact form, which performs the submission.
+HeyQ's customer surface is **read + requester-reply/reopen only** — it never
+hands out a portal access token (a reference must not grant access). Business+
+therefore shows each ticket in its own in-app detail page (the mirror), with a
+working reply box and Reopen; there is no "open the HeyQ portal by token" action.
+
+Ticket **creation** is not an adapter call: the product hands off to HeyQ's own
+`/contact` form, which creates the ticket server-side against the HeyQ API.
 
 ## Handoff
 
-Business+ → HeyQ is a link: `<HEYQ_BASE>/contact?order=<stable OMS order id>`.
-Configure the base with `VITE_HEYQ_URL` (default `http://localhost:18020`).
+Business+ → HeyQ is a link: `<HEYQ_FRONTEND>/contact?order=<stable OMS order id>`.
+Two origins are configured (both optional; deployed defaults are baked in):
+
+- `VITE_HEYQ_URL` — the HeyQ **frontend**, for opening HeyQ pages (contact form,
+  portal). Default `https://heyq.vercel.app`.
+- `VITE_HEYQ_API_URL` — the HeyQ **API** origin, for ticket reads/writes. Default
+  `https://heyq-api-production.up.railway.app`. Requests resolve to `${base}/api/…`.
+
+For local development against a local HeyQ, set `VITE_HEYQ_URL=http://localhost:18020`
+and `VITE_HEYQ_API_URL=http://localhost:4310`.
 
 Before handing off, the order is read and authorized **through the OMS service
 boundary**, never from page state. An out-of-scope order is refused with an
@@ -93,31 +113,23 @@ A linked ticket renders from its saved snapshot, so it survives HeyQ being down,
 the order being archived upstream, or the delivery moving on. "Check live status"
 re-reads OMS and shows the drift explicitly.
 
-## Known limitation of the mock
+## The round trip is real
 
-The mock HeyQ backend lives **inside Business+**. A ticket submitted by hand in
-the real HeyQ tab does not appear in the Business+ list — the two apps are
-separate origins with separate mock state, and no bridge (postMessage,
-shared-origin localStorage) is used by design. The Business+ list reflects its own
-mock HeyQ store. When HeyQ serves a real API, the round trip becomes real with no
-caller changes.
+A ticket submitted through HeyQ's contact form is created in the HeyQ API and then
+appears in the Business+ list — both apps read the same server state. The old
+"separate in-process mock stores" limitation is gone; the mock HeyQ backend has
+been removed from Business+.
 
-The store is persisted to this origin's `localStorage` (`ggx.heyq.tickets`) so
-ticket state survives a refresh, exactly like the app's other mocks. That is
-Business+ caching its own mock — not a channel between the apps.
-
-## HeyQ-side compatibility change
-
-HeyQ's mock order catalogue (`data/businessPlusOrders.ts`) only knew `BP-ORD-*`
-ids, so a `/contact?order=GGX-…` deep link would have been refused. Business+
-order rows were **appended** (additive — the `BP-ORD-*` set is untouched). Two
-HeyQ assertions that hard-coded the seed size were made seed-derived. This block
-disappears when the real provider reads OMS.
+HeyQ's mock API keeps state **in memory** (no database): a HeyQ redeploy resets
+tickets, and it runs as a single instance. That is a property of the mock-stage
+HeyQ service, not of this adapter.
 
 ## Deferred to production
 
-- Real HeyQ API behind the adapter (the swap point is `heyqService`).
 - Verifiable session handoff (signed token) instead of passing external ids.
-- Per-user authorization; today authorization is account-scope only.
+- Per-user authorization; today HeyQ scopes reads by account/identity, and the
+  OMS order check is account-scope only.
 - HeyQ-emitted notifications/events (a support notification is currently seeded).
 - Attachments on tickets (HeyQ's contact form owns capture).
+- A customer-facing portal deep-link (would require HeyQ to issue the owner a
+  portal token over the customer surface).
