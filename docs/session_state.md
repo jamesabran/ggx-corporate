@@ -3,10 +3,44 @@
 > Lightweight resume/checkpoint file. Detailed June 2026 history was archived to
 > `docs/archive/session_log_2026-06.md`.
 
-## Most Recent Work — HeyQ support integration (2026-07-15)
+## Most Recent Work — HeyQ deployed integration (2026-07-15)
 
-Support now runs on **HeyQ**, connected through a mock adapter. Full contract:
-`docs/heyq_integration.md`.
+Support now reads/writes the **deployed HeyQ API** (Railway), not the in-process
+mock. Full contract: `docs/heyq_integration.md`.
+
+- **Seam split:** `services/heyqCustomerApi.ts` (new) is the HTTP client behind
+  `services/heyqService.ts`. `listMyTickets`/`getMyTicket` → `GET /api/customer/
+  tickets(/:id)`; `replyToMyTicket`/`reopenMyTicket` → `POST /api/tickets/:id/
+  {messages,reopen}` then re-read the customer view. Responses map to the existing
+  `CustomerTicket` by an explicit field allowlist (agent data can't leak even from
+  a bad response). **`data/heyqTickets.ts` (the mock) was deleted.**
+- **Config:** `VITE_HEYQ_API_URL` (API origin, default the Railway URL) is
+  separate from `VITE_HEYQ_URL` (HeyQ frontend, for opening pages, default
+  `heyq.vercel.app`). Both have deployed defaults; see `.env.example`.
+- **Submission unchanged:** the `/contact` handoff (`startOrderHandoff` →
+  `heyq.vercel.app/contact?order=<id>`) still creates the ticket server-side in
+  HeyQ. OMS side (`transactionService`) unchanged — order auth, snapshot, live
+  status are still local/OMS.
+- **Portal deep-link removed:** HeyQ's customer surface issues no portal token, so
+  the "View / Open in GGX Support" portal links now open the **in-app** ticket
+  detail (the mirror) with working reply/reopen.
+- **HeyQ side (repo `../HeyQ`, commit `429469d`):** agent/internal API routes are
+  gated from the customer origin (403); CORS split into env-driven agent vs
+  customer origin lists (`HEYQ_FRONTEND_ORIGIN` / `HEYQ_BUSINESS_PLUS_ORIGIN`;
+  `ggx-corporate.vercel.app` + `localhost:18010` allowed by default).
+- **Tests:** Business+ 32/32 (`npm test`, focused fetch-stubbed adapter + UI).
+  HeyQ 177/177 (`npm test`, incl. new `server/http.test.ts`). Both typecheck +
+  build green. Business+ has no ESLint; HeyQ lint clean.
+- **NOT pushed/redeployed.** The live Railway API still runs pre-change code
+  (verified: it currently blocks the Business+ origin via CORS and leaves agent
+  routes open — exactly what these commits fix). Full deployed E2E needs a push so
+  Railway/Vercel redeploy. New behavior was verified against a local production
+  run of the HeyQ API.
+
+## Prior Work — HeyQ support integration via mock adapter (2026-07-15)
+
+Support ran on **HeyQ** through an in-process mock adapter (now superseded by the
+deployed integration above). Full contract: `docs/heyq_integration.md`.
 
 - **OMS equivalent reused:** `services/transactionService.ts` (its docblock already
   names OMS as the source system). Stable order id = the **tracking number**. No
