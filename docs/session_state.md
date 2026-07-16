@@ -3,6 +3,38 @@
 > Lightweight resume/checkpoint file. Detailed June 2026 history was archived to
 > `docs/archive/session_log_2026-06.md`.
 
+## Most Recent Work — HeyQ realtime live conversations (2026-07-16)
+
+Business+ ticket conversations now update **live** over HeyQ's realtime WebSocket
+channel. HeyQ stays the system of record; Business+ is a customer subscriber to a
+single authorized ticket. Contract consumed: `HeyQ/docs/realtime-conversations.md`
+(commit `adfb134`). Full write-up: `docs/heyq_integration.md` → "Live conversations".
+
+- **New seam (no new service/infra):** `services/heyqRealtimeClient.ts` (reusable
+  protocol client — auth via minted token, subscribe/unsubscribe one ticket,
+  reconnect w/ capped backoff + token re-mint, typing, customer-safe event
+  filtering) and `hooks/useTicketConversation.ts` (dedup by event/message id,
+  `createdAt` ordering, optimistic send + retry, reconnect refetch, typing throttle,
+  live status/updated meta). Token/URL/projection added to `heyqCustomerApi` +
+  `heyqService` (`getRealtimeToken`, `getHeyQRealtimeUrl`, `projectRealtimeMessage`,
+  `apiMintRealtimeToken`); attachments metadata added to the message allowlist.
+- **Endpoint:** `wss://<api-origin>/api/realtime` from the SAME `VITE_HEYQ_API_URL`
+  (https→wss). Token is single-use, ticket-scoped, minted over REST per connect.
+- **UI:** `SupportTicketDetail` rewritten around the hook — live incoming replies,
+  optimistic/pending + failed-with-retry bubbles, "Customer Support is typing…",
+  Live/Reconnecting pill, attachment chips; system messages stay centered/quiet.
+  `SupportTickets` list gets focus+poll refresh, recent-activity sort, and an
+  unread dot/count (client-side `lib/ticketReadState.ts`, per requester).
+- **Security:** subscribes only to the bound ticket (never by ticket id alone),
+  consumes only customer routes/events, drops `assignment_changed`/internal notes,
+  no credentials in the URL/logs. HeyQ still owns persistence/authz/lifecycle.
+- **Tests:** +10 in `tests/heyq-realtime.test.mjs` (service seam, client lifecycle/
+  filtering/reconnect, and DOM: live reply, dedup, typing, optimistic reconcile).
+  Business+ **44/44** (`npm test`), typecheck + production build green.
+- **Deployed E2E note:** the stubbed integration drives the REAL client against the
+  documented frame shapes; a true two-app Railway/Vercel E2E requires HeyQ's
+  realtime build live on Railway. HeyQ was NOT changed in this task.
+
 ## Most Recent Work — HeyQ deployed integration (2026-07-15)
 
 Support now reads/writes the **deployed HeyQ API** (Railway), not the in-process

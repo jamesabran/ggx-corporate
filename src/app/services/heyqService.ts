@@ -37,7 +37,13 @@ import {
   apiReplyToMyTicket,
   apiReopenMyTicket,
   apiCreateTicket,
+  apiMintRealtimeToken,
+  getHeyQApiBaseUrl,
+  projectRealtimeMessage,
+  type RealtimeToken,
 } from './heyqCustomerApi';
+
+export { projectRealtimeMessage } from './heyqCustomerApi';
 
 // ── HeyQ contract types (owned by HeyQ; mirrored here for the adapter) ────────
 // HeyQ's requester-facing vocabulary. Previously shared from the in-process mock;
@@ -139,6 +145,13 @@ export type HeyQResult<T> =
 
 // ── Customer-facing view models ──────────────────────────────────────────────
 
+/** Customer-safe attachment METADATA (name/size/type) on a public message. */
+export interface HeyQAttachment {
+  name: string;
+  size: number;
+  type: string;
+}
+
 /** A public conversation entry. Internal notes have no representation here. */
 export interface CustomerTicketMessage {
   id: string;
@@ -147,6 +160,8 @@ export interface CustomerTicketMessage {
   /** Team name for support replies (e.g. "Claims"), not the agent's name. */
   authorLabel: string;
   body: string;
+  /** Attachment metadata on this public message, if any. Display-only. */
+  attachments?: HeyQAttachment[];
   createdAt: string;
 }
 
@@ -407,6 +422,70 @@ export async function reopenMyTicket(id: string): Promise<HeyQResult<CustomerTic
   const who = await getRequesterIdentity();
   if (!who) return { status: 'forbidden' };
   return apiReopenMyTicket(who, id);
+}
+
+// ── Realtime (live ticket conversation over the HeyQ WebSocket channel) ───────
+//
+// HeyQ owns the channel and remains the source of truth (persist-first, then
+// broadcast). Business+ is a CUSTOMER subscriber to a single authorized ticket.
+// The full contract lives in HeyQ/docs/realtime-conversations.md. Only the
+// customer-safe event subset is modelled here — assignment changes and internal
+// notes are never delivered on a customer channel and have no type below.
+
+/** The customer-visible realtime event types. `ticket.assignment_changed` is
+ *  agent-only and deliberately absent. */
+export type CustomerRealtimeEventType =
+  | 'message.created'
+  | 'ticket.status_changed'
+  | 'typing.started'
+  | 'typing.stopped';
+
+/** Who caused an event. Customers only ever see these three. */
+export type RealtimeActorType = 'agent' | 'requester' | 'system';
+
+/**
+ * The realtime envelope as it arrives on a customer socket. `id` is stable for
+ * de-duplication; `serverTimestamp` is authoritative for ordering. `data` shape
+ * depends on `type` (see the contract) and is intentionally left `unknown` — each
+ * consumer projects the fields it needs through an explicit allowlist.
+ */
+export interface CustomerRealtimeEvent {
+  id: string;
+  type: CustomerRealtimeEventType;
+  ticketId: string;
+  actorType: RealtimeActorType;
+  serverTimestamp: string;
+  data: unknown;
+}
+
+/** `data` on a `ticket.status_changed` event (status is customer-safe). */
+export interface StatusChangedData {
+  status: HeyQTicketStatus;
+  fromStatus?: HeyQTicketStatus;
+}
+
+/**
+ * The WebSocket endpoint for the realtime channel, derived from the SAME origin
+ * as the REST API (`VITE_HEYQ_API_URL`). https→wss, http→ws — so an https page
+ * never attempts an insecure socket. No credentials are ever placed in this URL;
+ * authentication is a token message sent after connect.
+ */
+export function getHeyQRealtimeUrl(): string {
+  const base = getHeyQApiBaseUrl(); // e.g. https://heyq-api-production.up.railway.app
+  const wsBase = base.replace(/^http/i, 'ws'); // https→wss, http→ws
+  return `${wsBase}/api/realtime`;
+}
+
+/**
+ * Mint a short-lived, single-use, ticket-scoped realtime connection token for the
+ * signed-in requester. Resolves identity through the same path as every other
+ * read, so an unauthenticated caller (or a ticket that isn't theirs) never gets a
+ * token. Called once per connection attempt, including each reconnect.
+ */
+export async function getRealtimeToken(ticketId: string): Promise<HeyQResult<RealtimeToken>> {
+  const who = await getRequesterIdentity();
+  if (!who) return { status: 'forbidden' };
+  return apiMintRealtimeToken(who, ticketId);
 }
 
 // ── Live order status (OMS, not HeyQ) ────────────────────────────────────────

@@ -28,6 +28,7 @@ import {
   TICKET_STATUS_OPTIONS,
   type CustomerTicket,
   type CustomerTicketMessage,
+  type HeyQAttachment,
   type HeyQTicketStatus,
   type HeyQLinkedOrder,
   type HeyQResult,
@@ -36,6 +37,7 @@ import {
 export type {
   CustomerTicket,
   CustomerTicketMessage,
+  HeyQAttachment,
   HeyQTicketStatus,
   HeyQLinkedOrder,
   HeyQResult,
@@ -48,8 +50,23 @@ export {
 };
 
 // Re-exported so pages have one import site for the HeyQ handoff + report actions.
-export { openHeyQContact, startOrderHandoff, getLiveOrderStatus, submitOrderReport, REPORT_CONCERN_OPTIONS } from './heyqService';
-export type { OrderReportInput, HeyQConcernType } from './heyqService';
+export { openHeyQContact, startOrderHandoff, getLiveOrderStatus, submitOrderReport, REPORT_CONCERN_OPTIONS, getRequesterIdentity } from './heyqService';
+export type { OrderReportInput, HeyQConcernType, HeyQRequesterIdentity } from './heyqService';
+
+// Realtime (live conversation) — the token/URL/event-projection seam. Pages don't
+// touch heyqService directly for realtime; they go through the client + hook,
+// which import these from here.
+export {
+  getRealtimeToken,
+  getHeyQRealtimeUrl,
+  projectRealtimeMessage,
+} from './heyqService';
+export type {
+  CustomerRealtimeEvent,
+  CustomerRealtimeEventType,
+  RealtimeActorType,
+  StatusChangedData,
+} from './heyqService';
 
 /**
  * List-row shape for the existing Support Tickets table and topbar search.

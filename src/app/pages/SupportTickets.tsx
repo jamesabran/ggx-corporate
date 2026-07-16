@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import {
   getTicketsList,
   openHeyQContact,
+  getRequesterIdentity,
   TICKET_STATUS_META,
   TICKET_PRIORITY_META,
   TICKET_STATUS_OPTIONS,
@@ -21,6 +22,13 @@ import {
 } from '../services/ticketsService';
 import { SearchInput } from '../components/SearchInput';
 import { formatTicketDate } from '../lib/utils';
+import { computeUnread } from '../lib/ticketReadState';
+
+// The customer realtime channel is ticket-scoped (a token binds ONE ticket), so
+// the list can't hold a socket per ticket. It stays live the contract-sanctioned
+// way: re-reading the SAME REST API on focus and on a short poll, which surfaces
+// new tickets, latest-activity, status and preview changes.
+const LIST_POLL_MS = 15_000;
 
 export function SupportTickets() {
   const navigate = useNavigate();
@@ -30,17 +38,25 @@ export function SupportTickets() {
   const [searchQuery, setSearchQuery] = useState('');
   const [handedOff, setHandedOff] = useState(false);
 
-  // Ticket list loaded from HeyQ. Reloaded on focus so replies and status
-  // changes made in the HeyQ tab show up when the user comes back.
+  // Ticket list loaded from HeyQ. Reloaded on focus AND on a short poll so agent
+  // replies, new tickets and status changes surface without a manual refresh.
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [unread, setUnread] = useState<Set<string>>(new Set());
+  const [scope, setScope] = useState('');
   const reloadTickets = () => { getTicketsList().then(setTickets).catch(() => {}); };
+
+  useEffect(() => { getRequesterIdentity().then((who) => { if (who) setScope(who.externalUserId); }); }, []);
 
   useEffect(() => { reloadTickets(); }, []);
   useEffect(() => {
     const onFocus = () => reloadTickets();
     window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+    const poll = window.setInterval(reloadTickets, LIST_POLL_MS);
+    return () => { window.removeEventListener('focus', onFocus); window.clearInterval(poll); };
   }, []);
+
+  // Recompute unread (and seed first-seen baselines) whenever the list changes.
+  useEffect(() => { setUnread(computeUnread(scope, tickets)); }, [tickets, scope]);
 
   // Deep-link from notifications / dashboard: ?new=1 starts a general ticket.
   useEffect(() => {
@@ -70,23 +86,36 @@ export function SupportTickets() {
     [tickets],
   );
 
-  const visibleTickets = tickets.filter((t) => {
-    const q = searchQuery.trim().toLowerCase();
-    const searchOk =
-      q.length < 2 ||
-      t.id.toLowerCase().includes(q) ||
-      t.trackingNumber.toLowerCase().includes(q) ||
-      t.subject.toLowerCase().includes(q);
-    const statusOk = statusFilter === 'all' || t.status === statusFilter;
-    const typeOk = typeFilter === 'all' || t.issueType === typeFilter;
-    return searchOk && statusOk && typeOk;
-  });
+  const visibleTickets = tickets
+    .filter((t) => {
+      const q = searchQuery.trim().toLowerCase();
+      const searchOk =
+        q.length < 2 ||
+        t.id.toLowerCase().includes(q) ||
+        t.trackingNumber.toLowerCase().includes(q) ||
+        t.subject.toLowerCase().includes(q);
+      const statusOk = statusFilter === 'all' || t.status === statusFilter;
+      const typeOk = typeFilter === 'all' || t.issueType === typeFilter;
+      return searchOk && statusOk && typeOk;
+    })
+    // Recent-activity first: the most recently updated ticket leads the list.
+    .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime());
+
+  const unreadCount = tickets.filter((t) => unread.has(t.id)).length;
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Support Tickets</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">Support Tickets</h1>
+            {unreadCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                {unreadCount} new {unreadCount === 1 ? 'update' : 'updates'}
+              </span>
+            )}
+          </div>
           <p className="text-gray-600 mt-1">Submit support tickets and track your requests</p>
         </div>
         <Button onClick={handleSubmitTicket}>
@@ -164,13 +193,22 @@ export function SupportTickets() {
                 ) : visibleTickets.map((ticket) => {
                   const status = TICKET_STATUS_META[ticket.status];
                   const priority = TICKET_PRIORITY_META[ticket.priority];
+                  const isUnread = unread.has(ticket.id);
                   return (
                     <TableRow
                       key={ticket.id}
-                      className="cursor-pointer"
+                      className={`cursor-pointer ${isUnread ? 'bg-blue-50/40' : ''}`}
                       onClick={() => navigate(`/dashboard/support-tickets/${ticket.id}`)}
                     >
-                      <TableCell className="font-medium text-blue-600 whitespace-nowrap">{ticket.id}</TableCell>
+                      <TableCell className="font-medium text-blue-600 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-2">
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isUnread ? 'bg-blue-600' : 'bg-transparent'}`}
+                            title={isUnread ? 'New activity' : undefined}
+                          />
+                          {ticket.id}
+                        </span>
+                      </TableCell>
                       <TableCell className="whitespace-nowrap">{ticket.trackingNumber}</TableCell>
                       <TableCell>{ticket.issueType}</TableCell>
                       <TableCell>

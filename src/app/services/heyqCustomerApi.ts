@@ -22,6 +22,7 @@
 import type {
   CustomerTicket,
   CustomerTicketMessage,
+  HeyQAttachment,
   HeyQConcernType,
   HeyQLinkedOrder,
   HeyQOrderSnapshot,
@@ -48,11 +49,18 @@ export function getHeyQApiBaseUrl(): string {
 // Only the fields Business+ reads are typed. HeyQ's own model is the source of
 // truth; these mirror its M23 customer projection (src/app/models/ticket.ts).
 
+interface HeyQApiAttachment {
+  name: string;
+  size: number;
+  type: string;
+}
+
 interface HeyQApiMessage {
   id: string;
   from: 'you' | 'support' | 'system';
   authorLabel: string;
   body: string;
+  attachments?: HeyQApiAttachment[];
   createdAt: string;
 }
 
@@ -173,8 +181,43 @@ function toLinkedOrder(o: HeyQApiLinkedOrder): HeyQLinkedOrder {
   };
 }
 
+/** Copy only the customer-safe attachment metadata — never spread the payload. */
+function toAttachments(list: HeyQApiAttachment[] | undefined): HeyQAttachment[] | undefined {
+  if (!Array.isArray(list) || list.length === 0) return undefined;
+  return list.map((a) => ({ name: a.name, size: a.size, type: a.type }));
+}
+
 function toMessage(m: HeyQApiMessage): CustomerTicketMessage {
-  return { id: m.id, from: m.from, authorLabel: m.authorLabel, body: m.body, createdAt: m.createdAt };
+  return {
+    id: m.id,
+    from: m.from,
+    authorLabel: m.authorLabel,
+    body: m.body,
+    attachments: toAttachments(m.attachments),
+    createdAt: m.createdAt,
+  };
+}
+
+/**
+ * Project a raw realtime `message.created` payload's message into the Business+
+ * `CustomerTicketMessage` by the SAME explicit allowlist the REST path uses. The
+ * server already projects for the customer audience; this re-projection is the
+ * client-side guarantee that no unexpected field on a socket frame can reach the
+ * UI (mirrors `CUSTOMER_SAFE_MESSAGE_FIELDS` in HeyQ's realtime model).
+ */
+export function projectRealtimeMessage(raw: unknown): CustomerTicketMessage | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const m = raw as Partial<HeyQApiMessage>;
+  if (typeof m.id !== 'string' || typeof m.body !== 'string') return null;
+  const from = m.from === 'you' || m.from === 'support' || m.from === 'system' ? m.from : 'support';
+  return {
+    id: m.id,
+    from,
+    authorLabel: typeof m.authorLabel === 'string' ? m.authorLabel : '',
+    body: m.body,
+    attachments: toAttachments(m.attachments),
+    createdAt: typeof m.createdAt === 'string' ? m.createdAt : new Date().toISOString(),
+  };
 }
 
 /**
@@ -362,4 +405,37 @@ export async function apiCreateTicket(
   });
   if (!res.ok) return { status: res.result };
   return { status: 'ok', data: toCustomerTicket(res.data as HeyQApiCustomerTicket) };
+}
+
+// ── Realtime connection token (short-lived, single-use, ticket-scoped) ─────────
+
+export interface RealtimeToken {
+  token: string;
+  expiresInMs: number;
+}
+
+/**
+ * Mint a customer realtime connection token for ONE ticket over REST
+ * (`POST /api/customer/realtime/token`). HeyQ verifies the requester may see the
+ * ticket and returns 404 otherwise — knowing a ticket id is never enough. The
+ * token is short-lived (~60 s) and single-use; the socket carries NO credentials
+ * in its URL, only this token as its first message. A fresh token is minted per
+ * connection attempt (including every reconnect).
+ */
+export async function apiMintRealtimeToken(
+  who: HeyQRequesterIdentity,
+  ticketId: string,
+): Promise<HeyQResult<RealtimeToken>> {
+  const res = await postJson('/customer/realtime/token', {
+    externalUserId: who.externalUserId,
+    externalOrgId: who.externalOrgId,
+    ticketId,
+  });
+  if (!res.ok) return { status: res.result };
+  const data = res.data as Partial<RealtimeToken>;
+  if (!data || typeof data.token !== 'string') return { status: 'unavailable' };
+  return {
+    status: 'ok',
+    data: { token: data.token, expiresInMs: typeof data.expiresInMs === 'number' ? data.expiresInMs : 60_000 },
+  };
 }

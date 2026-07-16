@@ -1,23 +1,28 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
 import {
   IconArrowLeft, IconSend, IconUser, IconHeadset, IconPackage, IconCalendar,
   IconUsersGroup, IconRefresh, IconInfoCircle, IconRotateClockwise,
+  IconPaperclip, IconAlertTriangle, IconLoader2, IconReload, IconX, IconWifi,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Alert } from '../components/ui/Alert';
-// The ticket lives in HeyQ; this page is a customer-visible mirror of it. Every
-// write (reply, reopen) goes back to HeyQ through the ticketsService façade —
+// The ticket lives in HeyQ; this page is a customer-visible mirror of it. The
+// conversation updates LIVE over HeyQ's realtime channel (useTicketConversation),
+// while every write (reply, reopen) still persists over HeyQ's REST API —
 // Business+ keeps no ticket state of its own. Order data comes from OMS.
 import {
-  getTicketById, replyToTicket, reopenTicket, getLiveOrderStatus,
+  getTicketById, getLiveOrderStatus, getRequesterIdentity,
   TICKET_STATUS_META, TICKET_PRIORITY_META,
-  type CustomerTicket,
+  type CustomerTicket, type CustomerTicketMessage, type HeyQAttachment,
 } from '../services/ticketsService';
 import { statusConfig } from '../services/transactionService';
 import { formatTicketDate } from '../lib/utils';
+import { markTicketSeen } from '../lib/ticketReadState';
+import { useTicketConversation, type PendingMessage } from '../hooks/useTicketConversation';
+import type { RealtimeStatus } from '../services/heyqRealtimeClient';
 
 type LoadState =
   | { kind: 'loading' }
@@ -29,8 +34,6 @@ export function SupportTicketDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
-  const [reply, setReply] = useState('');
-  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) { setState({ kind: 'not_found' }); return; }
@@ -85,24 +88,47 @@ export function SupportTicketDetail() {
     );
   }
 
-  const ticket = state.ticket;
+  // The ticket loaded — hand off to the live view (subscribes to HeyQ realtime).
+  return <LiveTicketView id={state.ticket.id} initialTicket={state.ticket} back={back} />;
+}
+
+/**
+ * The live ticket surface. Owns the realtime subscription via
+ * `useTicketConversation`: the header, alerts and conversation all render from
+ * the hook's live `ticket`/`messages`, so an agent reply or status change appears
+ * without a refresh.
+ */
+function LiveTicketView({
+  id, initialTicket, back,
+}: { id: string; initialTicket: CustomerTicket; back: React.ReactNode }) {
+  const convo = useTicketConversation(id, initialTicket);
+  const { ticket, messages, pending, agentTyping, connection, sending } = convo;
+  const [reply, setReply] = useState('');
+
+  // Mark the ticket seen (clears the unread dot on the list) on open and whenever
+  // its latest activity advances while it's open. Read-state is customer-side only.
+  const scope = useRef<string>('');
+  useEffect(() => {
+    let alive = true;
+    getRequesterIdentity().then((who) => { if (alive && who) scope.current = who.externalUserId; });
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => {
+    markTicketSeen(scope.current, ticket.id, ticket.updatedAt);
+  }, [ticket.id, ticket.updatedAt]);
+
   const status = TICKET_STATUS_META[ticket.status];
   const priority = TICKET_PRIORITY_META[ticket.priority];
 
   const handleSend = async () => {
-    if (!id || !reply.trim() || busy) return;
-    setBusy(true);
-    const res = await replyToTicket(id, reply);
-    if (res.status === 'ok') { setState({ kind: 'ok', ticket: res.data }); setReply(''); }
-    setBusy(false);
+    if (!reply.trim() || sending) return;
+    const body = reply;
+    setReply(''); // clear immediately; the message renders optimistically
+    await convo.send(body);
   };
 
   const handleReopen = async () => {
-    if (!id || busy) return;
-    setBusy(true);
-    const res = await reopenTicket(id);
-    if (res.status === 'ok') setState({ kind: 'ok', ticket: res.data });
-    setBusy(false);
+    await convo.reopen();
   };
 
   return (
@@ -139,33 +165,24 @@ export function SupportTicketDetail() {
         {/* Conversation — public replies only. Internal notes never leave HeyQ. */}
         <div className="lg:col-span-2 space-y-4">
           <Card>
-            <CardHeader><CardTitle>Conversation</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>Conversation</CardTitle>
+                <ConnectionPill status={connection} />
+              </div>
+            </CardHeader>
             <CardContent className="space-y-4">
-              {ticket.messages.map((m) => {
-                if (m.from === 'system') {
-                  return (
-                    <p key={m.id} className="text-center text-xs text-gray-400 py-1">
-                      {m.body} · {formatTicketDate(m.createdAt)}
-                    </p>
-                  );
-                }
-                const isCustomer = m.from === 'you';
-                return (
-                  <div key={m.id} className={`flex gap-3 ${isCustomer ? 'flex-row-reverse' : ''}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isCustomer ? 'bg-blue-600' : 'bg-gray-200'}`}>
-                      {isCustomer ? <IconUser className="w-4 h-4 text-white" /> : <IconHeadset className="w-4 h-4 text-gray-600" />}
-                    </div>
-                    <div className={`max-w-[80%] ${isCustomer ? 'items-end text-right' : ''}`}>
-                      <div className={`inline-block rounded-xl px-3.5 py-2.5 text-sm text-left ${isCustomer ? 'bg-blue-50 text-gray-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {m.body}
-                      </div>
-                      <p className="text-[11px] text-gray-400 mt-1">
-                        {m.authorLabel} · {formatTicketDate(m.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+              {messages.map((m) => (
+                <MessageBubble key={m.id} message={m} />
+              ))}
+
+              {/* Optimistic outgoing replies (sending / failed with retry). */}
+              {pending.map((p) => (
+                <PendingBubble key={p.tempId} pending={p} onRetry={() => convo.retry(p.tempId)} onDismiss={() => convo.dismissFailed(p.tempId)} />
+              ))}
+
+              {/* Agent typing indicator. */}
+              {agentTyping && <TypingBubble />}
 
               {/* Reply box. A reply to a resolved/closed ticket reopens it in HeyQ. */}
               <div className="border-t border-gray-100 pt-4 space-y-3">
@@ -177,17 +194,26 @@ export function SupportTicketDetail() {
                   className="w-full h-24 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Type your message to the support team..."
                   value={reply}
-                  onChange={(e) => setReply(e.target.value)}
+                  onChange={(e) => { setReply(e.target.value); convo.notifyTyping(e.target.value); }}
+                  onBlur={convo.stopTyping}
                 />
+                {connection === 'reconnecting' && (
+                  <p className="text-[11px] text-amber-600 flex items-center gap-1.5">
+                    <IconWifi className="w-3.5 h-3.5" />
+                    Reconnecting to live updates… you can still send — replies are delivered over a separate channel.
+                  </p>
+                )}
                 <div className="flex items-center justify-end gap-3">
                   {ticket.canReopen && (
-                    <Button variant="outline" onClick={handleReopen} disabled={busy}>
+                    <Button variant="outline" onClick={handleReopen} disabled={sending}>
                       <IconRotateClockwise className="w-4 h-4 mr-2" />
                       Reopen ticket
                     </Button>
                   )}
-                  <Button disabled={!reply.trim() || busy} onClick={handleSend}>
-                    <IconSend className="w-4 h-4 mr-2" />
+                  <Button disabled={!reply.trim() || sending} onClick={handleSend}>
+                    {sending
+                      ? <IconLoader2 className="w-4 h-4 mr-2 animate-spin" />
+                      : <IconSend className="w-4 h-4 mr-2" />}
                     Send Reply
                   </Button>
                 </div>
@@ -214,6 +240,125 @@ export function SupportTicketDetail() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** A confirmed conversation entry. System notes are centered and quieter. */
+function MessageBubble({ message: m }: { message: CustomerTicketMessage }) {
+  if (m.from === 'system') {
+    return (
+      <p className="text-center text-xs text-gray-400 py-1">
+        {m.body} · {formatTicketDate(m.createdAt)}
+      </p>
+    );
+  }
+  const isCustomer = m.from === 'you';
+  return (
+    <div className={`flex gap-3 ${isCustomer ? 'flex-row-reverse' : ''}`}>
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isCustomer ? 'bg-blue-600' : 'bg-gray-200'}`}>
+        {isCustomer ? <IconUser className="w-4 h-4 text-white" /> : <IconHeadset className="w-4 h-4 text-gray-600" />}
+      </div>
+      <div className={`max-w-[80%] ${isCustomer ? 'items-end text-right' : ''}`}>
+        <div className={`inline-block rounded-xl px-3.5 py-2.5 text-sm text-left ${isCustomer ? 'bg-blue-50 text-gray-800' : 'bg-gray-100 text-gray-800'}`}>
+          {m.body}
+          {m.attachments && m.attachments.length > 0 && <AttachmentList attachments={m.attachments} />}
+        </div>
+        <p className="text-[11px] text-gray-400 mt-1">
+          {m.authorLabel} · {formatTicketDate(m.createdAt)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** An optimistic outgoing reply — sending spinner, or failed with retry/dismiss. */
+function PendingBubble({ pending: p, onRetry, onDismiss }: { pending: PendingMessage; onRetry: () => void; onDismiss: () => void }) {
+  const failed = p.status === 'failed';
+  return (
+    <div className="flex gap-3 flex-row-reverse">
+      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-600">
+        <IconUser className="w-4 h-4 text-white" />
+      </div>
+      <div className="max-w-[80%] items-end text-right">
+        <div className={`inline-block rounded-xl px-3.5 py-2.5 text-sm text-left ${failed ? 'bg-red-50 text-gray-800 ring-1 ring-red-200' : 'bg-blue-50/70 text-gray-500'}`}>
+          {p.body}
+        </div>
+        {failed ? (
+          <p className="text-[11px] text-red-600 mt-1 flex items-center justify-end gap-2">
+            <IconAlertTriangle className="w-3.5 h-3.5" />
+            Not sent.
+            <button type="button" onClick={onRetry} className="inline-flex items-center gap-1 font-medium text-red-700 hover:underline">
+              <IconReload className="w-3.5 h-3.5" /> Retry
+            </button>
+            <button type="button" onClick={onDismiss} className="inline-flex items-center gap-1 text-gray-400 hover:text-gray-600">
+              <IconX className="w-3.5 h-3.5" /> Dismiss
+            </button>
+          </p>
+        ) : (
+          <p className="text-[11px] text-gray-400 mt-1 flex items-center justify-end gap-1.5">
+            <IconLoader2 className="w-3 h-3 animate-spin" /> Sending…
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** "Customer Support is typing…" with animated dots. */
+function TypingBubble() {
+  return (
+    <div className="flex gap-3">
+      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-200">
+        <IconHeadset className="w-4 h-4 text-gray-600" />
+      </div>
+      <div>
+        <div className="inline-flex items-center gap-1 rounded-xl bg-gray-100 px-3.5 py-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.3s]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.15s]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" />
+        </div>
+        <p className="text-[11px] text-gray-400 mt-1">Customer Support is typing…</p>
+      </div>
+    </div>
+  );
+}
+
+/** Attachment metadata chips (display-only — HeyQ owns capture). */
+function AttachmentList({ attachments }: { attachments: HeyQAttachment[] }) {
+  return (
+    <div className="mt-2 space-y-1">
+      {attachments.map((a, i) => (
+        <div key={`${a.name}-${i}`} className="flex items-center gap-1.5 text-[12px] text-gray-500">
+          <IconPaperclip className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="truncate">{a.name}</span>
+          <span className="text-gray-400">· {formatBytes(a.size)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (!bytes || bytes < 1024) return `${bytes || 0} B`;
+  const kb = bytes / 1024;
+  return kb < 1024 ? `${Math.round(kb)} KB` : `${(kb / 1024).toFixed(1)} MB`;
+}
+
+/** Live-connection status chip in the Conversation header. */
+function ConnectionPill({ status }: { status: RealtimeStatus }) {
+  if (status === 'open') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-600">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Live
+      </span>
+    );
+  }
+  if (status === 'closed') return null;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-600">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+      {status === 'connecting' ? 'Connecting…' : 'Reconnecting…'}
+    </span>
   );
 }
 

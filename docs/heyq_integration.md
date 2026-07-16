@@ -135,6 +135,49 @@ HeyQ's mock API keeps state **in memory** (no database): a HeyQ redeploy resets
 tickets, and it runs as a single instance. That is a property of the mock-stage
 HeyQ service, not of this adapter.
 
+## Live conversations (realtime)
+
+Ticket conversations update **live** over HeyQ's realtime WebSocket channel. HeyQ
+owns the channel and stays the system of record (persist-first, then broadcast);
+Business+ is a **customer subscriber** to a single authorized ticket. The full
+contract is `HeyQ/docs/realtime-conversations.md`.
+
+- **Endpoint / origin:** `wss://<api-origin>/api/realtime`, derived from the SAME
+  `VITE_HEYQ_API_URL` used for REST (`https→wss`, `http→ws`). No new variable, no
+  credentials in the URL.
+- **Connection token:** a short-lived, single-use, **ticket-scoped** token minted
+  over REST (`POST /api/customer/realtime/token` with the requester identity +
+  ticket id). HeyQ verifies visibility and returns 404 for a ticket that isn't
+  the requester's — knowing a ticket id is never enough. A fresh token is minted
+  per connect attempt, including each reconnect.
+- **The seam:** `services/heyqRealtimeClient.ts` (the reusable protocol client) +
+  `hooks/useTicketConversation.ts` (the detail-page state machine). The token/URL
+  and the message-projection allowlist go through the existing `heyqService`
+  adapter; no separate service or infrastructure was added.
+- **Events consumed (customer-safe only):** `message.created`,
+  `ticket.status_changed`, `typing.started`, `typing.stopped`. `assignment_changed`
+  and internal notes are never delivered on a customer channel and are dropped by
+  the client even if one ever arrived. Message payloads are re-projected through
+  the same allowlist the REST path uses (`projectRealtimeMessage`).
+- **Reliability:** events de-dupe by `event.id`, messages by `message.id`, and the
+  thread orders by `createdAt` — socket arrival order is never trusted. The client
+  reconnects with capped backoff and, on every (re)subscribe, triggers a REST
+  **refetch** to recover anything missed while offline. REST stays authoritative:
+  replies persist over `POST /api/tickets/:id/messages` and keep working when the
+  socket is down.
+- **Outgoing replies** render optimistically, reconcile to the confirmed server
+  message (and de-dupe the realtime echo), and a failure is preserved with a
+  retry action. **Typing** is throttled (one `start` per burst, re-emitted at most
+  once/2 s) and force-stopped on send, clear, blur, ticket change and unmount.
+- **Support Tickets list:** the customer token binds ONE ticket, so the list can't
+  hold a socket per ticket. It stays current the contract-sanctioned way — the
+  same REST read on focus and a short poll — surfacing new tickets, latest-activity
+  previews, status, recent-activity ordering, and an **unread** indicator tracked
+  client-side (localStorage, per requester; no privileged state).
+- **Attachments:** attachment **metadata** (name/size/type) that arrives on a
+  public message is displayed read-only. Capture is still HeyQ's (the contact
+  form); Business+ adds no upload UI.
+
 ## Deferred to production
 
 - Verifiable session handoff (signed token) instead of passing external ids.
