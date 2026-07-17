@@ -50,6 +50,8 @@ export function getHeyQApiBaseUrl(): string {
 // truth; these mirror its M23 customer projection (src/app/models/ticket.ts).
 
 interface HeyQApiAttachment {
+  /** Present for real uploaded attachments — used to build a download URL. */
+  id?: string;
   name: string;
   size: number;
   type: string;
@@ -184,7 +186,12 @@ function toLinkedOrder(o: HeyQApiLinkedOrder): HeyQLinkedOrder {
 /** Copy only the customer-safe attachment metadata — never spread the payload. */
 function toAttachments(list: HeyQApiAttachment[] | undefined): HeyQAttachment[] | undefined {
   if (!Array.isArray(list) || list.length === 0) return undefined;
-  return list.map((a) => ({ name: a.name, size: a.size, type: a.type }));
+  return list.map((a) => ({
+    id: typeof a.id === 'string' ? a.id : undefined,
+    name: a.name,
+    size: a.size,
+    type: a.type,
+  }));
 }
 
 function toMessage(m: HeyQApiMessage): CustomerTicketMessage {
@@ -309,6 +316,41 @@ async function postJson(path: string, body: unknown): Promise<
   }
 }
 
+/**
+ * POST a multipart/form-data body (an upload). The browser sets the multipart
+ * `Content-Type`/boundary from the FormData, so it must NOT be set here. HeyQ
+ * validates the files server-side and returns 400 with per-file detail on
+ * rejection (client validation is the first gate, so that path is rare).
+ */
+async function postForm(path: string, form: FormData): Promise<
+  { ok: true; data: unknown } | { ok: false; result: 'forbidden' | 'not_found' | 'unavailable' }
+> {
+  try {
+    const res = await fetch(`${getHeyQApiBaseUrl()}/api${path}`, { method: 'POST', body: form });
+    if (!res.ok) return { ok: false, result: resultForStatus(res.status) };
+    return { ok: true, data: await res.json() };
+  } catch {
+    return { ok: false, result: 'unavailable' };
+  }
+}
+
+/**
+ * Direct URL to download or (for images/PDFs) preview an attachment on the
+ * customer surface. Identity travels as query params (the same handoff the other
+ * customer reads use) so the URL is loadable directly by an <img>/<a>. HeyQ still
+ * authorizes the ticket before serving the bytes.
+ */
+export function buildAttachmentUrl(
+  who: HeyQRequesterIdentity,
+  ticketId: string,
+  attachmentId: string,
+  inline = false,
+): string {
+  const q = new URLSearchParams({ externalUserId: who.externalUserId, externalOrgId: who.externalOrgId });
+  if (inline) q.set('disposition', 'inline');
+  return `${getHeyQApiBaseUrl()}/api/customer/tickets/${encodeURIComponent(ticketId)}/attachments/${encodeURIComponent(attachmentId)}?${q.toString()}`;
+}
+
 // ── Public operations (consumed by heyqService) ───────────────────────────────
 
 /** The signed-in requester's tickets. Any failure degrades to an empty list. */
@@ -336,9 +378,21 @@ export async function apiReplyToMyTicket(
   who: HeyQRequesterIdentity,
   id: string,
   body: string,
+  files?: File[],
 ): Promise<HeyQResult<CustomerTicket>> {
-  const posted = await post(`/tickets/${encodeURIComponent(id)}/messages`, { body });
-  if (!posted.ok) return { status: posted.result };
+  if (files?.length) {
+    // A reply WITH attachments is a multipart upload: HeyQ validates + stores the
+    // files atomically with the message, so the message never references a missing
+    // upload. A rejected batch fails the whole reply (no message is created).
+    const form = new FormData();
+    form.append('body', body);
+    for (const f of files) form.append('files', f, f.name);
+    const posted = await postForm(`/tickets/${encodeURIComponent(id)}/messages`, form);
+    if (!posted.ok) return { status: posted.result };
+  } else {
+    const posted = await post(`/tickets/${encodeURIComponent(id)}/messages`, { body });
+    if (!posted.ok) return { status: posted.result };
+  }
   return apiGetMyTicket(who, id);
 }
 
@@ -366,6 +420,8 @@ export interface CreateCustomerTicketInput {
     snapshot: HeyQOrderSnapshot;
     capturedAt: string;
   };
+  /** Files attached during ticket creation (uploaded atomically with the ticket). */
+  files?: File[];
 }
 
 /**
@@ -393,7 +449,7 @@ export async function apiCreateTicket(
       }
     : undefined;
 
-  const res = await postJson('/customer/tickets', {
+  const payload = {
     externalUserId: who.externalUserId,
     externalOrgId: who.externalOrgId,
     name: input.name,
@@ -402,7 +458,26 @@ export async function apiCreateTicket(
     subject: input.subject,
     description: input.description,
     linkedOrder,
-  });
+  };
+
+  let res;
+  if (input.files?.length) {
+    // Creation WITH attachments — multipart so files upload atomically with the
+    // ticket. Scalar fields become form fields; the linked order rides as JSON.
+    const form = new FormData();
+    form.append('externalUserId', payload.externalUserId);
+    form.append('externalOrgId', payload.externalOrgId);
+    form.append('name', payload.name);
+    form.append('email', payload.email);
+    form.append('concernType', payload.concernType);
+    form.append('subject', payload.subject);
+    form.append('description', payload.description);
+    if (linkedOrder) form.append('linkedOrder', JSON.stringify(linkedOrder));
+    for (const f of input.files) form.append('files', f, f.name);
+    res = await postForm('/customer/tickets', form);
+  } else {
+    res = await postJson('/customer/tickets', payload);
+  }
   if (!res.ok) return { status: res.result };
   return { status: 'ok', data: toCustomerTicket(res.data as HeyQApiCustomerTicket) };
 }

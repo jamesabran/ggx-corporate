@@ -43,6 +43,10 @@ export interface PendingMessage {
   body: string;
   createdAt: string;
   status: 'sending' | 'failed';
+  /** Staged files to (re)upload with this reply. */
+  files?: File[];
+  /** Display metadata for the optimistic bubble (no id until HeyQ stores them). */
+  attachments?: { name: string; size: number; type: string }[];
 }
 
 export interface TicketConversation {
@@ -58,8 +62,8 @@ export interface TicketConversation {
   connection: RealtimeStatus;
   /** True while a reply POST is in flight (guards duplicate submission). */
   sending: boolean;
-  /** Send a reply. Persists over REST; renders optimistically. */
-  send: (body: string) => Promise<void>;
+  /** Send a reply, optionally with file attachments. Persists over REST; renders optimistically. */
+  send: (body: string, files?: File[]) => Promise<void>;
   /** Retry a previously failed reply. */
   retry: (tempId: string) => Promise<void>;
   /** Discard a failed reply the requester no longer wants to send. */
@@ -265,9 +269,9 @@ export function useTicketConversation(id: string, initialTicket: CustomerTicket)
   // ── Sending replies (optimistic, REST-backed, retryable) ───────────────────
 
   const submit = useCallback(
-    async (tempId: string, body: string) => {
+    async (tempId: string, body: string, files?: File[]) => {
       setPending((prev) => prev.map((p) => (p.tempId === tempId ? { ...p, status: 'sending' } : p)));
-      const res = await replyToTicket(id, body);
+      const res = await replyToTicket(id, body, files);
       if (res.status === 'ok') {
         mergeTicket(res.data);
         setPending((prev) => prev.filter((p) => p.tempId !== tempId));
@@ -279,15 +283,16 @@ export function useTicketConversation(id: string, initialTicket: CustomerTicket)
   );
 
   const send = useCallback(
-    async (body: string) => {
+    async (body: string, files?: File[]) => {
       const text = body.trim();
       if (!text || sending) return; // guard empty + duplicate submission
       const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      setPending((prev) => [...prev, { tempId, body: text, createdAt: new Date().toISOString(), status: 'sending' }]);
+      const attachments = files?.map((f) => ({ name: f.name, size: f.size, type: f.type }));
+      setPending((prev) => [...prev, { tempId, body: text, createdAt: new Date().toISOString(), status: 'sending', files, attachments }]);
       stopTyping(); // typing ends on send
       setSending(true);
       try {
-        await submit(tempId, text);
+        await submit(tempId, text, files);
       } finally {
         setSending(false);
       }
@@ -301,7 +306,7 @@ export function useTicketConversation(id: string, initialTicket: CustomerTicket)
       if (!item || sending) return;
       setSending(true);
       try {
-        await submit(tempId, item.body);
+        await submit(tempId, item.body, item.files);
       } finally {
         setSending(false);
       }

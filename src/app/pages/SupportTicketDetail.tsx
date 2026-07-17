@@ -4,20 +4,24 @@ import {
   IconArrowLeft, IconSend, IconUser, IconHeadset, IconPackage, IconCalendar,
   IconUsersGroup, IconRefresh, IconInfoCircle, IconRotateClockwise,
   IconPaperclip, IconAlertTriangle, IconLoader2, IconReload, IconX, IconWifi,
+  IconDownload,
 } from '@tabler/icons-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Alert } from '../components/ui/Alert';
+import { AttachmentInput } from '../components/AttachmentInput';
 // The ticket lives in HeyQ; this page is a customer-visible mirror of it. The
 // conversation updates LIVE over HeyQ's realtime channel (useTicketConversation),
 // while every write (reply, reopen) still persists over HeyQ's REST API —
 // Business+ keeps no ticket state of its own. Order data comes from OMS.
 import {
-  getTicketById, getLiveOrderStatus, getRequesterIdentity,
+  getTicketById, getLiveOrderStatus, getRequesterIdentity, buildAttachmentUrl,
   TICKET_STATUS_META, TICKET_PRIORITY_META,
   type CustomerTicket, type CustomerTicketMessage, type HeyQAttachment,
+  type HeyQRequesterIdentity,
 } from '../services/ticketsService';
+import { isPreviewable, formatBytes } from '../lib/attachmentPolicy';
 import { statusConfig } from '../services/transactionService';
 import { formatTicketDate } from '../lib/utils';
 import { markTicketSeen } from '../lib/ticketReadState';
@@ -104,13 +108,18 @@ function LiveTicketView({
   const convo = useTicketConversation(id, initialTicket);
   const { ticket, messages, pending, agentTyping, connection, sending } = convo;
   const [reply, setReply] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  // The signed-in requester identity — needed to build authorized attachment URLs.
+  const [who, setWho] = useState<HeyQRequesterIdentity | null>(null);
 
   // Mark the ticket seen (clears the unread dot on the list) on open and whenever
   // its latest activity advances while it's open. Read-state is customer-side only.
   const scope = useRef<string>('');
   useEffect(() => {
     let alive = true;
-    getRequesterIdentity().then((who) => { if (alive && who) scope.current = who.externalUserId; });
+    getRequesterIdentity().then((identity) => {
+      if (alive && identity) { scope.current = identity.externalUserId; setWho(identity); }
+    });
     return () => { alive = false; };
   }, []);
   useEffect(() => {
@@ -123,8 +132,10 @@ function LiveTicketView({
   const handleSend = async () => {
     if (!reply.trim() || sending) return;
     const body = reply;
+    const toSend = files;
     setReply(''); // clear immediately; the message renders optimistically
-    await convo.send(body);
+    setFiles([]);
+    await convo.send(body, toSend.length ? toSend : undefined);
   };
 
   const handleReopen = async () => {
@@ -173,7 +184,7 @@ function LiveTicketView({
             </CardHeader>
             <CardContent className="space-y-4">
               {messages.map((m) => (
-                <MessageBubble key={m.id} message={m} />
+                <MessageBubble key={m.id} message={m} ticketId={ticket.id} who={who} />
               ))}
 
               {/* Optimistic outgoing replies (sending / failed with retry). */}
@@ -196,7 +207,9 @@ function LiveTicketView({
                   value={reply}
                   onChange={(e) => { setReply(e.target.value); convo.notifyTyping(e.target.value); }}
                   onBlur={convo.stopTyping}
+                  disabled={sending}
                 />
+                <AttachmentInput value={files} onChange={setFiles} disabled={sending} />
                 {connection === 'reconnecting' && (
                   <p className="text-[11px] text-amber-600 flex items-center gap-1.5">
                     <IconWifi className="w-3.5 h-3.5" />
@@ -214,7 +227,7 @@ function LiveTicketView({
                     {sending
                       ? <IconLoader2 className="w-4 h-4 mr-2 animate-spin" />
                       : <IconSend className="w-4 h-4 mr-2" />}
-                    Send Reply
+                    {sending ? (files.length ? 'Uploading…' : 'Sending…') : 'Send Reply'}
                   </Button>
                 </div>
               </div>
@@ -236,6 +249,8 @@ function LiveTicketView({
             </CardContent>
           </Card>
 
+          <ConsolidatedAttachments messages={messages} ticketId={ticket.id} who={who} />
+
           {ticket.linkedOrder && <LinkedOrderCard ticket={ticket} />}
         </div>
       </div>
@@ -244,7 +259,7 @@ function LiveTicketView({
 }
 
 /** A confirmed conversation entry. System notes are centered and quieter. */
-function MessageBubble({ message: m }: { message: CustomerTicketMessage }) {
+function MessageBubble({ message: m, ticketId, who }: { message: CustomerTicketMessage; ticketId: string; who: HeyQRequesterIdentity | null }) {
   if (m.from === 'system') {
     return (
       <p className="text-center text-xs text-gray-400 py-1">
@@ -261,7 +276,7 @@ function MessageBubble({ message: m }: { message: CustomerTicketMessage }) {
       <div className={`max-w-[80%] ${isCustomer ? 'items-end text-right' : ''}`}>
         <div className={`inline-block rounded-xl px-3.5 py-2.5 text-sm text-left ${isCustomer ? 'bg-blue-50 text-gray-800' : 'bg-gray-100 text-gray-800'}`}>
           {m.body}
-          {m.attachments && m.attachments.length > 0 && <AttachmentList attachments={m.attachments} />}
+          {m.attachments && m.attachments.length > 0 && <AttachmentList attachments={m.attachments} ticketId={ticketId} who={who} />}
         </div>
         <p className="text-[11px] text-gray-400 mt-1">
           {m.authorLabel} · {formatTicketDate(m.createdAt)}
@@ -282,6 +297,17 @@ function PendingBubble({ pending: p, onRetry, onDismiss }: { pending: PendingMes
       <div className="max-w-[80%] items-end text-right">
         <div className={`inline-block rounded-xl px-3.5 py-2.5 text-sm text-left ${failed ? 'bg-red-50 text-gray-800 ring-1 ring-red-200' : 'bg-blue-50/70 text-gray-500'}`}>
           {p.body}
+          {p.attachments && p.attachments.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {p.attachments.map((a, i) => (
+                <div key={`${a.name}-${i}`} className="flex items-center gap-1.5 text-[12px] text-gray-400">
+                  <IconPaperclip className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate max-w-[180px]">{a.name}</span>
+                  <span>· {formatBytes(a.size)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         {failed ? (
           <p className="text-[11px] text-red-600 mt-1 flex items-center justify-end gap-2">
@@ -323,25 +349,108 @@ function TypingBubble() {
   );
 }
 
-/** Attachment metadata chips (display-only — HeyQ owns capture). */
-function AttachmentList({ attachments }: { attachments: HeyQAttachment[] }) {
+/**
+ * Attachment chips inside a message. A real uploaded attachment (it has an `id`,
+ * and we know the requester identity) becomes an authorized download link, with an
+ * inline thumbnail/preview for images and PDFs; anything else offers a download.
+ * Metadata-only attachments (no id) stay static chips.
+ */
+function AttachmentList({ attachments, ticketId, who }: { attachments: HeyQAttachment[]; ticketId: string; who: HeyQRequesterIdentity | null }) {
   return (
-    <div className="mt-2 space-y-1">
-      {attachments.map((a, i) => (
-        <div key={`${a.name}-${i}`} className="flex items-center gap-1.5 text-[12px] text-gray-500">
-          <IconPaperclip className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="truncate">{a.name}</span>
-          <span className="text-gray-400">· {formatBytes(a.size)}</span>
-        </div>
-      ))}
+    <div className="mt-2 space-y-1.5">
+      {attachments.map((a, i) => {
+        if (!a.id || !who) {
+          return (
+            <div key={`${a.name}-${i}`} className="flex items-center gap-1.5 text-[12px] text-gray-500">
+              <IconPaperclip className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">{a.name}</span>
+              <span className="text-gray-400">· {formatBytes(a.size)}</span>
+            </div>
+          );
+        }
+        const previewable = isPreviewable(a.type);
+        const isImage = a.type.startsWith('image/');
+        return (
+          <div key={a.id} className="space-y-1">
+            <a
+              href={buildAttachmentUrl(who, ticketId, a.id)}
+              download={a.name}
+              className="inline-flex items-center gap-1.5 text-[12px] text-blue-600 hover:underline"
+            >
+              <IconPaperclip className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate max-w-[180px]">{a.name}</span>
+              <span className="text-gray-400">· {formatBytes(a.size)}</span>
+              <IconDownload className="w-3.5 h-3.5 flex-shrink-0" />
+            </a>
+            {previewable && (
+              isImage ? (
+                <a href={buildAttachmentUrl(who, ticketId, a.id, true)} target="_blank" rel="noreferrer" className="block w-fit">
+                  <img
+                    src={buildAttachmentUrl(who, ticketId, a.id, true)}
+                    alt={a.name}
+                    className="max-h-40 max-w-[200px] rounded-lg border border-gray-200 object-contain"
+                  />
+                </a>
+              ) : (
+                <a
+                  href={buildAttachmentUrl(who, ticketId, a.id, true)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-block text-[11px] font-medium text-blue-600 hover:underline"
+                >
+                  Preview
+                </a>
+              )
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function formatBytes(bytes: number): string {
-  if (!bytes || bytes < 1024) return `${bytes || 0} B`;
-  const kb = bytes / 1024;
-  return kb < 1024 ? `${Math.round(kb)} KB` : `${(kb / 1024).toFixed(1)} MB`;
+/**
+ * A ticket's consolidated attachment list, derived from the conversation messages
+ * (deduped by attachment id) so it stays live without a separate fetch — a file
+ * shared in any message shows here exactly once, with a link to download it and a
+ * note of which message it came from.
+ */
+function ConsolidatedAttachments({
+  messages, ticketId, who,
+}: { messages: CustomerTicketMessage[]; ticketId: string; who: HeyQRequesterIdentity | null }) {
+  const seen = new Set<string>();
+  const items: { att: HeyQAttachment; from: string }[] = [];
+  for (const m of messages) {
+    for (const a of m.attachments ?? []) {
+      if (!a.id || seen.has(a.id)) continue; // one row per file — never duplicated
+      seen.add(a.id);
+      items.push({ att: a, from: m.authorLabel });
+    }
+  }
+  if (items.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>Attachments ({items.length})</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        {items.map(({ att, from }) => (
+          <div key={att.id} className="flex items-start gap-2.5">
+            <IconPaperclip className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              {who && att.id ? (
+                <a href={buildAttachmentUrl(who, ticketId, att.id)} download={att.name} className="text-blue-600 font-medium hover:underline break-all">
+                  {att.name}
+                </a>
+              ) : (
+                <span className="text-gray-800 font-medium break-all">{att.name}</span>
+              )}
+              <p className="text-[11px] text-gray-400">{formatBytes(att.size)} · shared by {from}</p>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
 }
 
 /** Live-connection status chip in the Conversation header. */

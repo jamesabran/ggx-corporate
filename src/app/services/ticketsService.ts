@@ -50,7 +50,7 @@ export {
 };
 
 // Re-exported so pages have one import site for the HeyQ handoff + report actions.
-export { openHeyQContact, startOrderHandoff, getLiveOrderStatus, submitOrderReport, REPORT_CONCERN_OPTIONS, getRequesterIdentity } from './heyqService';
+export { openHeyQContact, startOrderHandoff, getLiveOrderStatus, submitOrderReport, getAttachmentUrl, buildAttachmentUrl, REPORT_CONCERN_OPTIONS, getRequesterIdentity } from './heyqService';
 export type { OrderReportInput, HeyQConcernType, HeyQRequesterIdentity } from './heyqService';
 
 // Realtime (live conversation) — the token/URL/event-projection seam. Pages don't
@@ -136,9 +136,10 @@ export async function getTicketById(id: string): Promise<HeyQResult<CustomerTick
   return getMyTicket(id);
 }
 
-/** Post a public reply. In HeyQ this reopens a resolved/closed ticket. */
-export async function replyToTicket(id: string, body: string): Promise<HeyQResult<CustomerTicket>> {
-  return replyToMyTicket(id, body);
+/** Post a public reply, optionally with attachments. In HeyQ this reopens a
+ * resolved/closed ticket. */
+export async function replyToTicket(id: string, body: string, files?: File[]): Promise<HeyQResult<CustomerTicket>> {
+  return replyToMyTicket(id, body, files);
 }
 
 /** Reopen a resolved/closed ticket. */

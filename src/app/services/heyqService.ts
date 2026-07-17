@@ -38,12 +38,13 @@ import {
   apiReopenMyTicket,
   apiCreateTicket,
   apiMintRealtimeToken,
+  buildAttachmentUrl,
   getHeyQApiBaseUrl,
   projectRealtimeMessage,
   type RealtimeToken,
 } from './heyqCustomerApi';
 
-export { projectRealtimeMessage } from './heyqCustomerApi';
+export { projectRealtimeMessage, buildAttachmentUrl } from './heyqCustomerApi';
 
 // ── HeyQ contract types (owned by HeyQ; mirrored here for the adapter) ────────
 // HeyQ's requester-facing vocabulary. Previously shared from the in-process mock;
@@ -145,8 +146,10 @@ export type HeyQResult<T> =
 
 // ── Customer-facing view models ──────────────────────────────────────────────
 
-/** Customer-safe attachment METADATA (name/size/type) on a public message. */
+/** Customer-safe attachment METADATA on a public message. `id` is present for
+ * real uploaded attachments and lets the UI build an authorized download URL. */
 export interface HeyQAttachment {
+  id?: string;
   name: string;
   size: number;
   type: string;
@@ -355,6 +358,20 @@ export interface OrderReportInput {
   concernType: HeyQConcernType;
   subject: string;
   description: string;
+  /** Files attached in the report drawer (uploaded with the ticket on submit). */
+  files?: File[];
+}
+
+/**
+ * Authorized download/preview URL for one of a ticket's attachments, for the
+ * signed-in requester. Resolves identity through the same path as every other
+ * read; returns null when unauthenticated. `inline` requests inline rendering
+ * (HeyQ serves only images/PDFs inline and forces a download otherwise).
+ */
+export async function getAttachmentUrl(ticketId: string, attachmentId: string, inline = false): Promise<string | null> {
+  const who = await getRequesterIdentity();
+  if (!who) return null;
+  return buildAttachmentUrl(who, ticketId, attachmentId, inline);
 }
 
 /**
@@ -388,6 +405,7 @@ export async function submitOrderReport(input: OrderReportInput): Promise<HeyQRe
       snapshot: authorized.data.snapshot,
       capturedAt: new Date().toISOString(),
     },
+    files: input.files,
   });
 }
 
@@ -407,14 +425,16 @@ export async function getMyTicket(id: string): Promise<HeyQResult<CustomerTicket
   return apiGetMyTicket(who, id);
 }
 
-/** Post a public reply. Replying to a resolved/closed ticket reopens it in HeyQ. */
+/** Post a public reply, optionally with file attachments. Replying to a
+ * resolved/closed ticket reopens it in HeyQ. */
 export async function replyToMyTicket(
   id: string,
   body: string,
+  files?: File[],
 ): Promise<HeyQResult<CustomerTicket>> {
   const who = await getRequesterIdentity();
   if (!who) return { status: 'forbidden' };
-  return apiReplyToMyTicket(who, id, body);
+  return apiReplyToMyTicket(who, id, body, files);
 }
 
 /** Reopen a resolved/closed ticket. HeyQ owns the resulting state transition. */

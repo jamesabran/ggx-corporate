@@ -174,9 +174,43 @@ contract is `HeyQ/docs/realtime-conversations.md`.
   same REST read on focus and a short poll — surfacing new tickets, latest-activity
   previews, status, recent-activity ordering, and an **unread** indicator tracked
   client-side (localStorage, per requester; no privileged state).
-- **Attachments:** attachment **metadata** (name/size/type) that arrives on a
-  public message is displayed read-only. Capture is still HeyQ's (the contact
-  form); Business+ adds no upload UI.
+- **Attachments:** files can be attached in the Report an Issue drawer, on a
+  requester reply, and by an agent — see "Attachments" below. Uploaded-file
+  metadata (incl. the stored id) that arrives live on a public message renders as
+  a downloadable chip with inline preview for images/PDFs, so a file attached on
+  the other side appears without a manual refresh.
+
+## Attachments
+
+Files can be attached when creating a ticket (Report an Issue drawer), on a
+requester reply, and on an agent reply. **HeyQ owns validation, storage, and
+authorization** — the Business+ client only stages files and shows early
+validation via a shared policy (`src/app/lib/attachmentPolicy.ts`, mirrored from
+HeyQ's authoritative copy).
+
+- **Allowlist, both extension AND MIME:** images (jpg/jpeg/png/webp/gif),
+  documents (pdf/doc/docx/xls/xlsx/csv/txt), and zip. Executables, scripts,
+  active-content web files (html/svg/xml…), compiled binaries, shortcut/registry
+  files, macro-enabled Office files, misleading double extensions
+  (`invoice.pdf.exe`), MIME/extension mismatches, and password-protected zips are
+  rejected. Max 5 files/submission, 10 MB each.
+- **Upload path:** multipart to the HeyQ customer API — `POST /api/customer/tickets`
+  (creation) and `POST /api/tickets/:id/messages` (reply). Files are validated
+  server-side over the bytes and stored atomically with the message: a rejected
+  batch creates no message and no attachment record (no orphans).
+- **Storage:** HeyQ keeps file metadata (ticket id, message id, uploader, original
+  name, safe server-generated object key, MIME, size, timestamp) against the
+  ticket; bytes live in HeyQ's object store, never in Business+. The object key is
+  server-generated — never the original filename — so there is no path-traversal
+  surface. Storage is swappable behind HeyQ's attachment module.
+- **Download/preview:** `GET /api/customer/tickets/:id/attachments/:attId`
+  (identity-scoped, ticket-authorized). Served as an attachment by default with
+  `X-Content-Type-Options: nosniff`; inline rendering only for validated images
+  and PDFs. Business+ builds the URL with `buildAttachmentUrl(identity, …)`.
+- **Consolidated list:** the ticket detail shows one deduped attachment collection
+  derived from the conversation, each row noting the message it came from; a live
+  attachment joins it without a refresh (`GET /api/customer/tickets/:id/attachments`
+  is the API equivalent).
 
 ## Deferred to production
 
@@ -184,6 +218,7 @@ contract is `HeyQ/docs/realtime-conversations.md`.
 - Per-user authorization; today HeyQ scopes reads by account/identity, and the
   OMS order check is account-scope only.
 - HeyQ-emitted notifications/events (a support notification is currently seeded).
-- Attachments on tickets (HeyQ's contact form owns capture).
+- Durable object storage + malware scanning (HeyQ's attachment store is in-memory
+  at the mock stage; the module is swappable for S3/GCS).
 - A customer-facing portal deep-link (would require HeyQ to issue the owner a
   portal token over the customer surface).

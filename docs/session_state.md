@@ -3,6 +3,39 @@
 > Lightweight resume/checkpoint file. Detailed June 2026 history was archived to
 > `docs/archive/session_log_2026-06.md`.
 
+## Most Recent Work — Ticket attachments across Business+ + HeyQ (2026-07-17)
+
+Attachment support added end to end for the support flow. **HeyQ owns validation,
+storage, and authorization** (it owns attachments); Business+ stages files with a
+mirrored client policy and downloads through authorized URLs. Full write-up:
+`docs/heyq_integration.md` → "Attachments".
+
+- **Shared policy** `src/app/lib/attachmentPolicy.ts` (both repos, kept in sync):
+  extension+MIME allowlist, 5-file / 10-MB caps, double-extension + MIME-mismatch
+  rejection, previewable-type list; HeyQ adds byte-level encrypted-zip rejection.
+- **HeyQ backend (repo `../HeyQ`):** new `server/attachments.ts` (in-memory blob
+  store keyed by a safe server-generated object key + metadata in the seed store)
+  and `server/multipart.ts` (dependency-free parser). Reply/create routes accept
+  multipart and validate BEFORE creating anything (atomic — no orphaned message or
+  record). New routes: consolidated list + identity-scoped download/preview
+  (`attachment` disposition + `nosniff` by default; inline only for images/PDFs).
+  `TicketAttachment` model + `MockAttachment.id`. Agent composer, ChatThread
+  (download links + inline preview), `ticketService` upload helpers.
+- **Business+:** `components/AttachmentInput.tsx` (shared picker), Report drawer +
+  ticket reply composer upload files (multipart via `heyqCustomerApi`), messages
+  render downloadable chips + inline preview, a deduped **consolidated attachments**
+  card derived from the conversation, and live attachments carry their id through
+  `projectRealtimeMessage` so a file attached on the other side is downloadable
+  without a refresh.
+- **Tests:** HeyQ `server/attachments.test.ts` (+15: creation/reply/agent uploads,
+  5-file & 10-MB caps, blocked ext, MIME mismatch, double extension, encrypted zip,
+  no-orphan-on-failure, authorized + cross-ticket download). Business+
+  `tests/heyq-attachments.test.mjs` (+6: shared policy, multipart create/reply,
+  identity-scoped URL, realtime id passthrough). HeyQ **302/302** + lint clean;
+  Business+ **50/50**. Both typecheck + build green.
+- **Not pushed/redeployed at write time** (see git); the live Railway HeyQ API must
+  redeploy for the deployed E2E path.
+
 ## Most Recent Work — HeyQ realtime live conversations (2026-07-16)
 
 Business+ ticket conversations now update **live** over HeyQ's realtime WebSocket

@@ -6,6 +6,7 @@ import {
 import { Button } from './ui/Button';
 import { Select } from './ui/Select';
 import { Badge } from './ui/Badge';
+import { AttachmentInput } from './AttachmentInput';
 import {
   submitOrderReport, REPORT_CONCERN_OPTIONS, type CustomerTicket, type HeyQConcernType,
 } from '../services/ticketsService';
@@ -39,6 +40,7 @@ export function ReportIssueDrawer({ open, onClose, order }: ReportIssueDrawerPro
   const [concernType, setConcernType] = useState<HeyQConcernType>('delivery_delay');
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
   const [phase, setPhase] = useState<Phase>({ kind: 'form' });
 
   // Reset to a clean form each time the drawer opens for a (possibly different) order.
@@ -47,6 +49,7 @@ export function ReportIssueDrawer({ open, onClose, order }: ReportIssueDrawerPro
       setConcernType('delivery_delay');
       setSubject(`Issue with order ${order.trackingNumber}`);
       setDescription('');
+      setFiles([]);
       setPhase({ kind: 'form' });
     }
   }, [open, order.trackingNumber]);
@@ -66,6 +69,7 @@ export function ReportIssueDrawer({ open, onClose, order }: ReportIssueDrawerPro
       concernType,
       subject: subject.trim(),
       description: description.trim(),
+      files: files.length ? files : undefined,
     });
     if (res.status === 'ok') setPhase({ kind: 'success', ticket: res.data });
     else setPhase({ kind: 'error', message: FAILURE_MESSAGE[res.status] }); // form values are preserved
@@ -157,6 +161,13 @@ export function ReportIssueDrawer({ open, onClose, order }: ReportIssueDrawerPro
                   onChange={(e) => setDescription(e.target.value)}
                   disabled={submitting}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Attachments <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <AttachmentInput value={files} onChange={setFiles} disabled={submitting} />
               </div>
             </div>
 
