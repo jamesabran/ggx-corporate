@@ -105,15 +105,18 @@ export async function addHeyQApiStubScript(page, tickets) {
       const method = (init?.method ?? 'GET').toUpperCase();
       const path = new URL(u, 'http://x').pathname;
 
-      // Create (embedded report drawer).
+      // Create (embedded report drawer). Body is JSON for text-only submissions.
       if (method === 'POST' && path.endsWith('/api/customer/tickets')) {
-        const body = init?.body ? JSON.parse(init.body) : {};
+        let body = {};
+        try { body = init?.body ? JSON.parse(init.body) : {}; } catch { body = {}; }
+        const linkedTransactions = body.linkedTransactions;
         const now = new Date().toISOString();
         return json({
           id: 'tkt-created-1', reference: 'HQ-2026-9001', subject: body.subject,
           concernType: body.concernType, issueType: 'Reported issue', status: 'open',
           priority: 'normal', supportTeam: 'Customer Support', createdAt: now, updatedAt: now,
-          openedBySupport: false, canReopen: false, linkedOrder: body.linkedOrder,
+          openedBySupport: false, canReopen: false,
+          linkedOrder: linkedTransactions?.[0], linkedTransactions,
           messages: [{ id: 'm1', from: 'you', authorLabel: 'You', body: body.description, createdAt: now }],
         });
       }

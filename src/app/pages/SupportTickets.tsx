@@ -6,14 +6,14 @@ import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
-import { Alert } from '../components/ui/Alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
+import { ReportIssueDrawer } from '../components/ReportIssueDrawer';
 // Tickets live in HeyQ. This page reads them through the ticketsService façade
-// (over the heyqService adapter) and hands off to HeyQ for anything that WRITES
-// a ticket — creation, replies, status, resolution and reopening are HeyQ's.
+// (over the heyqService adapter). Creating a ticket happens IN PLACE via the
+// Report an Issue drawer (which posts to HeyQ's customer API) — no redirect to
+// HeyQ. Replies, status, resolution and reopening remain HeyQ's.
 import {
   getTicketsList,
-  openHeyQContact,
   getRequesterIdentity,
   TICKET_STATUS_META,
   TICKET_PRIORITY_META,
@@ -36,7 +36,9 @@ export function SupportTickets() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [handedOff, setHandedOff] = useState(false);
+  // The in-app Report an Issue drawer — opened by "Submit a Ticket". No preselected
+  // transaction here (the user picks affected transactions inside the drawer).
+  const [reportOpen, setReportOpen] = useState(false);
 
   // Ticket list loaded from HeyQ. Reloaded on focus AND on a short poll so agent
   // replies, new tickets and status changes surface without a manual refresh.
@@ -58,17 +60,13 @@ export function SupportTickets() {
   // Recompute unread (and seed first-seen baselines) whenever the list changes.
   useEffect(() => { setUnread(computeUnread(scope, tickets)); }, [tickets, scope]);
 
-  // Deep-link from notifications / dashboard: ?new=1 starts a general ticket.
+  // Deep-link from notifications / dashboard: ?new=1 opens the report drawer.
   useEffect(() => {
-    if (searchParams.get('new') === '1') handleSubmitTicket();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (searchParams.get('new') === '1') setReportOpen(true);
   }, [searchParams]);
 
-  /** General support: HeyQ's contact form, no preselected order. */
-  const handleSubmitTicket = () => {
-    openHeyQContact();
-    setHandedOff(true);
-  };
+  /** Open the in-app Report an Issue drawer (no preselected transaction). */
+  const handleSubmitTicket = () => setReportOpen(true);
 
   const summary = useMemo(() => {
     const count = (...s: SupportTicket['status'][]) =>
@@ -92,7 +90,7 @@ export function SupportTickets() {
       const searchOk =
         q.length < 2 ||
         t.id.toLowerCase().includes(q) ||
-        t.trackingNumber.toLowerCase().includes(q) ||
+        t.trackingNumbers.some((n) => n.toLowerCase().includes(q)) ||
         t.subject.toLowerCase().includes(q);
       const statusOk = statusFilter === 'all' || t.status === statusFilter;
       const typeOk = typeFilter === 'all' || t.issueType === typeFilter;
@@ -123,13 +121,6 @@ export function SupportTickets() {
           Submit a Ticket
         </Button>
       </div>
-
-      {handedOff && (
-        <Alert variant="info" title="Continue in GGX Support">
-          We opened GGX Support in a new tab. Once you submit there, your ticket appears in this
-          list — it refreshes when you come back to this tab.
-        </Alert>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard label="Open Tickets" value={String(summary.open)}       sub="Awaiting response"   icon={IconMessage}     iconBg="bg-orange-50"  iconColor="text-orange-600" />
@@ -247,6 +238,14 @@ export function SupportTickets() {
           </div>
         </CardContent>
       </Card>
+
+      {/* In-app report drawer — creates the ticket via HeyQ's customer API without
+          leaving Business+. On success we refresh the list so the new ticket shows. */}
+      <ReportIssueDrawer
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        onSubmitted={reloadTickets}
+      />
     </div>
   );
 }

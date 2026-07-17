@@ -96,6 +96,7 @@ interface HeyQApiCustomerTicket {
   resolvedAt?: string;
   reopenedAt?: string;
   linkedOrder?: HeyQApiLinkedOrder;
+  linkedTransactions?: HeyQApiLinkedOrder[];
   messages?: HeyQApiMessage[];
   canReopen: boolean;
 }
@@ -233,6 +234,14 @@ export function projectRealtimeMessage(raw: unknown): CustomerTicketMessage | nu
  * the response has no path into Business+.
  */
 function toCustomerTicket(t: HeyQApiCustomerTicket): CustomerTicket {
+  // Normalize both shapes to one array: the new `linkedTransactions` collection
+  // when present, else the legacy single `linkedOrder` as a one-element list. The
+  // scalar `linkedOrder` is kept (first entry) so any existing reader still works.
+  const linkedTransactions = Array.isArray(t.linkedTransactions) && t.linkedTransactions.length
+    ? t.linkedTransactions.map(toLinkedOrder)
+    : t.linkedOrder
+      ? [toLinkedOrder(t.linkedOrder)]
+      : undefined;
   return {
     id: t.id,
     reference: t.reference,
@@ -246,7 +255,8 @@ function toCustomerTicket(t: HeyQApiCustomerTicket): CustomerTicket {
     updatedAt: t.updatedAt,
     resolvedAt: t.resolvedAt,
     reopenedAt: t.reopenedAt,
-    linkedOrder: t.linkedOrder ? toLinkedOrder(t.linkedOrder) : undefined,
+    linkedOrder: linkedTransactions?.[0],
+    linkedTransactions,
     messages: (t.messages ?? []).map(toMessage),
     canReopen: t.canReopen,
   };
@@ -413,13 +423,17 @@ export interface CreateCustomerTicketInput {
   concernType: HeyQConcernType;
   subject: string;
   description: string;
-  /** Linked order (Business+ OMS shape); mapped to HeyQ's snapshot on the wire. */
-  linkedOrder?: {
+  /**
+   * Linked transactions (Business+ OMS shape), primary/originating first; mapped to
+   * HeyQ's snapshot on the wire. One ticket references all of them. Omit/empty for
+   * a general, unlinked ticket.
+   */
+  linkedTransactions?: {
     externalOrderId: string;
     trackingNumber: string;
     snapshot: HeyQOrderSnapshot;
     capturedAt: string;
-  };
+  }[];
   /** Files attached during ticket creation (uploaded atomically with the ticket). */
   files?: File[];
 }
@@ -433,20 +447,19 @@ export async function apiCreateTicket(
   who: HeyQRequesterIdentity,
   input: CreateCustomerTicketInput,
 ): Promise<HeyQResult<CustomerTicket>> {
-  const linkedOrder = input.linkedOrder
-    ? {
-        externalOrderId: input.linkedOrder.externalOrderId,
-        trackingNumber: input.linkedOrder.trackingNumber,
-        capturedAt: input.linkedOrder.capturedAt,
+  const linkedTransactions = input.linkedTransactions?.length
+    ? input.linkedTransactions.map((o) => ({
+        externalOrderId: o.externalOrderId,
+        trackingNumber: o.trackingNumber,
+        capturedAt: o.capturedAt,
         snapshot: {
-          shipmentStatus:
-            SHIPMENT_TO_HEYQ[input.linkedOrder.snapshot.deliveryStatus] ?? input.linkedOrder.snapshot.deliveryStatus,
-          bookingDate: input.linkedOrder.snapshot.bookedOn,
-          serviceType: input.linkedOrder.snapshot.serviceType,
-          deliverySummary: input.linkedOrder.snapshot.deliverySummary,
-          route: input.linkedOrder.snapshot.route,
+          shipmentStatus: SHIPMENT_TO_HEYQ[o.snapshot.deliveryStatus] ?? o.snapshot.deliveryStatus,
+          bookingDate: o.snapshot.bookedOn,
+          serviceType: o.snapshot.serviceType,
+          deliverySummary: o.snapshot.deliverySummary,
+          route: o.snapshot.route,
         },
-      }
+      }))
     : undefined;
 
   const payload = {
@@ -457,13 +470,13 @@ export async function apiCreateTicket(
     concernType: CONCERN_TO_HEYQ[input.concernType] ?? 'general_inquiry',
     subject: input.subject,
     description: input.description,
-    linkedOrder,
+    linkedTransactions,
   };
 
   let res;
   if (input.files?.length) {
     // Creation WITH attachments — multipart so files upload atomically with the
-    // ticket. Scalar fields become form fields; the linked order rides as JSON.
+    // ticket. Scalar fields become form fields; linked transactions ride as JSON.
     const form = new FormData();
     form.append('externalUserId', payload.externalUserId);
     form.append('externalOrgId', payload.externalOrgId);
@@ -472,7 +485,7 @@ export async function apiCreateTicket(
     form.append('concernType', payload.concernType);
     form.append('subject', payload.subject);
     form.append('description', payload.description);
-    if (linkedOrder) form.append('linkedOrder', JSON.stringify(linkedOrder));
+    if (linkedTransactions) form.append('linkedTransactions', JSON.stringify(linkedTransactions));
     for (const f of input.files) form.append('files', f, f.name);
     res = await postForm('/customer/tickets', form);
   } else {

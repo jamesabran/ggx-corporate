@@ -3,6 +3,43 @@
 > Lightweight resume/checkpoint file. Detailed June 2026 history was archived to
 > `docs/archive/session_log_2026-06.md`.
 
+## Most Recent Work — Multi-transaction reports across Business+ + HeyQ (2026-07-17)
+
+"Submit a Ticket" (Support Tickets) now opens the **existing Report an Issue
+drawer in place** — no redirect to HeyQ / `/contact`. One ticket can link **many**
+transactions. Full write-up: `docs/heyq_integration.md` → "Multiple transactions
+per ticket".
+
+- **Business+ drawer/combobox:** `components/TransactionMultiSelect.tsx` (new,
+  shared) — searchable multi-select over `listAuthorizedTransactions` (account-
+  scoped through OMS; searches tracking #/recipient/destination); removable chips;
+  duplicate prevention; each result shows tracking · status · destination/recipient.
+  `ReportIssueDrawer` reworked: `preselected` + `onSubmitted` props (was `order`);
+  Transaction Details preselects the current transaction, Support Tickets starts
+  empty; unlinked submission allowed; attachment flow preserved; success shows the
+  ticket id, closes, refreshes the list, stays in-app.
+- **Business+ service:** `submitOrderReport` takes `externalOrderIds: string[]`,
+  authorizes EACH via `getAuthorizedOrder` (refuses the whole submission if any is
+  out of scope), builds a `linkedTransactions` array; `apiCreateTicket` sends
+  `linkedTransactions`; `CustomerTicket` + `SupportTicket` carry the collection;
+  list rows show first + "+N more" and keep every number searchable.
+- **HeyQ:** `Ticket`/`CustomerTicket` gain `linkedTransactions?: LinkedOrder[]`
+  (+ `linkedOrdersOf` helper); `linkedOrder` mirrors the first for back-compat. OMS
+  stays source of truth; snapshots minimal. Server create (`businessPlusContext.
+  linkedTransactions`), customer projection, `POST /customer/tickets` route, and
+  `searchCorpus`/`trackingNumbersFor` (all numbers searchable, list item
+  `trackingNumbers`) updated. Agent UI: new `LinkedTransactionsPanel` (count
+  heading, ≤3 compact rows tracking·status·origin→destination, "View all", per-
+  transaction modal reusing `LinkedOrderPanel` — one at a time, never leaving the
+  ticket; primary/originating shown first). `TicketTable` shows "+N more".
+- **Tests:** Business+ **54/54** (`npm test`) — new adapter multi/unlinked/whole-
+  refusal/single-ticket/response-mapping + DOM drawer-opens-without-nav, preselect,
+  combobox search/multi-select/duplicate-prevention, unlinked submit. HeyQ
+  **307/307** (`vitest run`) incl. new `server/businessPlusMultiTransaction.test.ts`
+  (creation, back-compat, unlinked, projection, list display + all-tracking search).
+  Both typecheck + build green; HeyQ lint clean; Business+ has no ESLint.
+- **Not pushed/redeployed at write time** unless noted below in git.
+
 ## Most Recent Work — Ticket attachments across Business+ + HeyQ (2026-07-17)
 
 Attachment support added end to end for the support flow. **HeyQ owns validation,

@@ -58,16 +58,42 @@ hands out a portal access token (a reference must not grant access). Business+
 therefore shows each ticket in its own in-app detail page (the mirror), with a
 working reply box and Reopen; there is no "open the HeyQ portal by token" action.
 
-Ticket **creation** happens two ways, both server-side in HeyQ:
+Ticket **creation** always happens **in the report drawer**, server-side in HeyQ —
+Business+ never redirects to HeyQ or opens `/contact` to create a ticket:
 
-- **In-app report drawer** (Transaction Details → "Report an issue"): submits
-  directly to `POST /api/customer/tickets` via `submitOrderReport`, staying inside
-  Business+. The order is authorized through the OMS boundary FIRST, then the
-  identity + OMS snapshot are sent; HeyQ trusts them (Business+ owns order
-  authorization) and returns the customer projection. The created ticket is
-  order-linked and immediately visible in Support Tickets (same identity scope).
-- **General "Submit a Ticket"** (Support Tickets page, no order): still hands off
-  to HeyQ's own `/contact` form via `buildContactUrl`.
+- **Report an Issue drawer** (opened from Transaction Details **and** from Support
+  Tickets → "Submit a Ticket"): submits directly to `POST /api/customer/tickets`
+  via `submitOrderReport`, staying inside Business+. From Transaction Details the
+  current transaction is **preselected**; from Support Tickets nothing is
+  preselected. On success the drawer closes with the ticket id, the list refreshes,
+  and the user stays in Business+.
+- **`buildContactUrl` / the `/contact` handoff still exists** for other entry
+  points but is no longer how "Submit a Ticket" behaves.
+
+### Multiple transactions per ticket
+
+One ticket may reference **many** transactions (the drawer's searchable
+multi-select combobox, `TransactionMultiSelect`):
+
+- The combobox searches by tracking number (plus recipient/destination) over only
+  the transactions **authorized for the current account/subaccount** —
+  `listAuthorizedTransactions` scopes through the OMS boundary
+  (`getTransactionsBySubaccountId`), the same account-scope rule
+  `getAuthorizedOrder` enforces. Selections show as removable chips; duplicates are
+  prevented; each result shows tracking number, delivery status, and a short
+  destination/recipient reference.
+- `submitOrderReport` takes `externalOrderIds: string[]` and authorizes **every**
+  selected order against OMS before creating anything — if any is out of scope the
+  **whole submission is refused** (never partially linked). An **empty** list is
+  allowed: a general, unlinked ticket for non-order-specific concerns.
+- **One** ticket is created for all selected transactions (not one per). On the
+  wire the create payload carries `linkedTransactions` (primary/originating first);
+  HeyQ stores the collection and mirrors the first into `linkedOrder` for backward
+  compatibility. The customer projection returns `linkedTransactions` (plus
+  `linkedOrder` = the first). Existing single-transaction tickets keep working.
+- **Support Tickets list:** a single linked transaction shows its tracking number;
+  several show the first plus "+N more". **All** linked tracking numbers stay
+  searchable (`SupportTicket.trackingNumbers`).
 
 The standalone HeyQ contact form is unchanged for direct HeyQ users.
 

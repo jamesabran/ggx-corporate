@@ -264,7 +264,7 @@ describe('submitting an order report (create via the customer API)', () => {
   it('authorizes the order via OMS, then POSTs a mapped payload to /customer/tickets', async () => {
     const { result, calls } = await withStub(
       (svc) => svc.submitOrderReport({
-        externalOrderId: 'GGX-2026-90008',
+        externalOrderIds: ['GGX-2026-90008'],
         concernType: 'failed_delivery', // Business+ concern → HeyQ delivery_delay
         subject: 'Delivery failed',
         description: 'Recipient was available.',
@@ -280,14 +280,52 @@ describe('submitting an order report (create via the customer API)', () => {
     assert.equal(body.externalOrgId, 'main');
     assert.equal(body.concernType, 'delivery_delay'); // mapped from failed_delivery
     assert.equal(body.subject, 'Delivery failed');
-    assert.equal(body.linkedOrder.trackingNumber, 'GGX-2026-90008');
-    assert.equal(body.linkedOrder.snapshot.shipmentStatus, 'failed_delivery'); // OMS 'failed' → HeyQ
+    // Multi-transaction wire shape: a linkedTransactions array (one entry here).
+    assert.equal(body.linkedTransactions.length, 1);
+    assert.equal(body.linkedTransactions[0].trackingNumber, 'GGX-2026-90008');
+    assert.equal(body.linkedTransactions[0].snapshot.shipmentStatus, 'failed_delivery'); // OMS 'failed' → HeyQ
   });
 
-  it('refuses an out-of-scope / unknown order at the OMS gate — no ticket is created', async () => {
+  it('creates ONE ticket linking ALL selected transactions (not one per transaction)', async () => {
     const { result, calls } = await withStub(
       (svc) => svc.submitOrderReport({
-        externalOrderId: 'GGX-9999-00000',
+        externalOrderIds: ['GGX-2026-90008', 'GGX-2026-90009'],
+        concernType: 'general_inquiry',
+        subject: 'Two affected orders',
+        description: 'Both delayed.',
+      }),
+      { response: CREATED },
+    );
+    assert.equal(result.status, 'ok');
+    const posts = creates(calls);
+    assert.equal(posts.length, 1, 'exactly one ticket is created for all transactions');
+    const body = JSON.parse(posts[0].body);
+    // Order preserved: the primary/originating transaction stays first.
+    assert.deepEqual(body.linkedTransactions.map((o) => o.trackingNumber), ['GGX-2026-90008', 'GGX-2026-90009']);
+  });
+
+  it('allows an UNLINKED submission (general concern) — no linked transactions', async () => {
+    const { result, calls } = await withStub(
+      (svc) => svc.submitOrderReport({
+        externalOrderIds: [],
+        concernType: 'billing_issue',
+        subject: 'Billing question',
+        description: 'Not about a specific order.',
+      }),
+      { response: { ...CREATED, linkedOrder: undefined } },
+    );
+    assert.equal(result.status, 'ok');
+    const posts = creates(calls);
+    assert.equal(posts.length, 1);
+    const body = JSON.parse(posts[0].body);
+    assert.equal(body.linkedTransactions, undefined, 'a general ticket carries no linked transactions');
+  });
+
+  it('refuses the WHOLE submission if ANY selected order is out of scope — no ticket is created', async () => {
+    const { result, calls } = await withStub(
+      (svc) => svc.submitOrderReport({
+        // First is authorized, second is unknown: the whole submission must fail.
+        externalOrderIds: ['GGX-2026-90008', 'GGX-9999-00000'],
         concernType: 'general_inquiry',
         subject: 'x',
         description: 'y',
@@ -295,7 +333,32 @@ describe('submitting an order report (create via the customer API)', () => {
       { response: CREATED },
     );
     assert.equal(result.status, 'not_found');
-    assert.equal(creates(calls).length, 0, 'no create request may be sent when the order is not authorized');
+    assert.equal(creates(calls).length, 0, 'no create request may be sent when any order is unauthorized');
+  });
+});
+
+describe('multi-transaction response mapping', () => {
+  const MULTI = {
+    id: 'tkt_multi', reference: 'HQ-7777', subject: 'Two orders',
+    issueType: 'General inquiry', status: 'open', priority: 'normal', supportTeam: 'Customer Support',
+    createdAt: '2026-07-15T00:00:00Z', updatedAt: '2026-07-15T00:00:00Z', canReopen: false,
+    linkedTransactions: [
+      { externalOrderId: 'GGX-2026-90008', trackingNumber: 'GGX-2026-90008', capturedAt: '2026-07-15T00:00:00Z',
+        snapshot: { shipmentStatus: 'in_transit', bookingDate: '2026-05-31', route: 'Metro Manila → Pasig City' } },
+      { externalOrderId: 'GGX-2026-90009', trackingNumber: 'GGX-2026-90009', capturedAt: '2026-07-15T00:00:00Z',
+        snapshot: { shipmentStatus: 'delivered', bookingDate: '2026-05-30', route: 'Makati City → Cebu City' } },
+    ],
+    messages: [],
+  };
+
+  it('maps a linkedTransactions array and mirrors the first into linkedOrder', async () => {
+    const { result } = await withStub((svc) => svc.getMyTicket('tkt_multi'), { response: MULTI });
+    assert.equal(result.status, 'ok');
+    assert.equal(result.data.linkedTransactions.length, 2);
+    assert.deepEqual(result.data.linkedTransactions.map((o) => o.trackingNumber), ['GGX-2026-90008', 'GGX-2026-90009']);
+    // Back-compat: linkedOrder is the primary (first) transaction.
+    assert.equal(result.data.linkedOrder.trackingNumber, 'GGX-2026-90008');
+    assert.equal(result.data.linkedTransactions[1].snapshot.deliveryStatusLabel, 'Delivered');
   });
 });
 

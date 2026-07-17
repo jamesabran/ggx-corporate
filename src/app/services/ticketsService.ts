@@ -50,8 +50,8 @@ export {
 };
 
 // Re-exported so pages have one import site for the HeyQ handoff + report actions.
-export { openHeyQContact, startOrderHandoff, getLiveOrderStatus, submitOrderReport, getAttachmentUrl, buildAttachmentUrl, REPORT_CONCERN_OPTIONS, getRequesterIdentity } from './heyqService';
-export type { OrderReportInput, HeyQConcernType, HeyQRequesterIdentity } from './heyqService';
+export { openHeyQContact, startOrderHandoff, getLiveOrderStatus, submitOrderReport, listAuthorizedTransactions, getAttachmentUrl, buildAttachmentUrl, REPORT_CONCERN_OPTIONS, getRequesterIdentity } from './heyqService';
+export type { OrderReportInput, AuthorizedTransactionOption, HeyQConcernType, HeyQRequesterIdentity } from './heyqService';
 
 // Realtime (live conversation) — the token/URL/event-projection seam. Pages don't
 // touch heyqService directly for realtime; they go through the client + hook,
@@ -75,8 +75,14 @@ export type {
 export interface SupportTicket {
   id: string;
   reference: string;
-  /** Linked OMS order (stable order id). '—' when the ticket has no order. */
+  /**
+   * Compact linked-order display: the primary tracking number, plus "+N more" when
+   * the ticket links several. '—' when the ticket has no order. Every linked number
+   * stays searchable via `trackingNumbers`.
+   */
   trackingNumber: string;
+  /** Every linked tracking number (primary first). Drives search across all of them. */
+  trackingNumbers: string[];
   issueType: string;
   subject: string;
   /** SUPPORT status — not the order's delivery status. */
@@ -89,11 +95,25 @@ export interface SupportTicket {
   canReopen: boolean;
 }
 
+/** "GGX-1 +2 more" for a multi-transaction ticket, the bare number for one, '—' for none. */
+function compactTracking(numbers: string[]): string {
+  if (numbers.length === 0) return '—';
+  if (numbers.length === 1) return numbers[0];
+  return `${numbers[0]} +${numbers.length - 1} more`;
+}
+
 function toRow(t: CustomerTicket): SupportTicket {
+  const trackingNumbers = (t.linkedTransactions?.length
+    ? t.linkedTransactions
+    : t.linkedOrder
+      ? [t.linkedOrder]
+      : []
+  ).map((o) => o.trackingNumber);
   return {
     id: t.id,
     reference: t.reference,
-    trackingNumber: t.linkedOrder?.trackingNumber ?? '—',
+    trackingNumber: compactTracking(trackingNumbers),
+    trackingNumbers,
     issueType: t.issueType,
     subject: t.subject,
     status: t.status,
@@ -124,7 +144,7 @@ export async function getTicketsList(filters?: TicketFilters): Promise<SupportTi
     rows = rows.filter(
       (t) =>
         t.id.toLowerCase().includes(q) ||
-        t.trackingNumber.toLowerCase().includes(q) ||
+        t.trackingNumbers.some((n) => n.toLowerCase().includes(q)) ||
         t.subject.toLowerCase().includes(q),
     );
   }

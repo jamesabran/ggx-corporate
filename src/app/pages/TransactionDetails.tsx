@@ -698,11 +698,16 @@ export function TransactionDetails() {
       <ReportIssueDrawer
         open={reportOpen}
         onClose={() => setReportOpen(false)}
-        order={{
-          externalOrderId: transaction.trackingNumber,
-          trackingNumber: transaction.trackingNumber,
-          statusLabel: status.label,
-        }}
+        preselected={[
+          {
+            externalOrderId: transaction.trackingNumber,
+            trackingNumber: transaction.trackingNumber,
+            statusKey: transaction.status,
+            statusLabel: status.label,
+            statusVariant: status.variant,
+            reference: transaction.destination || transaction.recipient.name,
+          },
+        ]}
       />
 
       {/* Proof of delivery / pickup mock */}

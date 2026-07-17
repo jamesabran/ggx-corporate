@@ -28,7 +28,7 @@
  * Business+ page. Agent actions belong to the HeyQ agent app.
  */
 
-import { getTransactionById, statusConfig, serviceTypeLabel } from './transactionService';
+import { getTransactionById, getTransactionsBySubaccountId, statusConfig, serviceTypeLabel } from './transactionService';
 import { getSessionContext } from './authService';
 import { getAccountIdByName } from '../data/accounts';
 import {
@@ -106,6 +106,24 @@ export interface HeyQOrderSnapshot {
   route: string;
   /** Booking date (the relevant date for support context). */
   bookedOn: string;
+}
+
+/**
+ * A single option in the report drawer's transaction combobox. OMS-derived and
+ * scoped to the caller's account — enough to recognize the order (tracking number,
+ * status, a short destination/recipient reference) and link it to a ticket.
+ */
+export interface AuthorizedTransactionOption {
+  /** Stable OMS order id (the tracking number). */
+  externalOrderId: string;
+  trackingNumber: string;
+  /** OMS delivery-status key (for the badge palette). */
+  statusKey: string;
+  statusLabel: string;
+  /** Badge variant for the delivery status, so the UI needn't import statusConfig. */
+  statusVariant: BadgeVariant;
+  /** Short destination or recipient reference for the result row. */
+  reference: string;
 }
 
 /** A ticket's link to an OMS order: stable id + snapshot. Reference data only. */
@@ -188,8 +206,13 @@ export interface CustomerTicket {
   updatedAt: string;
   resolvedAt?: string;
   reopenedAt?: string;
-  /** Present only for order-linked tickets. Snapshot may be absent (see below). */
+  /** Primary/first linked order — legacy mirror of `linkedTransactions[0]`. */
   linkedOrder?: HeyQLinkedOrder;
+  /**
+   * All linked transactions (primary first). One ticket can reference many. Absent
+   * for a general (unlinked) ticket; a one-element array for a single-order ticket.
+   */
+  linkedTransactions?: HeyQLinkedOrder[];
   messages: CustomerTicketMessage[];
   /** Requesters may reopen a resolved/closed ticket. */
   canReopen: boolean;
@@ -283,6 +306,40 @@ export async function getAuthorizedOrder(
   };
 }
 
+/**
+ * The transactions the signed-in requester may reference in a report, optionally
+ * narrowed by a query. Scoped by account through the OMS boundary — Admin (`main`)
+ * sees every account, a Manager only their subaccount — the same rule
+ * `getAuthorizedOrder` enforces per order. The query matches tracking number
+ * first (the primary search key), plus recipient and destination for convenience.
+ * Results are capped so the combobox never renders an unbounded list.
+ */
+export async function listAuthorizedTransactions(
+  query?: string,
+  limit = 20,
+): Promise<AuthorizedTransactionOption[]> {
+  const who = await getRequesterIdentity();
+  if (!who) return [];
+  const summaries = await getTransactionsBySubaccountId(who.externalOrgId);
+  const q = query?.trim().toLowerCase() ?? '';
+  const matched = q
+    ? summaries.filter(
+        (t) =>
+          t.tracking.toLowerCase().includes(q) ||
+          t.recipient.toLowerCase().includes(q) ||
+          t.destination.toLowerCase().includes(q),
+      )
+    : summaries;
+  return matched.slice(0, limit).map((t) => ({
+    externalOrderId: t.tracking,
+    trackingNumber: t.tracking,
+    statusKey: t.status,
+    statusLabel: statusConfig[t.status]?.label ?? t.status,
+    statusVariant: (statusConfig[t.status]?.variant ?? 'default') as BadgeVariant,
+    reference: t.destination || t.recipient,
+  }));
+}
+
 type OmsTransaction = NonNullable<Awaited<ReturnType<typeof getTransactionById>>>;
 
 /**
@@ -354,7 +411,12 @@ export async function startOrderHandoff(
 // ── Embedded report submission (creates a ticket via the HeyQ customer API) ──
 
 export interface OrderReportInput {
-  externalOrderId: string;
+  /**
+   * The selected transactions (stable OMS order ids), primary/originating first.
+   * MAY be empty — a general, non-order-specific concern submits with no link.
+   * Every id is authorized against OMS before the ticket is created.
+   */
+  externalOrderIds: string[];
   concernType: HeyQConcernType;
   subject: string;
   description: string;
@@ -375,11 +437,14 @@ export async function getAttachmentUrl(ticketId: string, attachmentId: string, i
 }
 
 /**
- * Submit an order-linked report from inside Business+ (the report drawer). The
- * order is authorized through the OMS boundary FIRST — an out-of-scope order is
- * refused, never submitted — then the ticket is created via HeyQ's customer API
- * with the identity and the OMS-captured snapshot. Returns the created customer
- * ticket so the caller can link straight to it.
+ * Submit a report from inside Business+ (the report drawer). ONE ticket is created
+ * for ALL selected transactions, not one per transaction. Every selected order is
+ * authorized through the OMS boundary FIRST — Business+ owns order authorization,
+ * so this is the server-side gate: if ANY selected order is out of scope the whole
+ * submission is refused (that failure is returned), never partially linked. With no
+ * selected order the ticket is created unlinked (a general concern). Snapshots are
+ * OMS-captured; order is preserved so the primary/originating transaction stays first.
+ * Returns the created customer ticket so the caller can link straight to it.
  */
 export async function submitOrderReport(input: OrderReportInput): Promise<HeyQResult<CustomerTicket>> {
   const session = await getSessionContext();
@@ -389,9 +454,25 @@ export async function submitOrderReport(input: OrderReportInput): Promise<HeyQRe
     externalOrgId: session.accountId,
   };
 
-  // OMS authorization is the gate — Business+ owns it.
-  const authorized = await getAuthorizedOrder(who, input.externalOrderId);
-  if (authorized.status !== 'ok') return authorized;
+  const capturedAt = new Date().toISOString();
+  // Snapshot is REQUIRED on each entry here (unlike the display-only HeyQLinkedOrder,
+  // whose snapshot may be absent) — it is always captured fresh from OMS below.
+  const linkedTransactions: {
+    externalOrderId: string;
+    trackingNumber: string;
+    snapshot: HeyQOrderSnapshot;
+    capturedAt: string;
+  }[] = [];
+  for (const externalOrderId of input.externalOrderIds) {
+    const authorized = await getAuthorizedOrder(who, externalOrderId);
+    if (authorized.status !== 'ok') return authorized; // refuse the whole submission
+    linkedTransactions.push({
+      externalOrderId,
+      trackingNumber: authorized.data.trackingNumber,
+      snapshot: authorized.data.snapshot,
+      capturedAt,
+    });
+  }
 
   return apiCreateTicket(who, {
     name: session.user.name,
@@ -399,12 +480,7 @@ export async function submitOrderReport(input: OrderReportInput): Promise<HeyQRe
     concernType: input.concernType,
     subject: input.subject,
     description: input.description,
-    linkedOrder: {
-      externalOrderId: input.externalOrderId,
-      trackingNumber: authorized.data.trackingNumber,
-      snapshot: authorized.data.snapshot,
-      capturedAt: new Date().toISOString(),
-    },
+    linkedTransactions: linkedTransactions.length ? linkedTransactions : undefined,
     files: input.files,
   });
 }

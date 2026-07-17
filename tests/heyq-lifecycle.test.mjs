@@ -150,12 +150,47 @@ describe('Support Tickets page (reads the HeyQ customer API)', () => {
     assert.equal((await cardValue('Resolved').innerText()).trim(), '1');
   });
 
-  it('Submit a Ticket opens HeyQ with no preselected order', async () => {
+  it('Submit a Ticket opens the in-app report drawer (no HeyQ redirect) and submits unlinked', async () => {
+    await page.goto(`${server.base}/dashboard/support-tickets`, { waitUntil: 'networkidle' });
+    const before = (await handoffs()).length;
+
+    await page.getByRole('button', { name: /submit a ticket/i }).click();
+    // The Report an Issue drawer opens IN PLACE — no navigation, no /contact handoff.
+    await page.getByRole('dialog', { name: /report an issue/i }).waitFor({ state: 'visible', timeout: 10_000 });
+    assert.equal((await handoffs()).length, before, 'must not redirect to HeyQ / open /contact');
+    assert.match(page.url(), /\/dashboard\/support-tickets$/);
+
+    // A general concern submits with no linked transaction and stays in Business+.
+    await page.locator('#report-subject').fill('General billing question');
+    await page.locator('#report-description').fill('Not about a specific order.');
+    await page.getByRole('button', { name: /submit report/i }).click();
+    await page.getByText(/report submitted/i).waitFor({ state: 'visible', timeout: 10_000 });
+    assert.equal((await handoffs()).length, before, 'still no external handoff after submit');
+  });
+
+  it('the affected-transactions combobox searches, multi-selects, and prevents duplicates', async () => {
     await page.goto(`${server.base}/dashboard/support-tickets`, { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: /submit a ticket/i }).click();
-    const url = (await handoffs()).at(-1);
-    assert.match(url, /\/contact$/);
-    assert.doesNotMatch(url, /order=/);
+    const dialog = page.getByRole('dialog', { name: /report an issue/i });
+    await dialog.waitFor({ state: 'visible', timeout: 10_000 });
+
+    const search = dialog.getByPlaceholder(/search transactions by tracking number/i);
+    // Search by tracking number → pick a real, authorized order (admin sees all).
+    await search.click();
+    await search.fill('90009');
+    const option = dialog.getByRole('button', { name: /GGX-2026-90009/i });
+    await option.first().click();
+    // It appears as a removable chip in the selected list.
+    await dialog.getByLabel('Selected transactions').getByText('GGX-2026-90009').waitFor({ timeout: 10_000 });
+
+    // Duplicate prevention: searching the same order again offers no result to add.
+    await search.fill('90009');
+    await dialog.getByText(/no matching transactions/i).waitFor({ timeout: 10_000 });
+
+    // Multi-select: a second distinct order can still be added.
+    await search.fill('90008');
+    await dialog.getByRole('button', { name: /GGX-2026-90008/i }).first().click();
+    await dialog.getByLabel('Selected transactions').getByText('GGX-2026-90008').waitFor({ timeout: 10_000 });
   });
 
   it('View opens the ticket inside Business+ (no external HeyQ portal handoff)', async () => {

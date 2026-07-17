@@ -1,21 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  IconX, IconHeadset, IconSend, IconCircleCheck, IconAlertTriangle, IconPackage,
+  IconX, IconHeadset, IconSend, IconCircleCheck, IconAlertTriangle,
 } from '@tabler/icons-react';
 import { Button } from './ui/Button';
 import { Select } from './ui/Select';
-import { Badge } from './ui/Badge';
 import { AttachmentInput } from './AttachmentInput';
+import { TransactionMultiSelect } from './TransactionMultiSelect';
 import {
-  submitOrderReport, REPORT_CONCERN_OPTIONS, type CustomerTicket, type HeyQConcernType,
+  submitOrderReport, REPORT_CONCERN_OPTIONS,
+  type CustomerTicket, type HeyQConcernType, type AuthorizedTransactionOption,
 } from '../services/ticketsService';
 
 interface ReportIssueDrawerProps {
   open: boolean;
   onClose: () => void;
-  /** The transaction context this report is about (already loaded in Business+). */
-  order: { externalOrderId: string; trackingNumber: string; statusLabel?: string };
+  /**
+   * Transactions to preselect. From Transaction Details this is the current
+   * transaction; from Support Tickets it is empty (start with nothing selected).
+   * The first entry is treated as the primary/originating transaction.
+   */
+  preselected?: AuthorizedTransactionOption[];
+  /** Called with the created ticket after a successful submit (e.g. to refresh a list). */
+  onSubmitted?: (ticket: CustomerTicket) => void;
 }
 
 type Phase =
@@ -25,34 +32,42 @@ type Phase =
   | { kind: 'success'; ticket: CustomerTicket };
 
 const FAILURE_MESSAGE: Record<'forbidden' | 'not_found' | 'unavailable', string> = {
-  forbidden: 'This order isn’t available for support on your account. Check you’re in the right account and try again.',
-  not_found: 'We couldn’t find this order to attach it. Please try again.',
+  forbidden: 'One of the selected transactions isn’t available for support on your account. Remove it and try again.',
+  not_found: 'We couldn’t find one of the selected transactions to attach it. Please try again.',
   unavailable: 'GGX Support is temporarily unreachable. Your details are kept — try again in a moment.',
 };
 
 /**
- * In-app "Report an issue" drawer. Submits an order-linked ticket DIRECTLY to the
- * HeyQ customer API (no redirect to HeyQ's Contact Us page) and keeps the user on
- * the transaction. On success it confirms and links to the created ticket.
+ * In-app "Report an issue" drawer. Reused from both Transaction Details (with the
+ * current transaction preselected) and Support Tickets (no preselection). Submits
+ * ONE ticket for all selected transactions DIRECTLY to the HeyQ customer API (no
+ * redirect to HeyQ), keeps the user inside Business+, and confirms with the ticket
+ * id on success. A report may be submitted with no linked transaction.
  */
-export function ReportIssueDrawer({ open, onClose, order }: ReportIssueDrawerProps) {
+export function ReportIssueDrawer({ open, onClose, preselected, onSubmitted }: ReportIssueDrawerProps) {
   const navigate = useNavigate();
   const [concernType, setConcernType] = useState<HeyQConcernType>('delivery_delay');
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
+  const [transactions, setTransactions] = useState<AuthorizedTransactionOption[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [phase, setPhase] = useState<Phase>({ kind: 'form' });
 
-  // Reset to a clean form each time the drawer opens for a (possibly different) order.
+  // Reset to a clean form each time the drawer opens. Preselection seeds both the
+  // selected transactions and a sensible default subject (only when exactly one is
+  // preselected — a general or multi report keeps the subject open for the user).
   useEffect(() => {
     if (open) {
+      const seed = preselected ?? [];
       setConcernType('delivery_delay');
-      setSubject(`Issue with order ${order.trackingNumber}`);
+      setSubject(seed.length === 1 ? `Issue with order ${seed[0].trackingNumber}` : '');
       setDescription('');
+      setTransactions(seed);
       setFiles([]);
       setPhase({ kind: 'form' });
     }
-  }, [open, order.trackingNumber]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 
@@ -65,14 +80,18 @@ export function ReportIssueDrawer({ open, onClose, order }: ReportIssueDrawerPro
     if (!canSubmit) return; // guards empty input AND blocks duplicate submits
     setPhase({ kind: 'submitting' });
     const res = await submitOrderReport({
-      externalOrderId: order.externalOrderId,
+      externalOrderIds: transactions.map((t) => t.externalOrderId),
       concernType,
       subject: subject.trim(),
       description: description.trim(),
       files: files.length ? files : undefined,
     });
-    if (res.status === 'ok') setPhase({ kind: 'success', ticket: res.data });
-    else setPhase({ kind: 'error', message: FAILURE_MESSAGE[res.status] }); // form values are preserved
+    if (res.status === 'ok') {
+      onSubmitted?.(res.data);
+      setPhase({ kind: 'success', ticket: res.data });
+    } else {
+      setPhase({ kind: 'error', message: FAILURE_MESSAGE[res.status] }); // form values are preserved
+    }
   };
 
   return (
@@ -87,20 +106,12 @@ export function ReportIssueDrawer({ open, onClose, order }: ReportIssueDrawerPro
             </div>
             <div>
               <h2 className="text-base font-semibold text-gray-900">Report an issue</h2>
-              <p className="text-xs text-gray-500">We’ll open a support ticket for this order.</p>
+              <p className="text-xs text-gray-500">We’ll open a support ticket with our team.</p>
             </div>
           </div>
           <button className="text-gray-400 hover:text-gray-600 p-1" onClick={close} aria-label="Close" disabled={submitting}>
             <IconX className="w-5 h-5" />
           </button>
-        </div>
-
-        {/* Order context — always shown so the user knows what they're reporting on. */}
-        <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2.5 text-sm">
-          <IconPackage className="w-4 h-4 text-gray-400 flex-shrink-0" />
-          <span className="text-gray-500">Order</span>
-          <span className="font-medium text-gray-900">{order.trackingNumber}</span>
-          {order.statusLabel && <Badge variant="default">{order.statusLabel}</Badge>}
         </div>
 
         {phase.kind === 'success' ? (
@@ -118,6 +129,16 @@ export function ReportIssueDrawer({ open, onClose, order }: ReportIssueDrawerPro
                   <span>{phase.message}</span>
                 </div>
               )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Affected transactions <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <TransactionMultiSelect value={transactions} onChange={setTransactions} disabled={submitting} />
+                <p className="mt-1.5 text-xs text-gray-400">
+                  Link one or more orders, or leave empty for a general concern.
+                </p>
+              </div>
 
               <div>
                 <label htmlFor="report-concern" className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -145,6 +166,7 @@ export function ReportIssueDrawer({ open, onClose, order }: ReportIssueDrawerPro
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   disabled={submitting}
+                  placeholder="Briefly summarize the issue"
                   maxLength={120}
                 />
               </div>
@@ -201,7 +223,7 @@ function SuccessState({
       </p>
       <div className="flex flex-col w-full max-w-xs gap-2.5 mt-6">
         <Button onClick={onView}>Open ticket</Button>
-        <Button variant="outline" onClick={onDone}>Back to transaction</Button>
+        <Button variant="outline" onClick={onDone}>Done</Button>
       </div>
     </div>
   );
