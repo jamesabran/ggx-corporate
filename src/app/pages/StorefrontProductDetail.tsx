@@ -35,6 +35,51 @@ function variantLabel(product: PublicProductDetail, variant: PublicProductVarian
     .join(' / ');
 }
 
+function isVariantPurchasable(v: PublicProductVariant): boolean {
+  return v.status === 'active' && (v.unlimitedStock || v.stockQuantity > 0);
+}
+
+/** Default option selection: the first PURCHASABLE variant (active + in
+ * stock) when one exists, so a buyer never lands on an out-of-stock
+ * combination just because it happened to use each option's first value —
+ * the storefront card said "In stock" based on the product having SOME
+ * available variant, so the detail page must open on one. Falls back to the
+ * first variant that exists at all (a real, generated combination, even if
+ * currently unavailable) rather than blindly combining first-values, which
+ * could land on a combination that was never generated as a variant. */
+function defaultSelectionFor(product: PublicProductDetail): Record<string, string> {
+  if (product.options.length === 0) return {};
+  const valueToOption = new Map<string, string>();
+  for (const o of product.options) for (const v of o.values) valueToOption.set(v.id, o.id);
+
+  const source = product.variants.find(isVariantPurchasable) ?? product.variants[0];
+  const selected: Record<string, string> = {};
+  if (source) {
+    for (const valueId of source.optionValueIds) {
+      const optionId = valueToOption.get(valueId);
+      if (optionId) selected[optionId] = valueId;
+    }
+  }
+  for (const o of product.options) {
+    if (!selected[o.id] && o.values[0]) selected[o.id] = o.values[0].id;
+  }
+  return selected;
+}
+
+/** Per-option-value availability: true when at least one ACTIVE, in-stock
+ * variant uses this value — lets the picker visually mark values that lead
+ * to an unavailable combination, without requiring a full combinatorial
+ * check against every other currently-selected option. */
+function valueAvailability(product: PublicProductDetail): Map<string, boolean> {
+  const map = new Map<string, boolean>();
+  for (const o of product.options) for (const v of o.values) map.set(v.id, false);
+  for (const variant of product.variants) {
+    if (!isVariantPurchasable(variant)) continue;
+    for (const valueId of variant.optionValueIds) map.set(valueId, true);
+  }
+  return map;
+}
+
 /** Cover-image-first gallery ordering — mirrors `ProductImageGallery.tsx`'s
  * own admin-side "starred image is the cover" convention. */
 function sortedImages(product: PublicProductDetail) {
@@ -76,7 +121,7 @@ export function StorefrontProductDetail() {
         if (!active) return;
         setProduct(p);
         if (p) {
-          setSelected(Object.fromEntries(p.options.map((o) => [o.id, o.values[0]?.id]).filter(([, v]) => !!v)));
+          setSelected(defaultSelectionFor(p));
           const images = sortedImages(p);
           setActiveImageId(images[0]?.id ?? null);
         }
@@ -98,6 +143,7 @@ export function StorefrontProductDetail() {
   }, [product, store, slug]);
 
   const resolvedVariant = useMemo(() => (product ? resolveVariant(product, selected) : undefined), [product, selected]);
+  const valueAvailable = useMemo(() => (product ? valueAvailability(product) : new Map<string, boolean>()), [product]);
 
   // Keep the main image in sync with a variant's own photo, when it has one.
   useEffect(() => {
@@ -190,12 +236,14 @@ export function StorefrontProductDetail() {
       {accentStyle && <div className="h-1 w-full" style={accentStyle} />}
       {/* Storefront identity header — Product Detail is still part of the
           merchant's own store, not a generic GGX page, so it carries the same
-          logo/name/accent branding as the storefront grid, plus an explicit
-          route back to it (whole block is a link, with a labeled "Back to
-          store" line so it doesn't read as just a logo). */}
+          logo/name/accent branding as the storefront grid. The logo/name
+          itself is the route back to the store (no separate "Back to store"
+          line cluttering it) — page-level "All products" navigation lives
+          below, right above the product content, where a back-nav is
+          normally expected. */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between gap-3">
-          <Link to={`/shop/${slug}`} className="group flex items-center gap-3 min-w-0">
+          <Link to={`/shop/${slug}`} className="flex items-center gap-3 min-w-0">
             <div
               className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0"
               style={accentStyle ?? { backgroundColor: '#2563eb' }}
@@ -204,12 +252,7 @@ export function StorefrontProductDetail() {
                 ? <img src={store.logoUrl} alt={store.storeName} className="w-full h-full object-cover" />
                 : <IconBuildingStore className="w-5 h-5 text-white" />}
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">{store.storeName}</p>
-              <p className="text-xs text-gray-400 group-hover:text-gray-600 flex items-center gap-1 transition-colors">
-                <IconArrowLeft className="w-3 h-3" /> Back to store
-              </p>
-            </div>
+            <p className="text-sm font-semibold text-gray-900 truncate">{store.storeName}</p>
           </Link>
           {cartCount > 0 && (
             <button
@@ -230,7 +273,15 @@ export function StorefrontProductDetail() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <main className="max-w-5xl mx-auto px-6 py-8">
+        <Link
+          to={`/shop/${slug}`}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors mb-5"
+        >
+          <IconArrowLeft className="w-4 h-4" /> All products
+        </Link>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Gallery */}
         <div>
           <div className="aspect-square rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center">
@@ -297,19 +348,24 @@ export function StorefrontProductDetail() {
                   <div className="flex flex-wrap gap-2">
                     {option.values.map((value) => {
                       const isSelected = selected[option.id] === value.id;
+                      const isAvailable = valueAvailable.get(value.id) ?? false;
                       return (
                         <button
                           key={value.id}
                           type="button"
                           onClick={() => setSelected((prev) => ({ ...prev, [option.id]: value.id }))}
+                          title={isAvailable ? undefined : 'Currently unavailable in this option'}
                           className={cn(
                             'px-3.5 h-9 rounded-lg border text-sm font-medium transition-colors',
                             isSelected
                               ? 'border-blue-600 bg-blue-50 text-blue-700'
-                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
+                              : isAvailable
+                                ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                : 'border-gray-200 bg-gray-50 text-gray-400',
                           )}
                         >
                           {value.value}
+                          {!isAvailable && <span className="ml-1 text-[10px] text-gray-400">(unavailable)</span>}
                         </button>
                       );
                     })}
@@ -375,6 +431,7 @@ export function StorefrontProductDetail() {
               </button>
             )}
           </div>
+        </div>
         </div>
       </main>
     </div>

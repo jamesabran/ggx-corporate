@@ -108,6 +108,10 @@ export interface ProductInput {
   stockQuantity?: number;
   lowStockThreshold?: number;
   unlimitedStock?: boolean;
+  /** Optional client-generated key scoping a single create *attempt* — see
+   * `createProduct`'s docblock. Absent for every other write (updates are
+   * naturally idempotent; only creation can duplicate a row on retry). */
+  idempotencyKey?: string;
 }
 
 export interface SkuSettings {
@@ -123,6 +127,31 @@ export function deriveStockStatus(p: { stockQuantity: number; lowStockThreshold:
   if (p.unlimitedStock) return 'unlimited';
   if (p.stockQuantity <= 0) return 'out_of_stock';
   if (p.stockQuantity <= p.lowStockThreshold) return 'low_stock';
+  return 'in_stock';
+}
+
+/**
+ * Aggregate purchasability for a variant-carrying product, derived from its
+ * ACTIVE variants only — never the base product's own stock fields, which
+ * are just a fallback/pre-variant value the merchant may never touch again
+ * (see `ProductFormDialog`'s "these are the base/fallback price/stock"
+ * notice). An `inactive` variant never counts, regardless of its stock.
+ *
+ * Root cause this fixes: the storefront grid and Inventory list previously
+ * always read the base product's `stock_quantity`/`unlimited_stock`, so a
+ * variant product could show "In stock" while every real variant a buyer
+ * could actually select was out of stock or inactive — inconsistent with
+ * the product detail page, which already derived availability per-variant.
+ */
+export function deriveVariantAggregateStockStatus(
+  variants: { status: VariantStatus; stockQuantity: number; unlimitedStock: boolean }[],
+  lowStockThreshold: number,
+): StockStatus {
+  const active = variants.filter((v) => v.status === 'active');
+  if (active.some((v) => v.unlimitedStock)) return 'unlimited';
+  const totalStock = active.reduce((sum, v) => sum + v.stockQuantity, 0);
+  if (totalStock <= 0) return 'out_of_stock';
+  if (totalStock <= lowStockThreshold) return 'low_stock';
   return 'in_stock';
 }
 
@@ -202,16 +231,25 @@ function scopeWhere(scope: ScopeSelection, alias = ''): { clause: string; accoun
 
 // ─── SKU settings ───────────────────────────────────────────────────────
 
+/**
+ * Read this account's SKU settings, creating the default row on first call.
+ * A plain `insert ... on conflict do nothing` only RETURNS a row on the
+ * (rare, one-time) insert path — every subsequent call for an
+ * already-set-up account (the overwhelming majority in practice, since this
+ * fires on every Inventory/ProductFormDialog load) fell through to a SECOND
+ * sequential round trip just to select the row that already existed. A
+ * no-op `do update` makes `returning` fire unconditionally, so this is
+ * always exactly one round trip. Measured against the real Commerce DB:
+ * ~1.2s (insert-miss + select) vs ~250-350ms (single upsert) once the
+ * account is already set up.
+ */
 export async function getSkuSettings(accountId: string): Promise<SkuSettings> {
   const sql = getCommerceSql();
-  const rows = await sql<{ account_id: string; auto_generate: boolean; prefix: string; next_sequence: number }[]>`
+  const [row] = await sql<{ account_id: string; auto_generate: boolean; prefix: string; next_sequence: number }[]>`
     insert into commerce_sku_settings (account_id) values (${accountId})
-    on conflict (account_id) do nothing
+    on conflict (account_id) do update set account_id = excluded.account_id
     returning account_id, auto_generate, prefix, next_sequence
   `;
-  const row = rows[0] ?? (await sql<{ account_id: string; auto_generate: boolean; prefix: string; next_sequence: number }[]>`
-    select account_id, auto_generate, prefix, next_sequence from commerce_sku_settings where account_id = ${accountId}
-  `)[0];
   return {
     accountId: row.account_id,
     autoGenerate: row.auto_generate,
@@ -295,7 +333,21 @@ export async function listProducts(scope: ScopeSelection, opts: ListProductsOpti
         )
         from commerce_product_variants v
         where v.product_id = p.id
-      ) as price_range
+      ) as price_range,
+      -- Aggregate availability across ACTIVE variants only, for a
+      -- variant-carrying product — mirrors deriveVariantAggregateStockStatus.
+      -- Kept as one query (not per-product N+1) for list performance.
+      (
+        select
+          case
+            when bool_or(v.unlimited_stock) then 'unlimited'
+            when coalesce(sum(v.stock_quantity), 0) <= 0 then 'out_of_stock'
+            when coalesce(sum(v.stock_quantity), 0) <= p.low_stock_threshold then 'low_stock'
+            else 'in_stock'
+          end
+        from commerce_product_variants v
+        where v.product_id = p.id and v.status = 'active'
+      ) as variant_stock_status
     from commerce_products p
     where (${scope.mode === 'consolidated'} or p.account_id = ${scope.mode === 'single' ? scope.accountId : ''})
       and (${opts.status === undefined} or p.status = ${opts.status ?? 'draft'})
@@ -325,7 +377,9 @@ export async function listProducts(scope: ScopeSelection, opts: ListProductsOpti
     stockQuantity: row.stock_quantity,
     lowStockThreshold: row.low_stock_threshold,
     unlimitedStock: row.unlimited_stock,
-    stockStatus: deriveStockStatus({ stockQuantity: row.stock_quantity, lowStockThreshold: row.low_stock_threshold, unlimitedStock: row.unlimited_stock }),
+    stockStatus: row.has_variants
+      ? (row.variant_stock_status as StockStatus)
+      : deriveStockStatus({ stockQuantity: row.stock_quantity, lowStockThreshold: row.low_stock_threshold, unlimitedStock: row.unlimited_stock }),
     coverImageUrl: row.cover_image_url,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -385,37 +439,52 @@ export async function getPublicProductById(productId: string): Promise<ProductDe
   return getProductDetail({ mode: 'consolidated' }, productId);
 }
 
+/**
+ * Full product detail read. The 4 underlying queries (product row, images,
+ * options, variants) are all keyed on `productId` alone — none depends on
+ * another's RESULT, only the caller's already-known id/scope — so they fire
+ * concurrently instead of as 4 sequential network round trips to the remote
+ * Postgres pooler. Measured against the real dedicated Commerce DB: ~1.17s
+ * sequential vs ~300ms parallel for this exact query set — a real, direct
+ * contributor to "Commerce pages feel slow to load," since this is the read
+ * behind every Inventory edit, every post-mutation dialog refresh, and every
+ * public product-detail page view. A missing product is still handled
+ * correctly: the other 3 queries just resolve to empty arrays for a
+ * nonexistent `productId` (harmless — nothing keyed to it exists), and the
+ * NotFoundError below still fires before any of that data is used.
+ */
 export async function getProductDetail(scope: ScopeSelection, productId: string): Promise<ProductDetail> {
   const sql = getCommerceSql();
-  const [p] = await sql<any[]>`
-    select * from commerce_products p
-    where p.id = ${productId}
-      and (${scope.mode === 'consolidated'} or p.account_id = ${scope.mode === 'single' ? scope.accountId : ''})
-  `;
+  const [[p], images, options, variantRows] = await Promise.all([
+    sql<any[]>`
+      select * from commerce_products p
+      where p.id = ${productId}
+        and (${scope.mode === 'consolidated'} or p.account_id = ${scope.mode === 'single' ? scope.accountId : ''})
+    `,
+    sql<any[]>`
+      select id, url, display_order, is_cover from commerce_product_images
+      where product_id = ${productId} order by display_order asc
+    `,
+    sql<any[]>`
+      select o.id as option_id, o.name, o.display_order as option_order,
+             v.id as value_id, v.value, v.sku_fragment, v.display_order as value_order
+      from commerce_product_options o
+      left join commerce_product_option_values v on v.option_id = o.id
+      where o.product_id = ${productId}
+      order by o.display_order asc, v.display_order asc
+    `,
+    sql<any[]>`
+      select v.id, v.sku, v.price_override, v.compare_at_price_override, v.stock_quantity, v.unlimited_stock,
+             v.status, v.image_id,
+             coalesce(array_agg(ov.option_value_id) filter (where ov.option_value_id is not null), '{}') as option_value_ids
+      from commerce_product_variants v
+      left join commerce_product_variant_option_values ov on ov.variant_id = v.id
+      where v.product_id = ${productId}
+      group by v.id
+      order by v.created_at asc
+    `,
+  ]);
   if (!p) throw new CommerceNotFoundError('Product not found.');
-
-  const images = await sql<any[]>`
-    select id, url, display_order, is_cover from commerce_product_images
-    where product_id = ${productId} order by display_order asc
-  `;
-  const options = await sql<any[]>`
-    select o.id as option_id, o.name, o.display_order as option_order,
-           v.id as value_id, v.value, v.sku_fragment, v.display_order as value_order
-    from commerce_product_options o
-    left join commerce_product_option_values v on v.option_id = o.id
-    where o.product_id = ${productId}
-    order by o.display_order asc, v.display_order asc
-  `;
-  const variantRows = await sql<any[]>`
-    select v.id, v.sku, v.price_override, v.compare_at_price_override, v.stock_quantity, v.unlimited_stock,
-           v.status, v.image_id,
-           coalesce(array_agg(ov.option_value_id) filter (where ov.option_value_id is not null), '{}') as option_value_ids
-    from commerce_product_variants v
-    left join commerce_product_variant_option_values ov on ov.variant_id = v.id
-    where v.product_id = ${productId}
-    group by v.id
-    order by v.created_at asc
-  `;
 
   const optionsById = new Map<string, ProductOption>();
   for (const row of options) {
@@ -451,7 +520,12 @@ export async function getProductDetail(scope: ScopeSelection, productId: string)
     stockQuantity: p.stock_quantity,
     lowStockThreshold: p.low_stock_threshold,
     unlimitedStock: p.unlimited_stock,
-    stockStatus: deriveStockStatus({ stockQuantity: p.stock_quantity, lowStockThreshold: p.low_stock_threshold, unlimitedStock: p.unlimited_stock }),
+    stockStatus: p.has_variants
+      ? deriveVariantAggregateStockStatus(
+          variantRows.map((v) => ({ status: v.status, stockQuantity: v.stock_quantity, unlimitedStock: v.unlimited_stock })),
+          p.low_stock_threshold,
+        )
+      : deriveStockStatus({ stockQuantity: p.stock_quantity, lowStockThreshold: p.low_stock_threshold, unlimitedStock: p.unlimited_stock }),
     coverImageUrl: images.find((i) => i.is_cover)?.url ?? images[0]?.url ?? null,
     description: p.description,
     weight: p.weight === null ? null : Number(p.weight),
@@ -483,37 +557,78 @@ function validateProductInput(input: ProductInput): void {
   if (!input.name?.trim()) throw new CommerceValidationError('Product name is required.');
   if (typeof input.unitPrice !== 'number' || input.unitPrice < 0) throw new CommerceValidationError('Unit price must be a non-negative number.');
   if (input.compareAtPrice != null && input.compareAtPrice <= input.unitPrice) {
-    throw new CommerceValidationError('Compare-at price must be greater than the selling price.');
+    throw new CommerceValidationError('Original price must be greater than the selling price.');
   }
 }
 
+/**
+ * Create a product. When `input.idempotencyKey` is supplied, this is
+ * retry-safe end to end: a replayed call with the SAME key (a network
+ * timeout the client treated as a failure and retried, or a fast
+ * double-submit) never inserts a second row — mirrors the
+ * `commerce_promotion_redemptions.idempotency_key` pattern. Without a key
+ * (the caller doesn't opt in), behaves as before — every call creates a new
+ * row.
+ *
+ * A replay's payload RECONCILES onto the already-created row (via
+ * `updateProduct`) rather than being silently discarded — a Codex finding
+ * on the first pass: the client still shows the same (not-yet-confirmed)
+ * create form, so if the merchant edits a field before the original
+ * response arrives and the retry fires, the edit is a genuine correction to
+ * the still-in-progress product, not a no-op. SKU is never touched here
+ * (already allocated on the winning attempt, and `updateProduct` doesn't
+ * accept SKU changes at all).
+ */
 export async function createProduct(accountId: string, input: ProductInput, actor: string): Promise<ProductDetail> {
   validateProductInput(input);
   const sql = getCommerceSql();
+  const key = input.idempotencyKey?.trim() || null;
+
+  if (key) {
+    const [existing] = await sql<{ id: string }[]>`
+      select id from commerce_products where account_id = ${accountId} and idempotency_key = ${key}
+    `;
+    if (existing) return updateProduct({ mode: 'single', accountId }, existing.id, input, actor);
+  }
+
   const productId = randomUUID();
 
-  await sql.begin(async (tx) => {
-    const slug = await ensureUniqueSlug(tx, accountId, slugify(input.slug?.trim() || input.name));
-    const sku = await resolveSkuValue(tx, accountId, input.sku);
-    try {
-      await tx`
-        insert into commerce_products (
-          id, account_id, name, slug, description, category, status, sku, unit_price, compare_at_price,
-          weight, length_cm, width_cm, height_cm, stock_quantity, low_stock_threshold, unlimited_stock,
-          created_by, updated_by
-        ) values (
-          ${productId}, ${accountId}, ${input.name.trim()}, ${slug}, ${input.description ?? ''}, ${input.category ?? ''},
-          ${input.status ?? 'draft'}, ${sku}, ${input.unitPrice}, ${input.compareAtPrice ?? null},
-          ${input.weight ?? null}, ${input.dimensions?.length ?? null}, ${input.dimensions?.width ?? null}, ${input.dimensions?.height ?? null},
-          ${input.stockQuantity ?? 0}, ${input.lowStockThreshold ?? 0}, ${input.unlimitedStock ?? false},
-          ${actor}, ${actor}
-        )
+  try {
+    await sql.begin(async (tx) => {
+      const slug = await ensureUniqueSlug(tx, accountId, slugify(input.slug?.trim() || input.name));
+      const sku = await resolveSkuValue(tx, accountId, input.sku);
+      try {
+        await tx`
+          insert into commerce_products (
+            id, account_id, name, slug, description, category, status, sku, unit_price, compare_at_price,
+            weight, length_cm, width_cm, height_cm, stock_quantity, low_stock_threshold, unlimited_stock,
+            idempotency_key, created_by, updated_by
+          ) values (
+            ${productId}, ${accountId}, ${input.name.trim()}, ${slug}, ${input.description ?? ''}, ${input.category ?? ''},
+            ${input.status ?? 'draft'}, ${sku}, ${input.unitPrice}, ${input.compareAtPrice ?? null},
+            ${input.weight ?? null}, ${input.dimensions?.length ?? null}, ${input.dimensions?.width ?? null}, ${input.dimensions?.height ?? null},
+            ${input.stockQuantity ?? 0}, ${input.lowStockThreshold ?? 0}, ${input.unlimitedStock ?? false},
+            ${key}, ${actor}, ${actor}
+          )
+        `;
+      } catch (err) {
+        translateDbError(err, 'Could not create the product.');
+      }
+      await insertSkuRegistry(tx, accountId, sku, { productId });
+    });
+  } catch (err) {
+    // A concurrent replay of the same key can lose the race above and hit
+    // the unique index here instead — fall back to returning the winner's
+    // row rather than surfacing a spurious conflict to a caller that only
+    // ever intended to create ONE product.
+    if (key) {
+      const [existing] = await sql<{ id: string }[]>`
+        select id from commerce_products where account_id = ${accountId} and idempotency_key = ${key}
       `;
-    } catch (err) {
-      translateDbError(err, 'Could not create the product.');
+      if (existing) return updateProduct({ mode: 'single', accountId }, existing.id, input, actor);
     }
-    await insertSkuRegistry(tx, accountId, sku, { productId });
-  });
+    throw err;
+  }
 
   return getProductDetail({ mode: 'single', accountId }, productId);
 }
@@ -529,7 +644,7 @@ export async function updateProduct(
   if (patch.compareAtPrice !== undefined) {
     const newPrice = patch.unitPrice ?? existing.unitPrice;
     if (patch.compareAtPrice != null && patch.compareAtPrice <= newPrice) {
-      throw new CommerceValidationError('Compare-at price must be greater than the selling price.');
+      throw new CommerceValidationError('Original price must be greater than the selling price.');
     }
   }
 
@@ -768,7 +883,7 @@ export async function updateVariant(scope: ScopeSelection, productId: string, va
   if (patch.compareAtPriceOverride != null) {
     const price = patch.priceOverride !== undefined ? patch.priceOverride : variant.priceOverride ?? existing.unitPrice;
     if (price != null && patch.compareAtPriceOverride <= price) {
-      throw new CommerceValidationError('Variant compare-at price must be greater than its selling price.');
+      throw new CommerceValidationError('Variant original price must be greater than its selling price.');
     }
   }
   const sql = getCommerceSql();

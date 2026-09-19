@@ -32,7 +32,7 @@ import {
   type StorefrontProfile, type PublishStatus, type OrderImpact, type StorefrontProfileInput,
   type Collection, type HomepageSection, type HeroBanner, type HeroBannerInput, type HeroBannerPatch,
 } from '../services/storefrontService';
-import { getInventoryProducts, getInventoryProductsByIds, isLowStock, type InventoryProduct } from '../services/inventoryService';
+import { getInventoryProducts, isLowStock, type InventoryProduct } from '../services/inventoryService';
 import { getServiceTypeLabel, type ServiceTypeKey } from '../data/serviceTypes';
 import { getAccountNameById } from '../data/accounts';
 
@@ -90,10 +90,20 @@ export function Storefront() {
   const [bannerDialog, setBannerDialog] = useState<{ banner?: HeroBanner } | null>(null);
   const [deleteBannerTarget, setDeleteBannerTarget] = useState<HeroBanner | null>(null);
 
-  // Resolve listed products from the selected product ids.
-  const refreshListed = (ids: string[]) => {
-    if (ids.length === 0) { setListed([]); return; }
-    getInventoryProductsByIds(ids).then(setListed);
+  // Resolve listed products from the selected product ids against the
+  // ALREADY-LOADED inventory for this scope — never a separate network
+  // round-trip. A storefront can only ever select products from its own
+  // account's inventory, so `inventory` (or `source`, passed explicitly right
+  // after a fresh fetch, before that state has committed) is always a
+  // superset of `ids`. Fixes a measured real duplicate/over-fetch: this page
+  // already fetches the account's full inventory once in the init
+  // `Promise.all` below; it previously ALSO called the now-removed
+  // `getInventoryProductsByIds`, which (no batch-by-id backend route exists)
+  // fetched every account's ENTIRE product catalog cross-tenant, just to
+  // filter it down to the same handful of already-known ids.
+  const refreshListed = (ids: string[], source: InventoryProduct[] = inventory) => {
+    const byId = new Map(source.map((p) => [p.id, p]));
+    setListed(ids.map((id) => byId.get(id)).filter((p): p is InventoryProduct => !!p));
   };
 
   const loadCollections = (id: string) => {
@@ -130,7 +140,7 @@ export function Storefront() {
         setImpact(imp);
         setInventory(inv);
         setProductIdsState(ids);
-        refreshListed(ids);
+        refreshListed(ids, inv);
         if (scopeId) { loadCollections(scopeId); loadSections(scopeId); loadBanners(scopeId); }
       }).catch((err) => {
         // A failure here (e.g. Inventory's API erroring) previously left the

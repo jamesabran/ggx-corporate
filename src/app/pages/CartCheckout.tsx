@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
-  IconBuildingStore, IconCash, IconClock, IconPackage, IconTag, IconX,
+  IconArrowLeft, IconBuildingStore, IconCash, IconClock, IconPackage, IconTag, IconX,
 } from '@tabler/icons-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -14,6 +14,7 @@ import {
   useCartItems, clearCart, getCartSeller,
   useAppliedPromoCode, setAppliedPromoCode,
 } from '../lib/cartStore';
+import { loadSessionState, saveSessionState, clearSessionState } from '../lib/storage';
 import { getFeatureStateSync } from '../services/featureEnablementService';
 import { getPublicStore } from '../services/publicStorefrontService';
 import { placeStorefrontOrder } from '../services/storefrontOrdersService';
@@ -48,7 +49,16 @@ const blank: CheckoutForm = {
 export function CartCheckout() {
   const navigate = useNavigate();
   const items = useCartItems();
-  const [form, setForm] = useState<CheckoutForm>(blank);
+  // Delivery-details draft survives leaving Checkout (e.g. "Back to cart" to
+  // adjust quantities) and coming back — "where practical" per this page's
+  // nav requirements. Deliberately SESSION-scoped (sessionStorage, not
+  // localStorage/lib/storage.ts's default) — this form carries the buyer's
+  // real name, mobile number, and address, so it must never survive past
+  // this browser tab/window (a Codex finding on the first pass: localStorage
+  // would leave one buyer's personal details pre-filled for the next person
+  // on a shared/public device, even after a full browser restart). Cleared
+  // once an order actually places.
+  const [form, setForm] = useState<CheckoutForm>(() => loadSessionState('checkoutFormDraft', blank));
   const [placed, setPlaced] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState({
@@ -108,6 +118,10 @@ export function CartCheckout() {
 
   const set = <K extends keyof CheckoutForm>(k: K, v: string) =>
     setForm((prev) => ({ ...prev, [k]: v }));
+
+  useEffect(() => {
+    saveSessionState('checkoutFormDraft', form);
+  }, [form]);
 
   const subtotal = useMemo(
     () => items.reduce((sum, i) => sum + i.productSnapshot.unitPrice * i.quantity, 0),
@@ -270,6 +284,7 @@ export function CartCheckout() {
     });
     clearCart();
     setAppliedPromoCode(null);
+    clearSessionState('checkoutFormDraft');
     setPlacing(false);
     setPlaced(true);
   };
@@ -360,8 +375,20 @@ export function CartCheckout() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-2 text-sm text-gray-500">
-          <IconBuildingStore className="w-4 h-4" /> Secure checkout · Powered by GoGo Xpress
+        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-3">
+          {seller ? (
+            <Link
+              to={`/shop/${seller.slug}/cart`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <IconArrowLeft className="w-4 h-4" /> Back to cart
+            </Link>
+          ) : (
+            <span />
+          )}
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <IconBuildingStore className="w-4 h-4" /> Secure checkout · Powered by GoGo Xpress
+          </div>
         </div>
       </header>
 

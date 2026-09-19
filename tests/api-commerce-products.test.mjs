@@ -216,6 +216,78 @@ describe('Commerce products API', { skip: dockerAvailable ? false : 'Docker not 
     assert.equal(imgRes._status, 400);
   });
 
+  it('a retried create with the SAME idempotencyKey returns the ORIGINAL product, not a duplicate', async () => {
+    const key = 'idem-retry-key-1';
+    const first = await call('POST', 'products', {
+      headers: managerCookie(),
+      body: { name: 'Retried Product', sku: 'RETRY-001', unitPrice: 75, idempotencyKey: key },
+    });
+    assert.equal(first._status, 201);
+    const second = await call('POST', 'products', {
+      headers: managerCookie(),
+      body: { name: 'Retried Product', sku: 'RETRY-001', unitPrice: 75, idempotencyKey: key },
+    });
+    assert.equal(second._status, 201);
+    assert.equal(second._body.product.id, first._body.product.id, 'replaying the same key must return the same product, not create a second one');
+
+    const list = await call('GET', 'products', { headers: managerCookie() });
+    const matches = list._body.products.filter((p) => p.name === 'Retried Product');
+    assert.equal(matches.length, 1, 'exactly one row should exist for this name');
+  });
+
+  it('a retried create with an EDITED payload reconciles the edit onto the same row, never discards it', async () => {
+    const key = 'idem-retry-key-edited';
+    const first = await call('POST', 'products', {
+      headers: managerCookie(),
+      body: { name: 'Edited Retry Product', sku: 'RETRY-002', unitPrice: 100, idempotencyKey: key },
+    });
+    assert.equal(first._status, 201);
+    // Simulates the merchant changing a field (price) before the original
+    // create's response ever arrived, then the retry firing with the new value.
+    const second = await call('POST', 'products', {
+      headers: managerCookie(),
+      body: { name: 'Edited Retry Product', sku: 'RETRY-002', unitPrice: 150, idempotencyKey: key },
+    });
+    assert.equal(second._status, 201);
+    assert.equal(second._body.product.id, first._body.product.id, 'still the same row, not a duplicate');
+    assert.equal(second._body.product.unitPrice, 150, 'the edited value must be applied, not silently discarded');
+
+    const list = await call('GET', 'products', { headers: managerCookie() });
+    const matches = list._body.products.filter((p) => p.name === 'Edited Retry Product');
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0].unitPrice, 150, 'the DB must reflect the edited value');
+  });
+
+  it('a full Details -> Photos -> Variants workflow (with a retried Details save) creates exactly ONE parent product', async () => {
+    const key = 'idem-variant-workflow-key';
+    const name = 'Variant Workflow Product';
+    // Simulates the real dialog flow: the Details tab's "Create product" call
+    // is retried once (e.g. a dropped response) before Photos/Variants are
+    // configured against what the client believes is the product id.
+    const attempt1 = await call('POST', 'products', { headers: managerCookie(), body: { name, sku: 'WF-001', unitPrice: 300, idempotencyKey: key } });
+    const attempt2 = await call('POST', 'products', { headers: managerCookie(), body: { name, sku: 'WF-001', unitPrice: 300, idempotencyKey: key } });
+    assert.equal(attempt2._body.product.id, attempt1._body.product.id);
+    const id = attempt2._body.product.id;
+
+    const withImage = await call('POST', `products/${id}/images`, {
+      headers: managerCookie(),
+      body: { r2ObjectKey: `accounts/acme-luzon/products/${id}/photo.jpg`, url: 'https://cdn/photo.jpg' },
+    });
+    assert.equal(withImage._status, 201);
+
+    const withVariants = await call('PUT', `products/${id}/variant-options`, {
+      headers: managerCookie(),
+      body: { options: [{ name: 'Size', values: ['S', 'M', 'L'] }] },
+    });
+    assert.equal(withVariants._status, 200);
+    assert.equal(withVariants._body.product.variants.length, 3);
+
+    const list = await call('GET', 'products', { headers: managerCookie() });
+    const matches = list._body.products.filter((p) => p.name === name);
+    assert.equal(matches.length, 1, 'the full Details->Photos->Variants workflow must produce exactly one product record');
+    assert.equal(matches[0].id, id, 'the single product must be the one photos/variants were attached to (not an orphaned duplicate)');
+  });
+
   it('re-running variant-options is idempotent for already-existing combinations', async () => {
     const created = await call('POST', 'products', { headers: managerCookie(), body: { name: 'Mug', sku: 'MUG-001', unitPrice: 200 } });
     const id = created._body.product.id;

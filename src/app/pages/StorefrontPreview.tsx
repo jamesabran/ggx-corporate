@@ -292,7 +292,7 @@ export function StorefrontPreview() {
       {/* Store header */}
       <header className="bg-white border-b border-gray-200">
         {accentStyle && <div className="h-1 w-full" style={accentStyle} />}
-        <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="max-w-[1400px] mx-auto px-6 py-8">
           {cartCount > 0 && (
             <div className="flex justify-end mb-4">
               <button
@@ -349,7 +349,7 @@ export function StorefrontPreview() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-[1400px] mx-auto px-6 py-8 space-y-8">
         {/* Hero banners — merchant-configured, enabled + in-date-window only
             (already filtered server-side). Auto-advances every 6s when there's
             more than one; dots let a visitor jump directly. */}
@@ -440,8 +440,8 @@ export function StorefrontPreview() {
               </div>
 
               {productsLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {Array.from({ length: 6 }).map((_, i) => (
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {Array.from({ length: 8 }).map((_, i) => (
                     <div key={i} className="h-64 rounded-xl bg-gray-100 animate-pulse" />
                   ))}
                 </div>
@@ -494,7 +494,7 @@ export function StorefrontPreview() {
                   return (
                     <>
                       {availableProducts.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                           {availableProducts.map(renderCard)}
                         </div>
                       )}
@@ -505,7 +505,7 @@ export function StorefrontPreview() {
                             <span className="text-xs font-medium text-gray-400 uppercase tracking-wide whitespace-nowrap">Available again soon</span>
                             <div className="h-px flex-1 bg-gray-200" />
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                             {unavailableProducts.map(renderCard)}
                           </div>
                         </div>
@@ -594,20 +594,20 @@ function ProductCard({
         >
           <IconEye className="w-4 h-4" />
         </Link>
-        {p.hasVariants ? (
-          <Link
-            to={productHref}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium h-9 transition-colors"
-          >
-            View options
-          </Link>
-        ) : outOfStock ? (
+        {outOfStock ? (
           <button
             type="button" disabled
             className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-sm font-medium h-9 cursor-not-allowed"
           >
             Out of stock
           </button>
+        ) : p.hasVariants ? (
+          <Link
+            to={productHref}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium h-9 transition-colors"
+          >
+            View options
+          </Link>
         ) : justAdded ? (
           <button
             type="button" disabled

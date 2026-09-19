@@ -133,6 +133,12 @@ export function ProductFormDialog({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState(false);
+  // One key per CREATE ATTEMPT (this dialog instance — the parent keys a
+  // brand-new "Add product" dialog with `key="new"`, so a fresh key is
+  // minted per genuine new-product intent), reused across retries of that
+  // same attempt so a lost/retried request can never create a second
+  // product. See `createInventoryProduct`'s docblock.
+  const [createIdempotencyKey] = useState(() => crypto.randomUUID());
 
   const set = (k: keyof FormState, v: string) => setForm((prev) => ({ ...prev, [k]: v }));
 
@@ -176,6 +182,7 @@ export function ProductFormDialog({
     description: form.description.trim(),
     status: form.status,
     sku: product ? undefined : (form.sku.trim() || undefined), // SKU is immutable after creation
+    idempotencyKey: product ? undefined : createIdempotencyKey,
     unitPrice: form.onSale ? (num(form.salePrice) ?? 0) : (num(form.itemPrice) ?? 0),
     compareAtPrice: form.onSale ? (num(form.originalPrice) ?? null) : null,
     weight: form.weight.trim() === '' ? null : num(form.weight) ?? null,

@@ -20,10 +20,10 @@
  * non-admin, it just forwards whatever concrete scope the caller already
  * resolved. See `api/_lib/commerceAuth.ts`.
  *
- * `getInventoryProduct`/`getInventoryProductsByIds` call the
- * SESSION-AUTHENTICATED `/api/commerce/products*` routes — correct for every
- * authenticated caller in this app (Inventory, Storefront admin, bulk
- * booking). Both fail closed (null / empty list), never throw into the page.
+ * `getInventoryProduct` calls the SESSION-AUTHENTICATED `/api/commerce/products*`
+ * routes — correct for every authenticated caller in this app (Inventory,
+ * Storefront admin, bulk booking). Fails closed (null), never throws into
+ * the page.
  * The truly public/anonymous pages (`StorefrontPreview.tsx`,
  * `StorefrontProductDetail.tsx`, `BuyerCheckout.tsx`) do NOT call through
  * this service for their product reads — they use the separate no-session
@@ -141,6 +141,9 @@ export interface ProductInput {
   stockQuantity?: number;
   lowStockThreshold?: number;
   unlimitedStock?: boolean;
+  /** `createInventoryProduct` only — see that function's docblock. Ignored
+   * on update (SKU/idempotency only matter for the initial insert). */
+  idempotencyKey?: string;
 }
 
 export interface SkuSettings {
@@ -301,26 +304,17 @@ export async function getInventoryProduct(id: string, scopeId?: string): Promise
   return toInventoryProductDetail(res.data.product);
 }
 
-/** Resolve products by id, preserving the given id order (unknown ids
- * skipped). Backed by the authenticated list endpoint (no batch-by-id route
- * exists) — see the module docblock's public-page caveat. Returns [] rather
- * than throwing on failure, since every current caller treats "can't load"
- * the same as "nothing listed". */
-export async function getInventoryProductsByIds(ids: string[]): Promise<InventoryProduct[]> {
-  if (ids.length === 0) return [];
-  let all: InventoryProduct[];
-  try {
-    all = await getInventoryProducts(undefined);
-  } catch {
-    return [];
-  }
-  const byId = new Map(all.map((p) => [p.id, p]));
-  return ids.map((id) => byId.get(id)).filter((p): p is InventoryProduct => !!p);
-}
-
 /** Create a product in the given (concrete) scope. Throws with a
  * human-readable message on validation/conflict failures so the dialog can
- * show it inline. */
+ * show it inline.
+ *
+ * Pass a stable `input.idempotencyKey` (one generated per create ATTEMPT —
+ * i.e. per open "Add product" dialog, reused across retries of that same
+ * attempt) so a lost/retried request can never insert a second product row.
+ * Root cause of the duplicate-product bug: this call previously had no
+ * idempotency protection at all, unlike every other create/redeem path in
+ * this app (`submitOpsRequest`, `apiCreateTicket`, `redeemPromotionCode`) —
+ * see `createProduct` in `api/_lib/commerceProducts.ts`. */
 export async function createInventoryProduct(scopeId: string, input: ProductInput): Promise<InventoryProductDetail> {
   const res = await postJson<{ product: RawProductDetail }>('/products', { ...input, accountId: scopeId });
   if (!res.ok) throw new Error(res.message);

@@ -113,7 +113,7 @@ export function ProductVariantBuilder({
     const price = d.price.trim() === '' ? null : Number(d.price);
     const compareAt = d.compareAt.trim() === '' ? null : Number(d.compareAt);
     if (compareAt != null && price != null && compareAt <= price) {
-      setRowError((prev) => ({ ...prev, [v.id]: 'Compare-at price must be greater than the selling price.' }));
+      setRowError((prev) => ({ ...prev, [v.id]: 'Original price must be greater than the selling price.' }));
       return;
     }
     setRowBusy(v.id);
@@ -248,7 +248,7 @@ export function ProductVariantBuilder({
                       <Input
                         type="number" min={0} value={d.compareAt}
                         onChange={(e) => setDraft(v.id, { compareAt: e.target.value })}
-                        placeholder="Compare-at" className="text-xs h-8"
+                        placeholder="Original price" className="text-xs h-8"
                       />
                       <Input
                         type="number" min={0} value={d.unlimited ? '' : d.stock} disabled={d.unlimited}
